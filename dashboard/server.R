@@ -52,8 +52,8 @@ server <- function(input, output) {
     
     # select text to display
     output$text_eth <- renderUI({
-                 str1 <- paste('Food insecurity criterion:','30% projected in IPC3+ and 5% increase')
-                 str2 <- paste('Drought criterion:', 'Named as driver for food insecurity')
+                 str1 <- paste('Food insecurity criterion for',input$dist, '30% projected in IPC3+ and 5% increase')
+                 str2 <- paste('Drought criterion:', 'Named as driver for food insecurity by FewsNet or Global IPC')
                 HTML(paste(str1, str2, sep = '<br/>'))
     })
     
@@ -64,6 +64,6 @@ server <- function(input, output) {
     
     output$conditional_text <- renderText({
         if(test() == 1){
-            paste("Hello",input$dist)
+            paste("Trigger met for these regions:",input$dist)
         }})
 }
