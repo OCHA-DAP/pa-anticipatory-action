@@ -34,8 +34,8 @@ fluidPage(
             tabsetPanel(type = "tabs",
                         tabPanel("Triggered Regions", textOutput("triggered_regions_list")),
                         tabPanel("Trigger Map", plotOutput("trigger_map")),
-                        tabPanel("Projections", verbatimTextOutput("summary")),
-                        tabPanel("Reports", tableOutput("table"))
+                        tabPanel("Projections", tableOutput("summary")),
+                        tabPanel("Reports", textOutput("reports"))
             )
        #,
         #    br(),

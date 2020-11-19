@@ -46,35 +46,41 @@ server <- function(input, output) {
     })
     
     # Generate a summary of the data ----
-    output$summary <- renderPrint({
-        summary(mtcars$mpg)
+    output$summary <- renderTable({
+        ipc_indices_data %>%
+            select(Source, ADMIN1, perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4) %>%
+            rename(Current_Situation_IPC3plus = perc_CS_3p,
+                   Current_Situation_IPC4plus = perc_CS_4,
+                   Short_term_proj_IPC3plus = perc_ML1_3p,
+                   Short_term_proj_IPC4plus = perc_ML1_4,
+                   Long_term_proj_IPC3plus = perc_ML2_3p,
+                   Long_term_proj_IPC4plus = perc_ML2_4)
     })
     
     # Generate an HTML table view of the data ----
-    output$table <- renderTable({
-        mtcars()
+    output$reports <- renderText({
+        print("Available forecasts:")
     })
     
     # create conditional lists of triggered regions
     output$triggered_regions_list <- renderText({
        
        if(input$country == 'eth' & input$source == 'fn' & input$period == fn_ml1){
-           triggered_regions_list <- ifelse(!is.na(eth_fn_ML1_trigger_list$ADM1_EN), eth_fn_ML1_trigger_list$ADM1_EN, "No region meets the trigger") 
-       }
+          triggered_regions_list <- eth_fn_ML1_trigger_list$ADM1_EN
+       } 
         
        if(input$country == 'eth' & input$source == 'fn' & input$period == fn_ml2){
-           triggered_regions_list <- ifelse(!is.na(eth_fn_ML2_trigger_list$ADM1_EN), eth_fn_ML2_trigger_list$ADM1_EN, "No region meets the trigger")
-       #triggered_regions_list <- eth_fn_ML2_trigger_list$ADM1_EN
-           }
-       
+          triggered_regions_list <- eth_fn_ML2_trigger_list$ADM1_EN
+       }
+        
        if(input$country == 'eth' & input$source == 'gbl' & input$period == gbl_ml1){
-           triggered_regions_list <- ifelse(length(eth_gbl_ML1_trigger_list$ADM1_EN) >= 1, eth_gbl_ML1_trigger_list$ADM1_EN, "No region meets the trigger")
+        #  triggered_regions_list <- ifelse(length(eth_gbl_ML1_trigger_list$ADM1_EN) > 0, eth_gbl_ML1_trigger_list$ADM1_EN, "No region meets the trigger")
+           triggered_regions_list <- eth_gbl_ML1_trigger_list$ADM1_EN
        }
-       
+        
        if(input$country == 'eth' & input$source == 'gbl' & input$period == gbl_ml2){
-           triggered_regions_list <- ifelse(length(eth_gbl_ML2_trigger_list$ADM1_EN) >= 1, eth_gbl_ML2_trigger_list$ADM1_EN, "No region meets the trigger")
+           triggered_regions_list <- eth_gbl_ML2_trigger_list$ADM1_EN
        }
-       
         triggered_regions_list
         
        })
