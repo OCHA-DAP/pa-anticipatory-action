@@ -1,5 +1,9 @@
 #
 # This is the server logic of the dashboard.
+# About deploying to ShinyApps.io: You should not have an explicit install.packages() call within your ui.R or server.R files.
+
+# load libraries
+library(DT)
 
 # source code generating all maps
 source("generate_subnational_map.R")
@@ -46,21 +50,42 @@ server <- function(input, output) {
     })
     
     # Generate a summary of the data ----
-    output$summary <- renderTable({
-        ipc_indices_data %>%
+    output$projections_table<- renderDataTable({
+        projections_table <- ipc_indices_data %>%
             select(Source, ADMIN1, perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4) %>%
             rename(Current_Situation_IPC3plus = perc_CS_3p,
                    Current_Situation_IPC4plus = perc_CS_4,
                    Short_term_proj_IPC3plus = perc_ML1_3p,
                    Short_term_proj_IPC4plus = perc_ML1_4,
                    Long_term_proj_IPC3plus = perc_ML2_3p,
-                   Long_term_proj_IPC4plus = perc_ML2_4)
+                   Long_term_proj_IPC4plus = perc_ML2_4) %>%
+            mutate(Current_Situation_IPC3plus = round(Current_Situation_IPC3plus, 1),
+                   Current_Situation_IPC4plus = round(Current_Situation_IPC4plus, 1),
+                   Short_term_proj_IPC3plus = round(Short_term_proj_IPC3plus, 1),
+                   Short_term_proj_IPC4plus = round(Short_term_proj_IPC4plus, 1),
+                   Long_term_proj_IPC3plus = round(Long_term_proj_IPC3plus, 1),
+                   Long_term_proj_IPC4plus = round(Long_term_proj_IPC4plus, 1))
+        
+        projections_table_searchable <- datatable(projections_table,
+                                                  filter = list(position = 'top', clear = FALSE),
+                                                  options = list(
+                                                        columnDefs = list(list(className = 'dt-center', targets = "_all")),
+                                                        search = list(regex = TRUE, caseInsensitive = TRUE),
+                                                        pageLength = 11))
+        
+        projections_table_searchable
     })
     
-    # Generate an HTML table view of the data ----
-    output$reports <- renderText({
-        print("Available forecasts:")
-    })
+    # Publish clickable links to full reports
+    
+    fewsnet_url <- a("FewsNet", href = "https://fews.net/east-africa/ethiopia/food-security-outlook/october-2020")
+    globalipc_url <- a("GlobalIPC", href = "http://www.ipcinfo.org/ipc-country-analysis/details-map/en/c/1152818/?iso3=ETH")
+              
+    output$reports <- renderUI({
+            tagList("Full reports:", 
+                    fewsnet_url,
+                   globalipc_url)
+        })
     
     # create conditional lists of triggered regions
     output$triggered_regions_list <- renderText({
@@ -84,10 +109,6 @@ server <- function(input, output) {
         triggered_regions_list
         
        })
-    
- #   output$mytext <- renderUI({
- #       HTML(paste(eth_gbl_ML1_trigger_list$ADM1_EN, sep = "", collapse = '<br/>'))
- #   })
    
     # create text variable of selected period
    output$period <- renderText(input$period)
