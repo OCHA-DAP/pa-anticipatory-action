@@ -14,7 +14,7 @@ eth_adm1 <- st_read("shapefiles/ET_Admin1_OCHA_2019/eth_admbnda_adm1_csa_bofed_2
 
 # build datasets per country, source. Ensures all regions are represented if no projections in certain regions
 # ETH FN
-eth_gbl <-  eth_adm1 %>%
+eth_fn <-  eth_adm1 %>%
              left_join(ipc_indices_data[ipc_indices_data$Source == 'FewsNet',], by = c('ADM1_EN' = 'ADMIN1'))
 
 # ETH GLB   

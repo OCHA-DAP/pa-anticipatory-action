@@ -50,7 +50,7 @@ server <- function(input, output) {
     })
     
     # Generate a summary of the data ----
-    output$projections_table<- renderDataTable({
+    output$projections_table<- DT::renderDataTable({
         projections_table <- ipc_indices_data %>%
             select(Source, ADMIN1, perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4) %>%
             rename(Current_Situation_IPC3plus = perc_CS_3p,
