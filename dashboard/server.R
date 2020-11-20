@@ -76,17 +76,14 @@ server <- function(input, output) {
         projections_table_searchable
     })
     
-    # Publish clickable links to full reports
+    # Display rainfall maps as temp projections. NOte single quotes must be outer set because string must include double quotes to be processed as HTML
     
-    fewsnet_url <- a("FewsNet", href = "https://fews.net/east-africa/ethiopia/food-security-outlook/october-2020")
-    globalipc_url <- a("GlobalIPC", href = "http://www.ipcinfo.org/ipc-country-analysis/details-map/en/c/1152818/?iso3=ETH")
-              
-    output$reports <- renderUI({
-            tagList("Full reports:", 
-                    fewsnet_url,
-                   globalipc_url)
-        })
-    
+    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2020/nov2020/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
+    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/Rainfall_forecast_november-January_.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
+    output$chc <- renderText({c('<img src="','https://blog.chc.ucsb.edu/wp-content/uploads/2020/11/Screen-Shot-2020-11-05-at-12.39.37-PM.png"','width = "500px" height = "500px"', '>')})
+    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/NMME/prob/images/prob_ensemble_prate_season4.png"','width = "500px" height = "500px"', '>')})
+    output$eth_nma <- renderText("No forecast for the 2021 Belg season available from the NMA.")
+        
     # create conditional lists of triggered regions
     output$triggered_regions_list <- renderText({
        
