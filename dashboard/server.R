@@ -71,7 +71,7 @@ server <- function(input, output) {
                                                   options = list(
                                                         columnDefs = list(list(className = 'dt-center', targets = "_all")),
                                                         search = list(regex = TRUE, caseInsensitive = TRUE),
-                                                        pageLength = 11))
+                                                        pageLength = 20))
         
         projections_table_searchable
     })
