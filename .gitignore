@@ -1,12 +1,14 @@
 # vs code
 .vscode/*
 
-# ignore R history and logs
-.Rhistory
-.Rproj.user
-
 #Mac DSStore
 .DS_Store
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# R files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
