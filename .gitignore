@@ -12,3 +12,6 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# pycharm
+.idea
