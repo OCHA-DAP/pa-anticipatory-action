@@ -51,7 +51,7 @@ MWI:
   start_date: "20090701"
   end_date: "20201001"
 
-  SOM:
+SOM:
   country_name: "somalia"
   iso2_code: "SO"
   region: "east-africa"
