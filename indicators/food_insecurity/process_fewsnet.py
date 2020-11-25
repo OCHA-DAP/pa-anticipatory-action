@@ -55,6 +55,8 @@ def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
         overlap: dataframe with the regions per admin2 for each IPC level
     """
     admin2 = gpd.read_file(path_admin)
+    if not all(x in admin2.columns for x in [adm0c,adm1c,adm2c]):
+        logger.warning(f"Not all admin columns defined in the config were found in the boundary shapefile. The boundary shapefile's columns are {list(admin2.columns)}")
     admin2 = admin2[[adm0c, adm1c, adm2c, "geometry"]]
     overlap = gpd.overlay(admin2, df, how="intersection")
     overlap = overlap.drop_duplicates()
@@ -253,25 +255,25 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2
     missing_adm2_popbound = np.setdiff1d(list(df_pop[pop_adm2c].dropna()),list(df_adm2[shp_adm2c].dropna()))
     if missing_adm2_popbound.size > 0:
         logger.warning(
-            f"The following adm regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin2_mapping in the config file to include them"
+            f"The following admin2 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin2_mapping in the config file to include them"
         )
 
     missing_adm2_boundpop = np.setdiff1d(list(df_adm2[shp_adm2c].dropna()),list(df_pop[pop_adm2c].dropna()))
     if missing_adm2_boundpop.size > 0:
         logger.warning(
-            f"The following adm regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
+            f"The following admin2 regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
         )
 
     missing_adm1_popbound = np.setdiff1d(list(df_pop[pop_adm1c].dropna()),list(df_adm2[shp_adm1c].dropna()))
     if missing_adm1_popbound.size > 0:
         logger.warning(
-            f"The following adm regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin2_mapping in the config file to include them"
+            f"The following admin1 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin1_mapping in the config file to include them"
         )
 
     missing_adm1_boundpop = np.setdiff1d(list(df_adm2[shp_adm1c].dropna()),list(df_pop[pop_adm1c].dropna()))
     if missing_adm1_boundpop.size > 0:
         logger.warning(
-            f"The following adm regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
+            f"The following admin1 regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
         )
 
 
@@ -466,6 +468,8 @@ def main(country_iso3, suffix,config_file="config.yml"):
     parameters = parse_yaml(config_file)[country_iso3]
 
     country = parameters["country_name"]
+    COUNTRY_FOLDER = f"../../analyses/{country}"
+
     iso2_code = parameters["iso2_code"]
     region = parameters["region"]
     regioncode = parameters["regioncode"]
@@ -475,7 +479,7 @@ def main(country_iso3, suffix,config_file="config.yml"):
     shp_adm2c = parameters["shp_adm2c"]
 
     pop_file = parameters["pop_filename"]
-    POP_PATH = f"{country}/Data/{pop_file}"
+    POP_PATH = f"{COUNTRY_FOLDER}/Data/{pop_file}"
     pop_adm1c = parameters["adm1c_pop"]
     pop_adm2c = parameters["adm2c_pop"]
     pop_col = parameters["pop_col"]
@@ -484,9 +488,9 @@ def main(country_iso3, suffix,config_file="config.yml"):
     fewsnet_dates = parameters["fewsnet_dates"]
 
     PATH_FEWSNET = "Data/FewsNetRaw/"
-    ADMIN2_PATH = f"{country}/Data/{admin2_shp}"
+    ADMIN2_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
     PERIOD_LIST = ["CS", "ML1", "ML2"]
-    RESULT_FOLDER = f"{country}/Data/FewsNetProcessed/"
+    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetProcessed/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
