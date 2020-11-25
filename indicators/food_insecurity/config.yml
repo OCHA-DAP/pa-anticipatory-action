@@ -63,7 +63,7 @@ SOM:
   iso2_code: "SO"
   region: "east-africa"
   regioncode: "EA"
-  path_admin2_shp: "Som_Admbnda_Adm2_UNDP.shp" #downloaded from https://data.humdata.org/dataset/ec140a63-5330-4376-a3df-c7ebf73cfc3c/resource/6f42e9ce-bbca-4c0d-a3e6-85efc9298c3c/download/som_adm_undp_shp.zip
+  path_admin2_shp: "som_adm_undp_shp/Som_Admbnda_Adm2_UNDP.shp" #downloaded from https://data.humdata.org/dataset/ec140a63-5330-4376-a3df-c7ebf73cfc3c/resource/6f42e9ce-bbca-4c0d-a3e6-85efc9298c3c/download/som_adm_undp_shp.zip
   fewsnet_dates: [ "200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
                    "201204","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
                    "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201812",
