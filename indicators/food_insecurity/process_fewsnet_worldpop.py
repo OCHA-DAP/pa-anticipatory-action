@@ -66,8 +66,7 @@ def combine_fewsnet_projections(
     regionabb,
     country_iso2,
     result_folder,
-    start_date,
-    end_date,
+    suffix,
 ):
     """
     Retrieve all FewsNet data, and calculate the population per IPC phase per date-admin combination
@@ -84,8 +83,7 @@ def combine_fewsnet_projections(
         regionabb: abbreviation of the region that the fewsnet data covers, e.g. "EA"
         iso2_code: iso2 code of the country of interest
         result_folder: path to folder to which to save the output
-        start_date: first date that is included in the data
-        end_date: last date that is included in the data
+        suffix: string to attach to the output files name
     """
     # all periods in the FewsNet data
     period_list = ["CS", "ML1", "ML2"]
@@ -188,7 +186,7 @@ def combine_fewsnet_projections(
         df.rename(columns={shp_adm1c: "ADMIN1", shp_adm2c: "ADMIN2"}, inplace=True)
         # TODO: decide what kind of filename we want to use for the output, i.e. do we always want to overwrite the output or not
         df.to_csv(
-            f"{result_folder}{country_iso3.lower()}_admin2_fewsnet_worldpop_{start_date}_{end_date}.csv"
+            f"{result_folder}{country_iso3.lower()}_admin2_fewsnet_worldpop{suffix}.csv"
         )
         # aggregate to admin1 by summing (and set to nan if no data for a date-adm1 combination
         df_adm1 = (
@@ -199,19 +197,20 @@ def combine_fewsnet_projections(
         )
         df_adm1.rename(columns={"pop_ADMIN2": "pop_ADMIN1"}, inplace=True)
         df_adm1.to_csv(
-            f"{result_folder}{country_iso3.lower()}_admin1_fewsnet_worldpop_{start_date}_{end_date}.csv"
+            f"{result_folder}{country_iso3.lower()}_admin1_fewsnet_worldpop{suffix}.csv"
         )
     else:
         logger.warning("No data found for the given dates")
 
 
-def main(country_iso3, config_file="config.yml"):
+def main(country_iso3, suffix, config_file="config.yml"):
     """
     This script computes the population per IPC phase per data - admin2 region combination.
     The IPC phase is retrieved from the FewsNet data, which publishes their data in shapefiles, of three periods namely current situation (CS), near-term projection (ML1) and mid-term projection (ML2)
     The IPC phases range from 1 to 5, and missing values are indicated by 99.
     Args:
         country_iso3: string with iso3 code
+        suffix: string to attach to the output files name
         config_file: path to config file
     """
     parameters = parse_yaml(config_file)[country_iso3]
@@ -224,8 +223,7 @@ def main(country_iso3, config_file="config.yml"):
     admin2_shp = parameters["path_admin2_shp"]
     shp_adm1c = parameters["shp_adm1c"]
     shp_adm2c = parameters["shp_adm2c"]
-    start_date = parameters["start_date"]
-    end_date = parameters["end_date"]
+
     # TODO: to make variables more generalizable with a config.py. Inspiration from pa-covid-model-parameterization
     # pop_dir = os.path.join(config.DIR_PATH, country, config.POP_DIR)
     FOLDER_FEWSNET = "Data/FewsNetRaw/"
@@ -246,12 +244,11 @@ def main(country_iso3, config_file="config.yml"):
         regioncode,
         country_iso2,
         RESULT_FOLDER,
-        start_date,
-        end_date,
+        suffix,
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="warning")
-    main(args.country_iso3.upper())
+    main(args.country_iso3.upper(), args.suffix)

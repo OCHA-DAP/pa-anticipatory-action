@@ -117,17 +117,30 @@ def compute_trigger(df):
     return df
 
 
-def main(country_iso3, admin_level, config_file="config.yml"):
+def main(country_iso3, admin_level, suffix, config_file="config.yml"):
+    """
+    Compute all functions to return one dataframe with processed columns and if trigger is met for each data-source combination
+    Args:
+        country_iso3: string with iso3 code
+        suffix: string to attach to the output files name
+        admin_level: integer indicating which admin level to aggregate to
+        suffix: string that is attached to the input file names and will be attached to the output file names
+        config_file: path to config file
+    """
     parameters = parse_yaml(config_file)[country_iso3]
     country = parameters["country_name"]
-    start_date = parameters["start_date"]
-    end_date = parameters["end_date"]
-    FEWS_PROCESSED_FOLDER = f"{country}/Data/FewsNetCombined/"
+
+    FEWS_PROCESSED_FOLDER = f"{country}/Data/FewsNetProcessed/"
     GIPC_PROCESSED_FOLDER = f"{country}/Data/GlobalIPCProcessed/"
-    processed_fews_path = f"{FEWS_PROCESSED_FOLDER}{country}_admin{admin_level}_fewsnet_combined_{start_date}_{end_date}.csv"
-    processed_globalipc_path = (
-        f"{GIPC_PROCESSED_FOLDER}{country}_globalipc_ADMIN{admin_level}.csv"
+    processed_fews_path = (
+        f"{FEWS_PROCESSED_FOLDER}{country}_fewsnet_admin{admin_level}{suffix}.csv"
     )
+    processed_globalipc_path = (
+        f"{GIPC_PROCESSED_FOLDER}{country}_globalipc_ADMIN{admin_level}{suffix}.csv"
+    )
+
+    RESULT_FOLDER = f"{country}/Data/IPC_trigger/"
+    Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
     # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
     ipc_cols = [
@@ -186,14 +199,12 @@ def main(country_iso3, admin_level, config_file="config.yml"):
         df_comb_trig = pd.DataFrame()
         logger.warning("No data found")
 
-    RESULT_FOLDER = f"{country}/Data/IPC_trigger/"
-    Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
     df_comb_trig.to_csv(
-        f"{RESULT_FOLDER}trigger_results_admin{admin_level}.csv", index=False
+        f"{RESULT_FOLDER}trigger_results_admin{admin_level}{suffix}.csv", index=False
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="warning")
-    main(args.country_iso3.upper(), args.admin_level)
+    main(args.country_iso3.upper(), args.admin_level, args.suffix)

@@ -16,7 +16,7 @@ def read_ipcglobal(parameters, ipc_path, shp_path, admin_level):
         parameters: dict with parameters parsed from config
         ipc_path: path to ipc data
         shp_path: path to shapefile
-
+        admin_level: integer indicating which admin level to aggregate to
     Returns:
         df_ipc: DataFrame with processed ipc data
     """
@@ -74,12 +74,14 @@ def read_ipcglobal(parameters, ipc_path, shp_path, admin_level):
     return df_ipc_agg
 
 
-def main(country_iso3, admin_level, config_file="config.yml"):
+def main(country_iso3, admin_level, suffix, config_file="config.yml"):
     """
     Define variables and save output
     Args:
         country_iso3: string with iso3 code
+        admin_level: integer indicating which admin level to aggregate to
         config_file: path to config file
+        suffix: string to attach to the output files name
     """
     parameters = parse_yaml(config_file)[country_iso3]
     country = parameters["country_name"]
@@ -93,10 +95,10 @@ def main(country_iso3, admin_level, config_file="config.yml"):
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
     df_ipc = read_ipcglobal(parameters, IPC_PATH, SHP_PATH, admin_level)
-    df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_ADMIN{admin_level}.csv")
+    df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_ADMIN{admin_level}{suffix}.csv")
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="warning")
-    main(args.country_iso3.upper(), args.admin_level)
+    main(args.country_iso3.upper(), args.admin_level, args.suffix)
