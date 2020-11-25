@@ -7,6 +7,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("country_iso3", help="Country ISO3")
     parser.add_argument("-a", "--admin_level", default=1)
+    # Prefix for filenames
+    parser.add_argument(
+        "-s",
+        "--suffix",
+        default="",
+        type=str,
+        help="Suffix for output files, and if applicable input files",
+    )
     return parser.parse_args()
 
 
