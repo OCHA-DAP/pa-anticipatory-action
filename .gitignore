@@ -1,4 +1,5 @@
-# vs code
+# IDEs
+.idea/*
 .vscode/*
 
 #Mac DSStore
@@ -12,3 +13,6 @@
 .Rhistory
 .RData
 .Ruserdata
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
