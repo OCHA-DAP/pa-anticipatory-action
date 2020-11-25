@@ -226,6 +226,54 @@ def merge_ipcperiod(inputdf_dict, adm0c, adm1c, adm2c):
     df["date"] = df["date"].dt.date
     return df
 
+def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping):
+    """
+    Determine if there is any admin regions that are not in the admin boundaries or population file. This to circumvent part of the population not being assigned to an admin.
+    Args:
+        adm_path:
+        pop_path: path to csv with population counts per admin2 region
+        shp_adm1c:  column name of the admin1 level name, in admin boundary data
+        shp_adm2c:  column name of the admin2 level name, in admin boundary data
+        pop_adm1c: column name of the admin1 level name, in population data
+        pop_adm2c: column name of the admin2 level name, in population data
+        pop_col: column name that contains the population count
+        admin2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+        admin1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+    """
+    df_adm2 = gpd.read_file(adm_path)
+    df_pop =load_popdata(
+        pop_path,
+        pop_adm1c,
+        pop_adm2c,
+        pop_col,
+        admin2_mapping=admin2_mapping,
+        admin1_mapping=admin1_mapping,
+    )
+
+    missing_adm2_popbound = np.setdiff1d(list(df_pop[pop_adm2c].dropna()),list(df_adm2[shp_adm2c].dropna()))
+    if missing_adm2_popbound.size > 0:
+        logger.warning(
+            f"The following adm regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin2_mapping in the config file to include them"
+        )
+
+    missing_adm2_boundpop = np.setdiff1d(list(df_adm2[shp_adm2c].dropna()),list(df_pop[pop_adm2c].dropna()))
+    if missing_adm2_boundpop.size > 0:
+        logger.warning(
+            f"The following adm regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
+        )
+
+    missing_adm1_popbound = np.setdiff1d(list(df_pop[pop_adm1c].dropna()),list(df_adm2[shp_adm1c].dropna()))
+    if missing_adm1_popbound.size > 0:
+        logger.warning(
+            f"The following adm regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin2_mapping in the config file to include them"
+        )
+
+    missing_adm1_boundpop = np.setdiff1d(list(df_adm2[shp_adm1c].dropna()),list(df_pop[pop_adm1c].dropna()))
+    if missing_adm1_boundpop.size > 0:
+        logger.warning(
+            f"The following adm regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
+        )
+
 
 def load_popdata(
     pop_path, pop_adm1c, pop_adm2c, pop_col, admin2_mapping=None, admin1_mapping=None
@@ -398,7 +446,7 @@ def aggr_admin1(df, adm1c):
     return df_adm
 
 
-def main(country_iso3, config_file="config.yml"):
+def main(country_iso3, suffix,config_file="config.yml"):
     """
     This script takes the FEWSNET IPC shapefiles provided by on fews.net and overlays them with an admin2 shapefile, in order
     to provide an IPC value for each admin2 district. In the case where there are multiple values per district, the IPC value
@@ -410,6 +458,10 @@ def main(country_iso3, config_file="config.yml"):
     Possible IPC values range from 1 (least severe) to 5 (most severe, famine).
 
     Set all variables, run the function for the different forecasts, and save as csv
+    Args:
+        country_iso3: string with iso3 code
+        suffix: string to attach to the output files name
+        config_file: path to config file
     """
     parameters = parse_yaml(config_file)[country_iso3]
 
@@ -422,10 +474,6 @@ def main(country_iso3, config_file="config.yml"):
     shp_adm1c = parameters["shp_adm1c"]
     shp_adm2c = parameters["shp_adm2c"]
 
-    # TODO: check if can be changed to fewsnet_dates min and max
-    start_date = parameters["start_date"]
-    end_date = parameters["end_date"]
-
     pop_file = parameters["pop_filename"]
     POP_PATH = f"{country}/Data/{pop_file}"
     pop_adm1c = parameters["adm1c_pop"]
@@ -433,11 +481,12 @@ def main(country_iso3, config_file="config.yml"):
     pop_col = parameters["pop_col"]
     admin1_mapping = parameters["admin1_mapping"]
     admin2_mapping = parameters["admin2_mapping"]
+    fewsnet_dates = parameters["fewsnet_dates"]
 
     PATH_FEWSNET = "Data/FewsNetRaw/"
     ADMIN2_PATH = f"{country}/Data/{admin2_shp}"
     PERIOD_LIST = ["CS", "ML1", "ML2"]
-    RESULT_FOLDER = f"{country}/Data/FewsNetCombined/"
+    RESULT_FOLDER = f"{country}/Data/FewsNetProcessed/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
@@ -447,7 +496,7 @@ def main(country_iso3, config_file="config.yml"):
             PATH_FEWSNET,
             ADMIN2_PATH,
             period,
-            parameters["fewsnet_dates"],
+            fewsnet_dates,
             shp_adm0c,
             shp_adm1c,
             shp_adm2c,
@@ -457,7 +506,8 @@ def main(country_iso3, config_file="config.yml"):
         )
 
     df_allipc = merge_ipcperiod(perioddf_dict, shp_adm0c, shp_adm1c, shp_adm2c)
-
+    #check whether names of adm regions in boundary and population files don't correspond
+    check_missingadmins(ADMIN2_PATH,POP_PATH,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping)
     df_pop = load_popdata(
         POP_PATH,
         pop_adm1c,
@@ -478,16 +528,16 @@ def main(country_iso3, config_file="config.yml"):
     )
 
     df_ipcpop.to_csv(
-        f"{RESULT_FOLDER}{country}_admin2_fewsnet_combined_{start_date}_{end_date}.csv"
+        f"{RESULT_FOLDER}{country}_fewsnet_admin2{suffix}.csv"
     )
 
     df_adm1 = aggr_admin1(df_ipcpop, shp_adm1c)
     df_adm1.to_csv(
-        f"{RESULT_FOLDER}{country}_admin1_fewsnet_combined_{start_date}_{end_date}.csv"
+        f"{RESULT_FOLDER}{country}_fewsnet_admin1{suffix}.csv"
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="warning")
-    main(args.country_iso3.upper())
+    main(args.country_iso3.upper(),args.suffix)
