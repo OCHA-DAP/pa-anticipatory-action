@@ -129,9 +129,10 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
     """
     parameters = parse_yaml(config_file)[country_iso3]
     country = parameters["country_name"]
+    COUNTRY_FOLDER = f"../../analyses/{country}"
 
-    FEWS_PROCESSED_FOLDER = f"{country}/Data/FewsNetProcessed/"
-    GIPC_PROCESSED_FOLDER = f"{country}/Data/GlobalIPCProcessed/"
+    FEWS_PROCESSED_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetProcessed/"
+    GIPC_PROCESSED_FOLDER = f"{COUNTRY_FOLDER}/Data/GlobalIPCProcessed/"
     processed_fews_path = (
         f"{FEWS_PROCESSED_FOLDER}{country}_fewsnet_admin{admin_level}{suffix}.csv"
     )
@@ -139,7 +140,7 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
         f"{GIPC_PROCESSED_FOLDER}{country}_globalipc_ADMIN{admin_level}{suffix}.csv"
     )
 
-    RESULT_FOLDER = f"{country}/Data/IPC_trigger/"
+    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/IPC_trigger/"
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
     # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower

@@ -216,6 +216,8 @@ def main(country_iso3, suffix, config_file="config.yml"):
     parameters = parse_yaml(config_file)[country_iso3]
 
     country = parameters["country_name"]
+    COUNTRY_FOLDER = f"../../analyses/{country}"
+
     region = parameters["region"]
     regioncode = parameters["regioncode"]
     country_iso2 = parameters["iso2_code"]
@@ -227,9 +229,9 @@ def main(country_iso3, suffix, config_file="config.yml"):
     # TODO: to make variables more generalizable with a config.py. Inspiration from pa-covid-model-parameterization
     # pop_dir = os.path.join(config.DIR_PATH, country, config.POP_DIR)
     FOLDER_FEWSNET = "Data/FewsNetRaw/"
-    FOLDER_POP = f"{country}/Data/WorldPop"
-    ADMIN2_PATH = f"{country}/Data/{admin2_shp}"
-    RESULT_FOLDER = f"{country}/Data/FewsNetWorldPop/"
+    FOLDER_POP = f"{COUNTRY_FOLDER}/Data/WorldPop"
+    ADMIN2_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
+    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetWorldPop/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
     combine_fewsnet_projections(

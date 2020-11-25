@@ -88,9 +88,10 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
     admin2_shp = parameters["path_admin2_shp"]
     GLOBALIPC_PATH = parameters["ipc_path"]
 
-    SHP_PATH = f"{country}/Data/{admin2_shp}"
-    IPC_PATH = f"{country}/Data/{GLOBALIPC_PATH}"
-    RESULT_FOLDER = f"{country}/Data/GlobalIPCProcessed/"
+    COUNTRY_FOLDER = f"../../analyses/{country}"
+    SHP_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
+    IPC_PATH = f"{COUNTRY_FOLDER}/Data/{GLOBALIPC_PATH}"
+    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/GlobalIPCProcessed/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
