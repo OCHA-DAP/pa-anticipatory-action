@@ -4,7 +4,7 @@ ETH:
   iso2_code: "ET"
   region: "east-africa"
   regioncode: "EA"
-  path_admin2_shp: "ET_Admin2_OCHA_2019/eth_admbnda_adm2_csa_bofed_20190827.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+  path_admin2_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm2_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
   fewsnet_dates: ["200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
   "201204","201207","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
   "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201810",
@@ -12,20 +12,19 @@ ETH:
   shp_adm0c: "ADM0_EN"
   shp_adm1c: "ADM1_EN"
   shp_adm2c: "ADM2_EN"
-  pop_filename: "Population_OCHA_2020/eth_admpop_adm2_2020.csv" #downloaded from https://data.humdata.org/dataset/ethiopia-population-data-_-admin-level-0-3
+  pop_filename: "Population_OCHA_2020/eth_admpop_adm2_20201028.csv" #downloaded from https://data.humdata.org/dataset/ethiopia-population-data-_-admin-level-0-3
   pop_col: "Total"
-  adm1c_pop: "admin1Name_en"
-  adm2c_pop: "admin2Name_en"
+  adm1c_pop: "ADM1_EN"
+  adm2c_pop: "ADM2_EN"
   admin1_mapping: {}
-  admin2_mapping: {"Etang Special": "Etang Special woreda","Zone 4  (Fantana Rasu)": "Zone 4 (Fantana Rasu)"}
-  start_date: "20090701"
-  end_date: "20201001"
-  processed_fews_path: "ethiopia/Data/FewsNetCombined/ethiopia_admin1_fewsnet_combined_20090701_20201001.csv"
+  admin2_mapping:
+    Etang Special: Etang Special woreda
+    Zone 4  (Fantana Rasu): Zone 4 (Fantana Rasu)
+    Halaba Special: Halaba
   ipc_path: "GlobalIPC/GlobalIPC_newcolumnnames.xlsx"
   replace_dict:
     Oromiya: Oromia
     SNNPR: SNNP
-  processed_globalipc_path: "ethiopia/Data/GlobalIPCProcessed/ethiopia_globalipc_processed.csv"
 
 MWI:
   country_name: "malawi"
@@ -46,10 +45,18 @@ MWI:
   pop_col: "p2019pop"
   adm1c_pop: "ADM1_EN"
   adm2c_pop: "ADM2_EN32"
+  #population data -- admin boundaries mapping
   admin1_mapping: {}
   admin2_mapping: {}
-  start_date: "20090701"
-  end_date: "20201001"
+  ipc_path: "GlobalIPC/GlobalIPC_newcolumnnames.xlsx"
+  #globalIPC -- admin boundaries mapping
+  replace_dict:
+    Blantyre city: Blantyre City
+    Chikhwawa: Chikwawa
+    Lilongwe city: Lilongwe City
+    Mzuzu city: Mzuzu City
+    Nkhata bay: Nkhata Bay
+    Zomba city: Zomba City
 
 SOM:
   country_name: "somalia"
@@ -70,5 +77,3 @@ SOM:
   adm2c_pop: "Admin2Name_en"
   admin1_mapping: {}
   admin2_mapping: {}
- # start_date: "20090701"
- # end_date: "20201001"
