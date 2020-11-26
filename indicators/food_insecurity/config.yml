@@ -1,4 +1,7 @@
 # country specific parameters
+# admin1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+# admin2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+
 ETH:
   country_name: "ethiopia"
   iso2_code: "ET"
@@ -77,6 +80,6 @@ SOM:
   adm2c_pop: "Admin2Name_en"
   admin1_mapping: {}
   admin2_mapping: 
-    Baydhaba: Baidoa
-    Bandarbeyla: Bandarbayla
-    Baydhaba: Baydhabo
+    Baidoa: Baydhaba
+    Bandarbayla: Bandarbeyla
+    Baidoa: Baydhabo
