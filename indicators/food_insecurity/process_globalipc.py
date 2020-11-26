@@ -96,7 +96,7 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
     df_ipc = read_ipcglobal(parameters, IPC_PATH, SHP_PATH, admin_level)
-    df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_ADMIN{admin_level}{suffix}.csv")
+    df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_admin{admin_level}{suffix}.csv")
 
 
 if __name__ == "__main__":
