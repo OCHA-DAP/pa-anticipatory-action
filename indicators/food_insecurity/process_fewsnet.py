@@ -228,7 +228,7 @@ def merge_ipcperiod(inputdf_dict, adm0c, adm1c, adm2c):
     df["date"] = df["date"].dt.date
     return df
 
-def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping):
+def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm0c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping):
     """
     Determine if there is any admin regions that are not in the admin boundaries or population file. This to circumvent part of the population not being assigned to an admin.
     Args:
@@ -245,6 +245,7 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2
     df_adm2 = gpd.read_file(adm_path)
     df_pop =load_popdata(
         pop_path,
+        pop_adm0c,
         pop_adm1c,
         pop_adm2c,
         pop_col,
@@ -278,7 +279,7 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2
 
 
 def load_popdata(
-    pop_path, pop_adm1c, pop_adm2c, pop_col, admin2_mapping=None, admin1_mapping=None
+    pop_path, pop_adm0c, pop_adm1c, pop_adm2c, pop_col, admin2_mapping=None, admin1_mapping=None
 ):
     """
 
@@ -310,6 +311,9 @@ def load_popdata(
         logger.warning(f"No population data for {', '.join(no_popdata)}")
     # 0 is here treated as missing data, since it is not realistic that a region has no population and will make calculations later on easier
     df_pop[pop_col] = df_pop[pop_col].replace(0, np.nan)
+
+    #in case there are duplicate adm1-adm2 combinations
+    df_pop=df_pop.groupby([pop_adm0c,pop_adm1c,pop_adm2c],as_index=False).sum()
 
     df_pop.rename(columns={pop_col: "Total"}, inplace=True)
     return df_pop
@@ -480,6 +484,7 @@ def main(country_iso3, suffix,config_file="config.yml"):
 
     pop_file = parameters["pop_filename"]
     POP_PATH = f"{COUNTRY_FOLDER}/Data/{pop_file}"
+    pop_adm0c = parameters["adm0c_pop"]
     pop_adm1c = parameters["adm1c_pop"]
     pop_adm2c = parameters["adm2c_pop"]
     pop_col = parameters["pop_col"]
@@ -511,9 +516,10 @@ def main(country_iso3, suffix,config_file="config.yml"):
 
     df_allipc = merge_ipcperiod(perioddf_dict, shp_adm0c, shp_adm1c, shp_adm2c)
     #check whether names of adm regions in boundary and population files don't correspond
-    check_missingadmins(ADMIN2_PATH,POP_PATH,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping)
+    check_missingadmins(ADMIN2_PATH,POP_PATH,shp_adm1c,shp_adm2c,pop_adm0c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping)
     df_pop = load_popdata(
         POP_PATH,
+        pop_adm0c,
         pop_adm1c,
         pop_adm2c,
         pop_col,
