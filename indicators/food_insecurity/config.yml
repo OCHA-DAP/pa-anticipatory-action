@@ -68,12 +68,15 @@ SOM:
                    "201204","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
                    "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201812",
                    "201902","201906","201910","202002","202006","202008","202010"]
-  shp_adm0c: "ADM0_EN"
-  shp_adm1c: "ADM1_EN"
-  shp_adm2c: "ADM2_EN"
+  shp_adm0c: "admin0Name"
+  shp_adm1c: "admin1Name"
+  shp_adm2c: "admin2Name"
   pop_filename: "som_pplp_adm2.csv" #downloaded from https://data.humdata.org/dataset/6cac9c64-2716-4809-9e82-440839d421f6/resource/a63d9729-c8fa-4456-a3fd-11034dd2117b/download/som_pplp_adm2.csv
   pop_col: "Pop2014UNFPA"
   adm1c_pop: "admin1Name_en"
   adm2c_pop: "Admin2Name_en"
   admin1_mapping: {}
-  admin2_mapping: {}
+  admin2_mapping: 
+    Baydhaba: Baidoa
+    Bandarbeyla: Bandarbayla
+    Baydhaba: Baydhabo
