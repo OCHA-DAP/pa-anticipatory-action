@@ -3,7 +3,7 @@ import os
 import geopandas as gpd
 from rasterstats import zonal_stats
 import numpy as np
-from utils import parse_args, parse_yaml, config_logger
+from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data
 from pathlib import Path
 import logging
 from tqdm import tqdm
@@ -102,10 +102,11 @@ def combine_fewsnet_projections(
             fews_country_path = (
                 f"{folder_fews}{country_iso2}_{d}/{country_iso2}_{d}_{period}.shp"
             )
-            if os.path.exists(fews_region_path):
-                fews_path = fews_region_path
-            elif os.path.exists(fews_country_path):
+            if os.path.exists(fews_country_path):
                 fews_path = fews_country_path
+            elif os.path.exists(fews_region_path):
+                fews_path = fews_region_path
+
 
             # path to population data
             pop_path = f"{folder_pop}/{country_iso3.lower()}_ppp_{d[:4]}_1km_Aggregated_UNadj.tif"
@@ -203,7 +204,7 @@ def combine_fewsnet_projections(
         logger.warning("No data found for the given dates")
 
 
-def main(country_iso3, suffix, config_file="config.yml"):
+def main(country_iso3, suffix, download_fewsnet, config_file="config.yml"):
     """
     This script computes the population per IPC phase per data - admin2 region combination.
     The IPC phase is retrieved from the FewsNet data, which publishes their data in shapefiles, of three periods namely current situation (CS), near-term projection (ML1) and mid-term projection (ML2)
@@ -234,6 +235,11 @@ def main(country_iso3, suffix, config_file="config.yml"):
     RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetWorldPop/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
+
+    if download_fewsnet:
+        for d in dates:
+            get_fewsnet_data(d,country_iso2,region,regioncode,FOLDER_FEWSNET)
+
     combine_fewsnet_projections(
         country_iso3,
         dates,
@@ -253,4 +259,4 @@ def main(country_iso3, suffix, config_file="config.yml"):
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="warning")
-    main(args.country_iso3.upper(), args.suffix)
+    main(args.country_iso3.upper(), args.suffix, args.download_fewsnet)
