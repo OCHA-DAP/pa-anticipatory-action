@@ -86,3 +86,26 @@ SOM:
     Baidoa: Baydhaba
     Bandarbayla: Bandarbeyla
     Baidoa: Baydhabo
+
+TCD:
+  country_name: "chad"
+  iso2_code: "TD"
+  region: "west-africa"
+  regioncode: "WA"
+  path_admin2_shp:
+  fewsnet_dates: ["200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
+  "201204","201207","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
+  "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201810",
+  "201902","201906","201910","202002","202006","202010"]
+  shp_adm0c:
+  shp_adm1c:
+  shp_adm2c:
+  pop_filename:
+  pop_col:
+  adm0c_pop:
+  adm1c_pop:
+  adm2c_pop:
+  admin1_mapping:
+  admin2_mapping:
+  ipc_path:
+  replace_dict:
