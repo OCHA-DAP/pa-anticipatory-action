@@ -2,7 +2,7 @@
 
 ## Background information
 
-What is the context of anticipatory action in this country?
+Provide a basic overview of the context of anticipatory action in this country. Link to the GDrive Trigger Card document for greater context and details.  
 
 ## Overview of analysis
 
