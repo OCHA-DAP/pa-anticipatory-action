@@ -1,3 +1,6 @@
+#Data
+indicators/food_insecurity/Data/FewsNetRaw
+
 # IDEs
 .idea/*
 .vscode/*
