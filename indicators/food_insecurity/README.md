@@ -8,10 +8,11 @@ This folder includes scripts to process IPC data by FewsNet and GlobalIPC. Moreo
 
 ### Adding a new country
 ##### General
-1. Download the shapefiles of the country, one on admin2 and one on admin1 level. Place the files in `country_name/Data` and set the specific path in the `config.yml`. Generally shapefiles can be found on the [Humanitarian Data Exchange](data.humdata.org)) or [FewsNet](https://fews.net/fews-data/334)  
+1. Download the shapefiles of the country, one on admin2 and one on admin1 level. Place the files in `country_name/Data` and set the specific path in the `config.yml`. 
+Generally shapefiles can be found on the [Humanitarian Data Exchange](data.humdata.org)), here it is good practice to go to the data grid of the country, for which the url is `https://data.humdata.org/group/[COUNTRY ISO3 CODE]` and then look at Geography&Infrastructure --> administrative boundaries. FewsNet also [provides administrative boundaries](https://fews.net/fews-data/334). 
 2. Add the country-specific variables to `config.yml`
 
-3a. If using `process_fewsnet.py`, download regional population data for one year and place it in `country_name/Data`. Often available by UN OCHA on the [Humanitarian Data Exchange](data.humdata.org)
+3a. If using `process_fewsnet.py`, download regional population data for one year and place it in `country_name/Data`. Often available on the [Humanitarian Data Exchange](data.humdata.org) through the data grid (`https://data.humdata.org/group/[COUNTRY ISO3 CODE]`) under Population & Socio-economy --> Baseline population
 3b. If using `process_fewsnet_worldpop.py`, download WorldPop's raster population data for all years to be included and save them in `country_name/Data/WorldPop`. The script expects to find the 1km, UNAdjusted files there.
 
 ##### FewsNet
