@@ -8,6 +8,13 @@ Provide a basic overview of the context of anticipatory action in this country. 
 
 What is the basic process of the analysis contained within this repository? 
 
+## Data description
+
+- Where does the data come from? Are there any licensing or usage restrictions?
+- How can the data be accessed?
+- Why were these datasets selected?
+- Are there any limitations with these datasets that one should be aware of when running the analysis and interpreting results?
+
 ## Directory structure
 
 Modify the structure outlined below as needed. 
@@ -27,7 +34,6 @@ Modify the structure outlined below as needed.
 ## Reproducing this analysis
 
 Include guidance to:
-- Access necessary datasets 
 - Reproduce the required computational environment 
 - Run top-level scripts (if needed)
 - Configure paramerers
