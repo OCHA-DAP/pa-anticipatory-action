@@ -3,10 +3,11 @@ import os
 import geopandas as gpd
 from rasterstats import zonal_stats
 import numpy as np
-from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data
+from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data, get_worldpop_data
 from pathlib import Path
 import logging
 from tqdm import tqdm
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ def combine_fewsnet_projections(
     country_iso2,
     result_folder,
     suffix,
+    config
 ):
     """
     Retrieve all FewsNet data, and calculate the population per IPC phase per date-admin combination
@@ -109,7 +111,7 @@ def combine_fewsnet_projections(
 
 
             # path to population data
-            pop_path = f"{folder_pop}/{country_iso3.lower()}_ppp_{d[:4]}_1km_Aggregated_UNadj.tif"
+            pop_path = f"{folder_pop}/{config.WORLDPOP_FILENAME.format(country_iso3=country_iso3,year=d[:4])}" #_1km_Aggregated_UNadj#{country_iso3.lower()}_ppp_{d[:4]}_UNadj.tif"
 
             if fews_path and os.path.exists(pop_path):
                 df_fews = merge_fewsnet_population(
@@ -204,7 +206,7 @@ def combine_fewsnet_projections(
         logger.warning("No data found for the given dates")
 
 
-def main(country_iso3, suffix, download_fewsnet, config_file="config.yml"):
+def main(country_iso3, suffix, download, config_file="config.yml", config=None):
     """
     This script computes the population per IPC phase per data - admin2 region combination.
     The IPC phase is retrieved from the FewsNet data, which publishes their data in shapefiles, of three periods namely current situation (CS), near-term projection (ML1) and mid-term projection (ML2)
@@ -214,7 +216,11 @@ def main(country_iso3, suffix, download_fewsnet, config_file="config.yml"):
         suffix: string to attach to the output files name
         config_file: path to config file
     """
-    parameters = parse_yaml(config_file)[country_iso3]
+
+    if config is None:
+        config = Config()
+    parameters = config.parameters(country_iso3)
+    # parameters = parse_yaml(config_file)[country_iso3]
 
     country = parameters["country_name"]
     COUNTRY_FOLDER = f"../../analyses/{country}"
@@ -236,9 +242,13 @@ def main(country_iso3, suffix, download_fewsnet, config_file="config.yml"):
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
-    if download_fewsnet:
+    if download:
         for d in dates:
             get_fewsnet_data(d,country_iso2,region,regioncode,FOLDER_FEWSNET)
+        years=[x[:4] for x in dates]
+        years_unique=set(years)
+        for y in years_unique:
+            get_worldpop_data(country_iso3, y, FOLDER_POP, config)
 
     combine_fewsnet_projections(
         country_iso3,
@@ -253,10 +263,11 @@ def main(country_iso3, suffix, download_fewsnet, config_file="config.yml"):
         country_iso2,
         RESULT_FOLDER,
         suffix,
+        config
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
-    config_logger(level="warning")
+    config_logger(level="info")
     main(args.country_iso3.upper(), args.suffix, args.download_fewsnet)
