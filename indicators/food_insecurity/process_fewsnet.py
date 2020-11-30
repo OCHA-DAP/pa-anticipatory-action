@@ -2,7 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import os
 import numpy as np
-from utils import parse_args, parse_yaml, config_logger
+from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data
 from pathlib import Path
 import logging
 
@@ -29,12 +29,12 @@ def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
         # In most cases FewsNet publishes per region, but sometimes also per country, so allow for both
         shape_region = f"{path}{region}{d}/{regionabb}_{d}_{period}.shp"
         shape_country = f"{path}{iso2_code}_{d}/{iso2_code}_{d}_{period}.shp"
-        if os.path.exists(shape_region):
-            gdf = gpd.read_file(shape_region)
+        if os.path.exists(shape_country):
+            gdf = gpd.read_file(shape_country)
             gdf["date"] = pd.to_datetime(d, format="%Y%m")
             df = df.append(gdf, ignore_index=True)
-        elif os.path.exists(shape_country):
-            gdf = gpd.read_file(shape_country)
+        elif os.path.exists(shape_region):
+            gdf = gpd.read_file(shape_region)
             gdf["date"] = pd.to_datetime(d, format="%Y%m")
             df = df.append(gdf, ignore_index=True)
     return df
@@ -452,7 +452,7 @@ def aggr_admin1(df, adm1c):
     return df_adm
 
 
-def main(country_iso3, suffix,config_file="config.yml"):
+def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
     """
     This script takes the FEWSNET IPC shapefiles provided by on fews.net and overlays them with an admin2 shapefile, in order
     to provide an IPC value for each admin2 district. In the case where there are multiple values per district, the IPC value
@@ -498,6 +498,10 @@ def main(country_iso3, suffix,config_file="config.yml"):
     RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetProcessed/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
+
+    if download_fewsnet:
+        for d in fewsnet_dates:
+            get_fewsnet_data(d,iso2_code,region,regioncode,PATH_FEWSNET)
 
     perioddf_dict = {}
     for period in PERIOD_LIST:
@@ -549,5 +553,5 @@ def main(country_iso3, suffix,config_file="config.yml"):
 
 if __name__ == "__main__":
     args = parse_args()
-    config_logger(level="warning")
-    main(args.country_iso3.upper(),args.suffix)
+    config_logger(level="info")
+    main(args.country_iso3.upper(),args.suffix,args.download_fewsnet)
