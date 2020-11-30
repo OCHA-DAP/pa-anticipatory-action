@@ -2,7 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import os
 import numpy as np
-from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data
+from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data, convert_to_numeric
 from pathlib import Path
 import logging
 
@@ -228,7 +228,7 @@ def merge_ipcperiod(inputdf_dict, adm0c, adm1c, adm2c):
     df["date"] = df["date"].dt.date
     return df
 
-def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm0c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping):
+def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,pop_bound_adm2_mapping,pop_bound_adm1_mapping):
     """
     Determine if there is any admin regions that are not in the admin boundaries or population file. This to circumvent part of the population not being assigned to an admin.
     Args:
@@ -239,24 +239,23 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm0c,pop_adm1
         pop_adm1c: column name of the admin1 level name, in population data
         pop_adm2c: column name of the admin2 level name, in population data
         pop_col: column name that contains the population count
-        admin2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
-        admin1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+        pop_bound_adm2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+        pop_bound_adm1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
     """
     df_adm2 = gpd.read_file(adm_path)
     df_pop =load_popdata(
         pop_path,
-        pop_adm0c,
         pop_adm1c,
         pop_adm2c,
         pop_col,
-        admin2_mapping=admin2_mapping,
-        admin1_mapping=admin1_mapping,
+        pop_bound_adm2_mapping=pop_bound_adm2_mapping,
+        pop_bound_adm1_mapping=pop_bound_adm1_mapping,
     )
 
     missing_adm2_popbound = np.setdiff1d(list(df_pop[pop_adm2c].dropna()),list(df_adm2[shp_adm2c].dropna()))
     if missing_adm2_popbound.size > 0:
         logger.warning(
-            f"The following admin2 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin2_mapping in the config file to include them"
+            f"The following admin2 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the pop_bound_adm2_mapping in the config file to include them"
         )
 
     missing_adm2_boundpop = np.setdiff1d(list(df_adm2[shp_adm2c].dropna()),list(df_pop[pop_adm2c].dropna()))
@@ -268,18 +267,18 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm0c,pop_adm1
     missing_adm1_popbound = np.setdiff1d(list(df_pop[pop_adm1c].dropna()),list(df_adm2[shp_adm1c].dropna()))
     if missing_adm1_popbound.size > 0:
         logger.warning(
-            f"The following admin1 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the admin1_mapping in the config file to include them"
+            f"The following admin1 regions of the pop file are not found in the boundaries shapefile: {missing_adm1_popbound}. You can adjust the pop_bound_adm1_mapping in the config file to include them"
         )
 
     missing_adm1_boundpop = np.setdiff1d(list(df_adm2[shp_adm1c].dropna()),list(df_pop[pop_adm1c].dropna()))
     if missing_adm1_boundpop.size > 0:
         logger.warning(
-            f"The following admin1 regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
+            f"The following admin1 regions of the boundaries shapefile are not found in the pop file {missing_adm1_boundpop}"
         )
 
 
 def load_popdata(
-    pop_path, pop_adm0c, pop_adm1c, pop_adm2c, pop_col, admin2_mapping=None, admin1_mapping=None
+    pop_path, pop_adm1c, pop_adm2c, pop_col, pop_bound_adm2_mapping=None, pop_bound_adm1_mapping=None
 ):
     """
 
@@ -288,8 +287,8 @@ def load_popdata(
         pop_adm1c: column name of the admin1 level name, in population data
         pop_adm2c: column name of the admin1 level name, in population data
         pop_col: column name that contains the population count
-        admin2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
-        admin1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+        pop_bound_adm2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+        pop_bound_adm1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
 
     Returns:
         df_pop: DataFrame with population per admin2/admin1 combination that corresponds with FewsNet names
@@ -298,23 +297,24 @@ def load_popdata(
     df_pop = pd.read_csv(pop_path)
     # remove whitespace at end of string
     df_pop[pop_adm2c] = df_pop[pop_adm2c].str.rstrip()
-    if admin2_mapping:
+    if pop_bound_adm2_mapping:
         df_pop[pop_adm2c] = df_pop[pop_adm2c].apply(
-            lambda x: get_new_name(x, admin2_mapping)
+            lambda x: get_new_name(x, pop_bound_adm2_mapping)
         )
-    if admin1_mapping:
+    if pop_bound_adm1_mapping:
         df_pop[pop_adm1c] = df_pop[pop_adm1c].apply(
-            lambda x: get_new_name(x, admin1_mapping)
+            lambda x: get_new_name(x, pop_bound_adm1_mapping)
         )
     no_popdata = df_pop.loc[df_pop[pop_col].isin([0, np.nan]), pop_adm2c].values
     if len(no_popdata) > 0:
         logger.warning(f"No population data for {', '.join(no_popdata)}")
+
+    df_pop[pop_col]=convert_to_numeric(df_pop[pop_col])
     # 0 is here treated as missing data, since it is not realistic that a region has no population and will make calculations later on easier
     df_pop[pop_col] = df_pop[pop_col].replace(0, np.nan)
 
-    #in case there are duplicate adm1-adm2 combinations
-    df_pop=df_pop.groupby([pop_adm0c,pop_adm1c,pop_adm2c],as_index=False).sum()
-
+    # in case there are duplicate adm1-adm2 combinations
+    df_pop = df_pop.groupby([pop_adm1c, pop_adm2c], as_index=False).sum()
     df_pop.rename(columns={pop_col: "Total"}, inplace=True)
     return df_pop
 
@@ -484,12 +484,11 @@ def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
 
     pop_file = parameters["pop_filename"]
     POP_PATH = f"{COUNTRY_FOLDER}/Data/{pop_file}"
-    pop_adm0c = parameters["adm0c_pop"]
     pop_adm1c = parameters["adm1c_pop"]
     pop_adm2c = parameters["adm2c_pop"]
     pop_col = parameters["pop_col"]
-    admin1_mapping = parameters["admin1_mapping"]
-    admin2_mapping = parameters["admin2_mapping"]
+    pop_bound_adm1_mapping = parameters["pop_bound_adm1_mapping"]
+    pop_bound_adm2_mapping = parameters["pop_bound_adm2_mapping"]
     fewsnet_dates = parameters["fewsnet_dates"]
 
     PATH_FEWSNET = "Data/FewsNetRaw/"
@@ -520,15 +519,14 @@ def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
 
     df_allipc = merge_ipcperiod(perioddf_dict, shp_adm0c, shp_adm1c, shp_adm2c)
     #check whether names of adm regions in boundary and population files don't correspond
-    check_missingadmins(ADMIN2_PATH,POP_PATH,shp_adm1c,shp_adm2c,pop_adm0c,pop_adm1c,pop_adm2c,pop_col,admin2_mapping,admin1_mapping)
+    check_missingadmins(ADMIN2_PATH,POP_PATH,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,pop_bound_adm2_mapping,pop_bound_adm1_mapping)
     df_pop = load_popdata(
         POP_PATH,
-        pop_adm0c,
         pop_adm1c,
         pop_adm2c,
         pop_col,
-        admin2_mapping=admin2_mapping,
-        admin1_mapping=admin1_mapping,
+        pop_bound_adm2_mapping=pop_bound_adm2_mapping,
+        pop_bound_adm1_mapping=pop_bound_adm1_mapping,
     )
 
     df_ipcpop = merge_ipcpop(
