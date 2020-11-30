@@ -1,3 +1,7 @@
+#Data
+indicators/food_insecurity/Data/FewsNetRaw/*
+analyses/*/Data/WorldPop/*
+
 # IDEs
 .idea/*
 .vscode/*

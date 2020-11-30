@@ -1,6 +1,7 @@
 # country specific parameters
-# admin1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
-# admin2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+# pop_bound_adm1_mapping: dict of admin1level names that don't correspond in in population data and the boundary shapefile. Keys are population names, values boundaries
+# pop_bound_adm2_mapping: dict of admin2level names that don't correspond in population data and the boundary shapefile. Keys are population names, values boundaries
+# globalipc_bound_mapping: dict of admin names that don't correspond in the global ipc data and the boundary shapefile. Can be names of all admin levels. Keys are Global IPC names, values boundaries
 
 ETH:
   country_name: "ethiopia"
@@ -20,13 +21,13 @@ ETH:
   adm0c_pop: "ADM0_EN"
   adm1c_pop: "ADM1_EN"
   adm2c_pop: "ADM2_EN"
-  admin1_mapping: {}
-  admin2_mapping:
+  pop_bound_adm1_mapping: {}
+  pop_bound_adm2_mapping:
     Etang Special: Etang Special woreda
     Zone 4  (Fantana Rasu): Zone 4 (Fantana Rasu)
     Halaba Special: Halaba
   ipc_path: "GlobalIPC/GlobalIPC_newcolumnnames.xlsx"
-  replace_dict:
+  globalipc_bound_mapping:
     Oromiya: Oromia
     SNNPR: SNNP
 
@@ -51,11 +52,11 @@ MWI:
   adm1c_pop: "ADM1_EN"
   adm2c_pop: "ADM2_EN32"
   #population data -- admin boundaries mapping
-  admin1_mapping: {}
-  admin2_mapping: {}
+  pop_bound_adm1_mapping: {}
+  pop_bound_adm2_mapping: {}
   ipc_path: "GlobalIPC/GlobalIPC_newcolumnnames.xlsx"
   #globalIPC -- admin boundaries mapping
-  replace_dict:
+  globalipc_bound_mapping:
     Blantyre city: Blantyre City
     Chikhwawa: Chikwawa
     Lilongwe city: Lilongwe City
@@ -81,31 +82,36 @@ SOM:
   adm0c_pop: "admin0Name_en"
   adm1c_pop: "admin1Name_en"
   adm2c_pop: "Admin2Name_en"
-  admin1_mapping: {}
-  admin2_mapping: 
+  pop_bound_adm1_mapping: {}
+  pop_bound_adm2_mapping: 
     Baidoa: Baydhaba
     Bandarbayla: Bandarbeyla
     Baydhaba: Baydhabo
 
 TCD:
-  country_name: "chad"
-  iso2_code: "TD"
-  region: "west-africa"
-  regioncode: "WA"
-  path_admin2_shp:
+  country_name: chad
+  iso2_code: TD
+  region: west-africa
+  regioncode: WA
+  path_admin2_shp: Administrative_boundaries/tcd_admbnda_adm2_ocha_20170615/tcd_admbnda_adm2_ocha_20170615.shp
   fewsnet_dates: ["200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
   "201204","201207","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
   "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201810",
   "201902","201906","201910","202002","202006","202010"]
-  shp_adm0c:
-  shp_adm1c:
-  shp_adm2c:
-  pop_filename:
-  pop_col:
-  adm0c_pop:
-  adm1c_pop:
-  adm2c_pop:
-  admin1_mapping:
-  admin2_mapping:
+  shp_adm0c: admin0Name
+  shp_adm1c: admin1Name
+  shp_adm2c: admin2Name
+  pop_filename: Population/admpop_adm2_projections.csv #Downloaded from https://data.humdata.org/dataset/population-statistics-of-chad
+  pop_col: Proj2020_Total
+  adm1c_pop: admin1Name_fr
+  adm2c_pop: admin2Name_fr
+  pop_bound_adm1_mapping:
+    Guera: Guéra
+    Hadjer Lamis: Hadjer-Lamis
+    Ouaddai: Ouaddaï
+    Tandjile: Tandjilé
+  pop_bound_adm2_mapping:
+    Bahr-Koh: Bahr-Köh
+    Tandjilé Ouest: Tandjile Ouest
   ipc_path:
-  replace_dict:
+  globalipc_bound_mapping:

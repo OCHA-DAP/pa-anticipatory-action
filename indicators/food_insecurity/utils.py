@@ -5,6 +5,10 @@ import argparse
 import requests
 import yaml
 import coloredlogs
+import locale
+import pandas as pd
+from pathlib import Path
+from urllib.request import urlretrieve
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +62,23 @@ def download_url(url, save_path, chunk_size=128):
     with open(save_path, "wb") as fd:
         for chunk in r.iter_content(chunk_size=chunk_size):
             fd.write(chunk)
-    logger.info(f'Downloaded "{url}" to "{save_path}"')
+    logger.info(f'Downloaded "{url}" to "{save_path}')
+
+def download_ftp(url, save_path):
+    logger.info(f'Downloading "{url}" to "{save_path}"')
+    urlretrieve(url, filename=save_path)
 
 def unzip(zip_file_path, save_path):
     logger.info(f"Unzipping {zip_file_path}")
     with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
+
+def convert_to_numeric(df_col,zone="en_US"):
+    if df_col.dtype == "object":
+        locale.setlocale(locale.LC_NUMERIC, zone)
+        df_col = df_col.apply(lambda x: locale.atof(x))
+        df_col = pd.to_numeric(df_col, errors="coerce")
+    return df_col
 
 def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
     """
@@ -82,31 +97,44 @@ def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
     zip_filename_country = os.path.join(
         output_dir, f"{iso2_code}{date}.zip"
     )
-    try:
-        download_url(url_country, zip_filename_country)
-    except Exception:
-        logger.warning(f"Cannot download FewsNet data for {iso2_code}, {date}")
-    try:
-        unzip(zip_filename_country, os.path.join(output_dir, f"{iso2_code}{date}"))
-        os.remove(zip_filename_country)
-    except Exception:
-        logger.warning(
-            f"File {zip_filename_country} is not a zip file, probably indicates FewsNet data for {iso2_code}, {date} doesn't exist. Removing the file.")
-        os.remove(zip_filename_country)
+    output_dir_country=os.path.join(output_dir, f"{iso2_code}{date}")
+    if not os.path.exists(output_dir_country):
+        try:
+            download_url(url_country, zip_filename_country)
+        except Exception:
+            logger.warning(f"Cannot download FewsNet data for {iso2_code}, {date}")
+        try:
+            unzip(zip_filename_country, output_dir_country)
+            os.remove(zip_filename_country)
+        except Exception:
+            logger.warning(
+                f"File {zip_filename_country} is not a zip file, probably indicates FewsNet data for {iso2_code}, {date} doesn't exist. Removing the file.")
+            os.remove(zip_filename_country)
 
 
     url_region = f"{FEWSNET_BASE_URL_REGION}{regioncode}/{region}{date}.zip"
     zip_filename_region = os.path.join(
         output_dir, f"{region}{date}.zip"
     )
-    try:
-        download_url(url_region, zip_filename_region)
-    except Exception:
-        logger.warning(f"Cannot download FewsNet data for {region}, {date}")
-    try:
-        unzip(zip_filename_region, os.path.join(output_dir, f"{region}{date}"))
-        os.remove(zip_filename_region)
-    except Exception:
-        logger.warning(
-            f"File {zip_filename_region} is not a zip file, probably indicates FewsNet data for {region}, {date} doesn't exist. Removing the file.")
-        os.remove(zip_filename_region)
+    output_dir_region=os.path.join(output_dir, f"{region}{date}")
+    if not os.path.exists(output_dir_region):
+        try:
+            if not os.path.exists(zip_filename_region):
+                download_url(url_region, zip_filename_region)
+        except Exception:
+            logger.warning(f"Cannot download FewsNet data for {region}, {date}")
+        try:
+            unzip(zip_filename_region, output_dir_region)
+            os.remove(zip_filename_region)
+        except Exception:
+            logger.warning(
+                f"File {zip_filename_region} is not a zip file, probably indicates FewsNet data for {region}, {date} doesn't exist. Removing the file.")
+            os.remove(zip_filename_region)
+
+def get_worldpop_data(country_iso3, year, output_dir, config):
+    #create directory if doesn't exist
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    url = config.WORLDPOP_URL.format(country_iso3_upper=country_iso3.upper(),country_iso3_lower=country_iso3.lower(),year=year)
+    output_file=os.path.join(output_dir, url.split("/")[-1])
+    if not os.path.exists(output_file):
+        download_ftp(url, output_file)
