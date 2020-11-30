@@ -31,9 +31,9 @@ def read_ipcglobal(parameters, ipc_path, shp_path, admin_level):
 
     # replace values in ipc df
     # mainly about differently spelled admin regions
-    if "replace_dict" in parameters:
-        replace_dict = parameters["replace_dict"]
-        df_ipc = df_ipc.replace(replace_dict)
+    if "globalipc_bound_mapping" in parameters:
+        globalipc_bound_mapping = parameters["globalipc_bound_mapping"]
+        df_ipc = df_ipc.replace(globalipc_bound_mapping)
 
     if len(df_ipc[f"ADMIN{admin_level}"].dropna().unique()) == 0:
         logger.warning(f"No admin {admin_level} regions found in the IPC file")
