@@ -16,13 +16,13 @@ fluidPage(
     br(),
     br(),
     
-    # Sidebar layout with input and output definitions ----
+    # Sidebar layout with input and output definitions
     sidebarLayout(
         
-        # Sidebar panel for inputs ----
+        # Sidebar panel for inputs
         sidebarPanel(
             
-            # Input: Select the random distribution type ----
+            # Input: select country
             radioButtons("country", "Select a country:",
                          c("Ethiopia" = "eth",
                            "Bangladesh" = "bgd",
@@ -40,7 +40,8 @@ fluidPage(
         
         # Main panel for displaying outputs
         mainPanel(
-            # Output: Tabset w/ plot, summary, and table
+            
+            # Tabset w/ plot, summary, and table
             tabsetPanel(type = "tabs",
                         tabPanel("Triggered Regions", textOutput("triggered_regions_list")),
                         tabPanel("Trigger Map", plotOutput("trigger_map")),
@@ -85,13 +86,5 @@ fluidPage(
                               )
                         )
             )
-       #,
-        #    br(),
-        #    span(strong("Regions that meet the trigger for:"), style = "color:navy"),
-        #    br(),
-            
-        #    textOutput("period"),
-        #    br(),
-        #    textOutput("triggered_regions_list")
-        )
+)
 )
