@@ -3,11 +3,14 @@ import os
 import geopandas as gpd
 from rasterstats import zonal_stats
 import numpy as np
-from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data, get_worldpop_data
 from pathlib import Path
 import logging
 from tqdm import tqdm
-from config import Config
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+from indicators.food_insecurity.config import Config
+from indicators.food_insecurity.utils import parse_args, config_logger, get_fewsnet_data, get_worldpop_data
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +103,9 @@ def combine_fewsnet_projections(
             # path to fewsnet data
             # sometimes fewsnet publishes per region, sometimes per country
             fews_path = None
-            fews_region_path = f"{folder_fews}{region}{d}/{regionabb}_{d}_{period}.shp"
-            fews_country_path = (
-                f"{folder_fews}{country_iso2}_{d}/{country_iso2}_{d}_{period}.shp"
-            )
+            fews_region_path = f"{folder_fews}{config.FEWSNET_FILENAME.format(region=region.lower(),regionabb=regionabb.upper(),date=d,period=period.upper())}"
+            fews_country_path = f"{folder_fews}{config.FEWSNET_FILENAME.format(region=country_iso2.upper(),regionabb=country_iso2.upper(),date=d,period=period.upper())}"
+
             if os.path.exists(fews_country_path):
                 fews_path = fews_country_path
             elif os.path.exists(fews_region_path):
@@ -174,6 +176,7 @@ def combine_fewsnet_projections(
                 # it can also be the case that FewsNet and Admin shapefile cover the same region
                 # but that FewsNet hasn't assigned a phase to a large part of the population
                 # if more than 50% doesn't have a phase assigned, raise a warning
+                #TODO: if perc_ipcclass is really small for the country fewsnet data, check if region fewsnet data does contain data. Not sure how to.. But for SOM 201307 ML2 it is the case that the country fewsnet data does contain data but the east-africa not. Might happen other way around as well..
                 perc_ipcclass = (
                     df_comb[f"pop_{period}"].sum() / df_adm["pop"].sum() * 100
                 )
