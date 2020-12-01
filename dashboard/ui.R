@@ -2,8 +2,19 @@
 
 fluidPage(
     
+    # styling
+  #  theme = "bootstrap.css",
+    
     # App title ----
-    titlePanel("Anticipatory Action Pilots"),
+    titlePanel(title="Anticipatory Action Pilots"), 
+    
+    # logo (must be in a subfolder named www that is sister to ui.r and not be listed with its path)
+    img(src="double_logo_header.jpg", align = "center", width=1275, height=100),
+        
+    br(),
+    span(strong("Please note that this dashboard is under development and intended for forecast exploration only. It should not be used as the main source of information for decision-making. Feedback and suggestions for functionalities can be directed to Josée Poirier (josee.poirier@un.org)."), style = "color:red"),
+    br(),
+    br(),
     
     # Sidebar layout with input and output definitions ----
     sidebarLayout(
@@ -29,8 +40,7 @@ fluidPage(
         
         # Main panel for displaying outputs
         mainPanel(
-            
-            # Output: Tabset w/ plot, summary, and table ----
+            # Output: Tabset w/ plot, summary, and table
             tabsetPanel(type = "tabs",
                         tabPanel("Triggered Regions", textOutput("triggered_regions_list")),
                         tabPanel("Trigger Map", plotOutput("trigger_map")),
