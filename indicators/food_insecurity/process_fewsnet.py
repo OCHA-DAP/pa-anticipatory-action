@@ -28,7 +28,7 @@ def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
         # path to fewsnet data
         # In most cases FewsNet publishes per region, but sometimes also per country, so allow for both
         shape_region = f"{path}{region}{d}/{regionabb}_{d}_{period}.shp"
-        shape_country = f"{path}{iso2_code}_{d}/{iso2_code}_{d}_{period}.shp"
+        shape_country = f"{path}{iso2_code}{d}/{iso2_code}_{d}_{period}.shp"
         if os.path.exists(shape_country):
             gdf = gpd.read_file(shape_country)
             gdf["date"] = pd.to_datetime(d, format="%Y%m")
