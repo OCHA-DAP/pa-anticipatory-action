@@ -154,10 +154,12 @@ def combine_fewsnet_projections(
                 df_comb[f"pop_{period}"] = df_comb[
                     [f"{period}_{i}" for i in range(1, 6)]
                 ].sum(axis=1, min_count=1)
-                # all columns that contain "period", i.e. also the 99 valued columns
-                period_cols = [c for c in df_comb.columns if period in c]
-                # total population in the admin region that is included in the FewsNet data (i.e. also including the 99 values)
-                df_comb[f"pop_Total_{period}"] = df_comb[period_cols].sum(
+
+                # all columns related to the period, also areas that don't have an ipc phase assigned.
+                # these can include 66 = water, 88 = parks, forests, reserves, 99 = No Data or Missing Data
+                period_cols_all = [f"{period}_{i}" for i in [1, 2, 3, 4, 5, 66, 88, 99]]
+                period_cols_data = [c for c in period_cols_all if c in df_comb.columns]
+                df_comb[f"pop_Total_{period}"] = df_comb[period_cols_data].sum(
                     axis=1, min_count=1
                 )
 
@@ -170,7 +172,7 @@ def combine_fewsnet_projections(
 
                 if pop_admfews < 95:
                     logger.warning(
-                        f"For date {d} and period {d} only {pop_admfews:.2f}% of the country's population is included in the region covered by the FewsNet shapefile"
+                        f"For date {d} and period {period} only {pop_admfews:.2f}% of the country's population is included in the region covered by the FewsNet shapefile"
                     )
 
                 # it can also be the case that FewsNet and Admin shapefile cover the same region
