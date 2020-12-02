@@ -9,6 +9,7 @@ import locale
 import pandas as pd
 from pathlib import Path
 from urllib.request import urlretrieve
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def parse_args():
         help="Suffix for output files, and if applicable input files",
     )
     parser.add_argument(
-        "-d", "--download-fewsnet", action="store_true", help="Download the raw FewsNet data"
+        "-d", "--download-data", action="store_true", help="Download the raw data. FewsNet and WorldPop are currently implemented"
     )
     return parser.parse_args()
 
@@ -138,3 +139,16 @@ def get_worldpop_data(country_iso3, year, output_dir, config):
     output_file=os.path.join(output_dir, url.split("/")[-1])
     if not os.path.exists(output_file):
         download_ftp(url, output_file)
+
+def get_globalipc_data(country_iso3, country_iso2, output_dir, config):
+    #create directory if doesn't exist
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    min_year=2010 #first year to retrieve data for. Doesn't matter if global ipc only started including data for later years
+    max_year=datetime.datetime.now().year #last date to retrieve data for. Doesn't matter if this is in the future
+    url = config.GLOBALIPC_URL.format(min_year=min_year,max_year=max_year,country_iso2=country_iso2)
+    output_file=os.path.join(output_dir, config.GLOBALIPC_FILENAME.format(country_iso3=country_iso3))
+    #have one file with all data, so also download if file already exists to make sure it contains the newest data (contrary to fewsnet)
+    try:
+        download_url(url, output_file)
+    except Exception:
+        logger.warning(f"Cannot download GlobalIPC data for {country_iso3}")
