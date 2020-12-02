@@ -275,4 +275,4 @@ def main(country_iso3, suffix, download, config_file="config.yml", config=None):
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country_iso3.upper(), args.suffix, args.download_fewsnet)
+    main(args.country_iso3.upper(), args.suffix, args.download_data)
