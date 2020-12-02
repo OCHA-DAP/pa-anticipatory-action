@@ -63,14 +63,12 @@ def download_url(url, save_path, chunk_size=128):
     with open(save_path, "wb") as fd:
         for chunk in r.iter_content(chunk_size=chunk_size):
             fd.write(chunk)
-    logger.info(f'Downloaded "{url}" to "{save_path}')
 
 def download_ftp(url, save_path):
     logger.info(f'Downloading "{url}" to "{save_path}"')
     urlretrieve(url, filename=save_path)
 
 def unzip(zip_file_path, save_path):
-    logger.info(f"Unzipping {zip_file_path}")
     with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
 
@@ -100,36 +98,40 @@ def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
     )
     output_dir_country=os.path.join(output_dir, f"{iso2_code}{date}")
     if not os.path.exists(output_dir_country):
+        #var to check if country data exists
+        country_data = False
         try:
             download_url(url_country, zip_filename_country)
         except Exception:
-            logger.warning(f"Cannot download FewsNet data for {iso2_code}, {date}")
+            logger.warning(f"Url of country level FewsNet data for {iso2_code}, {date} is not valid")
         try:
             unzip(zip_filename_country, output_dir_country)
-            os.remove(zip_filename_country)
+            logger.info(f'Downloaded "{url_country}" to "{zip_filename_country}')
+            logger.info(f"Unzipped {zip_filename_country}")
+            country_data=True
         except Exception:
-            logger.warning(
-                f"File {zip_filename_country} is not a zip file, probably indicates FewsNet data for {iso2_code}, {date} doesn't exist. Removing the file.")
-            os.remove(zip_filename_country)
+            #indicates that the url returned something that wasn't a zip, happens often and indicates data for the given country - date is not available
+            logger.info(f"No country level FewsNet data for {iso2_code}, {date}, using regional data if available")
+        os.remove(zip_filename_country)
 
-
-    url_region = f"{FEWSNET_BASE_URL_REGION}{regioncode}/{region}{date}.zip"
-    zip_filename_region = os.path.join(
-        output_dir, f"{region}{date}.zip"
-    )
-    output_dir_region=os.path.join(output_dir, f"{region}{date}")
-    if not os.path.exists(output_dir_region):
-        try:
-            if not os.path.exists(zip_filename_region):
-                download_url(url_region, zip_filename_region)
-        except Exception:
-            logger.warning(f"Cannot download FewsNet data for {region}, {date}")
-        try:
-            unzip(zip_filename_region, output_dir_region)
-            os.remove(zip_filename_region)
-        except Exception:
-            logger.warning(
-                f"File {zip_filename_region} is not a zip file, probably indicates FewsNet data for {region}, {date} doesn't exist. Removing the file.")
+        url_region = f"{FEWSNET_BASE_URL_REGION}{regioncode}/{region}{date}.zip"
+        zip_filename_region = os.path.join(
+            output_dir, f"{region}{date}.zip"
+        )
+        output_dir_region = os.path.join(output_dir, f"{region}{date}")
+        if not country_data and not os.path.exists(output_dir_region):
+            try:
+                if not os.path.exists(zip_filename_region):
+                    download_url(url_region, zip_filename_region)
+            except Exception:
+                logger.warning(f"Url of regional level FewsNet data for {region}, {date} is not valid")
+            try:
+                unzip(zip_filename_region, output_dir_region)
+                logger.info(f'Downloaded "{url_region}" to "{zip_filename_region}')
+                logger.info(f"Unzipped {zip_filename_region}")
+            except Exception:
+                # indicates that the url returned something that wasn't a zip, happens often and indicates data for the given country - date is not available
+                logger.warning(f"No FewsNet data for date {date} found that covers {iso2_code}")
             os.remove(zip_filename_region)
 
 def get_worldpop_data(country_iso3, year, output_dir, config):
