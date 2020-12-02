@@ -3,13 +3,17 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 from pathlib import Path
-
-from utils import parse_args, parse_yaml, config_logger
+import os
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+from indicators.food_insecurity.config import Config
+from indicators.food_insecurity.utils import parse_args, config_logger, get_globalipc_data
 
 logger = logging.getLogger(__name__)
 
 
-def read_ipcglobal(parameters, ipc_path, shp_path, admin_level):
+def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_level,config):
     """
     Process ipc data and do some checks
     Args:
@@ -21,9 +25,16 @@ def read_ipcglobal(parameters, ipc_path, shp_path, admin_level):
         df_ipc: DataFrame with processed ipc data
     """
 
-    # TODO: now assuming column names are already changed in the excel file. Might want to add something to change them automatically but fileformat is rather hard
-    # seems ipc file columns are always on line 11
+    # ipc file columns are always on line 11
     df_ipc = pd.read_excel(ipc_path, header=[11])
+    # ipc excel file comes with horrible column names, so change them to better understandable ones
+    df_ipc = df_ipc.rename(columns=config.GLOBALIPC_COLUMNNAME_MAPPING)
+    #due to excel settings, the percentages are on the 0 to 1 scale so change to 0-100
+    perc_cols = [c for c in df_ipc.columns if 'perc' in c]
+    df_ipc[perc_cols]=df_ipc[perc_cols]*100
+
+    #write to file such that user can check if column names are correct
+    df_ipc.to_excel(os.path.join(ipc_dir,f"{country_iso3}_globalipc_newcolumnnames.xlsx"))
     # remove rows with nan date
     df_ipc = df_ipc[
         (df_ipc["date"].notnull()) & (df_ipc[f"ADMIN{admin_level}"].notnull())
@@ -74,7 +85,7 @@ def read_ipcglobal(parameters, ipc_path, shp_path, admin_level):
     return df_ipc_agg
 
 
-def main(country_iso3, admin_level, suffix, config_file="config.yml"):
+def main(country_iso3, admin_level, suffix, download, config=None):
     """
     Define variables and save output
     Args:
@@ -83,23 +94,30 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
         config_file: path to config file
         suffix: string to attach to the output files name
     """
-    parameters = parse_yaml(config_file)[country_iso3]
+    if config is None:
+        config = Config()
+    parameters = config.parameters(country_iso3)
+    # parameters = parse_yaml(config_file)[country_iso3]
     country = parameters["country_name"]
+    country_iso2 = parameters["iso2_code"]
     admin2_shp = parameters["path_admin2_shp"]
-    GLOBALIPC_PATH = parameters["ipc_path"]
 
     COUNTRY_FOLDER = f"../../analyses/{country}"
     SHP_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
-    IPC_PATH = f"{COUNTRY_FOLDER}/Data/{GLOBALIPC_PATH}"
+    IPC_DIR = f"{COUNTRY_FOLDER}/Data/{config.GLOBALIPC_DIR}" #{GLOBALIPC_PATH}"
+    IPC_PATH = os.path.join(IPC_DIR,config.GLOBALIPC_FILENAME.format(country_iso3=country_iso3))
     RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/GlobalIPCProcessed/"
     # create output dir if it doesn't exist yet
     Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
 
-    df_ipc = read_ipcglobal(parameters, IPC_PATH, SHP_PATH, admin_level)
+    if download:
+        get_globalipc_data(country_iso3, country_iso2, IPC_DIR, config)
+
+    df_ipc = read_ipcglobal(country_iso3, parameters, IPC_PATH, IPC_DIR, SHP_PATH, admin_level,config)
     df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_admin{admin_level}{suffix}.csv")
 
 
 if __name__ == "__main__":
     args = parse_args()
-    config_logger(level="warning")
-    main(args.country_iso3.upper(), args.admin_level, args.suffix)
+    config_logger(level="info")
+    main(args.country_iso3.upper(), args.admin_level, args.suffix, args.download_data)
