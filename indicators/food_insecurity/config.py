@@ -31,7 +31,7 @@ class Config:
     #### Global IPC
     GLOBALIPC_DIR = "GlobalIPC"
     GLOBALIPC_URL="http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"
-    GLOBALIPC_FILENAME="{country_iso3}_globalipc_raw.csv"
+    GLOBALIPC_FILENAME="{country_iso3}_globalipc_raw.xlsx"
     #Analysis name, Country Population, % of total county Pop, Area Phase are not being used in our current analysis so not mapping them
     # Not entirely sure if Area always equals Admin2 regions
     GLOBALIPC_COLUMNNAME_MAPPING = {'Country':'ADMIN0','Level 1 Name':'ADMIN1','Area':'ADMIN2','Area ID':'ADMIN2_ID','Date of Analysis':'date','#':'pop_CS','Analysis Period':"CS_val",'#.1':'CS_1','%':'perc_CS_1','#.2':'CS_2', '%.1':'perc_CS_2', '#.3':'CS_3', '%.2':'perc_CS_3',
