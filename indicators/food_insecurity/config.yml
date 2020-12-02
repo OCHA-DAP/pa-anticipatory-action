@@ -26,7 +26,6 @@ ETH:
     Etang Special: Etang Special woreda
     Zone 4  (Fantana Rasu): Zone 4 (Fantana Rasu)
     Halaba Special: Halaba
-  ipc_path: "GlobalIPC/GlobalIPC_newcolumnnames.xlsx"
   globalipc_bound_mapping:
     Oromiya: Oromia
     SNNPR: SNNP
@@ -54,7 +53,6 @@ MWI:
   #population data -- admin boundaries mapping
   pop_bound_adm1_mapping: {}
   pop_bound_adm2_mapping: {}
-  ipc_path: "GlobalIPC/GlobalIPC_newcolumnnames.xlsx"
   #globalIPC -- admin boundaries mapping
   globalipc_bound_mapping:
     Blantyre city: Blantyre City
@@ -113,5 +111,4 @@ TCD:
   pop_bound_adm2_mapping:
     Bahr-Koh: Bahr-Köh
     Tandjilé Ouest: Tandjile Ouest
-  ipc_path:
   globalipc_bound_mapping:
