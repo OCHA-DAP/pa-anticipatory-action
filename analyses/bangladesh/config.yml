@@ -1,0 +1,3 @@
+DIRS:
+  shp_dir: "data/processed/Shapefiles"
+  data_dir: "data/processed"
