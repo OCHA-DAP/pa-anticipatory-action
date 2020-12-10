@@ -1,6 +1,7 @@
 #Data
 indicators/food_insecurity/Data/FewsNetRaw/*
 analyses/*/Data/WorldPop/*
+analyses/*/Data/GlobalIPC
 
 # IDEs
 .idea/*
