@@ -31,6 +31,8 @@ def add_columns(df, source):
         # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
         df[f"{period}_3p"] = df[[f"{period}_{i}" for i in range(3, 6)]].sum(axis=1)
         df[f"perc_{period}_3p"] = df[f"{period}_3p"] / df[f"pop_{period}"] * 100
+        df[f"{period}_4p"] = df[[f"{period}_{i}" for i in range(4, 6)]].sum(axis=1)
+        df[f"perc_{period}_4p"] = df[f"{period}_4p"] / df[f"pop_{period}"] * 100
         df[f"{period}_2m"] = df[[f"{period}_{i}" for i in range(1, 3)]].sum(axis=1)
         df[f"perc_{period}_2m"] = df[f"{period}_2m"] / df[f"pop_{period}"] * 100
     df["perc_inc_ML2_3p"] = df["perc_ML2_3p"] - df["perc_CS_3p"]
