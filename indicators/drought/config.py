@@ -1,0 +1,58 @@
+from datetime import datetime,timedelta
+from pathlib import Path
+import os
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+#cannot have an utils file inside the drought directory, and import from the utils directory.
+#So renamed to utils_general but this should of course be changed
+from utils_general.utils import parse_yaml
+
+
+class Config:
+    ### general directories
+    ANALYSES_DIR="analyses"
+    DATA_DIR = "Data"
+
+    def __init__(self):
+        #get the absolute path to the root directory, i.e. pa-anticipatory-action
+        self.DIR_PATH = getattr(
+            self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
+        )
+        self._parameters = None
+
+
+    def parameters(self, country):
+        if self._parameters is None:
+            # self._parameters = parse_yaml(os.path.join(self.DIR_PATH,"indicators","food_insecurity","config.yml"))[country_iso3] #
+            self._parameters = parse_yaml(os.path.join(self.DIR_PATH, self.ANALYSES_DIR, country.lower(), 'config.yml'))
+        return self._parameters
+
+
+
+    #General date objects
+    TODAY = datetime.now()
+
+    TODAY_MONTH = TODAY.strftime("%b")
+    NEXT_YEAR = TODAY.year+1
+
+    ### Shapefiles
+    #country specific shapefiles
+    SHAPEFILE_DIR = 'Shapefiles'
+    #world shapefile so used by all countries, save in drought folder
+    WORLD_SHP_PATH=os.path.join('indicators','drought','Data','TM_WORLD_BORDERS-0','TM_WORLD_BORDERS-0.3.shp')
+
+    FORECAST_BOUNDARIES_FIGNAME = "forecast_boundaries_overlap.png"
+
+    ### IRI
+    # currently downloading from november 2020 till latest date available
+    # and only the belowaverage data
+    # this can be changed but if downloading all historical data, it can take about half an hour
+    #TODO: decide if want one file per month or one with general name that contains newest data
+    IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
+    # IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Jan%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/C/(Below_Normal)/RANGEEDGES/data.nc"
+
+    IRI_DIR = "IRI"
+    #currently it is solely downloading belowaverage data, this can be changed but will make downloading times longer.
+    IRI_NC_FILENAME = f"IRI_2020{NEXT_YEAR}.nc"
+
