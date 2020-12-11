@@ -1,0 +1,5 @@
+iso3_code: "ETH"
+iso2_code: "ET"
+region: "east-africa"
+regioncode: "EA"
+path_admin2_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm2_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
