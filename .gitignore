@@ -2,7 +2,8 @@
 indicators/food_insecurity/Data/FewsNetRaw/*
 analyses/*/Data/WorldPop/*
 analyses/*/Data/GlobalIPC
-analyses/*/Data/IRI
+IRI/
+icpac/
 
 #Local experiments
 Experiments
