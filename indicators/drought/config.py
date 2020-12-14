@@ -16,9 +16,11 @@ class Config:
 
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
-        self.DIR_PATH = getattr(
+        DIR_PATH= getattr(
             self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
         )
+        self.DIR_PATH = DIR_PATH
+        self.DROUGHTDATA_DIR= os.path.join(DIR_PATH,'indicators','drought','Data')
         self._parameters = None
 
 
@@ -55,4 +57,10 @@ class Config:
     IRI_DIR = "IRI"
     #currently it is solely downloading belowaverage data, this can be changed but will make downloading times longer.
     IRI_NC_FILENAME = f"IRI_2020{NEXT_YEAR}.nc"
+
+
+    ### ICPAC
+    #TODO: probably want to download directly from the ftp server instead of uploading to GDrive and downloading from there. But couldn't figure out how to do that
+    ICPAC_GDRIVE_ZIPID = "13VQTVj5Lwm6jHYBMIf7oUZt5k1-alwjf"
+    ICPAC_DIR = "icpac"
 
