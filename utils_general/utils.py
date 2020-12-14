@@ -5,6 +5,13 @@ import argparse
 import requests
 import yaml
 import coloredlogs
+import json
+from google.oauth2 import service_account
+import pygsheets
+import os
+import logging
+import io
+from googleapiclient.http import MediaIoBaseDownload
 
 logger = logging.getLogger(__name__)
 
@@ -26,3 +33,35 @@ def config_logger(level="INFO"):
             "levelname": {"color": 8, "bold": True},
         },
     )
+
+def auth_googleapi():
+    #Authenticate the google service account
+    folderid_pa = '0AGYkOFcloQuyUk9PVA'
+    gapi_auth = os.getenv('GAPI_AUTH')
+    if not gapi_auth:
+        logger.error("No authentication file found")
+        return None
+    try:
+        info = json.loads(gapi_auth)
+        scopes = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
+        credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+        gclient = pygsheets.authorize(custom_credentials=credentials)
+        #enable the predictive analytics folder, i.e. allow to write to that folder
+        gclient.drive.enable_team_drive(folderid_pa)
+        return gclient
+    except Exception:
+        logger.error("Couldn't authenticate")
+        return None
+
+def download_gdrive(gclient,fileid,output_file):
+    request = gclient.drive.service.files().get_media(fileId=fileid)
+    fh = io.FileIO(output_file, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+        print("Download %d%%." % int(status.progress() * 100))
+
+def unzip(zip_file_path, save_path):
+    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
+        zip_ref.extractall(save_path)
