@@ -14,6 +14,9 @@ Experiments
 #Mac DSStore
 .DS_Store
 
+#Mac unzipping stuff
+__MACOSX/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
