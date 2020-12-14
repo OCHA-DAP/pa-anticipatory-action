@@ -16,10 +16,10 @@ Sentinel-1 imagery has been frequently applied to identify flood extent for a gi
 
 As shown in the image below, this processing was conducted in GEE using Javascript. As a cloud platform, GEE allows for relatively fast processing of large volumes of satellite imagery, with simple access to the necessary Sentinel-1 imagery. GEE is also freely accessible for nonprofit use, with sign-up available [here](https://signup.earthengine.google.com/#!/). In addition to the Sentinel-1 imagery, it was also required to upload a shapefile to delineate the area of interest (in this case accessed from HDX). 
 
-![image](images/gee.png)
+![image](images/gee.PNG)
 
 ### Results 
 
 For each date of imagery coverage between June and August, a Shapefile delineating flood extent (excluding permanent water bodies) was created, as is demonstrated below. We then combined this data with administrative unit Shapefiles to calculate the percent of flooded area per union (admin 4 level) over time. 
 
-![image](images/flood.png)
+![image](images/flood.PNG)
