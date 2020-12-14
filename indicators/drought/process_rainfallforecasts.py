@@ -6,19 +6,25 @@ from pathlib import Path
 import xarray as xr
 import matplotlib.pyplot as plt
 import geopandas as gpd
+import rasterio
+import numpy as np
+from rasterstats import zonal_stats
+import pandas as pd
+import rioxarray
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from indicators.drought.config import Config
 from indicators.drought.utils import parse_args
 #cannot have an utils file inside the drought directory, and import from the utils directory.
-#So renamed to utils_general but this should of course be changed
-from utils_general.utils import config_logger
+#So renamed to utils_general but this should maybe be changed
+from utils_general.utils import config_logger, auth_googleapi, download_gdrive, unzip
 
 logger = logging.getLogger(__name__)
 
-def download_iri(country, iri_auth,config,chunk_size=128):
-    IRI_dir = os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.IRI_DIR)
+def download_iri(iri_auth,config,chunk_size=128):
+    #TODO: it would be way nicer to download with opendap instead of requests, since then the file doesn't even have to be saved and is hopefully faster. Only, cannot figure out how to do that with cookie authentication
+    IRI_dir = os.path.join(config.DROUGHTDATA_DIR,config.IRI_DIR)
     Path(IRI_dir).mkdir(parents=True, exist_ok=True)
     #TODO: decide if only download if file doesn't exist. Also depends on whether want one IRI file with always newest data, or one IRI file per month
     IRI_filepath = os.path.join(IRI_dir, config.IRI_NC_FILENAME)
@@ -31,13 +37,18 @@ def download_iri(country, iri_auth,config,chunk_size=128):
     with open(IRI_filepath, "wb") as fd:
         for chunk in response.iter_content(chunk_size=chunk_size):
             fd.write(chunk)
+    #add crs to the nc file
+    nc_ds = xr.open_dataset(IRI_filepath, decode_times=False, drop_variables='C')
+    nc_ds.rio.write_crs("EPSG:4326").to_netcdf(IRI_filepath)
 
 def fix_calendar(ds, timevar='F'):
     if ds[timevar].attrs['calendar'] == '360':
         ds[timevar].attrs['calendar'] = '360_day'
     return ds
 
-def plot_forecast_boundaries(ds_nc,country, parameters, config, lon='X',lat='Y',forec_val='prob'):
+def plot_raster_boundaries(ds_nc,country, parameters, config, lon='X',lat='Y',forec_val='prob'):
+    #to circumvent that figures from different functions are overlapping
+    plt.figure()
     provider="IRI"
     # plot the forecast values and eth shapefile
     # for some date and leadtime combinationn a part of the world is masked. This might causes that it seems that the rasterdata and shapefile are not overlapping. But double check before getting confused by the masked values (speaking from experience)
@@ -53,51 +64,169 @@ def plot_forecast_boundaries(ds_nc,country, parameters, config, lon='X',lat='Y',
     df_adm = gpd.read_file(boundaries_adm1_path)
     df_world = gpd.read_file(boundaries_world_path)
 
-    fig = plt.figure(figsize=(32, 32))
+    # plot forecast and admin boundaries
     fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(32,8))
     ax1.contourf(lons, lats, prob)
-
     df_adm.boundary.plot(linewidth=1, ax=ax1, color="red")
-    # plot forecast and admin boundaries
     ax2.contourf(lons, lats, prob)
     df_world.boundary.plot(linewidth=1, ax=ax2, color="red")
     fig.suptitle(f'{country} {provider} forecasted values and shape boundaries')
     return fig
 
+def plot_spatial_columns(df, col_list, title=None, predef_bins=False,cmap='YlOrRd'):
+    #to circumvent that figures from different functions are overlapping
+    plt.figure()
 
-def get_iri_data(country, config, parameters, leadtime=3, tercile=0, forecast_date=None, download=False):
+    num_plots = len(col_list)
+    colp_num = 2
+    rows = num_plots // colp_num
+    rows += num_plots % colp_num
+    position = range(1, num_plots + 1)
+
+    if predef_bins:
+        scheme = None
+        bins_list = np.arange(30, 70, 5)
+        norm2 = mcolors.BoundaryNorm(boundaries=bins_list, ncolors=256)
+    else:
+        scheme = "natural_breaks"
+        norm2 = None
+
+    fig = plt.figure(1, figsize=(16, 6 * rows))
+
+    for i, col in enumerate(col_list):
+        ax = fig.add_subplot(rows, colp_num, position[i])
+
+        if not predef_bins:
+            colors = len(df[col].dropna().unique())
+        else:
+            colors = None
+
+        if df[col].isnull().values.all():
+            print(f"No not-NaN values for {c}")
+        elif df[col].isnull().values.any():
+            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm2, scheme=scheme,
+                    missing_kwds={"color": "lightgrey", "edgecolor": "red",
+                                  "hatch": "///",
+                                  "label": "No values"})
+        else:
+            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm2, scheme=scheme)
+
+        df.boundary.plot(linewidth=0.2, ax=ax)
+
+        plt.title(col)
+        ax.axis("off")
+        if not predef_bins and not df[col].isnull().values.all():
+            leg = ax.get_legend()
+
+            for lbl in leg.get_texts():
+                label_text = lbl.get_text()
+                upper = label_text.split(",")[-1].rstrip(']')
+
+                try:
+                    new_text = f'{float(upper):,.2f}'
+                except:
+                    new_text = upper
+                lbl.set_text(new_text)
+
+        #     legend_elements= [Line2D([0], [0], marker='o',markersize=15,label=k,color=color_dict[k],linestyle='None') for k in color_dict.keys()]
+    leg=plt.legend(title='Legend',frameon=False,handles=legend_elements,bbox_to_anchor=(1.5,0.8))
+    leg._legend_box.align = 'left'
+
+    if title:
+        fig.suptitle(title, fontsize=14, y=0.92)
+    return fig
+
+
+def get_iri_data(config, download=False):
     if download:
         iri_auth = os.getenv('IRI_AUTH')
         if not iri_auth:
             logger.error("No authentication file found")
-        download_iri(country,iri_auth,config)
-    # datetime format is strange, i.e. months since 1960. xarray doesn't recognize this date format, so set decode_times=False else will give an error
-    IRI_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country, config.DATA_DIR, config.IRI_DIR)
-    Path(IRI_dir).mkdir(parents=True, exist_ok=True)
-    IRI_filepath = os.path.join(IRI_dir, config.IRI_NC_FILENAME)
+        download_iri(iri_auth,config)
+    IRI_filepath = os.path.join(config.DROUGHTDATA_DIR, config.IRI_DIR, config.IRI_NC_FILENAME)
     # the nc contains two bands, prob and C. Still not sure what C is used for but couldn't discover useful information in it and will give an error if trying to read both (cause C is also a variable in prob)
     #the date format is formatted as months since 1960. In principle xarray can convert this type of data to datetime, but due to a wrong naming of the calendar variable it cannot do this automatically
     #Thus first load with decode_times=False and then change the calendar variable and decode the months
     iri_ds = xr.open_dataset(IRI_filepath, decode_times=False, drop_variables='C')
     iri_ds = fix_calendar(iri_ds, timevar='F')
     iri_ds = xr.decode_cf(iri_ds)
-    if forecast_date is None:
-        forecast_date=iri_ds['F'].max().values
-    iri_ds_sel=iri_ds.sel(L=leadtime,F=forecast_date,C=tercile)
 
-    #TODO: check range longitude and change [0,360] to [-180,180]
+    with rasterio.open(IRI_filepath) as src:
+        transform = src.transform
 
-    #this is mainly for debugging purposes, to check if forecasted values and admin shapes correcltly align
-    fig = plot_forecast_boundaries(iri_ds_sel, country, parameters, config)
-    fig.savefig(os.path.join(IRI_dir, config.FORECAST_BOUNDARIES_FIGNAME), format='png')
+    return iri_ds, transform
 
-    return iri_ds_sel
+    # #if no forecast_date select the latest forecast
+    # if forecast_date is None:
+    #     forecast_date=iri_ds['F'].max().values
+    # iri_ds_sel=iri_ds.sel(L=leadtime,F=forecast_date,C=tercile)
+    #
+    # #TODO: check range longitude and change [0,360] to [-180,180]
+    #
+    # #this is mainly for debugging purposes, to check if forecasted values and admin shapes correcltly align
+    # fig = plot_forecast_boundaries(iri_ds_sel, country, parameters, config)
+    # fig.savefig(os.path.join(IRI_dir, config.FORECAST_BOUNDARIES_FIGNAME), format='png')
+    #
+    # return iri_ds_sel
+
+def download_icpac(config):
+    #TODO: would be nicer to directly download from their ftp but couldn't figure out yet how (something with certificates)
+    gclient = auth_googleapi()
+    gzip_output_file=os.path.join(config.DROUGHTDATA_DIR, f'{config.ICPAC_DIR}.zip')
+    download_gdrive(gclient, config.ICPAC_GDRIVE_ZIPID, gzip_output_file)
+    unzip(gzip_output_file,config.DROUGHTDATA_DIR)
+    os.remove(gzip_output_file)
+
+def get_icpac_data(config,download=False):
+    if download:
+        download_icpac(config)
+
+    for path in Path(os.path.join(config.DROUGHTDATA_DIR,'icpac')).rglob("ForecastProb*nc"):
+        #TODO: merge datasets if there are several
+        icpac_ds = xr.open_dataset(path)
+        print(icpac_ds)
+        #assume all transforms of the different files are the same, so just select the one that is read the latest
+        with rasterio.open(path) as src:
+            transform = src.transform
+    return icpac_ds, transform
+
+
+def compute_raster_statistics(boundary_path, raster_array, raster_transform, threshold, upscale_factor=None):
+    df = gpd.read_file(boundary_path)
+    #TODO: decide if we want to upsample and if yes, implement
+    # if upscale_factor:
+    #     forecast_array, transform = resample_raster(raster_path, upscale_factor)
+    # else:
+    # extract statistics for each polygon. all_touched=True includes all cells that touch a polygon, with all_touched=False only those with the center inside the polygon are counted.
+    df["max_cell"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=raster_array, affine=raster_transform, band=1, nodata=-9999))["max"]
+    df["max_cell_touched"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=raster_array, affine=raster_transform, all_touched=True, band=1, nodata=-9999))["max"]
+
+    df["avg_cell"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=raster_array, affine=raster_transform, band=1, nodata=-9999))[
+        "mean"]
+    df["avg_cell_touched"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=raster_array, affine=raster_transform, all_touched=True, band=1, nodata=-9999))[
+        "mean"]
+
+    # calculate the percentage of the area within an admin that has a value larger than threshold
+    forecast_binary = np.where(raster_array >= threshold, 1, 0)
+    bin_zonal = pd.DataFrame(
+        zonal_stats(vectors=df, raster=forecast_binary, nodata=-999, affine=raster_transform, stats=['count', 'sum']))
+    df['perc_threshold'] = bin_zonal['sum'] / bin_zonal['count'] * 100
+    bin_zonal_touched = pd.DataFrame(
+        zonal_stats(vectors=df, raster=forecast_binary, nodata=-999, affine=raster_transform, all_touched=True, stats=['count', 'sum']))
+    df['perc_threshold_touched'] = bin_zonal_touched['sum'] / bin_zonal_touched['count'] * 100
+
+    return df
 
 def main(country, suffix, download, config=None):
     if config is None:
         config = Config()
     parameters = config.parameters(country)
     get_iri_data(country, config,parameters, download=download)
+    get_icpac_data(config,download=download)
 
 if __name__ == "__main__":
     args = parse_args()
