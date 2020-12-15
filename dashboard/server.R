@@ -78,7 +78,7 @@ server <- function(input, output) {
     
     # Display rainfall maps as temp projections. NOte single quotes must be outer set because string must include double quotes to be processed as HTML
     
-    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2020/nov2020/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
+    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2020/dec2020/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
     output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/Rainfall_forecast_november-January_.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
     output$chc <- renderText({c('<img src="','https://blog.chc.ucsb.edu/wp-content/uploads/2020/11/Screen-Shot-2020-11-05-at-12.39.37-PM.png"','width = "500px" height = "500px"', '>')})
     output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/NMME/prob/images/prob_ensemble_prate_season4.png"','width = "500px" height = "500px"', '>')})
