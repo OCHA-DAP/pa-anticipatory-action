@@ -1,3 +1,4 @@
 DIRS:
-  shp_dir: "data/processed/Shapefiles"
-  data_dir: "data/processed"
+  adm_dir: "data/ADM_Shp"
+  data_dir: "data/FE_Results"
+  gee_dir: "data/GEE_Output"

@@ -1,13 +1,22 @@
-import pandas as pd
 from scripts.d03_analysis import FE_fit_function as ff
-from datetime import datetime
 from scripts import utils
+import pandas as pd
+from datetime import datetime
 import numpy as np
 import os
 import logging
 
+# This script takes the output file from Generate_flood_frac.py and fits Gaussian
+# and polynomial functions to the data, to interpolate between dates without Sentinel-1
+# coverage.
+
+# Required inputs are:
+# 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir'
+# 2) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), specified as a command-line argument
+
+# Directory locations for the input and output files should be specified in the 'config.yml' file.
+
 parameters = utils.parse_yaml('config.yml')['DIRS']
-shp_dir = parameters['shp_dir']
 output_dir = parameters['data_dir']
 
 logger = logging.getLogger()
@@ -28,11 +37,6 @@ def make_data(df, adm_grp):
         df2 = df.loc[df[sel_col] == adm].reset_index()
         x, y = ff.get_xy(df2)[0], ff.get_xy(df2)[1]  # Get the x and y
         x_new = np.linspace(x[0], x[-1], 85)  # Generate new x data (at daily intervals)
-
-        # TODO: Some regions don't have observations for every date, not incl when there is 0 flooding
-        # Need to break out when there aren't enough original points to fit function
-        if len(x) < 10:
-            continue
 
         # New y values using same x data to calc the error
         y_g_old = ff.gauss(x, *ff.gauss_fit(x, y))  # Generate Gaussian fitted y data
