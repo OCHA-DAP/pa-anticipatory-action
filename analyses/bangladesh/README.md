@@ -1,5 +1,12 @@
 # CERF Anticipatory Action framework in Bangladesh
 
+##  Table of Contents
+1. [Background Information](#background-information)
+2. [Overview of analysis](#overview-of-analysis)
+3. [Data description](#data-description)
+4. [Directory structure](#directory-structure)
+5. [Reproducing this analysis](#reproducing-this-analysis)
+
 ## Background information
 
 Building on the work by individual agencies, such as the IFRC, WFP, FAO and NGOs, the pilot will methodologically combine three components, scaling-up anticipatory humanitarian action in Bangladesh:
