@@ -1,6 +1,6 @@
 # CERF Anticipatory Action framework in Bangladesh
 
-## Background
+## Background information
 
 Building on the work by individual agencies, such as the IFRC, WFP, FAO and NGOs, the pilot will methodologically combine three components, scaling-up anticipatory humanitarian action in Bangladesh:
 
@@ -18,14 +18,34 @@ CERF set aside around $5 million [pending final plan and confirmation] for antic
 Bangladesh. This funding will become available immediately once the defined trigger is reached to active the actions described above
 In addition, the pilot seeks to amplify and coordinate similar anticipatory action pilots at the agency scale, including from WFP, IFRC, and others.
 
-## Analysis
+## Overview of analysis
 
 The analysis within this repository contains two components. 
 
-1. Trigger analysis: Processing FFWC and GLOFAS forecasting data, used to trigger this pilot's anticipatory action. 
-2. Pilot evaluation: Calculating historical estimates of flooding extent over time in five high priority districts (Bogra, Gaibandha, Jamalpur, Kurigram, Sirajganj). This work is largely based on an analysis of Sentinel-1 SAR imagery in Google Earth Engine, accessible [here](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). This imagery processing methodology is adapted from [guidance from the UN-SPIDER Knowledge Portal](https://un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step).
+1. **Trigger analysis**: Processing FFWC and GLOFAS forecasting data, used to trigger this pilot's anticipatory action. 
+2. **Pilot evaluation**: Calculating historical estimates of flooding extent over time in five high priority districts (Bogra, Gaibandha, Jamalpur, Kurigram, Sirajganj). This work is largely based on an analysis of Sentinel-1 SAR imagery in Google Earth Engine, accessible [here](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). This imagery processing methodology is adapted from [guidance from the UN-SPIDER Knowledge Portal](https://un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step). This work also includes technical support provided to the Centre for Disaster Protection in processing and analysing the geospatial dimensions of survey data. The results of the historical flood analysis are summarized in [this slide deck](https://docs.google.com/presentation/d/1D5tj83Q63L-9lI343t0tcHwpxQ14XkGQK6PobUcXb6g/edit#slide=id.p3).
 
-## Structure of this repository 
+## Data description
+
+All input and output files are stored [on Google Drive](https://drive.google.com/drive/folders/16TR6uta4XgMhpuBVHJdH4WM529TkK_hF?usp=sharing). 
+
+Input data includes: 
+- Shapefiles of Admin 0 --> Admin 4 units in Bangladesh, originally accessed from [HDX](https://data.humdata.org/dataset/administrative-boundaries-of-bangladesh-as-of-2015). ```Adm_Shp```
+- Shapefile of mauzas (sub Admin 4) in Bangladesh, provided by a local contact. ```Adm_Shp/mauza``` 
+- Informant reports of flood extent over time in selected unions (Admin 4), provided by the Centre for Disaster Protection. ```CDP_Informant``` 
+- Selected household locations from CDP survey results. ```CDP_Survey``` 
+- [GLOFAS](https://www.globalfloods.eu/) river discharge measurements from selected stations along the Jamuna river. ```GLOFAS_Data``` 
+- [FFWC](http://www.ffwc.gov.bd/) water level measurements from selected stations along the Jamuna river. ```FFWC_Data```
+- [GSW](https://global-surface-water.appspot.com/download) Seasonality 2019 raster files covering Bangladesh. ```GSW_Data``` 
+
+Output data includes:
+- Output shapefiles from Google Earth Engine script. ```GEE_Output```
+- Flood extent results by Admin 4 regions over time, derived from ```GEE_Output``` files. ```FE_Results```
+- Interpolated flood extent results from Gaussian and polynomial fitting. ```FE_Results```
+- Permanent water extent shapefiles. ```GSW_Data```
+- Geolocated household locations with distance to water. ```CDP_Survey```
+
+## Directory structure 
 
 The content within this repository is structured as follows: 
 
@@ -53,7 +73,9 @@ The content within this repository is structured as follows:
 
 Larger raw and processed data files are currently not included within this repository. As described below, the historical analysis of flood extent can be reproduced using shapefiles generated from a Google Earth Engine script. Note that this requires a Google Earth Engine account. 
 
-## Getting started 
+## Reproducing this analysis 
+
+#### Setting up the Python environment
 
 Set up and activate a Python environment in Anaconda using the ```environment.yml``` file provided: 
 
@@ -62,11 +84,11 @@ conda env create -f environment.yml
 conda activate bang_floods
 ```
 
-### To reproduce the historical analysis of flood evolution:
+#### Historical flooding analysis
 
 1. Generate shapefiles that delineate flood extent over time using [this Google Earth Engine Script](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). Within the script, the following parameters can be changed: 1) start and end dates of a pre-flood period, 2) start and end dates of a flood period, and 3) shapefile to delineate geographic area of interest.
 
-2. Edit the ```config.yml``` file to include the location of the directory where your output shapefiles are stored (```shp_dir```) and the location where you want your output data to go (```data_dir```).
+2. Edit the ```config.yml``` file to include the location of the directory where your output shapefiles are stored (```gee_dir```), the admin areas are stored (```adm_dir```) and the location where you want your output data to go (```data_dir```).
 
 3. Run a Python script from the terminal in the repository root directory to generate .CSV files that include the flood fraction over time within admin areas. This script can be run by aggregating to ```ADM4```, ```ADM3```, and ```ADM2``` levels. For example: 
 
