@@ -22,19 +22,20 @@ In addition, the pilot seeks to amplify and coordinate similar anticipatory acti
 
 The analysis within this repository contains two components. 
 
-1. Processing FFWC and GLOFAS forecasting data, used to trigger this pilot's anticipatory action. 
-2. Calculating historical estimates of flooding extent over time in five high priority districts (Bogra, Gaibandha, Jamalpur, Kurigram, Sirajganj). This work is largely based on an analysis of Sentinel-1 SAR imagery in Google Earth Engine, accessible [here](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). This imagery processing methodology is adapted from [guidance from the UN-SPIDER Knowledge Portal](https://un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step).
+1. Trigger analysis: Processing FFWC and GLOFAS forecasting data, used to trigger this pilot's anticipatory action. 
+2. Pilot evaluation: Calculating historical estimates of flooding extent over time in five high priority districts (Bogra, Gaibandha, Jamalpur, Kurigram, Sirajganj). This work is largely based on an analysis of Sentinel-1 SAR imagery in Google Earth Engine, accessible [here](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). This imagery processing methodology is adapted from [guidance from the UN-SPIDER Knowledge Portal](https://un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step).
 
 ## Structure of this repository 
 
 The content within this repository is structured as follows: 
 
 ```
-├── data
-│   ├── processed             <- Data that has been processed or transformed in some way.  
-│   └── raw                   <- Original, immutable data. 
-│
+
 ├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
+│
+├── results                   <- Summary documentation and final outputs of analyses. 
+│   ├── figures               <- Output figures to summarize results. 
+│   └── write_up              <- Summary documentation addressing methodology and results.  
 │
 ├── scripts                   <- Scripts to perform data processing and analysis.    
 │   ├── d01_data              <- Scripts to load in datasets. 
@@ -42,8 +43,8 @@ The content within this repository is structured as follows:
 │   ├── d03_analysis          <- Scripts to conduct more in-depth analysis of data
 │   └── d04_visualization     <- Scripts to create visualizations. 
 │
-├── Generate_flood_frac.py    <- Top level script to generate data.
-├── Generate_interpolated.py  <- Description of this project.
+├── Generate_flood_frac.py    <- Top level script to generate flood extent from GEE output shapefiles.
+├── Generate_interpolated.py  <- Top level script to generate interpolated flood extent estimates. 
 ├── README.md                 <- Description of this project.
 ├── config.yml                <- Global variables.
 └── environment.yml           <- Contains dependencies to set up a conda environment. 
