@@ -1,4 +1,10 @@
-# vs code
+#Data
+indicators/food_insecurity/Data/FewsNetRaw/*
+analyses/*/Data/WorldPop/*
+analyses/*/Data/GlobalIPC
+
+# IDEs
+.idea/*
 .vscode/*
 
 #Mac DSStore
@@ -15,3 +21,6 @@
 
 # pycharm
 .idea
+
+# Byte-compiled / optimized / DLL files
+__pycache__/

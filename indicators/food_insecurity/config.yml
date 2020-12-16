@@ -1,0 +1,114 @@
+# country specific parameters
+# pop_bound_adm1_mapping: dict of admin1level names that don't correspond in in population data and the boundary shapefile. Keys are population names, values boundaries
+# pop_bound_adm2_mapping: dict of admin2level names that don't correspond in population data and the boundary shapefile. Keys are population names, values boundaries
+# globalipc_bound_mapping: dict of admin names that don't correspond in the global ipc data and the boundary shapefile. Can be names of all admin levels. Keys are Global IPC names, values boundaries
+
+ETH:
+  country_name: "ethiopia"
+  iso2_code: "ET"
+  region: "east-africa"
+  regioncode: "EA"
+  path_admin2_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm2_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+  fewsnet_dates: ["200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
+  "201204","201207","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
+  "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201810",
+  "201902","201906","201910","202002","202006","202008","202009","202010"]
+  shp_adm0c: "ADM0_EN"
+  shp_adm1c: "ADM1_EN"
+  shp_adm2c: "ADM2_EN"
+  pop_filename: "Population_OCHA_2020/eth_admpop_adm2_20201028.csv" #downloaded from https://data.humdata.org/dataset/ethiopia-population-data-_-admin-level-0-3
+  pop_col: "Total"
+  adm0c_pop: "ADM0_EN"
+  adm1c_pop: "ADM1_EN"
+  adm2c_pop: "ADM2_EN"
+  pop_bound_adm1_mapping: {}
+  pop_bound_adm2_mapping:
+    Etang Special: Etang Special woreda
+    Zone 4  (Fantana Rasu): Zone 4 (Fantana Rasu)
+    Halaba Special: Halaba
+  globalipc_bound_mapping:
+    Oromiya: Oromia
+    SNNPR: SNNP
+
+MWI:
+  country_name: "malawi"
+  iso2_code: "MW"
+  region: "southern-africa"
+  regioncode: "SA"
+  path_admin2_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm2_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
+  #no data available for 2018-10 but there is for 2018-12
+  #no data availabele for 2012-07. Removing here cause else assigning values due to borders and different shapefiles
+  fewsnet_dates: [ "200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
+                   "201204","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
+                   "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201812",
+                   "201902","201906","201910","202002","202006","202008","202010"]
+  shp_adm0c: "ADM0_EN"
+  shp_adm1c: "ADM1_EN"
+  shp_adm2c: "ADM2_EN"
+  pop_filename: "Population_OCHA_2018/mwi_pop_adm2_32_districts.csv" #downloaded from https://data.humdata.org/search?q=malawi+population&ext_search_source=main-nav
+  pop_col: "p2019pop"
+  adm0c_pop: "ADM0_EN"
+  adm1c_pop: "ADM1_EN"
+  adm2c_pop: "ADM2_EN32"
+  #population data -- admin boundaries mapping
+  pop_bound_adm1_mapping: {}
+  pop_bound_adm2_mapping: {}
+  #globalIPC -- admin boundaries mapping
+  globalipc_bound_mapping:
+    Blantyre city: Blantyre City
+    Chikhwawa: Chikwawa
+    Lilongwe city: Lilongwe City
+    Mzuzu city: Mzuzu City
+    Nkhata bay: Nkhata Bay
+    Zomba city: Zomba City
+
+SOM:
+  country_name: "somalia"
+  iso2_code: "SO"
+  region: "east-africa"
+  regioncode: "EA"
+  path_admin2_shp: "som_adm_undp_shp/Som_Admbnda_Adm2_UNDP.shp" #downloaded from https://data.humdata.org/dataset/ec140a63-5330-4376-a3df-c7ebf73cfc3c/resource/6f42e9ce-bbca-4c0d-a3e6-85efc9298c3c/download/som_adm_undp_shp.zip
+  fewsnet_dates: [ "200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
+                   "201204","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
+                   "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201812",
+                   "201902","201906","201910","202002","202006","202008","202010"]
+  shp_adm0c: "admin0Name"
+  shp_adm1c: "admin1Name"
+  shp_adm2c: "admin2Name"
+  pop_filename: "som_pplp_adm2.csv" #downloaded from https://data.humdata.org/dataset/6cac9c64-2716-4809-9e82-440839d421f6/resource/a63d9729-c8fa-4456-a3fd-11034dd2117b/download/som_pplp_adm2.csv
+  pop_col: "Pop2014UNFPA"
+  adm0c_pop: "admin0Name_en"
+  adm1c_pop: "admin1Name_en"
+  adm2c_pop: "Admin2Name_en"
+  pop_bound_adm1_mapping: {}
+  pop_bound_adm2_mapping: 
+    Baidoa: Baydhaba
+    Bandarbayla: Bandarbeyla
+    Baydhaba: Baydhabo
+
+TCD:
+  country_name: chad
+  iso2_code: TD
+  region: west-africa
+  regioncode: WA
+  path_admin2_shp: Administrative_boundaries/tcd_admbnda_adm2_ocha_20170615/tcd_admbnda_adm2_ocha_20170615.shp
+  fewsnet_dates: ["200907","200910","201001","201004","201007","201010","201101","201104","201107","201110","201201",
+  "201204","201207","201210","201301","201304","201307","201310","201401","201404","201407","201410","201501","201504",
+  "201507","201510","201602","201606","201610","201702","201706","201710","201802","201806","201810",
+  "201902","201906","201910","202002","202006","202010"]
+  shp_adm0c: admin0Name
+  shp_adm1c: admin1Name
+  shp_adm2c: admin2Name
+  pop_filename: Population/admpop_adm2_projections.csv #Downloaded from https://data.humdata.org/dataset/population-statistics-of-chad
+  pop_col: Proj2020_Total
+  adm1c_pop: admin1Name_fr
+  adm2c_pop: admin2Name_fr
+  pop_bound_adm1_mapping:
+    Guera: Guéra
+    Hadjer Lamis: Hadjer-Lamis
+    Ouaddai: Ouaddaï
+    Tandjile: Tandjilé
+  pop_bound_adm2_mapping:
+    Bahr-Koh: Bahr-Köh
+    Tandjilé Ouest: Tandjile Ouest
+  globalipc_bound_mapping:
