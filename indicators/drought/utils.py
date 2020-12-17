@@ -2,7 +2,7 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("country", help="Country name")
+    parser.add_argument("-c","--country", help="Country name")
     # parser.add_argument("-a", "--admin_level", default=1)
     # Prefix for filenames
     parser.add_argument(
