@@ -82,6 +82,7 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
 
     #initialize empty figure, to circumvent that figures from different functions are overlapping
     plt.figure()
+    plt.clf()
 
     #define the number of columns and rows
     colp_num = 2
@@ -90,15 +91,19 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
     rows += num_plots % colp_num
     position = range(1, num_plots + 1)
 
-    fig = plt.figure(1, figsize=(16, 6 * rows))
-
+    #TODO: messy now with the axes and ax objects, find neater method. If using plt.figure and then add_subplots calling function several times will overlap the plots :/
+    # fig = plt.figure(1, figsize=(16, 6 * rows))
+    fig, axes=plt.subplots(rows,colp_num)
+    [axi.set_axis_off() for axi in axes.ravel()]
     #if bins, set norm to classify the values in the bins
     if predef_bins is not None:
         scheme = None
         norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
+        legend_kwds=None
     else:
         scheme = "natural_breaks"
         norm = None
+        legend_kwds = {'bbox_to_anchor': (1.6, 1)}
 
     for i, col in enumerate(col_list):
         ax = fig.add_subplot(rows, colp_num, position[i])
@@ -115,19 +120,23 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
         #cannot handle missing_kwds if there are no missing values, so have to define those two cases separately
         elif df[col].isnull().values.any():
             df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm, scheme=scheme,
+                    legend_kwds=legend_kwds,
                     missing_kwds={"color": "lightgrey", "edgecolor": "red",
                                   "hatch": "///",
                                   "label": "No values"})
         else:
-            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm, scheme=scheme)
+            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm, scheme=scheme,
+                    legend_kwds=legend_kwds
+                    )
 
         df.boundary.plot(linewidth=0.2, ax=ax)
 
         plt.title(col)
         ax.axis("off")
+        plt.axis("off")
 
         #prettify legend if using individual color for each value
-        if not predef_bins and not df[col].isnull().values.all():
+        if predef_bins is None and not df[col].isnull().values.all():
             leg = ax.get_legend()
 
             for lbl in leg.get_texts():
@@ -141,12 +150,15 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
                 lbl.set_text(new_text)
 
     #TODO: fix legend and prettify plot
+
         #     legend_elements= [Line2D([0], [0], marker='o',markersize=15,label=k,color=color_dict[k],linestyle='None') for k in color_dict.keys()]
     # leg=plt.legend(title='Legend',frameon=False,handles=legend_elements,bbox_to_anchor=(1.5,0.8))
     # leg._legend_box.align = 'left'
 
     if title:
         fig.suptitle(title, fontsize=14, y=0.92)
+    fig.tight_layout()
+
     return fig
 
 
