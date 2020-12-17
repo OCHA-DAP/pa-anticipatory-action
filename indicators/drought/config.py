@@ -52,15 +52,19 @@ class Config:
     # this can be changed but if downloading all historical data, it can take about half an hour
     #TODO: decide if want one file per month or one with general name that contains newest data
     IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
+    #TODO: change URL back to above to include newest data. Now using November for debugging
+    IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Nov%202020)/RANGEEDGES/data.nc"
     # IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Jan%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/C/(Below_Normal)/RANGEEDGES/data.nc"
 
     IRI_DIR = "IRI"
     #currently it is solely downloading belowaverage data, this can be changed but will make downloading times longer.
-    IRI_NC_FILENAME = f"IRI_2020{NEXT_YEAR}.nc"
+    IRI_NC_FILENAME_RAW = f"IRI_2020{NEXT_YEAR}.nc"
+    IRI_NC_FILENAME_CRS = f"IRI_2020{NEXT_YEAR}_crs.nc"
 
 
     ### ICPAC
     #TODO: probably want to download directly from the ftp server instead of uploading to GDrive and downloading from there. But couldn't figure out how to do that
     ICPAC_GDRIVE_ZIPID = "13VQTVj5Lwm6jHYBMIf7oUZt5k1-alwjf"
     ICPAC_DIR = "icpac"
+    ICPAC_PROBFORECAST_REGEX = "ForecastProb*nc"
 
