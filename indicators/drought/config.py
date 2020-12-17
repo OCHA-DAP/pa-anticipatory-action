@@ -41,6 +41,8 @@ class Config:
     ### Shapefiles
     #country specific shapefiles
     SHAPEFILE_DIR = 'Shapefiles'
+
+    #TODO: check if this is a good world boundaries file and if there is any copyright or so to it
     #world shapefile so used by all countries, save in drought folder
     WORLD_SHP_PATH=os.path.join('indicators','drought','Data','TM_WORLD_BORDERS-0','TM_WORLD_BORDERS-0.3.shp')
 
@@ -51,9 +53,10 @@ class Config:
     # and only the belowaverage data
     # this can be changed but if downloading all historical data, it can take about half an hour
     #TODO: decide if want one file per month or one with general name that contains newest data
-    IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
+    # IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
     #TODO: change URL back to above to include newest data. Now using November for debugging
-    IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Nov%202020)/RANGEEDGES/data.nc"
+    # IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Oct%202020)/(Nov%202020)/RANGEEDGES/data.nc"
+    IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Mar%202017)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
     # IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Jan%202020)/(Jan%20{NEXT_YEAR})/RANGEEDGES/C/(Below_Normal)/RANGEEDGES/data.nc"
 
     IRI_DIR = "IRI"
