@@ -11,7 +11,8 @@ from indicators.drought.utils import parse_args
 from utils_general.utils import config_logger, auth_googleapi, download_gdrive, unzip
 
 
-def main(country, suffix, download, config=None):
+def main(download, config=None):
+    country='ethiopia'
     if config is None:
         config = Config()
     parameters = config.parameters(country)
@@ -41,4 +42,4 @@ def main(country, suffix, download, config=None):
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country.lower(), args.suffix, args.download_data)
+    main(args.download_data)
