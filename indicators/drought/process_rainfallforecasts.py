@@ -19,16 +19,152 @@ from indicators.drought.utils import parse_args
 #cannot have an utils file inside the drought directory, and import from the utils directory.
 #So renamed to utils_general but this should maybe be changed
 from utils_general.utils import config_logger, auth_googleapi, download_gdrive, unzip
+import matplotlib.colors as mcolors
 
 logger = logging.getLogger(__name__)
 
+#plot functions
+def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat',forec_val='prob'):
+    """
+    plot a raster file and a shapefile on top of each other with the goal to see if their coordinate systems match
+    Two plots are made, one with the adm2 shapefile of the country and one with the worldmap
+    For some forecast providers a part of the world is masked. This might causes that it seems that the rasterdata and shapefile are not overlapping. But double check before getting confused by the masked values (speaking from experience)
+
+    Args:
+        ds_nc (xarray dataset): dataset that should be plotted, all bands contained in this dataset will be plotted
+        country (str): country for which to plot the adm2 boundaries
+        parameters (dict): parameters for the specific country
+        config (Config): config for the drought indicator
+        lon (str): name of the longitude coordinate in ds_nc
+        lat (str): name of the latitude coordinate in ds_nc
+        forec_val (str): name of the variable that contains the values to be plotted in ds_nc
+
+    Returns:
+        fig (fig): two subplots with the raster and the country and world boundaries
+    """
+    #initialize empty figure, to circumvent that figures from different functions are overlapping
+    plt.figure()
+
+    # retrieve lats and lons
+    lons = ds_nc.variables[lon]
+    lats = ds_nc.variables[lat]
+    prob = ds_nc.variables[forec_val][:]
+
+    boundaries_adm1_path = os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR,parameters['path_admin2_shp'])
+    boundaries_world_path = os.path.join(config.DIR_PATH,config.WORLD_SHP_PATH)
+    # load admin boundaries shapefile
+    df_adm = gpd.read_file(boundaries_adm1_path)
+    df_world = gpd.read_file(boundaries_world_path)
+
+    # plot forecast and admin boundaries
+    fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(32,8))
+    ax1.contourf(lons, lats, prob)
+    df_adm.boundary.plot(linewidth=1, ax=ax1, color="red")
+    ax2.contourf(lons, lats, prob)
+    df_world.boundary.plot(linewidth=1, ax=ax2, color="red")
+    fig.suptitle(f'{country} forecasted values and shape boundaries')
+    return fig
+
+def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd'):
+    """
+    Create a subplot for each variable in col_list where the value for the variable per spatial region defined in "df" is shown
+    If predef_bins are given, the values will be classified to these bins. Else a different color will be given to each unique value
+    Args:
+        df (GeoDataframe): dataframe containing the values for the variables in col_list and the geo polygons
+        col_list (list of strs): indicating the column names that should be plotted
+        title (str): title of plot
+        predef_bins (list of numbers): bin boundaries
+        cmap (str): colormap to use
+
+    Returns:
+        fig: figure with subplot for each variable in col_list
+    """
+
+    #initialize empty figure, to circumvent that figures from different functions are overlapping
+    plt.figure()
+
+    #define the number of columns and rows
+    colp_num = 2
+    num_plots = len(col_list)
+    rows = num_plots // colp_num
+    rows += num_plots % colp_num
+    position = range(1, num_plots + 1)
+
+    fig = plt.figure(1, figsize=(16, 6 * rows))
+
+    #if bins, set norm to classify the values in the bins
+    if predef_bins is not None:
+        scheme = None
+        norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
+    else:
+        scheme = "natural_breaks"
+        norm = None
+
+    for i, col in enumerate(col_list):
+        ax = fig.add_subplot(rows, colp_num, position[i])
+
+        #if no predef bins, set unique color for each unique value
+        if predef_bins is None:
+            colors = len(df[col].dropna().unique())
+        #else colors will be determined by norm and cmap
+        else:
+            colors = None
+
+        if df[col].isnull().values.all():
+            print(f"No not-NaN values for {col}")
+        #cannot handle missing_kwds if there are no missing values, so have to define those two cases separately
+        elif df[col].isnull().values.any():
+            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm, scheme=scheme,
+                    missing_kwds={"color": "lightgrey", "edgecolor": "red",
+                                  "hatch": "///",
+                                  "label": "No values"})
+        else:
+            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm, scheme=scheme)
+
+        df.boundary.plot(linewidth=0.2, ax=ax)
+
+        plt.title(col)
+        ax.axis("off")
+
+        #prettify legend if using individual color for each value
+        if not predef_bins and not df[col].isnull().values.all():
+            leg = ax.get_legend()
+
+            for lbl in leg.get_texts():
+                label_text = lbl.get_text()
+                upper = label_text.split(",")[-1].rstrip(']')
+
+                try:
+                    new_text = f'{float(upper):,.2f}'
+                except:
+                    new_text = upper
+                lbl.set_text(new_text)
+
+    #TODO: fix legend and prettify plot
+        #     legend_elements= [Line2D([0], [0], marker='o',markersize=15,label=k,color=color_dict[k],linestyle='None') for k in color_dict.keys()]
+    # leg=plt.legend(title='Legend',frameon=False,handles=legend_elements,bbox_to_anchor=(1.5,0.8))
+    # leg._legend_box.align = 'left'
+
+    if title:
+        fig.suptitle(title, fontsize=14, y=0.92)
+    return fig
+
+
+#data retrieving and manipulating
 def invert_latlon(ds):
-    #invert lat if this ranges from -90 to 90 instead of 90 to -90
-    #inversion of lon still has to be implemented
-    #this inversion is done since some functions don't account for this inversion when reading the data and thus produce wrong results
-    #this is for example apparent when using xr.open_dataset() to read an array and input it to zonal_stats
-    #the lat coordinates should be named "lat" and lon coordinates "lon", so rename those coordinates in the dataset before inputting to this function if needed
-    #function largely copied from https://github.com/perrygeo/python-rasterstats/issues/218
+    """
+    This function checks for inversion of latitude and longitude and changes them if needed
+    Some datasets come with flipped coordinates.
+    For latitude this means that the coordinates start with the smallest number while for longitude they are flipped when starting with the largest number.
+    Some functions, such as zonal_stats, produce wrong results when these coordinates are flipped.
+    The dataset given as input (ds) should have its lat coordinates named "lat" and lon coordinates "lon"
+    Function largely copied from https://github.com/perrygeo/python-rasterstats/issues/218
+    Args:
+        ds (xarray dataset): dataset containing the variables and coordinates
+
+    Returns:
+        da (xarray dataset): dataset containing the variables and flipped coordinates
+    """
     lat_start=ds.lat[0].item()
     lat_end=ds.lat[ds.dims["lat"]-1].item()
     lon_start=ds.lon[0].item()
@@ -51,6 +187,21 @@ def invert_latlon(ds):
         logger.error("Inverted longitude still needs to be implemented..")
         # da=np.flip(da.squeeze('F'),axis=1)
     return da
+
+def fix_calendar(ds, timevar='F'):
+    """
+    Some datasets come with a wrong calendar attribute that isn't recognized by xarray
+    So map this attribute that can be read by xarray
+    Args:
+        ds (xarray dataset): dataset of interest
+        timevar (str): variable that contains the time in ds
+
+    Returns:
+
+    """
+    if ds[timevar].attrs['calendar'] == '360':
+        ds[timevar].attrs['calendar'] = '360_day'
+    return ds
 
 def download_iri(iri_auth,config,chunk_size=128):
     #TODO: it would be way nicer to download with opendap instead of requests, since then the file doesn't even have to be saved and is hopefully faster. Only, cannot figure out how to do that with cookie authentication
@@ -80,105 +231,6 @@ def download_iri(iri_auth,config,chunk_size=128):
     iri_ds.rio.write_crs("EPSG:4326").to_netcdf(IRI_filepath_crs)
 
     #TODO: check range longitude and change [0,360] to [-180,180]
-
-
-
-def fix_calendar(ds, timevar='F'):
-    if ds[timevar].attrs['calendar'] == '360':
-        ds[timevar].attrs['calendar'] = '360_day'
-    return ds
-
-def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat',forec_val='prob'):
-    #to circumvent that figures from different functions are overlapping
-    plt.figure()
-    #TODO: generalize to other providers
-    provider="IRI"
-    # plot the forecast values and eth shapefile
-    # for some date and leadtime combinationn a part of the world is masked. This might causes that it seems that the rasterdata and shapefile are not overlapping. But double check before getting confused by the masked values (speaking from experience)
-    # retrieve lats and lons
-    lons = ds_nc.variables[lon]
-    lats = ds_nc.variables[lat]
-    prob = ds_nc.variables[forec_val][:]
-    # plot forecast and admin boundaries
-
-    boundaries_adm1_path = os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR,parameters['path_admin2_shp'])
-    boundaries_world_path = os.path.join(config.DIR_PATH,config.WORLD_SHP_PATH)
-    # load admin boundaries shapefile
-    df_adm = gpd.read_file(boundaries_adm1_path)
-    df_world = gpd.read_file(boundaries_world_path)
-
-    # plot forecast and admin boundaries
-    fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(32,8))
-    ax1.contourf(lons, lats, prob)
-    df_adm.boundary.plot(linewidth=1, ax=ax1, color="red")
-    ax2.contourf(lons, lats, prob)
-    df_world.boundary.plot(linewidth=1, ax=ax2, color="red")
-    fig.suptitle(f'{country} {provider} forecasted values and shape boundaries')
-    return fig
-
-def plot_spatial_columns(df, col_list, title=None, predef_bins=False,cmap='YlOrRd'):
-    #to circumvent that figures from different functions are overlapping
-    plt.figure()
-
-    num_plots = len(col_list)
-    colp_num = 2
-    rows = num_plots // colp_num
-    rows += num_plots % colp_num
-    position = range(1, num_plots + 1)
-
-    if predef_bins:
-        scheme = None
-        bins_list = np.arange(30, 70, 5)
-        norm2 = mcolors.BoundaryNorm(boundaries=bins_list, ncolors=256)
-    else:
-        scheme = "natural_breaks"
-        norm2 = None
-
-    fig = plt.figure(1, figsize=(16, 6 * rows))
-
-    for i, col in enumerate(col_list):
-        ax = fig.add_subplot(rows, colp_num, position[i])
-
-        if not predef_bins:
-            colors = len(df[col].dropna().unique())
-        else:
-            colors = None
-
-        if df[col].isnull().values.all():
-            print(f"No not-NaN values for {c}")
-        elif df[col].isnull().values.any():
-            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm2, scheme=scheme,
-                    missing_kwds={"color": "lightgrey", "edgecolor": "red",
-                                  "hatch": "///",
-                                  "label": "No values"})
-        else:
-            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm2, scheme=scheme)
-
-        df.boundary.plot(linewidth=0.2, ax=ax)
-
-        plt.title(col)
-        ax.axis("off")
-        if not predef_bins and not df[col].isnull().values.all():
-            leg = ax.get_legend()
-
-            for lbl in leg.get_texts():
-                label_text = lbl.get_text()
-                upper = label_text.split(",")[-1].rstrip(']')
-
-                try:
-                    new_text = f'{float(upper):,.2f}'
-                except:
-                    new_text = upper
-                lbl.set_text(new_text)
-
-    #TODO: fix legend and prettify plot
-        #     legend_elements= [Line2D([0], [0], marker='o',markersize=15,label=k,color=color_dict[k],linestyle='None') for k in color_dict.keys()]
-    # leg=plt.legend(title='Legend',frameon=False,handles=legend_elements,bbox_to_anchor=(1.5,0.8))
-    # leg._legend_box.align = 'left'
-
-    if title:
-        fig.suptitle(title, fontsize=14, y=0.92)
-    return fig
 
 
 def get_iri_data(config, download=False):
@@ -226,13 +278,14 @@ def get_icpac_data(config,download=False):
             transform = src.transform
     return icpac_ds, transform
 
-
+#computations
 def compute_raster_statistics(boundary_path, raster_array, raster_transform, threshold, upscale_factor=None):
     df = gpd.read_file(boundary_path)
     #TODO: decide if we want to upsample and if yes, implement
     # if upscale_factor:
     #     forecast_array, transform = resample_raster(raster_path, upscale_factor)
     # else:
+
     # extract statistics for each polygon. all_touched=True includes all cells that touch a polygon, with all_touched=False only those with the center inside the polygon are counted.
     df["max_cell"] = pd.DataFrame(
         zonal_stats(vectors=df, raster=raster_array, affine=raster_transform, band=1, nodata=-9999))["max"]
