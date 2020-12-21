@@ -12,6 +12,7 @@ import os
 import logging
 import io
 from googleapiclient.http import MediaIoBaseDownload
+from urllib.request import urlretrieve
 
 logger = logging.getLogger(__name__)
 
@@ -65,3 +66,7 @@ def download_gdrive(gclient,fileid,output_file):
 def unzip(zip_file_path, save_path):
     with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
+
+def download_ftp(url, save_path):
+    logger.info(f'Downloading "{url}" to "{save_path}"')
+    urlretrieve(url, filename=save_path)
