@@ -33,8 +33,9 @@ class Config:
 
 
     #General date objects
+    #TODO: decide if want to use this for IRI
+    #Might also just want to download separate file for every month, since that is the structure of the other forecasts
     TODAY = datetime.now()
-
     TODAY_MONTH = TODAY.strftime("%b")
     NEXT_YEAR = TODAY.year+1
 
@@ -46,7 +47,11 @@ class Config:
     #world shapefile so used by all countries, save in drought folder
     WORLD_SHP_PATH=os.path.join('indicators','drought','Data','TM_WORLD_BORDERS-0','TM_WORLD_BORDERS-0.3.shp')
 
-    FORECAST_BOUNDARIES_FIGNAME = "forecast_boundaries_overlap.png"
+    ### Name mappings
+    #to rename the variables of different providers to
+    LOWERTERCILE = "prob_below"
+    LONGITUDE = "lon"
+    LATITUDE = "lat"
 
     ### IRI
     # currently downloading from november 2020 till latest date available
@@ -63,11 +68,28 @@ class Config:
     #currently it is solely downloading belowaverage data, this can be changed but will make downloading times longer.
     IRI_NC_FILENAME_RAW = f"IRI_2020{NEXT_YEAR}.nc"
     IRI_NC_FILENAME_CRS = f"IRI_2020{NEXT_YEAR}_crs.nc"
+    IRI_LOWERTERCILE = "prob"
 
 
     ### ICPAC
     #TODO: probably want to download directly from the ftp server instead of uploading to GDrive and downloading from there. But couldn't figure out how to do that
     ICPAC_GDRIVE_ZIPID = "13VQTVj5Lwm6jHYBMIf7oUZt5k1-alwjf"
     ICPAC_DIR = "icpac"
-    ICPAC_PROBFORECAST_REGEX = "ForecastProb*nc"
+    #Raw data can be processed for all dates, for the one with crs, we only want to one of interest
+    ICPAC_PROBFORECAST_REGEX_RAW = "ForecastProb*.nc"
+    ICPAC_PROBFORECAST_REGEX_CRS = "ForecastProb*{month}{year}_crs.nc"
+    ICPAC_LOWERTERCILE = "below"
+    ICPAC_LON = "x"
+    ICPAC_LAT = "y"
+
+    #NMME
+    #date should be string of YYYYMM
+    #TODO: in future might want to add support for monthly (and temperature) forecasts
+    NMME_FTP_URL_SEASONAL = "ftp://ftp.cpc.ncep.noaa.gov/NMME/prob//netcdf/prate.{date}.prob.adj.seas.nc"
+    NMME_DIR = "nmme"
+    NMME_NC_FILENAME_RAW = "nmme_prate_{date}_prob_adj_seas.nc"
+    NMME_NC_FILENAME_CRS = "nmme_prate_{date}_prob_adj_seas_crs.nc"
+    NMME_LOWERTERCILE = "prob_below"
+    NMME_LON = "x"
+    NMME_LAT = "y"
 
