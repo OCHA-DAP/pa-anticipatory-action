@@ -4,6 +4,7 @@ analyses/*/Data/WorldPop/*
 analyses/*/Data/GlobalIPC
 IRI/
 icpac/
+nmme/
 
 #Local experiments
 Experiments
