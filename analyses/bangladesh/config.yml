@@ -1,0 +1,4 @@
+DIRS:
+  adm_dir: "data/ADM_Shp"
+  data_dir: "data/FE_Results"
+  gee_dir: "data/GEE_Output"

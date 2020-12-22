@@ -1,0 +1,12 @@
+name: bang_floods
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - matplotlib
+  - geopandas
+  - spyder-kernels
+  - openpyxl
+  - xlrd
+  - ipykernel
+  - seaborn

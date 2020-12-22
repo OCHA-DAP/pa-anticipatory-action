@@ -113,7 +113,7 @@ def main(country_iso3, admin_level, suffix, download, config=None):
     if download:
         get_globalipc_data(country_iso3, country_iso2, IPC_DIR, config)
 
-    df_ipc = read_ipcglobal(country_iso3, parameters, IPC_PATH, IPC_DIR, SHP_PATH, admin_level,config)
+    df_ipc = read_ipcglobal(country_iso3, parameters, IPC_PATH, IPC_DIR, SHP_PATH, int(admin_level),config)
     df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_admin{admin_level}{suffix}.csv")
 
 

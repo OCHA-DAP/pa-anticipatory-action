@@ -1,8 +1,39 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2513
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww38200\viewh20180\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+# [COUNTRY NAME] Anticipatory Action
 
-\f0\fs24 \cf0 [Country-specific Information about the pilot and running the analysis]}
+## Background information
+
+Provide a basic overview of the context of anticipatory action in this country. Link to the GDrive Trigger Card document for greater context and details.  
+
+## Overview of analysis
+
+What is the basic process of the analysis contained within this repository? 
+
+## Data description
+
+- Where does the data come from? Are there any licensing or usage restrictions?
+- How can the data be accessed?
+- Why were these datasets selected?
+- Are there any limitations with these datasets that one should be aware of when running the analysis and interpreting results?
+
+## Directory structure
+
+Modify the structure outlined below as needed. 
+
+```
+
+├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
+│
+├── results                   <- Results from analysis which may include model outputs, figures, reports.  
+|
+├── scripts                   <- Scripts to perform generalized data processing and analysis steps. These scripts may be applied in the notebooks.    
+|
+└── README.md                 <- Description of this project.
+
+```
+
+## Reproducing this analysis
+
+Include guidance to:
+- Reproduce the required computational environment 
+- Run top-level scripts (if needed)
+- Configure paramerers
