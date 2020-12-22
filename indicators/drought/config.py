@@ -69,6 +69,8 @@ class Config:
     IRI_NC_FILENAME_RAW = f"IRI_2020{NEXT_YEAR}.nc"
     IRI_NC_FILENAME_CRS = f"IRI_2020{NEXT_YEAR}_crs.nc"
     IRI_LOWERTERCILE = "prob"
+    IRI_LON = "X"
+    IRI_LAT = "Y"
 
 
     ### ICPAC
