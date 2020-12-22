@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 #plot functions
 def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat',forec_val='prob_below'):
+    #TODO: at some point this function can be deleted/integrated with plot_raster_boundaries_test, but for now keeping for debugging
     """
     plot a raster file and a shapefile on top of each other with the goal to see if their coordinate systems match
     Two plots are made, one with the adm2 shapefile of the country and one with the worldmap
@@ -53,8 +54,6 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     """
     #initialize empty figure, to circumvent that figures from different functions are overlapping
     plt.figure()
-
-    #TODO: test if this change works with all providers
 
     # retrieve lats and lons
     lons=ds_nc.coords[lon]
@@ -76,32 +75,29 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     fig.suptitle(f'{country} forecasted values and shape boundaries')
     return fig
 
-def plot_raster_boundaries_test(ds_list,country, parameters, config, lon='lon',lat='lat',forec_val='prob_below',title_list=None):
-    #TODO: this function has to be finalized and integrated with plot_raster_boundaries!
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None):
     #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
     """
-    plot a raster file and a shapefile on top of each other with the goal to see if their coordinate systems match
-    Two plots are made, one with the adm2 shapefile of the country and one with the worldmap
-    For some forecast providers a part of the world is masked. This might causes that it seems that the rasterdata and shapefile are not overlapping. But double check before getting confused by the masked values (speaking from experience)
-
+    Plot a raster file and a shapefile on top of each other.
+    Several datasets can given and for each dataset a separate subplot will be generated
     Args:
         ds_nc (xarray dataset): dataset that should be plotted, all bands contained in this dataset will be plotted
-        country (str): country for which to plot the adm2 boundaries
-        parameters (dict): parameters for the specific country
-        config (Config): config for the drought indicator
+        boundary_path (str): path to the shapefile
+        clipped (bool): if True, clip the raster extent to the shapefile
         lon (str): name of the longitude coordinate in ds_nc
         lat (str): name of the latitude coordinate in ds_nc
         forec_val (str): name of the variable that contains the values to be plotted in ds_nc
-
+        title_list (list of strs): titles of subplots. If None, no subtitles will be used
+        suptitle (str): general figure title. If None, no title will be used
     Returns:
         fig (fig): two subplots with the raster and the country and world boundaries
     """
     #initialize empty figure, to circumvent that figures from different functions are overlapping
     plt.figure()
 
-    boundaries_adm1_path = os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR,parameters['path_admin1_shp'])
     # load admin boundaries shapefile
-    df_adm = gpd.read_file(boundaries_adm1_path)
+    df_bound = gpd.read_file(boundary_path)
+
 
     num_plots = len(ds_list)
     if num_plots>1:
@@ -113,44 +109,42 @@ def plot_raster_boundaries_test(ds_list,country, parameters, config, lon='lon',l
     position = range(1, num_plots + 1)
 
     #TODO: find a better way to define bins that always capture full range of values but are consistent
-    #TODO: define a missing values color
     predef_bins = np.arange(30, 61, 2.5)
     norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
     cmap=plt.cm.jet
-    # fig, axes = plt.subplots(nrows=rows, ncols=colp_num)
     fig, axes = plt.subplots(rows, colp_num)
     if num_plots==1:
         axes.set_axis_off()
     else:
         [axi.set_axis_off() for axi in axes.ravel()]
-    # fig = plt.figure(figsize=(16, 8))
+
     for i, ds in enumerate(ds_list):
         #TODO: decide if want to use projection and if Robinson is then good one
         ax = fig.add_subplot(rows, colp_num, position[i],projection=ccrs.Robinson())
 
         #TODO: spatial_dims needed for ICPAC data but don't understand why yet
-        clipped = ds.rio.set_spatial_dims(x_dim=lon,y_dim=lat).rio.clip(df_adm.geometry.apply(mapping), df_adm.crs, all_touched=True)
-        lons = clipped.coords[lon]
-        lats = clipped.coords[lat]
-        prob = clipped[forec_val]
+        if clipped:
+            ds = ds.rio.set_spatial_dims(x_dim=lon,y_dim=lat).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+        lons = ds.coords[lon]
+        lats = ds.coords[lat]
+        prob = ds[forec_val]
 
         im = plt.pcolormesh(lons, lats, prob, cmap=cmap, norm=norm)
 
         if title_list is not None:
             plt.title(title_list[i], size=8)
 
-        df_adm.boundary.plot(linewidth=1, ax=ax, color="red")
+        df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
         ax.axis("off")
 
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
     cb = plt.colorbar(im, cax=cbar_ax, orientation="vertical", pad=0.02, aspect=16, shrink=0.8)
-    # cb = plt.colorbar(ax=ax, orientation="vertical", pad=0.02, aspect=16, shrink=0.8)
     cb.set_label('prob', size=12, rotation=0, labelpad=15)
     cb.ax.tick_params(labelsize=10)
 
-    # plt.tight_layout()
-    # fig.suptitle(f'{country} forecasted values and shape boundaries')
+    if suptitle is not None:
+        fig.suptitle(suptitle, size=10)
     return fig
 
 def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd'):
@@ -180,7 +174,6 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
     position = range(1, num_plots + 1)
 
     #TODO: messy now with the axes and ax objects, find neater method. If using plt.figure and then add_subplots calling function several times will overlap the plots :/
-    # fig = plt.figure(1, figsize=(16, 6 * rows))
     fig, axes=plt.subplots(rows,colp_num)
     [axi.set_axis_off() for axi in axes.ravel()]
     #if bins, set norm to classify the values in the bins
@@ -238,11 +231,6 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
                 lbl.set_text(new_text)
 
     #TODO: fix legend and prettify plot
-
-        #     legend_elements= [Line2D([0], [0], marker='o',markersize=15,label=k,color=color_dict[k],linestyle='None') for k in color_dict.keys()]
-    # leg=plt.legend(title='Legend',frameon=False,handles=legend_elements,bbox_to_anchor=(1.5,0.8))
-    # leg._legend_box.align = 'left'
-
     if title:
         fig.suptitle(title, fontsize=14, y=0.92)
     fig.tight_layout()
@@ -288,6 +276,19 @@ def invert_latlon(ds):
         # ds=np.flip(ds.squeeze('F'),axis=1)
     return ds
 
+def change_longitude_range(ds):
+    """
+    If longitude ranges from 0 to 360, change it to range from -180 to 180.
+    Assumes the name of the longitude coordinates is "lon"
+    Args:
+        ds (xarray dataset): dataset that should be transformed
+
+    Returns:
+        ds_lon (xarray dataset): dataset with transformed longitude coordinates
+    """
+    ds_lon = ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180)).sortby('lon')
+    return ds_lon
+
 def fix_calendar(ds, timevar='F'):
     """
     Some datasets come with a wrong calendar attribute that isn't recognized by xarray
@@ -297,7 +298,7 @@ def fix_calendar(ds, timevar='F'):
         timevar (str): variable that contains the time in ds
 
     Returns:
-
+        ds (xarray dataset): modified dataset
     """
     if "calendar" in ds[timevar].attrs.keys():
         if ds[timevar].attrs['calendar'] == '360':
@@ -307,8 +308,23 @@ def fix_calendar(ds, timevar='F'):
             ds[timevar].attrs['calendar'] = '360_day'
     return ds
 
+
 #computations
 def compute_raster_statistics(boundary_path, raster_array, raster_transform, threshold, upscale_factor=None):
+    """
+    Compute statistics of the raster_array per geographical region defined in the boundary_path file
+    Currently several methods are implemented, namely the maximum and mean per region, and the percentage of the area with a value larger than threshold.
+    For all three methods, two variations are implemented: one where all raster cells touching a region are counted, and one where only the raster cells that have their center within the region are counted.
+    Args:
+        boundary_path (str): path to the shapefile
+        raster_array (numpy array): array containing the raster data
+        raster_transform (numpy array): array containing the transformation of the raster data, this is related to the CRS
+        threshold (float): minimum probability of a raster cell to count that cell as meeting the criterium
+        upscale_factor: currently not implemented
+
+    Returns:
+        df (Geodataframe): dataframe containing the computed statistics
+    """
     df = gpd.read_file(boundary_path)
     #TODO: decide if we want to upsample and if yes, implement
     # if upscale_factor:
@@ -377,15 +393,13 @@ def download_iri(iri_auth,config,chunk_size=128):
 
     #TODO: not sure if this block fits better here or in get_iri_data
     #invert_latlon assumes lon and lat to be the names of the coordinates
-    iri_ds=iri_ds.rename({"X": "lon", "Y": "lat"})
+    iri_ds=iri_ds.rename({config.IRI_LON: config.LONGITUDE, config.IRI_LAT: config.LATITUDE})
     #often IRI latitude is flipped so check for that and invert if needed
     iri_ds = invert_latlon(iri_ds)
+    iri_ds = change_longitude_range(iri_ds)
     # The iri data is in EPSG:4326 but this isn't included in the filedata (at least from experience)
     # This Coordinate Reference System (CRS) information is later on needed, so add it to the file
-    iri_ds.rio.write_crs("EPSG:4326").to_netcdf(IRI_filepath_crs)
-
-    #TODO: check range longitude and change [0,360] to [-180,180]
-
+    iri_ds.rio.set_spatial_dims(x_dim=config.LONGITUDE,y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").to_netcdf(IRI_filepath_crs)
 
 def get_iri_data(config, download=False):
     """
@@ -418,9 +432,13 @@ def get_iri_data(config, download=False):
 
     return iri_ds, transform
 
-
-#WIP
 def download_icpac(config):
+    """
+    Download the ICPAC data from the centre for humdata's drive.
+    A secret key is needed for this which should be saved as environmental variable with the name GAPI_AUTH
+    Args:
+        config (Config): config for the drought indicator
+    """
     #TODO: would be nicer to directly download from their ftp but couldn't figure out yet how (something with certificates)
     gclient = auth_googleapi()
     gzip_output_file=os.path.join(config.DROUGHTDATA_DIR, f'{config.ICPAC_DIR}.zip')
@@ -441,6 +459,18 @@ def download_icpac(config):
 
 
 def get_icpac_data(config,pubyear,pubmonth,download=False):
+    """
+    Load ICPAC's NetCDF file as xarray dataset
+    Args:
+        config (Config): config for the drought indicator
+        pubyear (str): year forecast is published in YYYY format
+        pubmonth (str): month forecast is published as abbreviation, e.g. Nov
+        download (bool): if True, download data
+
+    Returns:
+        icpac_ds (xarray dataset): dataset continaing the information in the netcdf file
+        transform (numpy array): affine transformation of the dataset based on its CRS
+    """
     if download:
         download_icpac(config)
     #TODO: check if better way to find the file
@@ -448,7 +478,7 @@ def get_icpac_data(config,pubyear,pubmonth,download=False):
         for path in Path(os.path.join(config.DROUGHTDATA_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear)):
 
             #rioxarray reads the icpac data correctly while xarray somehow messes up stuff but still not sure what exactly goes wrong there
-            icpac_ds = rioxarray.open_rasterio(path).squeeze()
+            icpac_ds = rioxarray.open_rasterio(path,masked=True).squeeze()
             icpac_ds = icpac_ds.rename({config.ICPAC_LON: config.LONGITUDE, config.ICPAC_LAT: config.LATITUDE, config.ICPAC_LOWERTERCILE:config.LOWERTERCILE})
 
             #assume all transforms of the different files are the same, so just select the one that is read the latest
@@ -459,6 +489,12 @@ def get_icpac_data(config,pubyear,pubmonth,download=False):
         logger.error(f"ICPAC forecast with regex {config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear)} not found")
 
 def download_nmme(config,date):
+    """
+    Download the NMME for date from their ftp server
+    Args:
+        config (Config): config for the drought indicator
+        date (str): date of publication in YYYYMM format
+    """
     NMME_dir = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR)
     Path(NMME_dir).mkdir(parents=True, exist_ok=True)
     NMME_filepath = os.path.join(NMME_dir, config.NMME_NC_FILENAME_RAW.format(date=date))
@@ -471,6 +507,7 @@ def download_nmme(config,date):
 
         #generally nmme coordinates are not inverted, but this is a double check
         nmme_ds = invert_latlon(nmme_ds)
+        nmme_ds = change_longitude_range(nmme_ds)
         nmme_ds = fix_calendar(nmme_ds, timevar='target')
         nmme_ds = fix_calendar(nmme_ds, timevar='initial_time')
         nmme_ds = xr.decode_cf(nmme_ds)
@@ -483,6 +520,17 @@ def download_nmme(config,date):
         nmme_ds[config.NMME_LOWERTERCILE].rio.write_crs("EPSG:4326").to_netcdf(NMME_filepath_crs)
 
 def get_nmme_data(config,date,download=False):
+    """
+    Read the NMME NetCDF data as xarray dataset
+    Args:
+        config (Config): config for the drought indicator
+        date (str): date of publication in YYYYMM format
+        download (bool): if True, download data
+
+    Returns:
+        nmme_ds (xarray dataset): dataset continaing the information in the netcdf file
+        transform (numpy array): affine transformation of the dataset based on its CRS
+    """
     if download:
         download_nmme(config,date)
     NMME_filepath = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR, config.NMME_NC_FILENAME_CRS.format(date=date))
