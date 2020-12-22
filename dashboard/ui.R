@@ -50,7 +50,7 @@ fluidPage(
                                  tags$br(), 
                                  htmlOutput("iri"),
                                  #htmlOutput("icpac"),
-                                 img(src="icpac_rainfall_20201222_JFM2021.png", align = "center", width=600, height=600),
+                                 img(src="icpac_rainfall_20201222_JFM2021.png", align = "center", width=600, height=600),                                 
                                  htmlOutput("chc"),
                                  htmlOutput("nmme"),
                                  textOutput("eth_nma")),
