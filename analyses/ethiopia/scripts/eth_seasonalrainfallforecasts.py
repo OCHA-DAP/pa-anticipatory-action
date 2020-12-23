@@ -1,17 +1,22 @@
 from pathlib import Path
 import sys
 import os
-import pandas as pd
 import numpy as np
 import cftime
 import calendar
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
-from indicators.drought.process_rainfallforecasts import get_iri_data, get_icpac_data,plot_raster_boundaries, compute_raster_statistics, plot_spatial_columns, plot_raster_boundaries_clip, get_nmme_data
+from indicators.drought.iri_rainfallforecast import get_iri_data
+from indicators.drought.icpac_rainfallforecast import get_icpac_data
+from indicators.drought.nmme_rainfallforecast import get_nmme_data
+from utils_general.plotting import plot_spatial_columns, plot_raster_boundaries, plot_raster_boundaries_clip
+from utils_general.raster_manipulation import compute_raster_statistics
+
 from indicators.drought.config import Config
 from indicators.drought.utils import parse_args
 from utils_general.utils import config_logger
+
 
 
 def main(download, config=None):
