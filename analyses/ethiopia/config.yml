@@ -1,6 +1,27 @@
+country_name: "ethiopia"
 iso3_code: "ETH"
 iso2_code: "ET"
-region: "east-africa"
-regioncode: "EA"
 path_admin2_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm2_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
 path_admin1_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm1_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+shp_adm0c: "ADM0_EN"
+shp_adm1c: "ADM1_EN"
+shp_adm2c: "ADM2_EN"
+
+foodinsecurity:
+  region: "east-africa"
+  regioncode: "EA"
+  fewsnet_dates_add: ["202008","202009"]
+  fewsnet_dates_remove: []
+  pop_filename: "Population_OCHA_2020/eth_admpop_adm2_20201028.csv" #downloaded from https://data.humdata.org/dataset/ethiopia-population-data-_-admin-level-0-3
+  pop_col: "Total"
+  adm0c_pop: "ADM0_EN"
+  adm1c_pop: "ADM1_EN"
+  adm2c_pop: "ADM2_EN"
+  pop_adm1_mapping: {}
+  pop_adm2_mapping:
+    Etang Special: Etang Special woreda
+    Zone 4  (Fantana Rasu): Zone 4 (Fantana Rasu)
+    Halaba Special: Halaba
+  globalipc_adm_mapping:
+    Oromiya: Oromia
+    SNNPR: SNNP
