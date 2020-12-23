@@ -1,9 +1,15 @@
 import pandas as pd
-from utils import parse_args, parse_yaml, config_logger
 from pathlib import Path
 import logging
 import numpy as np
 import os
+import sys
+
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+from indicators.food_insecurity.config import Config
+from indicators.food_insecurity.utils import parse_args
+from utils_general.utils import config_logger
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +125,7 @@ def compute_trigger(df):
     return df
 
 
-def main(country_iso3, admin_level, suffix, config_file="config.yml"):
+def main(country, admin_level, suffix, config=None):
     """
     Compute all functions to return one dataframe with processed columns and if trigger is met for each data-source combination
     Args:
@@ -129,8 +135,9 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
         suffix: string that is attached to the input file names and will be attached to the output file names
         config_file: path to config file
     """
-    parameters = parse_yaml(config_file)[country_iso3]
-    country = parameters["country_name"]
+    if config is None:
+        config = Config()
+    parameters = config.parameters(country)
     COUNTRY_FOLDER = f"../../analyses/{country}"
 
     FEWS_PROCESSED_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetProcessed/"
@@ -168,7 +175,7 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
 
     if os.path.exists(processed_fews_path):
         df_fews = pd.read_csv(processed_fews_path, index_col=0)
-        # TODO: adjust column names in process_fewsnet.py instead
+        # TODO: adjust column names in process_fewsnet_subnatpop.py instead
         df_fews = df_fews.rename(
             columns={
                 parameters["shp_adm1c"]: "ADMIN1",
@@ -210,4 +217,4 @@ def main(country_iso3, admin_level, suffix, config_file="config.yml"):
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="warning")
-    main(args.country_iso3.upper(), args.admin_level, args.suffix)
+    main(args.country.lower(), args.admin_level, args.suffix)

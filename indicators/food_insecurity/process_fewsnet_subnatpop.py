@@ -2,9 +2,15 @@ import geopandas as gpd
 import pandas as pd
 import os
 import numpy as np
-from utils import parse_args, parse_yaml, config_logger, get_fewsnet_data, convert_to_numeric
-from pathlib import Path
 import logging
+import sys
+from pathlib import Path
+
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+from indicators.food_insecurity.config import Config
+from indicators.food_insecurity.utils import parse_args, get_fewsnet_data
+from utils_general.utils import config_logger, convert_to_numeric
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +33,8 @@ def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
     for d in dates:
         # path to fewsnet data
         # In most cases FewsNet publishes per region, but sometimes also per country, so allow for both
-        shape_region = f"{path}{region}{d}/{regionabb}_{d}_{period}.shp"
-        shape_country = f"{path}{iso2_code}{d}/{iso2_code}_{d}_{period}.shp"
+        shape_region = os.path.join(path,f"{region}{d}/{regionabb}_{d}_{period}.shp")
+        shape_country = os.path.join(path,f"{iso2_code}{d}/{iso2_code}_{d}_{period}.shp")
         if os.path.exists(shape_country):
             gdf = gpd.read_file(shape_country)
             gdf["date"] = pd.to_datetime(d, format="%Y%m")
@@ -320,7 +326,7 @@ def load_popdata(
 
 
 def create_histpopdict(
-    df_data, country, histpop_path="Data/Worldbank_TotalPopulation.csv"
+    df_data, country, histpop_path
 ):
     """
     Retrieve the historical national population for the years that are present in df_data
@@ -371,7 +377,7 @@ def get_adjusted(row, perc_dict):
         return int(row["Total"] * adjustment)
 
 
-def merge_ipcpop(df_ipc, df_pop, country, pop_adm1c, pop_adm2c, shp_adm1c, shp_adm2c):
+def merge_ipcpop(df_ipc, df_pop, country, pop_adm1c, pop_adm2c, shp_adm1c, shp_adm2c,histpop_path):
     """
 
     Args:
@@ -394,7 +400,7 @@ def merge_ipcpop(df_ipc, df_pop, country, pop_adm1c, pop_adm2c, shp_adm1c, shp_a
     )
 
     # dict to indicate relative increase in population over the years
-    pop_dict = create_histpopdict(df_ipcp, country=country)
+    pop_dict = create_histpopdict(df_ipcp, country=country,histpop_path=histpop_path)
     # estimate percentage of population at given year in relation to the national population given by the subnational population file
     pop_tot_subn = df_ipcp[df_ipcp.date == df_ipcp.date.unique()[0]]["Total"].sum()
     perc_dict = {k: v / pop_tot_subn for k, v in pop_dict.items()}
@@ -452,7 +458,7 @@ def aggr_admin1(df, adm1c):
     return df_adm
 
 
-def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
+def main(country, suffix,download_fewsnet, config=None):
     """
     This script takes the FEWSNET IPC shapefiles provided by on fews.net and overlays them with an admin2 shapefile, in order
     to provide an IPC value for each admin2 district. In the case where there are multiple values per district, the IPC value
@@ -469,44 +475,50 @@ def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
         suffix: string to attach to the output files name
         config_file: path to config file
     """
-    parameters = parse_yaml(config_file)[country_iso3]
 
-    country = parameters["country_name"]
-    COUNTRY_FOLDER = f"../../analyses/{country}"
+    if config is None:
+        config = Config()
+    parameters = config.parameters(country)
 
     iso2_code = parameters["iso2_code"]
-    region = parameters["region"]
-    regioncode = parameters["regioncode"]
+    region = parameters["foodinsecurity"]["region"]
+    regioncode = parameters["foodinsecurity"]["regioncode"]
     admin2_shp = parameters["path_admin2_shp"]
     shp_adm0c = parameters["shp_adm0c"]
     shp_adm1c = parameters["shp_adm1c"]
     shp_adm2c = parameters["shp_adm2c"]
 
-    pop_file = parameters["pop_filename"]
-    POP_PATH = f"{COUNTRY_FOLDER}/Data/{pop_file}"
-    pop_adm1c = parameters["adm1c_pop"]
-    pop_adm2c = parameters["adm2c_pop"]
-    pop_col = parameters["pop_col"]
-    pop_bound_adm1_mapping = parameters["pop_bound_adm1_mapping"]
-    pop_bound_adm2_mapping = parameters["pop_bound_adm2_mapping"]
-    fewsnet_dates = parameters["fewsnet_dates"]
+    pop_filename = parameters["foodinsecurity"]["pop_filename"]
+    pop_adm1c = parameters["foodinsecurity"]["adm1c_pop"]
+    pop_adm2c = parameters["foodinsecurity"]["adm2c_pop"]
+    pop_col = parameters["foodinsecurity"]["pop_col"]
+    pop_bound_adm1_mapping = parameters["foodinsecurity"]["pop_adm1_mapping"]
+    pop_bound_adm2_mapping = parameters["foodinsecurity"]["pop_adm2_mapping"]
 
-    PATH_FEWSNET = "Data/FewsNetRaw/"
-    ADMIN2_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
-    PERIOD_LIST = ["CS", "ML1", "ML2"]
-    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetProcessed/"
+    fewsnet_dates = config.FEWSNET_DATES
+    if "fewsnet_dates_add" in parameters["foodinsecurity"].keys():
+        fewsnet_dates = fewsnet_dates + parameters["foodinsecurity"]["fewsnet_dates_add"]
+    if "fewsnet_dates_remove" in parameters["foodinsecurity"].keys():
+        fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
+
+    country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+    pop_path = os.path.join(country_folder,config.DATA_DIR,pop_filename)
+    fewsnet_raw_dir = os.path.join(config.FOODINSECURITYDATA_DIR, config.FEWSNET_RAW_DIR)
+    admin2bound_path = os.path.join(country_folder, config.DATA_DIR, config.SHAPEFILE_DIR, admin2_shp)
+    histpop_path = os.path.join(config.FOODINSECURITYDATA_DIR,config.WB_POP_FILENAME)
+    output_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSADMPOP_PROCESSED_DIR)
     # create output dir if it doesn't exist yet
-    Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     if download_fewsnet:
         for d in fewsnet_dates:
-            get_fewsnet_data(d,iso2_code,region,regioncode,PATH_FEWSNET)
+            get_fewsnet_data(d,iso2_code,region,regioncode,fewsnet_raw_dir)
 
     perioddf_dict = {}
-    for period in PERIOD_LIST:
+    for period in config.FEWSNET_PERIOD_NAMES:
         perioddf_dict[period] = gen_csml1m2(
-            PATH_FEWSNET,
-            ADMIN2_PATH,
+            fewsnet_raw_dir,
+            admin2bound_path,
             period,
             fewsnet_dates,
             shp_adm0c,
@@ -519,9 +531,9 @@ def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
 
     df_allipc = merge_ipcperiod(perioddf_dict, shp_adm0c, shp_adm1c, shp_adm2c)
     #check whether names of adm regions in boundary and population files don't correspond
-    check_missingadmins(ADMIN2_PATH,POP_PATH,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,pop_bound_adm2_mapping,pop_bound_adm1_mapping)
+    check_missingadmins(admin2bound_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,pop_bound_adm2_mapping,pop_bound_adm1_mapping)
     df_pop = load_popdata(
-        POP_PATH,
+        pop_path,
         pop_adm1c,
         pop_adm2c,
         pop_col,
@@ -537,19 +549,20 @@ def main(country_iso3, suffix,download_fewsnet, config_file="config.yml"):
         pop_adm2c,
         shp_adm1c,
         shp_adm2c,
+        histpop_path
     )
 
     df_ipcpop.to_csv(
-        f"{RESULT_FOLDER}{country}_fewsnet_admin2{suffix}.csv"
+        os.path.join(output_dir,f"{country}_fewsnet_admin2{suffix}.csv")
     )
 
     df_adm1 = aggr_admin1(df_ipcpop, shp_adm1c)
     df_adm1.to_csv(
-        f"{RESULT_FOLDER}{country}_fewsnet_admin1{suffix}.csv"
+        os.path.join(output_dir,f"{country}_fewsnet_admin1{suffix}.csv")
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country_iso3.upper(),args.suffix,args.download_fewsnet)
+    main(args.country.lower(),args.suffix,args.download_data)

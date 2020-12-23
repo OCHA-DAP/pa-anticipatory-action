@@ -10,7 +10,8 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args, config_logger, get_fewsnet_data, get_worldpop_data
+from indicators.food_insecurity.utils import parse_args, get_fewsnet_data, get_worldpop_data
+from utils_general.utils import config_logger
 
 logger = logging.getLogger(__name__)
 
@@ -103,9 +104,8 @@ def combine_fewsnet_projections(
             # path to fewsnet data
             # sometimes fewsnet publishes per region, sometimes per country
             fews_path = None
-            fews_region_path = f"{folder_fews}{config.FEWSNET_FILENAME.format(region=region.lower(),regionabb=regionabb.upper(),date=d,period=period.upper())}"
-            fews_country_path = f"{folder_fews}{config.FEWSNET_FILENAME.format(region=country_iso2.upper(),regionabb=country_iso2.upper(),date=d,period=period.upper())}"
-
+            fews_region_path = os.path.join(folder_fews,f"{config.FEWSNET_FILENAME.format(region=region.lower(),regionabb=regionabb.upper(),date=d,period=period.upper())}")
+            fews_country_path = os.path.join(folder_fews,f"{config.FEWSNET_FILENAME.format(region=country_iso2.upper(),regionabb=country_iso2.upper(),date=d,period=period.upper())}")
             if os.path.exists(fews_country_path):
                 fews_path = fews_country_path
             elif os.path.exists(fews_region_path):
@@ -193,8 +193,7 @@ def combine_fewsnet_projections(
         # set general admin names
         df.rename(columns={shp_adm1c: "ADMIN1", shp_adm2c: "ADMIN2"}, inplace=True)
         # TODO: decide what kind of filename we want to use for the output, i.e. do we always want to overwrite the output or not
-        df.to_csv(
-            f"{result_folder}{country_iso3.lower()}_admin2_fewsnet_worldpop{suffix}.csv"
+        df.to_csv(os.path.join(result_folder,f"{country_iso3.lower()}_admin2_fewsnet_worldpop{suffix}.csv")
         )
         # aggregate to admin1 by summing (and set to nan if no data for a date-adm1 combination
         df_adm1 = (
@@ -204,14 +203,13 @@ def combine_fewsnet_projections(
             .reset_index()
         )
         df_adm1.rename(columns={"pop_ADMIN2": "pop_ADMIN1"}, inplace=True)
-        df_adm1.to_csv(
-            f"{result_folder}{country_iso3.lower()}_admin1_fewsnet_worldpop{suffix}.csv"
+        df_adm1.to_csv(os.path.join(result_folder,f"{country_iso3.lower()}_admin1_fewsnet_worldpop{suffix}.csv")
         )
     else:
         logger.warning("No data found for the given dates")
 
 
-def main(country_iso3, suffix, download, config_file="config.yml", config=None):
+def main(country, suffix, download, config=None):
     """
     This script computes the population per IPC phase per data - admin2 region combination.
     The IPC phase is retrieved from the FewsNet data, which publishes their data in shapefiles, of three periods namely current situation (CS), near-term projection (ML1) and mid-term projection (ML2)
@@ -224,49 +222,50 @@ def main(country_iso3, suffix, download, config_file="config.yml", config=None):
 
     if config is None:
         config = Config()
-    parameters = config.parameters(country_iso3)
-    # parameters = parse_yaml(config_file)[country_iso3]
+    parameters = config.parameters(country)
 
-    country = parameters["country_name"]
-    COUNTRY_FOLDER = f"../../analyses/{country}"
-
-    region = parameters["region"]
-    regioncode = parameters["regioncode"]
+    country_iso3 = parameters["iso3_code"]
+    region = parameters["foodinsecurity"]["region"]
+    regioncode = parameters["foodinsecurity"]["regioncode"]
     country_iso2 = parameters["iso2_code"]
-    dates = parameters["fewsnet_dates"]
     admin2_shp = parameters["path_admin2_shp"]
     shp_adm1c = parameters["shp_adm1c"]
     shp_adm2c = parameters["shp_adm2c"]
 
-    # TODO: to make variables more generalizable with a config.py. Inspiration from pa-covid-model-parameterization
-    # pop_dir = os.path.join(config.DIR_PATH, country, config.POP_DIR)
-    FOLDER_FEWSNET = "Data/FewsNetRaw/"
-    FOLDER_POP = f"{COUNTRY_FOLDER}/Data/WorldPop"
-    ADMIN2_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
-    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetWorldPop/"
+    fewsnet_dates = config.FEWSNET_DATES
+    if "fewsnet_dates_add" in parameters["foodinsecurity"].keys():
+        fewsnet_dates = fewsnet_dates + parameters["foodinsecurity"]["fewsnet_dates_add"]
+    if "fewsnet_dates_remove" in parameters.keys():
+        fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
+
+    country_folder = os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country)
+    fewsnet_raw_dir = os.path.join(config.FOODINSECURITYDATA_DIR,config.FEWSNET_RAW_DIR)
+    worldpop_dir = os.path.join(country_folder,config.DATA_DIR,config.WORLDPOP_RAW_DIR)
+    admin2bound_path = os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,admin2_shp)
+    output_dir = os.path.join(country_folder,config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
     # create output dir if it doesn't exist yet
-    Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     if download:
-        for d in dates:
-            get_fewsnet_data(d,country_iso2,region,regioncode,FOLDER_FEWSNET)
-        years=[x[:4] for x in dates]
+        for d in fewsnet_dates:
+            get_fewsnet_data(d,country_iso2,region,regioncode,fewsnet_raw_dir)
+        years=[x[:4] for x in fewsnet_dates]
         years_unique=set(years)
         for y in years_unique:
-            get_worldpop_data(country_iso3, y, FOLDER_POP, config)
+            get_worldpop_data(country_iso3, y, worldpop_dir, config)
 
     combine_fewsnet_projections(
         country_iso3,
-        dates,
-        FOLDER_FEWSNET,
-        FOLDER_POP,
-        ADMIN2_PATH,
+        fewsnet_dates,
+        fewsnet_raw_dir,
+        worldpop_dir,
+        admin2bound_path,
         shp_adm1c,
         shp_adm2c,
         region,
         regioncode,
         country_iso2,
-        RESULT_FOLDER,
+        output_dir,
         suffix,
         config
     )
@@ -275,4 +274,4 @@ def main(country_iso3, suffix, download, config_file="config.yml", config=None):
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country_iso3.upper(), args.suffix, args.download_data)
+    main(args.country.lower(), args.suffix, args.download_data)
