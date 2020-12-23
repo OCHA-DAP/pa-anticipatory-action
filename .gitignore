@@ -2,6 +2,13 @@
 indicators/food_insecurity/Data/FewsNetRaw/*
 analyses/*/Data/WorldPop/*
 analyses/*/Data/GlobalIPC
+IRI/
+icpac/
+nmme/
+copernicus/
+
+#Local experiments
+Experiments
 
 # IDEs
 .idea/*
@@ -9,6 +16,9 @@ analyses/*/Data/GlobalIPC
 
 #Mac DSStore
 .DS_Store
+
+#Mac unzipping stuff
+__MACOSX/
 
 # Jupyter Notebook
 .ipynb_checkpoints
