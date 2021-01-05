@@ -100,6 +100,7 @@ class Config:
     #resolution can be 25 or 5
     CHIRPS_DIR = "chirps"
     CHIRPS_FTP_URL_GLOBAL_DAILY="https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/netcdf/p25/chirps-v2.0.{year}.days_p{resolution}.nc"
+    CHIRPS_FTP_URL_AFRICA_DAILY="https://data.chc.ucsb.edu/products/CHIRPS-2.0/africa_daily/tifs/p25/{year}/chirps-v2.0.{year}.{month}{day}.tif"
     CHIRPS_NC_FILENAME_RAW = "chirps_global_daily_{year}_p{resolution}.nc"
     CHIRPS_NC_FILENAME_CRS = "chirps_global_daily_{year}_p{resolution}_crs.nc"
     CHIRPS_LON = "longitude" #"x" #
