@@ -25,3 +25,4 @@ Rtree==0.9.4
 xlrd==1.2.0
 descartes==1.1.0
 mapclassify==2.4.0
+netCDF4==1.5.5.1
