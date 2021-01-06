@@ -85,7 +85,7 @@ def get_trigger_increase_rel(row, level, perc):
 
 def get_trigger_increase(row, period, level, perc):
     """
-    Return 1 if for "row", if the expected increase in the percentage of the population in "level" or higher at time "period" compared to currently (CS) is expected to be larger than "perc"
+    Return 1 for "row", if the expected increase in the percentage of the population in "level" or higher at time "period" compared to currently (CS) is expected to be larger than "perc"
     For Global IPC the population analysed in ML2 is sometimes different than in CS. That is why we work dirrectly with percentages and not anymore with (pop period level+ - pop CS level+) / pop CS
     """
     # range till 6 cause 5 is max level
@@ -103,7 +103,7 @@ def get_trigger_increase(row, period, level, perc):
 
 def compute_trigger(df):
     # TODO: would be great if we can define in config or so which triggers to compute. Not sure how..
-
+    #TODO: move this to country specific scripts/notebooks
     # get yes/no for different thresholds, i.e. column value for row will be 1 if threshold is met and 0 if it isnt
     df["threshold_ML1_4_20"] = df.apply(lambda x: get_trigger(x, "ML1", 4, 20), axis=1)
     df["threshold_ML1_3_30"] = df.apply(lambda x: get_trigger(x, "ML1", 3, 30), axis=1)
