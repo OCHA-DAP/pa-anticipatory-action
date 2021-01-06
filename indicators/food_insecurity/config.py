@@ -1,35 +1,61 @@
 import os
 from pathlib import Path
-from utils import parse_yaml
+from utils_general.utils import parse_yaml
+from datetime import datetime
 
 class Config:
+    ### general directories
+    ANALYSES_DIR = "analyses"
+    DATA_DIR = "Data"
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
-        self.DIR_PATH = getattr(
+        DIR_PATH = getattr(
             self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
         )
+        self.DIR_PATH = DIR_PATH
+        self.FOODINSECURITYDATA_DIR = os.path.join(DIR_PATH, 'indicators', 'food_insecurity', 'Data')
         self._parameters = None
 
 
-    def parameters(self, country_iso3):
+    def parameters(self, country):
         if self._parameters is None:
-            self._parameters = parse_yaml(os.path.join(self.DIR_PATH,"indicators","food_insecurity","config.yml"))[country_iso3] #os.path.join(self.CONFIG_DIR, f'{country_iso3.lower()}.yml'))
+            self._parameters = parse_yaml(os.path.join(self.DIR_PATH, self.ANALYSES_DIR, country.lower(), 'config.yml'))
         return self._parameters
 
+    #General date objects
+    TODAY = datetime.now()
+    TODAY_YEAR = TODAY.strftime("%Y")
+
+    ### Shapefiles
+    SHAPEFILE_DIR = 'Shapefiles'
+
     #### FewsNet
-    FEWSNET_DIR = "FewsNetRaw"
+    FEWSNET_RAW_DIR = "FewsNetRaw"
     #region can either be a part of a continent (e.g. east-africa) and a country (e.g. ethiopia)
     FEWSNET_FILENAME = "{region}{date}/{regionabb}_{date}_{period}.shp"
 
+    #TODO: test if works with dates in the future
+    #these are the standard dates fewsnet should have published data. In 2016 they changed the months of publication
+    #in the config per country, dates can be added and removed
+    FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
+    FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
+    FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
+    FEWSNET_PERIOD_NAMES = ["CS", "ML1", "ML2"]
+
+
     #### Worldpop
-    WORLDPOP_DIR = "WorldPop"
+    WORLDPOP_RAW_DIR = "WorldPop"
     # can make this more variable with a dict, e.g. if we want 1km and 100m or if we also want not UNadj
     # we are currently using 1km because this is generally granular enough and speeds up the calculations a lot
     WORLDPOP_FILENAME = "{country_iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
     WORLDPOP_URL="ftp://ftp.worldpop.org.uk/GIS/Population/Global_2000_2020_1km_UNadj/{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
 
+    #### Worldbank historical national population
+    WB_POP_FILENAME = "Worldbank_TotalPopulation.csv"
+
     #### Global IPC
-    GLOBALIPC_DIR = "GlobalIPC"
+    GLOBALIPC_RAW_DIR = "GlobalIPC"
+    GLOBALIPC_PROCESSED_DIR = "GlobalIPCProcessed"
     GLOBALIPC_URL="http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"
     GLOBALIPC_FILENAME="{country_iso3}_globalipc_raw.xlsx"
     #Analysis name, Country Population, % of total county Pop, Area Phase are not being used in our current analysis so not mapping them

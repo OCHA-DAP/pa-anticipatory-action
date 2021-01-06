@@ -27,6 +27,8 @@ Modify the structure outlined below as needed.
 |
 ├── scripts                   <- Scripts to perform generalized data processing and analysis steps. These scripts may be applied in the notebooks.    
 |
+├── config.yml                <- config file to specify country specific variables   
+|
 └── README.md                 <- Description of this project.
 
 ```
