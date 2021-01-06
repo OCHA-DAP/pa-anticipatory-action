@@ -3,6 +3,7 @@ import os
 import argparse
 from pathlib import Path
 import datetime
+import urllib.error
 
 import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
@@ -92,7 +93,10 @@ def get_worldpop_data(country_iso3, year, output_dir, config):
     url = config.WORLDPOP_URL.format(country_iso3_upper=country_iso3.upper(),country_iso3_lower=country_iso3.lower(),year=year)
     output_file=os.path.join(output_dir, url.split("/")[-1])
     if not os.path.exists(output_file):
-        download_ftp(url, output_file)
+        try:
+            download_ftp(url, output_file)
+        except urllib.error.URLError as e:
+            logger.warning(f"{e}. Data of the year of interest might not exist on the WorldPop FTP.")
 
 def get_globalipc_data(country_iso3, country_iso2, output_dir, config):
     #create directory if doesn't exist
