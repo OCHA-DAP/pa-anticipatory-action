@@ -8,7 +8,8 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args, config_logger, get_globalipc_data
+from indicators.food_insecurity.utils import parse_args, get_globalipc_data
+from utils_general.utils import config_logger
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +43,8 @@ def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_
 
     # replace values in ipc df
     # mainly about differently spelled admin regions
-    if "globalipc_bound_mapping" in parameters:
-        globalipc_bound_mapping = parameters["globalipc_bound_mapping"]
+    if "globalipc_adm_mapping" in parameters["foodinsecurity"].keys():
+        globalipc_bound_mapping = parameters["foodinsecurity"]["globalipc_adm_mapping"]
         df_ipc = df_ipc.replace(globalipc_bound_mapping)
 
     if len(df_ipc[f"ADMIN{admin_level}"].dropna().unique()) == 0:
@@ -53,7 +54,7 @@ def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_
     if admin_level == 1:
         df_ipc_agg = df_ipc.groupby(["ADMIN1", "date"], as_index=False).sum()
     elif admin_level == 2:
-        df_ipc_agg = df_ipc.groupby(["date", "ADMIN1", "ADMIN2"], as_index=False).sum()
+        df_ipc_agg = df_ipc.groupby(["date", "ADMIN1", "ADMIN2"], dropna=False, as_index=False).sum()
     else:
         df_ipc_agg = df_ipc.copy()
 
@@ -85,7 +86,7 @@ def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_
     return df_ipc_agg
 
 
-def main(country_iso3, admin_level, suffix, download, config=None):
+def main(country, admin_level, suffix, download, config=None):
     """
     Define variables and save output
     Args:
@@ -96,28 +97,27 @@ def main(country_iso3, admin_level, suffix, download, config=None):
     """
     if config is None:
         config = Config()
-    parameters = config.parameters(country_iso3)
-    # parameters = parse_yaml(config_file)[country_iso3]
-    country = parameters["country_name"]
+    parameters = config.parameters(country)
+    country_iso3 = parameters["iso3_code"]
     country_iso2 = parameters["iso2_code"]
     admin2_shp = parameters["path_admin2_shp"]
 
-    COUNTRY_FOLDER = f"../../analyses/{country}"
-    SHP_PATH = f"{COUNTRY_FOLDER}/Data/{admin2_shp}"
-    IPC_DIR = f"{COUNTRY_FOLDER}/Data/{config.GLOBALIPC_DIR}" #{GLOBALIPC_PATH}"
-    IPC_PATH = os.path.join(IPC_DIR,config.GLOBALIPC_FILENAME.format(country_iso3=country_iso3))
-    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/GlobalIPCProcessed/"
+    country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+    admin2bound_path = os.path.join(country_folder, config.DATA_DIR, config.SHAPEFILE_DIR, admin2_shp)
+    globalipc_dir = os.path.join(country_folder, config.DATA_DIR, config.GLOBALIPC_RAW_DIR)
+    globalipc_path = os.path.join(globalipc_dir,config.GLOBALIPC_FILENAME.format(country_iso3=country_iso3))
+    output_dir = os.path.join(country_folder, config.DATA_DIR, config.GLOBALIPC_PROCESSED_DIR)
     # create output dir if it doesn't exist yet
-    Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     if download:
-        get_globalipc_data(country_iso3, country_iso2, IPC_DIR, config)
+        get_globalipc_data(country_iso3, country_iso2, globalipc_dir, config)
 
-    df_ipc = read_ipcglobal(country_iso3, parameters, IPC_PATH, IPC_DIR, SHP_PATH, int(admin_level),config)
-    df_ipc.to_csv(f"{RESULT_FOLDER}{country}_globalipc_admin{admin_level}{suffix}.csv")
+    df_ipc = read_ipcglobal(country_iso3, parameters, globalipc_path, globalipc_dir, admin2bound_path, int(admin_level),config)
+    df_ipc.to_csv(os.path.join(output_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv"))
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country_iso3.upper(), args.admin_level, args.suffix, args.download_data)
+    main(args.country.lower(), args.admin_level, args.suffix, args.download_data)

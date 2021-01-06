@@ -1,7 +1,5 @@
 import zipfile
 import logging
-import os
-import argparse
 import requests
 import yaml
 import coloredlogs
@@ -13,6 +11,8 @@ import logging
 import io
 from googleapiclient.http import MediaIoBaseDownload
 from urllib.request import urlretrieve
+import locale
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -70,3 +70,24 @@ def unzip(zip_file_path, save_path):
 def download_ftp(url, save_path):
     logger.info(f'Downloading "{url}" to "{save_path}"')
     urlretrieve(url, filename=save_path)
+
+def download_url(url, save_path, chunk_size=128):
+    # Remove file if already exists
+    try:
+        os.remove(save_path)
+    except OSError:
+        pass
+    # Download
+    r = requests.get(url, stream=True)
+    with open(save_path, "wb") as fd:
+        for chunk in r.iter_content(chunk_size=chunk_size):
+            fd.write(chunk)
+
+def convert_to_numeric(df_col,zone="en_US"):
+    if df_col.dtype == "object":
+        locale.setlocale(locale.LC_NUMERIC, zone)
+        df_col = df_col.apply(lambda x: locale.atof(x))
+        df_col = pd.to_numeric(df_col, errors="coerce")
+    return df_col
+
+

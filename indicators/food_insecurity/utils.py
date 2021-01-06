@@ -1,22 +1,22 @@
-import zipfile
 import logging
 import os
 import argparse
-import requests
-import yaml
-import coloredlogs
-import locale
-import pandas as pd
 from pathlib import Path
-from urllib.request import urlretrieve
 import datetime
+
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+from utils_general.utils import download_ftp, download_url, unzip
 
 logger = logging.getLogger(__name__)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("country_iso3", help="Country ISO3")
+    # parser.add_argument("-c", "--country", help="Country name")
+    parser.add_argument("country", help="Country name")
+    # parser.add_argument("country_iso3", help="Country ISO3")
     parser.add_argument("-a", "--admin_level", default=1)
     # Prefix for filenames
     parser.add_argument(
@@ -30,54 +30,6 @@ def parse_args():
         "-d", "--download-data", action="store_true", help="Download the raw data. FewsNet and WorldPop are currently implemented"
     )
     return parser.parse_args()
-
-
-def parse_yaml(filename):
-    with open(filename, "r") as stream:
-        config = yaml.safe_load(stream)
-    return config
-
-
-def config_logger(level="INFO"):
-    # Colours selected from here:
-    # http://humanfriendly.readthedocs.io/en/latest/_images/ansi-demo.png
-    coloredlogs.install(
-        level=level,
-        fmt="%(asctime)s %(name)s %(levelname)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        field_styles={
-            "name": {"color": 8},
-            "asctime": {"color": 248},
-            "levelname": {"color": 8, "bold": True},
-        },
-    )
-
-def download_url(url, save_path, chunk_size=128):
-    # Remove file if already exists
-    try:
-        os.remove(save_path)
-    except OSError:
-        pass
-    # Download
-    r = requests.get(url, stream=True)
-    with open(save_path, "wb") as fd:
-        for chunk in r.iter_content(chunk_size=chunk_size):
-            fd.write(chunk)
-
-def download_ftp(url, save_path):
-    logger.info(f'Downloading "{url}" to "{save_path}"')
-    urlretrieve(url, filename=save_path)
-
-def unzip(zip_file_path, save_path):
-    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-        zip_ref.extractall(save_path)
-
-def convert_to_numeric(df_col,zone="en_US"):
-    if df_col.dtype == "object":
-        locale.setlocale(locale.LC_NUMERIC, zone)
-        df_col = df_col.apply(lambda x: locale.atof(x))
-        df_col = pd.to_numeric(df_col, errors="coerce")
-    return df_col
 
 def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
     """
