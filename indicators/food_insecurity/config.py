@@ -2,6 +2,24 @@ import os
 from pathlib import Path
 from utils_general.utils import parse_yaml
 from datetime import datetime
+import ftplib
+import re
+
+
+def retrieve_worldpop_dirname():
+    """
+    Retrieve the name of the directory with the data of interest on Worldpop's ftp server
+    This has to be done dynamically, since the folder includes a year in its name and we don't know when this year is changed
+    Returns:
+        item (str): the path to the folder with the Global population data on 1km resolution and UN adjusted numbers
+    """
+    site = "ftp.worldpop.org.uk"
+    username = "anonymous"
+    password = None
+    ftp = ftplib.FTP(site, username, password)
+    for item in ftp.nlst("GIS/Population"):
+        if re.search(r"Global_.*_1km_UNadj", item):
+            return item
 
 class Config:
     ### general directories
@@ -29,18 +47,23 @@ class Config:
     ### Shapefiles
     SHAPEFILE_DIR = 'Shapefiles'
 
+    ### General values
+    IPC_PERIOD_NAMES = ["CS", "ML1", "ML2"]
+    ADMIN0_COL = "ADMIN0"
+    ADMIN1_COL = "ADMIN1"
+    ADMIN2_COL = "ADMIN2"
+
     #### FewsNet
     FEWSNET_RAW_DIR = "FewsNetRaw"
     #region can either be a part of a continent (e.g. east-africa) and a country (e.g. ethiopia)
     FEWSNET_FILENAME = "{region}{date}/{regionabb}_{date}_{period}.shp"
 
-    #TODO: test if works with dates in the future
     #these are the standard dates fewsnet should have published data. In 2016 they changed the months of publication
     #in the config per country, dates can be added and removed
     FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
     FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
-    FEWSNET_PERIOD_NAMES = ["CS", "ML1", "ML2"]
+
 
 
     #### Worldpop
@@ -48,7 +71,12 @@ class Config:
     # can make this more variable with a dict, e.g. if we want 1km and 100m or if we also want not UNadj
     # we are currently using 1km because this is generally granular enough and speeds up the calculations a lot
     WORLDPOP_FILENAME = "{country_iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
-    WORLDPOP_URL="ftp://ftp.worldpop.org.uk/GIS/Population/Global_2000_2020_1km_UNadj/{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
+    #this dirname changes with the year, so dynamically retrieve it by using a regex
+    WORLDPOP_FTP_DIRNAME = retrieve_worldpop_dirname()
+    WORLDPOP_BASEURL=f"ftp://ftp.worldpop.org.uk/{WORLDPOP_FTP_DIRNAME}/"
+    WORLDPOP_URL=WORLDPOP_BASEURL+"{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
+
+    # WORLDPOP_URL="ftp://ftp.worldpop.org.uk/GIS/Population/Global_2000_2020_1km_UNadj/{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
 
     #### Worldbank historical national population
     WB_POP_FILENAME = "Worldbank_TotalPopulation.csv"
