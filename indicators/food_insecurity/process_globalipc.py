@@ -14,7 +14,7 @@ from utils_general.utils import config_logger
 logger = logging.getLogger(__name__)
 
 
-def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_level,config):
+def read_ipcglobal(country, country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_level,config):
     """
     Process ipc data and do some checks
     Args:
@@ -30,6 +30,7 @@ def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_
     df_ipc = pd.read_excel(ipc_path, header=[11])
     # ipc excel file comes with horrible column names, so change them to better understandable ones
     df_ipc = df_ipc.rename(columns=config.GLOBALIPC_COLUMNNAME_MAPPING)
+    df_ipc['ADMIN2_ID']=df_ipc['ADMIN2_ID'].astype(str)
     #due to excel settings, the percentages are on the 0 to 1 scale so change to 0-100
     perc_cols = [c for c in df_ipc.columns if 'perc' in c]
     df_ipc[perc_cols]=df_ipc[perc_cols]*100
@@ -50,24 +51,36 @@ def read_ipcglobal(country_iso3, parameters, ipc_path, ipc_dir, shp_path, admin_
     if len(df_ipc[f"ADMIN{admin_level}"].dropna().unique()) == 0:
         logger.warning(f"No admin {admin_level} regions found in the IPC file")
 
-    # TODO: implement other adm levels
-    if admin_level == 1:
-        df_ipc_agg = df_ipc.groupby(["ADMIN1", "date"], as_index=False).sum()
+    if admin_level == 0:
+        #TODO: decide on method of admin0 aggregation
+        #data of countries we have worked so far with enables us to aggregate to admin0 level with two methods
+        #one is to take all the adm2 values and group them by date
+        #the other is to use the already aggregated numbers on admin0 level that are present in the raw data
+        #in theory they should give the same results, but in practice they dont... (for MWI and SOM)
+        df_ipc_adm0_group = df_ipc[df_ipc[config.ADMIN0_COL].str.lower().str.fullmatch(country.lower())].groupby([config.ADMIN0_COL,"date"],as_index=False).sum()
+        df_ipc_adm0_precalc = df_ipc[df_ipc[config.ADMIN0_COL].str.lower().str.match(f"{country.lower()}:")]
+        print(df_ipc_adm0_precalc[["ADMIN0","date","CS_1"]].sort_values("date"))
+        print(df_ipc_adm0_group[["ADMIN0","date","CS_1"]].sort_values("date"))
+        df_ipc_agg = df_ipc_adm0_group
+
+    elif admin_level == 1:
+        df_ipc_agg = df_ipc.groupby([config.ADMIN1_COL, "date"], as_index=False).sum()
+        df_ipc_agg[config.ADMIN0_COL] = country
+
     elif admin_level == 2:
-        df_ipc_agg = df_ipc.groupby(["date", "ADMIN1", "ADMIN2"], dropna=False, as_index=False).sum()
+        df_ipc_agg = df_ipc.groupby(["date", config.ADMIN1_COL, config.ADMIN2_COL], dropna=False, as_index=False).sum()
+        df_ipc_agg[config.ADMIN0_COL] = country
     else:
         df_ipc_agg = df_ipc.copy()
 
     ipc_cols = [
-        f"{period}_{i}" for period in ["CS", "ML1", "ML2"] for i in [1, 2, 3, 4, 5]
+        f"{period}_{i}" for period in config.IPC_PERIOD_NAMES for i in [1, 2, 3, 4, 5]
     ]
-    pop_cols = [f"pop_{period}" for period in ["CS", "ML1", "ML2"]]
-    # TODO: add ADMIN0
-    adm_cols = [f"ADMIN{a}" for a in range(1, int(admin_level) + 1)]
-
+    pop_cols = [f"pop_{period}" for period in config.IPC_PERIOD_NAMES]
+    adm_cols = [f"ADMIN{a}" for a in range(0, int(admin_level) + 1)]
     df_ipc_agg = df_ipc_agg[["date"] + adm_cols + ipc_cols + pop_cols]
-    # TODO: implement getting population per admin region, already implemented in proces_fewsnet.py
-    df_ipc_agg[f"pop_ADMIN{admin_level}"] = np.nan
+    # TODO: implement getting total population per admin region, already implemented in process_fewsnet.py
+    # df_ipc_agg[f"pop_ADMIN{admin_level}"] = np.nan
 
     shp_admc = parameters[f"shp_adm{admin_level}c"]
     boundaries = gpd.read_file(shp_path)
@@ -113,7 +126,7 @@ def main(country, admin_level, suffix, download, config=None):
     if download:
         get_globalipc_data(country_iso3, country_iso2, globalipc_dir, config)
 
-    df_ipc = read_ipcglobal(country_iso3, parameters, globalipc_path, globalipc_dir, admin2bound_path, int(admin_level),config)
+    df_ipc = read_ipcglobal(country, country_iso3, parameters, globalipc_path, globalipc_dir, admin2bound_path, int(admin_level),config)
     df_ipc.to_csv(os.path.join(output_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv"))
 
 
