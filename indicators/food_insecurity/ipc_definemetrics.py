@@ -17,32 +17,6 @@ logger = logging.getLogger(__name__)
 # TODO: quality check that perc cols add up to 100
 
 
-def add_columns(df, source,config):
-    df["date"] = pd.to_datetime(df["date"])
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-
-    df["Source"] = source
-
-    # calculate percentage of population per analysis period and level
-    for period in config.IPC_PERIOD_NAMES:
-        # IPC level goes up to 5, so define range up to 6
-        for i in range(1, 6):
-            c = f"{period}_{i}"
-            df[f"perc_{c}"] = df[c] / df[f"pop_{period}"] * 100
-        # get pop and perc in IPC3+ and IPC2-
-        # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
-        df[f"{period}_3p"] = df[[f"{period}_{i}" for i in range(3, 6)]].sum(axis=1)
-        df[f"perc_{period}_3p"] = df[f"{period}_3p"] / df[f"pop_{period}"] * 100
-        df[f"{period}_4p"] = df[[f"{period}_{i}" for i in range(4, 6)]].sum(axis=1)
-        df[f"perc_{period}_4p"] = df[f"{period}_4p"] / df[f"pop_{period}"] * 100
-        df[f"{period}_2m"] = df[[f"{period}_{i}" for i in range(1, 3)]].sum(axis=1)
-        df[f"perc_{period}_2m"] = df[f"{period}_2m"] / df[f"pop_{period}"] * 100
-    df["perc_inc_ML2_3p"] = df["perc_ML2_3p"] - df["perc_CS_3p"]
-    df["perc_inc_ML1_3p"] = df["perc_ML1_3p"] - df["perc_CS_3p"]
-    return df
-
-
 def define_trigger_percentage(row, period, level, perc):
     """
     Return 1 if percentage of population in row for period in level "level" or higher, equals or larger than perc
