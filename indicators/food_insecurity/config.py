@@ -61,6 +61,7 @@ class Config:
     #these are the standard dates fewsnet should have published data. In 2016 they changed the months of publication
     #in the config per country, dates can be added and removed
     FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
+    FEWSWORLDPOP_PROCESSED_FILENAME = "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
     FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
 
