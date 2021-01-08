@@ -8,6 +8,7 @@ import numpy as np
 from shapely.geometry import mapping
 import cartopy.crs as ccrs
 import matplotlib.colors as mcolors
+import math
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
@@ -59,7 +60,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     fig.suptitle(f'{country} forecasted values and shape boundaries')
     return fig
 
-def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None):
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8):
     #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
     """
     Plot a raster file and a shapefile on top of each other.
@@ -73,6 +74,10 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
         forec_val (str): name of the variable that contains the values to be plotted in ds_nc
         title_list (list of strs): titles of subplots. If None, no subtitles will be used
         suptitle (str): general figure title. If None, no title will be used
+        colp_num (int): number of columns in figure
+        predef_bins (array/list): array/list with bins to classify the values in
+        figsize(tuple): width, height of the figure in inches
+        labelsize(float): size of legend labels and subplot titles
     Returns:
         fig (fig): two subplots with the raster and the country and world boundaries
     """
@@ -82,21 +87,14 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     # load admin boundaries shapefile
     df_bound = gpd.read_file(boundary_path)
 
-
     num_plots = len(ds_list)
-    if num_plots>1:
-        colp_num=2
-    else:
-        colp_num=1
-    rows = num_plots // colp_num
-    rows += num_plots % colp_num
+    rows = math.ceil(num_plots / colp_num)
     position = range(1, num_plots + 1)
 
-    #TODO: find a better way to define bins that always capture full range of values but are consistent
-    predef_bins = np.arange(30, 61, 2.5)
     norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
     cmap=plt.cm.jet
-    fig, axes = plt.subplots(rows, colp_num)
+    # cmap.set_bad(color='red')
+    fig, axes = plt.subplots(rows, colp_num,figsize=figsize)
     if num_plots==1:
         axes.set_axis_off()
     else:
@@ -116,7 +114,7 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
         im = plt.pcolormesh(lons, lats, prob, cmap=cmap, norm=norm)
 
         if title_list is not None:
-            plt.title(title_list[i], size=8)
+            plt.title(title_list[i], size=labelsize)
 
         df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
         ax.axis("off")
@@ -124,8 +122,8 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
     cb = plt.colorbar(im, cax=cbar_ax, orientation="vertical", pad=0.02, aspect=16, shrink=0.8)
-    cb.set_label('prob', size=12, rotation=0, labelpad=15)
-    cb.ax.tick_params(labelsize=10)
+    cb.set_label(forec_val, size=labelsize, rotation=0, labelpad=15)
+    cb.ax.tick_params(labelsize=labelsize)
 
     if suptitle is not None:
         fig.suptitle(suptitle, size=10)
