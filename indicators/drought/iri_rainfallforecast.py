@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 import rasterio
 import xarray as xr
+#pycharm is indicating that rioxarray is not used, but actually is used when calling .rio
 import rioxarray
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
