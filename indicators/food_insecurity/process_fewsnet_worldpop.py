@@ -194,7 +194,8 @@ def process_fewsnet_worldpop(
             df = df.append(df_comb, ignore_index=True)
 
     if not df.empty:
-        df.to_csv(os.path.join(result_folder,config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country.lower(),admin_level=str(admin_level),suffix=suffix)))
+        df=df.sort_values(by="date")
+        df.to_csv(os.path.join(result_folder,config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country.lower(),admin_level=str(admin_level),suffix=suffix)),index=False)
 
     else:
         logger.warning("No data found for the given dates")
