@@ -5,6 +5,7 @@ import xarray as xr
 import rioxarray
 import geopandas as gpd
 from shapely.geometry import mapping
+import numpy as np
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
@@ -25,7 +26,7 @@ def main(download, config=None):
 
     # create list of years of interest
     years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
-  
+    years=[2020]
     # get data for each year
     # ADD ME warning message if data unavailable
 
@@ -39,6 +40,7 @@ def main(download, config=None):
         # rolling sum of 14 days
         ds_roll=ds_clip.rolling(time=14).sum()
         print(ds_roll)
+        print(np.sort(np.unique(ds_roll.precip.values.flatten()[~np.isnan(ds_roll.precip.values.flatten())])))
         # #select november month and plot those. Just because it speeds up plotting compared to 365 days
         # ds_roll_sel = ds_roll.sel(time=slice(f"{i}-11-01", f"{i}-11-30"))
         # ds_sel = ds_clip.sel(time=slice(f"{i}-11-01", f"{i}-11-30"))
