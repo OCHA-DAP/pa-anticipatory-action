@@ -31,6 +31,8 @@ def make_data(df, adm_grp):
 
     sel_col = adm_grp + '_PCODE'
 
+    no_fit = []
+
     for adm in df[sel_col].unique():
 
         # Fit the data
@@ -38,10 +40,17 @@ def make_data(df, adm_grp):
         x, y = ff.get_xy(df2)[0], ff.get_xy(df2)[1]  # Get the x and y
         x_new = np.linspace(x[0], x[-1], 85)  # Generate new x data (at daily intervals)
 
-        # New y values using same x data to calc the error
-        y_g_old = ff.gauss(x, *ff.gauss_fit(x, y))  # Generate Gaussian fitted y data
-        y_p_old = ff.poly_fit(x, x, y, 3)  # Generate polynomial fitted y data - degree 3
+        # Need to check if all y values are zero (ie. no flooding), as it is meaningless to fit to this
+        #if np.count_nonzero(y) == 0:
+        #    continue
 
+        try:
+        # New y values using same x data to calc the error
+            y_g_old = ff.gauss(x, *ff.gauss_fit(x, y))  # Generate Gaussian fitted y data
+            y_p_old = ff.poly_fit(x, x, y, 3)  # Generate polynomial fitted y data - degree 3
+        except:
+            no_fit.append(adm)
+            continue
         # New y values using daily x data to get better peak estimate
         y_g_new = ff.gauss(x_new, *ff.gauss_fit(x, y))  # Generate Gaussian fitted y data
         y_p_new = ff.poly_fit(x_new, x, y, 3)  # Generate polynomial fitted y data - degree 3
@@ -96,6 +105,7 @@ def make_data(df, adm_grp):
     intensities.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_intensity.csv'), index=False)
     dates.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_peak.csv'), index=False)
     flood_extents.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_extent_interpolated.csv'), index=False)
+    pd.DataFrame(no_fit, columns=['No_Fit']).to_csv(os.path.join(output_dir, f'{adm_grp}_no_fit.csv'), index=False)
     logger.info(f'Output files saved to {output_dir}')
 
 

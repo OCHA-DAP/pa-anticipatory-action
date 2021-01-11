@@ -104,7 +104,7 @@ def get_flood_area(adm_grp, adm_shp, date, gee_dir):
     not_flooded = intersection['geometry'].area
     not_flooded = not_flooded.rename('not_flooded_area')
     output_df_part = pd.merge(adm_shp, not_flooded.to_frame(), left_on=adm_grp, right_index=True)
-    output_df_part.loc[:, 'flooded_area'] = output_df_part['adm_area'] - output_df_part['not_flooded_area']
+    output_df_part.loc[:, 'flooded_area'] = round(output_df_part['adm_area'] - output_df_part['not_flooded_area'],5)
     output_df_part.loc[:, 'date'] = datetime.datetime.strptime(date[:10], '%Y-%m-%d')
     return output_df_part
 
@@ -134,7 +134,6 @@ def main(adm, adm_dir, gee_dir, data_dir):
     output_df['date'] = pd.to_datetime(output_df['date'], format="%Y-%m-%d").dt.strftime('%Y-%m-%d')
     output_df = output_df[[(adm + '_EN_y'), (adm + '_PCODE'), 'flood_fraction', 'date']]
     output_df.columns = [adm + '_EN', (adm + '_PCODE'), 'flood_fraction', 'date']
-    #output_df = clean_df(output_df, adm)
     output_df.to_csv(os.path.join(data_dir, f'{adm}_flood_extent_sentinel.csv'), index=False)
     return output_df
 

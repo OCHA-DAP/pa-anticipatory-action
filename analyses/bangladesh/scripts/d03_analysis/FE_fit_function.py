@@ -37,7 +37,7 @@ def gauss_fit(x, y):
 
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-    popt, pcov = curve_fit(gauss, x, y, p0=[min(y), max(y), mean, sigma])
+    popt, pcov = curve_fit(gauss, x, y, p0=[min(y), max(y), mean, sigma], maxfev=5000)
     return popt
 
 
