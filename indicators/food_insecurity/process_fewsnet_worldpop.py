@@ -91,15 +91,13 @@ def combine_fewsnet_projections(
         result_folder: path to folder to which to save the output
         suffix: string to attach to the output files name
     """
-    # all periods in the FewsNet data
-    period_list = ["CS", "ML1", "ML2"]
     df = gpd.GeoDataFrame()
     # initialize progress bar
     pbar = tqdm(dates)
     # loop over dates
     for d in pbar:
         df_fews_list = []
-        for period in period_list:
+        for period in config.IPC_PERIOD_NAMES:
             pbar.set_description(f"Processing date {d}, period {period}")
             # path to fewsnet data
             # sometimes fewsnet publishes per region, sometimes per country
@@ -113,6 +111,7 @@ def combine_fewsnet_projections(
 
 
             # path to population data
+            #TODO: somehow use data from previous year if current year doesn't exist. I.e. in beginning of 2021, there wasn't yet worldpop data of 2021 but could use that of 2020
             pop_path = f"{folder_pop}/{config.WORLDPOP_FILENAME.format(country_iso3=country_iso3,year=d[:4])}" #_1km_Aggregated_UNadj#{country_iso3.lower()}_ppp_{d[:4]}_UNadj.tif"
 
             if fews_path and os.path.exists(pop_path):
@@ -137,7 +136,7 @@ def combine_fewsnet_projections(
             df_comb = pd.concat(df_listind, axis=1).reset_index()
 
             # add ipc level columns that are not present in the data (commonly level 5 columns)
-            ipc_cols = [f"{period}_{i}" for period in period_list for i in range(1, 6)]
+            ipc_cols = [f"{period}_{i}" for period in config.IPC_PERIOD_NAMES for i in range(1, 6)]
             for i in ipc_cols:
                 if i not in df_comb.columns:
                     df_comb[i] = 0
@@ -149,7 +148,7 @@ def combine_fewsnet_projections(
             )["sum"]
 
             # calculate population per period over all IPC levels
-            for period in period_list:
+            for period in config.IPC_PERIOD_NAMES:
                 # population that has an IPC level assigned
                 df_comb[f"pop_{period}"] = df_comb[
                     [f"{period}_{i}" for i in range(1, 6)]
@@ -159,7 +158,7 @@ def combine_fewsnet_projections(
                 # these can include 66 = water, 88 = parks, forests, reserves, 99 = No Data or Missing Data
                 period_cols_all = [f"{period}_{i}" for i in [1, 2, 3, 4, 5, 66, 88, 99]]
                 period_cols_data = [c for c in period_cols_all if c in df_comb.columns]
-                df_comb[f"pop_Total_{period}"] = df_comb[period_cols_data].sum(
+                df_comb[f"pop_total_{period}"] = df_comb[period_cols_data].sum(
                     axis=1, min_count=1
                 )
 
@@ -167,7 +166,7 @@ def combine_fewsnet_projections(
                 # here we calculate the total population based on the admin shape, and compare it to the total population of the overlay of the admin and fewsnet shapefiles
                 # if the disperancy causes more than 5% of the population to be excluded, raise a warning
                 pop_admfews = (
-                    df_comb[f"pop_Total_{period}"].sum() / df_adm["pop"].sum() * 100
+                    df_comb[f"pop_total_{period}"].sum() / df_adm["pop"].sum() * 100
                 )
 
                 if pop_admfews < 95:
@@ -191,20 +190,28 @@ def combine_fewsnet_projections(
 
     if not df.empty:
         # set general admin names
-        df.rename(columns={shp_adm1c: "ADMIN1", shp_adm2c: "ADMIN2"}, inplace=True)
+        df.rename(columns={shp_adm1c: config.ADMIN1_COL, shp_adm2c: config.ADMIN2_COL}, inplace=True)
         # TODO: decide what kind of filename we want to use for the output, i.e. do we always want to overwrite the output or not
         df.to_csv(os.path.join(result_folder,f"{country_iso3.lower()}_admin2_fewsnet_worldpop{suffix}.csv")
         )
         # aggregate to admin1 by summing (and set to nan if no data for a date-adm1 combination
         df_adm1 = (
-            df.drop("ADMIN2", axis=1)
-            .groupby(["date", "ADMIN1"])
+            df.drop(config.ADMIN2_COL, axis=1)
+            .groupby(["date", config.ADMIN1_COL])
             .agg(lambda x: np.nan if x.isnull().all() else x.sum())
             .reset_index()
         )
-        df_adm1.rename(columns={"pop_ADMIN2": "pop_ADMIN1"}, inplace=True)
-        df_adm1.to_csv(os.path.join(result_folder,f"{country_iso3.lower()}_admin1_fewsnet_worldpop{suffix}.csv")
+        df_adm1.to_csv(os.path.join(result_folder,f"{country_iso3.lower()}_admin1_fewsnet_worldpop{suffix}.csv"))
+
+        df_adm0 = (
+            df.drop(config.ADMIN2_COL, axis=1)
+                .groupby(["date"])
+                .agg(lambda x: np.nan if x.isnull().all() else x.sum())
+                .reset_index()
         )
+        df_adm0[config.ADMIN0_COL]=country_iso3
+        df_adm0.to_csv(os.path.join(result_folder,f"{country_iso3.lower()}_admin0_fewsnet_worldpop{suffix}.csv"))
+
     else:
         logger.warning("No data found for the given dates")
 
