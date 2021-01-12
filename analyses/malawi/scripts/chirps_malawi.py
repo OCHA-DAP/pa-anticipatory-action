@@ -38,6 +38,7 @@ def main(download, config=None):
         ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.clip(
             df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
         # rolling sum of 14 days
+        #TODO: check that there are no negative values!
         ds_roll=ds_clip.rolling(time=14).sum()
         print(ds_roll)
         print(np.sort(np.unique(ds_roll.precip.values.flatten()[~np.isnan(ds_roll.precip.values.flatten())])))
