@@ -20,7 +20,7 @@ from indicators.drought.config import Config
 from utils_general.plotting import plot_raster_boundaries_clip, plot_histogram
 
 
-def chirps_plot_alldates(ds,adm1_path,config):
+def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
     #just testing function, has to be optimized
     df_bound=gpd.read_file(adm1_path)
     ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
@@ -34,8 +34,9 @@ def chirps_plot_alldates(ds,adm1_path,config):
 
     #create list of titles for subplots
     ds_list_date_str=[pd.to_datetime(str(x)).strftime("%Y-%m-%d") for x in ds_clip["time"].values]
-
-    fig_clip = plot_raster_boundaries_clip(ds_list, adm1_path, title_list=ds_list_date_str, forec_val=config.CHIRPS_VARNAME, colp_num=10, figsize=(90,60),labelsize=40,predef_bins=np.linspace(ds_clip.precip.min(),ds_clip.precip.max(),10)) #figszie=18*colp_num,6*rows
+    if predef_bins is None:
+        predef_bins=np.linspace(ds_clip.precip.min(), ds_clip.precip.max(), 10)
+    fig_clip = plot_raster_boundaries_clip(ds_list, adm1_path, title_list=ds_list_date_str, forec_val=config.CHIRPS_VARNAME, colp_num=10, figsize=(90,60),labelsize=40,predef_bins=predef_bins) #figszie=18*colp_num,6*rows
 
     return fig_histog,fig_clip
 
