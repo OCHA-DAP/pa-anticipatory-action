@@ -233,12 +233,10 @@ def retrieve_fewsnet_worldpop(country, admin_level, suffix="", download=False, c
 
     if download:
         for d in fewsnet_dates:
-            #TODO: change name and move to this file
             download_fewsnet(d,country_iso2,region,regioncode,fewsnet_raw_dir)
         years=[x[:4] for x in fewsnet_dates]
         years_unique=set(years)
         for y in years_unique:
-            #TODO: change name function and give parameters instead and remove worlpop_dir from input args
             download_worldpop(country_iso3, y, worldpop_dir, config)
 
     adminbound_path = os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
