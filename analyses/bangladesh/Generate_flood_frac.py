@@ -104,7 +104,7 @@ def get_flood_area(adm_grp, adm_shp, date, gee_dir):
     not_flooded = intersection['geometry'].area
     not_flooded = not_flooded.rename('not_flooded_area')
     output_df_part = pd.merge(adm_shp, not_flooded.to_frame(), left_on=adm_grp, right_index=True)
-    output_df_part.loc[:, 'flooded_area'] = round(output_df_part['adm_area'] - output_df_part['not_flooded_area'],5)
+    output_df_part.loc[:, 'flooded_area'] = output_df_part['adm_area'] - output_df_part['not_flooded_area']
     output_df_part.loc[:, 'date'] = datetime.datetime.strptime(date[:10], '%Y-%m-%d')
     return output_df_part
 
@@ -129,7 +129,7 @@ def main(adm, adm_dir, gee_dir, data_dir):
     # Subtract river area from flooded area
     output_df.loc[:, 'non_river_area'] = output_df['adm_area_y'] - output_df['river_area']
     # Calculate the flooded fraction
-    output_df.loc[:, 'flood_fraction'] = output_df['flooded_area'] / output_df['non_river_area']
+    output_df.loc[:, 'flood_fraction'] = round(output_df['flooded_area'] / output_df['non_river_area'],4)
     # Clean the dataframe
     output_df['date'] = pd.to_datetime(output_df['date'], format="%Y-%m-%d").dt.strftime('%Y-%m-%d')
     output_df = output_df[[(adm + '_EN_y'), (adm + '_PCODE'), 'flood_fraction', 'date']]
