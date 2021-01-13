@@ -72,14 +72,16 @@ def aggregate_adminlevel(df_ipc,admin_level,country,config):
         #one is to take all the adm2 values and group them by date
         #the other is to use the already aggregated numbers on admin0 level that are present in the raw data
         #in theory they should give the same results, but in practice they dont... (for MWI and SOM)
+        #TODO: aggregate from admin2 and use the other two methods only to raise warning if mismatch
         df_ipc_adm0_group = df_ipc[df_ipc[config.ADMIN0_COL].str.lower().str.fullmatch(country.lower())].groupby([config.ADMIN0_COL,"date"],as_index=False).sum()
         df_ipc_adm0_precalc = df_ipc[df_ipc[config.ADMIN0_COL].str.lower().str.match(f"{country.lower()}:")]
         #TODO: remove once aggregation method has been decided
         print(df_ipc_adm0_precalc[["ADMIN0","date","CS_1"]].sort_values("date"))
         print(df_ipc_adm0_group[["ADMIN0","date","CS_1"]].sort_values("date"))
-        df_ipc_agg = df_ipc_adm0_group
+        df_ipc_agg = df_ipc_adm0_precalc
 
     elif admin_level == 1:
+        #TODO: aggregate from admin2 and use the other method only to raise warning if mismatch
         df_ipc_agg = df_ipc.groupby([config.ADMIN1_COL, "date"], as_index=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
 
@@ -90,6 +92,27 @@ def aggregate_adminlevel(df_ipc,admin_level,country,config):
         logger.error(f"Admin level {admin_level} has not been implemented")
 
     return df_ipc_agg
+
+def compute_population_admin(df,admin_level,config):
+    print(df[["date","reported_pop_CS","reported_pop_ML1","reported_pop_ML2"]])
+    for period in config.IPC_PERIOD_NAMES:
+        #with min_count=1 NaN is returned instead of 0 if all values are NaN
+        df[f"pop_{period}"]=df[[f"{period}_{i}" for i in range(1, 6)]].sum(axis=1,min_count=1)
+        df_notmatch = df[abs((df[f"pop_{period}"]-df[f"reported_pop_{period}"])/df[f"reported_pop_{period}"])>0.05]
+        if not df_notmatch.empty:
+            dateadm_notmatch = df_notmatch.set_index(["date",f"ADMIN{admin_level}"]).index.unique()
+            dateadm_notmatch = dateadm_notmatch.sort_values()
+            # df_notmatch_numbers =
+            cols = ["date",f"ADMIN{admin_level}",f"pop_{period}",f"reported_pop_{period}"]
+            print([",".join("{}:{}".format(*t) for t in zip(cols, row)) for _, row in df_notmatch[cols].iterrows()])
+            dateadm_notmatch_str = ",".join([f"[{da[0].strftime('%m-%Y')},{da[1]}]" for da in dateadm_notmatch])
+            logger.warning(f"{period}: Not matching population numbers on the following date-admin{admin_level} combinations: {dateadm_notmatch_str}")
+    # neg_dates = df[df[c] < 0].index.unique()
+    # neg_dates = neg_dates.sort_values()
+    # neg_dates_str = ",".join([n.strftime("%d-%m-%Y") for n in neg_dates])
+    # logger.warning(f'{data_name}: Negative value in column {c} on {neg_dates_str}')
+    return df
+
 
 def download_globalipc(country,config,parameters,output_dir):
     #create directory if doesn't exist
@@ -136,13 +159,15 @@ def process_globalipc(country, admin_level, config, parameters,ipc_dir):
     # remove rows with nan date and nan adm value
     df_ipc = df_ipc[
         (df_ipc["date"].notnull()) & (df_ipc[f"ADMIN{admin_level}"].notnull())
-    ]
+        ]
+
 
     if len(df_ipc[f"ADMIN{admin_level}"].dropna().unique()) == 0:
         logger.warning(f"No admin {admin_level} regions found in the IPC file")
 
     df_ipc_agg = aggregate_adminlevel(df_ipc,admin_level,country,config)
-
+    print(df_ipc[df_ipc.date=="2020-10-01"][["date","reported_pop_CS","reported_pop_ML1","reported_pop_ML2"]])
+    df_ipc_agg = compute_population_admin(df_ipc_agg,admin_level,config)
     #recompute the percentage columns.
     # Already included in the ipc data but these are rounded numbers so want the unrounded numbers based on the raw population numbers
     df_ipc_agg = compute_percentage_columns(df_ipc_agg, config)
