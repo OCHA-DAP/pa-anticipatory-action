@@ -72,8 +72,9 @@ def test_mismatch_adminlevels(df_agg,df_precalc,admin_level,country, config):
     if admin_level==0:
         df_precalc = df_precalc[df_precalc[config.ADMIN0_COL].str.lower().str.match(f"{country.lower()}:")]
     elif admin_level==1:
-
+        #assume admin1 sum is reported in the admin0 column and the rows corresponds to those that don't contain the admin0 name
         df_precalc = df_precalc[~df_precalc[config.ADMIN0_COL].str.lower().str.contains(country.lower())]
+        #rename to make df_agg columns equal to df_precalc for merging
         df_agg = df_agg.drop(config.ADMIN0_COL, axis=1)
         df_agg=df_agg.rename(columns={config.ADMIN1_COL: config.ADMIN0_COL})
     #no aggregation for adm2 so tests don't make sense in that case
@@ -84,11 +85,13 @@ def test_mismatch_adminlevels(df_agg,df_precalc,admin_level,country, config):
         #only look at population and perc_ipc3+ for now, could add more
         match_cols = [f"pop_{p}" for p in config.IPC_PERIOD_NAMES] + [f"perc_{p}_3p" for p in config.IPC_PERIOD_NAMES]
         for c in match_cols:
+            #select rows where the two methods differ by more than 5%
             if "perc" in c:
                 df_notmatch = df_merge[abs(df_merge[f"{c}_agg"] - df_merge[f"{c}_precalc"]) > 5]
             else:
                 df_notmatch = df_merge[abs((df_merge[f"{c}_agg"] - df_merge[f"{c}_precalc"]) / df_merge[f"{c}_precalc"]) > 0.05]
             if not df_notmatch.empty:
+                #raise warning if any rows that differ by more than 5%
                 dateadm_notmatch = df_notmatch.set_index(["date", config.ADMIN0_COL]).index.unique()
                 dateadm_notmatch = dateadm_notmatch.sort_values()
                 dateadm_notmatch_str = ",".join([f"[{da[0].strftime('%m-%Y')},{da[1]}]" for da in dateadm_notmatch])
