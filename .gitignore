@@ -2,6 +2,7 @@
 indicators/food_insecurity/Data/FewsNetRaw/*
 analyses/*/Data/WorldPop/*
 analyses/*/Data/GlobalIPC
+analyses/*/Data/GlobalIPCProcessed
 IRI/
 icpac/
 nmme/
