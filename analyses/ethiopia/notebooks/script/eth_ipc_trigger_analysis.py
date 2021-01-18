@@ -319,7 +319,7 @@ globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_leve
 df_gadm=pd.read_csv(globalipc_path)
 
 
-df_gadm["date"]=pd.to_datetime(df_fadmt["date"])
+df_gadm["date"]=pd.to_datetime(df_gadm["date"])
 df_gadm["year"]=df_gadm["date"].dt.year
 df_gadm["month"]=df_gadm["date"].dt.month
 
