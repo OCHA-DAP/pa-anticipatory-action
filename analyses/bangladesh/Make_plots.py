@@ -24,6 +24,7 @@ logger = logging.getLogger()
 # TODO: Fix plot layouts that save with lots of white space to the left
 # TODO: Implement functionality to remove outliers from map - (needed for FWHM)
 # TODO: Reclass admin units with no flooding as zero rather than na?
+# TODO: Fix hard coding with aoi selection, shapefile naming
 
 
 def make_time_series(df_shp, df_data, id_col):
