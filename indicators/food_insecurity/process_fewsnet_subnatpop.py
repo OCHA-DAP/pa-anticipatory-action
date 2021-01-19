@@ -515,7 +515,7 @@ def main(country, suffix,download_fewsnet, config=None):
             get_fewsnet_data(d,iso2_code,region,regioncode,fewsnet_raw_dir)
 
     perioddf_dict = {}
-    for period in config.FEWSNET_PERIOD_NAMES:
+    for period in config.IPC_PERIOD_NAMES:
         perioddf_dict[period] = gen_csml1m2(
             fewsnet_raw_dir,
             admin2bound_path,
