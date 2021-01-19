@@ -109,3 +109,9 @@ python Generate_flood_frac.py ADM4
 python Generate_interpolated.py ADM4
 ```
 
+5. Visualise the results through basic choropleth mapping, using the same input aggregation level as the previous steps.
+
+```
+python Make_plots.py ADM4
+```
+
