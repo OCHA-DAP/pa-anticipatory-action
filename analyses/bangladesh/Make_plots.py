@@ -15,17 +15,11 @@ import logging
 
 # Directory locations for the input and output files should be specified in the 'config.yml' file.
 
-parameters = utils.parse_yaml('config.yml')['DIRS']
-input_dir = parameters['data_dir']
-output_dir = parameters['plot_dir']
-shp_dir = parameters['adm_dir']
-logger = logging.getLogger()
-
-# TODO: Fix plot layouts that save with lots of white space to the left
 # TODO: Implement functionality to remove outliers from map - (needed for FWHM)
 # TODO: Reclass admin units with no flooding as zero rather than na?
 # TODO: Fix hard coding with aoi selection, shapefile naming
 
+logger = logging.getLogger()
 
 def make_time_series(df_shp, df_data, id_col):
     # Time series of flooding - satellite
@@ -64,7 +58,7 @@ def make_choropleth(df_shp, df_data, id_col, map_col, title, outliers=False):
     plt.title(label=title)
     ax.set_axis_off()
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, f'{map_col}.png'), dpi=300)
+    plt.savefig(os.path.join(output_dir, f'{map_col}.png'), dpi=300, bbox_inches='tight')
 
 
 def make_graphs(adm):
@@ -93,6 +87,11 @@ def make_graphs(adm):
 
 
 if __name__ == "__main__":
+    parameters = utils.parse_yaml('config.yml')['DIRS']
+    input_dir = parameters['data_dir']
+    output_dir = parameters['plot_dir']
+    shp_dir = parameters['adm_dir']
+
     arg = utils.parse_args()
     utils.config_logger()
     adm = arg.adm_level
