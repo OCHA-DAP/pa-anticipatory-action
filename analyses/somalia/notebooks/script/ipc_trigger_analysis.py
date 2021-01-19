@@ -125,8 +125,8 @@ df_ntl["natl_criterion_ML2_4_2half"] = df_ntl.apply(lambda x: get_national_abs_c
 
 # determine whether national trigger is met
 
-df_ntl['national_trigger_ML1'] =  np.where(df_ntl['natl_criterion_ML1_3_20'] & (df_ntl['natl_criterion_ML1_3_5in'] ) | (df_ntl['natl_criterion_ML1_4_2half'] == 1), 1, 0)
-df_ntl['national_trigger_ML2'] =  np.where(df_ntl['natl_criterion_ML2_3_20'] & (df_ntl['natl_criterion_ML2_3_5in'] ) | (df_ntl['natl_criterion_ML2_4_2half'] == 1), 1, 0)
+df_ntl['national_trigger_ML1'] =  np.where((df_ntl['natl_criterion_ML1_3_20']==1) & ((df_ntl['natl_criterion_ML1_3_5in'] )==1 | (df_ntl['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
+df_ntl['national_trigger_ML2'] =  np.where((df_ntl['natl_criterion_ML2_3_20']==1) & ((df_ntl['natl_criterion_ML2_3_5in'] )==1 | (df_ntl['natl_criterion_ML2_4_2half'] == 1)), 1, 0)
 
 
 # extract year / month per row
@@ -580,8 +580,8 @@ df_gadm["trigger_ML2_4_2half"]=df_gadm.apply(lambda x: get_trigger(x,"ML2",4,2.5
 
 
 #analyse endorsed trigger applied at subnational level
-glob_subnatl_activations_ML1=df_gadm.loc[((df_gadm["trigger_ML1_3_20"]==1) & (df_gadm["trigger_ML1_3_5ir"]==1)) | (df_gadm["trigger_ML1_4_2half"]==1)]
-glob_subnatl_activations_ML2=df_gadm.loc[((df_gadm["trigger_ML2_3_20"]==1) & (df_gadm["trigger_ML2_3_5ir"]==1)) | (df_gadm["trigger_ML2_4_2half"]==1)]
+glob_subnatl_activations_ML1=df_gadm.loc[(df_gadm["trigger_ML1_3_20"]==1) & ((df_gadm["trigger_ML1_3_5ir"]==1) | (df_gadm["trigger_ML1_4_2half"]==1))]
+glob_subnatl_activations_ML2=df_gadm.loc[(df_gadm["trigger_ML2_3_20"]==1) & ((df_gadm["trigger_ML2_3_5ir"]==1) | (df_gadm["trigger_ML2_4_2half"]==1))]
 
 print("ML1 below")
 display(glob_subnatl_activations_ML1.groupby(['year', 'month'], as_index=False)[admc,'perc_CS_3p','perc_ML1_3p','perc_ML1_4p'].agg(lambda x: list(x)))
@@ -613,8 +613,8 @@ df_gntl["natl_criterion_ML2_4_2half"] = df_gntl.apply(lambda x: get_national_abs
 
 # determine whether national trigger is met
 
-df_gntl['national_trigger_ML1'] =  np.where((df_gntl['natl_criterion_ML1_3_20'] & df_gntl['natl_criterion_ML1_3_5in'] ) | (df_gntl['natl_criterion_ML1_4_2half'] == 1), 1, 0)
-df_gntl['national_trigger_ML2'] =  np.where((df_gntl['natl_criterion_ML2_3_20'] & df_gntl['natl_criterion_ML2_3_5in'] ) | (df_gntl['natl_criterion_ML2_4_2half'] == 1), 1, 0)
+df_gntl['national_trigger_ML1'] =  np.where((df_gntl['natl_criterion_ML1_3_20']==1) & ((df_gntl['natl_criterion_ML1_3_5in']==1 ) | (df_gntl['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
+df_gntl['national_trigger_ML2'] =  np.where((df_gntl['natl_criterion_ML2_3_20']==1) & ((df_gntl['natl_criterion_ML2_3_5in']==1 ) | (df_gntl['natl_criterion_ML2_4_2half'] == 1)), 1, 0)
 
 
 # extract year / month per row
@@ -679,8 +679,8 @@ df_gntl_noagg["natl_criterion_ML2_4_2half"] = df_gntl_noagg.apply(lambda x: get_
 
 
 # determine whether national trigger is met
-df_gntl_noagg['national_trigger_ML1'] =  np.where((df_gntl_noagg['natl_criterion_ML1_3_20'] & df_gntl_noagg['natl_criterion_ML1_3_5in'] ) | (df_gntl_noagg['natl_criterion_ML1_4_2half'] == 1), 1, 0)
-df_gntl_noagg['national_trigger_ML2'] =  np.where((df_gntl_noagg['natl_criterion_ML2_3_20'] & df_gntl_noagg['natl_criterion_ML2_3_5in'] ) | (df_gntl_noagg['natl_criterion_ML2_4_2half'] == 1), 1, 0)
+df_gntl_noagg['national_trigger_ML1'] =  np.where((df_gntl_noagg['natl_criterion_ML1_3_20']==1) & ((df_gntl_noagg['natl_criterion_ML1_3_5in']==1 ) | (df_gntl_noagg['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
+df_gntl_noagg['national_trigger_ML2'] =  np.where((df_gntl_noagg['natl_criterion_ML2_3_20']==1) & ((df_gntl_noagg['natl_criterion_ML2_3_5in']==1 ) | (df_gntl_noagg['natl_criterion_ML2_4_2half'] == 1)), 1, 0)
 
 
 # extract year / month per row
@@ -739,7 +739,7 @@ def get_national_relative_increase_criterion(row, period, phase, threshold):
 
 # determine whether national trigger is met
 df_gntl["natl_criterion_ML1_3_5relin"] = df_gntl.apply(lambda x: get_national_relative_increase_criterion(x,"ML1",3,5),axis=1)
-df_gntl['national_trigger_springanalysis'] =  np.where(df_gntl['natl_criterion_ML1_3_20'] & ((df_gntl['natl_criterion_ML1_3_5relin']) | (df_gntl['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
+df_gntl['national_trigger_springanalysis'] =  np.where((df_gntl['natl_criterion_ML1_3_20']==1) & ((df_gntl['natl_criterion_ML1_3_5relin']==1) | (df_gntl['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
 # df_gntl['national_trigger_ML2'] =  np.where((df_gntl['natl_criterion_ML2_3_20'] & df_gntl['natl_criterion_ML2_3_5in'] ) | (df_gntl['natl_criterion_ML2_4_2half'] == 1), 1, 0)
 
 
@@ -755,7 +755,7 @@ display(national_activations_ML1_springanalysis.round(2).groupby(['year', 'month
 
 # determine whether national trigger is met
 df_gntl_noagg["natl_criterion_ML1_3_5relin"] = df_gntl_noagg.apply(lambda x: get_national_relative_increase_criterion(x,"ML1",3,5),axis=1)
-df_gntl_noagg['national_trigger_springanalysis'] =  np.where(df_gntl_noagg['natl_criterion_ML1_3_20'] & ((df_gntl_noagg['natl_criterion_ML1_3_5relin']) | (df_gntl_noagg['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
+df_gntl_noagg['national_trigger_springanalysis'] =  np.where((df_gntl_noagg['natl_criterion_ML1_3_20']==1) & ((df_gntl_noagg['natl_criterion_ML1_3_5relin']==1) | (df_gntl_noagg['natl_criterion_ML1_4_2half'] == 1)), 1, 0)
 
 
 # list years / months during which national trigger would have been met
