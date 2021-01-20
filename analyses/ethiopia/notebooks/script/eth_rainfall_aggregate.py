@@ -268,7 +268,7 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
 ds,transform=load_iri(config)
 
 
-ds
+# ds
 
 
 #MAM season
@@ -308,7 +308,8 @@ plot_spatial_columns(df_stats,stats_perc_cols,
 df_stats_adm2=compute_raster_statistics(adm2_bound_path,ds_l2["prob_below"].values,transform,probability_threshold)
 
 
-df_stats_adm2[["ADM2_EN"]+stats_cols+stats_perc_cols].style.highlight_max(color = 'orange', axis = 0)
+#orange is max values
+# df_stats_adm2[["ADM2_EN"]+stats_cols+stats_perc_cols].style.highlight_max(color = 'orange', axis = 0)
 
 
 #red = nan values. Occurs in left column if no cell has its center within that region
