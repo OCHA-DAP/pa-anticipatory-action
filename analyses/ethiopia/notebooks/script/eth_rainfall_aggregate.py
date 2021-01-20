@@ -14,8 +14,8 @@
 # For 2), two main factors have to be decided upon, namely the spatial level of decision making, and the aggregation from raster cells to that spatial level.
 
 # ### The level of decision making
-# Ultimately we would like to have a drought-indicator per livelihood zone but this is not realistic due to the high uncertainty in forecasts with a longer lead time. \
-# At the minimum we need an indication per admin1. \
+# Ultimately we would like to have a drought-indicator per livelihood zone but this is not realistic due to the high uncertainty in forecasts with a longer lead time.   
+# At the minimum we need an indication per admin1.    
 # For large admin1 regions with different weather patterns, it would be great to be able to have an indication per admin2 (or weather type region). 
 
 # ### Possible methodologies for aggregating to decision level
@@ -33,7 +33,8 @@
 # 3) Compute the **percentage of the admin region** that has a value higher than *probability_threshold* and trigger if this percentage is larger than *trigger_threshold_percentage*
 
 # ### Our proposal
-# Compute the average value of all cells with their centre in an admin1 region. If this value is higher than 45% probability, activate \
+# **Note: this is a very early stage proposal and meant to guide the discussion**     
+# Compute the average value of all cells with their centre in an admin1 region. If this value is higher than 45% probability, activate    
 # Compute the maximum value of cells touching an admin2 per admin2. If any of the admin2's have a maximum value that is higher than 47.5%, raise a warning and decide with the team if that area should have an activation
 
 # ### Spatial level questions:
@@ -47,7 +48,7 @@
 # 
 
 # ## CODE
-# Implement the above mentioned aggregatoin methodologies for admin2 and admin 1 level. This is done for the current forecast (2021-01) for the MAM season (2 months leadtime)\
+# Implements the above mentioned aggregation methodologies for admin2 and admin 1 level. This is done for the current forecast (2021-01) for the MAM season (2 months leadtime)     
 # The final part of the notebook computes the dates the proposed threshold has been met since 2017
 
 # ### Load packages
@@ -278,6 +279,7 @@ ds_l2=ds.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2)
 probability_threshold=50
 
 
+#compute the different aggregation methodologies per admin1
 df_stats=compute_raster_statistics(adm1_bound_path,ds_l2["prob_below"].values,transform,probability_threshold)
 
 
@@ -287,9 +289,11 @@ bins_list=np.arange(30,70,2.5)
 bins_perc_list=np.arange(0,50,5)
 
 
+#highlight the max values
 df_stats[["ADM1_EN"]+stats_cols+stats_perc_cols].style.highlight_max(color = 'orange', axis = 0)
 
 
+#plot the value per region
 plot_spatial_columns(df_stats,stats_cols,
                 title="Analysis of IRI forecast",predef_bins=bins_list)
 
@@ -300,18 +304,14 @@ plot_spatial_columns(df_stats,stats_perc_cols,
 
 # ### ADM2
 
+#compute the different aggregation methodologies per admin1
 df_stats_adm2=compute_raster_statistics(adm2_bound_path,ds_l2["prob_below"].values,transform,probability_threshold)
 
 
 df_stats_adm2[["ADM2_EN"]+stats_cols+stats_perc_cols].style.highlight_max(color = 'orange', axis = 0)
 
 
-stats_cols=['max_cell', 'max_cell_touched', 'avg_cell', 'avg_cell_touched']
-stats_perc_cols = ['perc_threshold', 'perc_threshold_touched']
-bins_list=np.arange(30,70,2.5)
-bins_perc_list=np.arange(0,50,5)
-
-
+#red = nan values. Occurs in left column if no cell has its center within that region
 plot_spatial_columns(df_stats_adm2,stats_cols,
                 title="Analysis of IRI forecast",predef_bins=bins_list)
 
@@ -329,6 +329,7 @@ leadtime=2
 
 
 def prob_histograms(df,col_list,ylim=None,xlim=None):
+    #plot histogram for each entry in col_list
     fig = plt.figure(1,figsize=(16,4))
 
     for i,col in enumerate(col_list):
@@ -346,13 +347,13 @@ def prob_histograms(df,col_list,ylim=None,xlim=None):
 
 
 def alldates_statistics(ds,transform,prob_threshold,perc_threshold,leadtime,adm_path):
+    #compute statistics on level in adm_path for all dates in ds
     df_list=[]
     ds=ds.sel(L=leadtime)
     print(f"Number of forecasts: {len(ds.F)}")
     for date in ds.F.values:
         ds_date=ds.sel(F=date)
         df=compute_raster_statistics(adm_path,ds_date["prob_below"].values,transform,prob_threshold)
-#         df=df[[reg_col,"max_cell","max_cell_touched","avg_cell","perc_threshold"]]
         df["date"]=pd.to_datetime(date.strftime("%Y-%m-%d"))
         df_list.append(df)
     df_hist=pd.concat(df_list)
@@ -365,7 +366,8 @@ def alldates_statistics(ds,transform,prob_threshold,perc_threshold,leadtime,adm_
     
     df_hist["date_str"]=df_hist["date"].dt.strftime("%Y-%m")
     df_hist["pred_date"]=df_hist.date+pd.offsets.DateOffset(months=leadtime)
-    df_hist["pred_date_end"]=df_hist.date+pd.offsets.DateOffset(months=leadtime+3)
+    #valid for period of 3 months, i.e. till 2 months later than first month
+    df_hist["pred_date_end"]=df_hist.date+pd.offsets.DateOffset(months=leadtime+2)
     df_hist["pred_date_form"]=df_hist["pred_date"].apply(lambda x: x.strftime("%b"))
     df_hist["pred_date_end_form"]=df_hist["pred_date_end"].apply(lambda x: x.strftime("%b %Y"))
     df_hist["forec_valid"]=df_hist[["pred_date_form","pred_date_end_form"]].agg(" - ".join,axis=1)
@@ -373,6 +375,7 @@ def alldates_statistics(ds,transform,prob_threshold,perc_threshold,leadtime,adm_
     return df_hist
 
 
+#compute aggregated values on adm1 for all dates since Jan 2017
 df_hist=alldates_statistics(ds,transform,probability_threshold,percentage_threshold,leadtime,adm1_bound_path)
 
 
@@ -382,20 +385,16 @@ prob_histograms(df_hist,stats_cols,xlim=(0,60))
 prob_histograms(df_hist,stats_perc_cols,xlim=(0,df_hist.perc_threshold.max()))
 
 
+#binned values of max cell touched on adm1 for all history
 pd.cut(df_hist.groupby("date").max()["max_cell_touched"],np.arange(30,60,2.5)).value_counts().sort_index(ascending=False)
 
 
+#binned values of avg cell on adm1 for all history
 pd.cut(df_hist.groupby("date").max()["avg_cell"],np.arange(30,60,2.5)).value_counts().sort_index(ascending=False)
 
 
+#values of perc threhold on adm1 for all history
 df_hist.value_counts("perc_threshold").sort_index(ascending=False)
-
-
-df_hist[df_hist.avg_cell>=40][["date_str","forec_valid","ADM1_EN","avg_cell"]]
-
-
-plot_spatial_columns(df_hist[df_hist.date=="2020-10-16"],stats_cols,
-                title="Analysis of IRI forecast",predef_bins=bins_list)
 
 
 # #### Historical analysis admin2
@@ -413,13 +412,13 @@ plot_spatial_columns(df_hist_adm2[df_hist_adm2.date=="2020-10-16"],stats_cols,
                 title="Analysis of IRI forecast",predef_bins=bins_list)
 
 
-# December-February 2021 has been one of the driest season forecasted by IRI since 2017. With CHIRPS data from Dec 1st till mid Jan, it seems there is indeed below average rainfall, but in the lower part of ethipia instead of mid/upper part as forecasted \
-# https://data.chc.ucsb.edu/products/CHIRPS-2.0/moving_12pentad/pngs/africa_east/Anomaly_12PentAccum_Current.png
+# December-February 2021 has been one of the driest season forecasted by IRI since 2017. With CHIRPS data from Dec 1st till mid Jan, it seems there is indeed below average rainfall, but in the lower part of ethipia instead of mid/upper part as forecasted    
+# CHIRPS data: https://data.chc.ucsb.edu/products/CHIRPS-2.0/moving_12pentad/pngs/africa_east/Anomaly_12PentAccum_Current.png
 
 # ### Past activations 
-# If using 
-# ADMIN 1 average of all cells with its center inside the region is >=45
-# OR
+# If using     
+# ADMIN 1 average of all cells with its center inside the region is >=45    
+# OR    
 # ADMIN 2 maximum value of all cells touching the region is >= 47.5
 
 act_adm1=df_hist[df_hist.avg_cell>=45][["date","forec_valid","ADM1_EN","avg_cell"]]
@@ -439,6 +438,9 @@ df_hist_adm2[(df_hist_adm2.max_cell_touched>=47.5) & ~(df_hist_adm2.date.isin(ac
 # - Do we want to upsample the resolution if using an average or percentage based methodology?   
 #     - If so, what is the best upsampling methodology for our use case? Main difference between methodologies is smoother values vs introducing new values. [This](https://gisgeography.com/raster-resampling/) is a nice explanation of the different methods (now using bilinear)
 # - How should we define a dry mask?
+
+
+
 
 
 
