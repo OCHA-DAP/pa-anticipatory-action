@@ -34,10 +34,10 @@ The indicators and analyses folders contain more specific information on the dat
 
 ## Repository structure
 ```
-├── indicators
-|    ├── drought <-- contains indicator related scripts
-|    |    ├── data <-- this data is not saved on Github, but folder will be created when data is downloaded
-|    |    └── README <-- indicator specific information
+├── indicators              <- generalized code to retrieve and process data, compute indices, etc.
+|    ├── drought            <- contains indicator related scripts
+|    |    ├── data          <- this data is not saved on Github, but folder will be created when data is downloaded
+|    |    └── README        <- indicator specific information
 |    |
 |    ├── flooding
 |    |
@@ -45,30 +45,30 @@ The indicators and analyses folders contain more specific information on the dat
 |    |
 |    └── cholera
 |
-├── analyses
-│    ├── country_template <-- contains standardized country directory structure
-│    │    ├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
-│    │    │
-│    │    ├── results                   <- Results from analysis which may include model outputs, figures, reports.  
-│    │    |
-│    │    ├── scripts                   <- Scripts to perform generalized data processing and analysis steps. These scripts might refer to the indicators folders
-│    │    |
-│    │    ├── data                      <- Can include raw data as well as processed data
-│    │    |
-│    │    ├── config.yml                <- config file to specify country specific variables   
-│    │    |
-│    │    └── README.md                 <- country specific readme describing the project and processing
-│    ├── bangladesh
-│    |
-│    ├── chad
-│    |
-│    ├── ethiopia
-│    |
-│    ├── malawi
-│    |
-│    └── somalia
+├── analyses <- analyses at the country level 
+|    ├── country_template   <- contains standardized country directory structure
+|    |    ├── notebooks     <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
+|    |    |
+|    |    ├── results       <- Results from analysis which may include model outputs, figures, reports.  
+|    |    |
+|    |    ├── scripts       <- Scripts to perform generalized data processing and analysis steps. These scripts might refer to the indicators folders
+|    |    |
+|    |    ├── data          <- Can include raw data as well as processed data
+|    |    |
+|    |    ├── config.yml    <- config file to specify country specific variables   
+|    |    |
+|    |    └── README.md     <- details about the project, instructions to reproduce the analysis
+|    ├── bangladesh
+|    |
+|    ├── chad
+|    |
+|    ├── ethiopia
+|    |
+|    ├── malawi
+|    |
+|    └── somalia
 |
-├── utils_general <-- scripts with functions that are generalizable across indicators and/or countries
+├── utils_general           <-- All-purpose code that is generalizable across indicators and/or countries
 |
 ├── requirements.txt
 |
