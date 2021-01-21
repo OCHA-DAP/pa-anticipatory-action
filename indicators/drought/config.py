@@ -84,7 +84,7 @@ class Config:
     ICPAC_LON = "x"
     ICPAC_LAT = "y"
 
-    #NMME
+    ### NMME
     #date should be string of YYYYMM
     #TODO: in future might want to add support for monthly (and temperature) forecasts
     NMME_FTP_URL_SEASONAL = "ftp://ftp.cpc.ncep.noaa.gov/NMME/prob//netcdf/prate.{date}.prob.adj.seas.nc"
@@ -95,3 +95,13 @@ class Config:
     NMME_LON = "x"
     NMME_LAT = "y"
 
+
+    ### CHIRPS
+    #resolution can be 25 or 5
+    CHIRPS_DIR = "chirps"
+    CHIRPS_FTP_URL_GLOBAL_DAILY="https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/netcdf/p25/chirps-v2.0.{year}.days_p{resolution}.nc"
+    CHIRPS_NC_FILENAME_RAW = "chirps_global_daily_{year}_p{resolution}.nc"
+    CHIRPS_NC_FILENAME_CRS = "chirps_global_daily_{year}_p{resolution}_crs.nc"
+    CHIRPS_LON = "longitude" #"x" #
+    CHIRPS_LAT = "latitude" #"y" #
+    CHIRPS_VARNAME = "precip"
