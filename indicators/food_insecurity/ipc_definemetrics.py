@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 # TODO: check that all cols, so CS ML1 ML2 1 to 5 and pop cols are present in input data
 # TODO: quality check that perc cols add up to 100
 
-
 def define_trigger_percentage(row, period, level, perc):
     """
     Return 1 if percentage of population in row for period in level "level" or higher, equals or larger than perc
@@ -30,8 +29,6 @@ def define_trigger_percentage(row, period, level, perc):
     else:
         return 0
 
-
-# TODO: we are not using the relative increase at the moment, do we want to remove it?
 def define_trigger_increase_rel(row, level, perc):
     """
     Return 1 if population in row for >="level" at ML1 is expected to be larger than (current (CS) population in >=level) * (1+(perc/100))
@@ -53,7 +50,6 @@ def define_trigger_increase_rel(row, level, perc):
     else:
         return 0
 
-
 def define_trigger_increase(row, period, level, perc):
     """
     Return 1 for "row", if the expected increase in the percentage of the population in "level" or higher at time "period" compared to currently (CS) is expected to be larger than "perc"
@@ -71,32 +67,8 @@ def define_trigger_increase(row, period, level, perc):
     else:
         return 0
 
-
-def compute_trigger(df):
-    # TODO: would be great if we can define in config or so which triggers to compute. Not sure how..
-    #TODO: move this to country specific scripts/notebooks
-    # get yes/no for different thresholds, i.e. column value for row will be 1 if threshold is met and 0 if it isnt
-    df["threshold_ML1_4_20"] = df.apply(lambda x: define_trigger_percentage(x, "ML1", 4, 20), axis=1)
-    df["threshold_ML1_3_30"] = df.apply(lambda x: define_trigger_percentage(x, "ML1", 3, 30), axis=1)
-    df["threshold_ML1_3_5i"] = df.apply(
-        lambda x: define_trigger_increase(x, "ML1", 3, 5), axis=1
-    )
-    df["threshold_ML2_4_20"] = df.apply(lambda x: define_trigger_percentage(x, "ML2", 4, 20), axis=1)
-    df["threshold_ML2_3_30"] = df.apply(lambda x: define_trigger_percentage(x, "ML2", 3, 30), axis=1)
-    df["threshold_ML2_3_5i"] = df.apply(
-        lambda x: define_trigger_increase(x, "ML2", 3, 5), axis=1
-    )
-
-    df["trigger_ML1"] = (df["threshold_ML1_4_20"] == 1) | (
-        (df["threshold_ML1_3_30"] == 1) & (df["threshold_ML1_3_5i"] == 1)
-    )
-    df["trigger_ML2"] = (df["threshold_ML2_4_20"] == 1) | (
-        (df["threshold_ML2_3_30"] == 1) & (df["threshold_ML2_3_5i"] == 1)
-    )
-    return df
-
-
 def main(country, admin_level, suffix, config=None):
+    #TODO: now keeping for reference but remove or adjust in future
     """
     Compute all functions to return one dataframe with processed columns and if trigger is met for each data-source combination
     Args:
