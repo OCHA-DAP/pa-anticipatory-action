@@ -1,8 +1,9 @@
 country_name: chad
 iso3_code: TCD
 iso2_code: TD
-path_admin2_shp: tcd_admbnda_adm2_ocha_20170615/tcd_admbnda_adm2_ocha_20170615.shp
+path_admin0_shp: tcd_admbnda_adm0_ocha/tcd_admbnda_adm0_ocha.shp
 path_admin1_shp: tcd_admbnda_adm1_ocha/tcd_admbnda_adm1_ocha.shp
+path_admin2_shp: tcd_admbnda_adm2_ocha_20170615/tcd_admbnda_adm2_ocha_20170615.shp
 shp_adm0c: admin0Name
 shp_adm1c: admin1Name
 shp_adm2c: admin2Name

@@ -17,36 +17,7 @@ logger = logging.getLogger(__name__)
 # TODO: quality check that perc cols add up to 100
 
 
-def add_columns(df, source):
-    df["date"] = pd.to_datetime(df["date"])
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-
-    df["Source"] = source
-
-    # TODO: these are column names used by FewsNet, already change in process_fewsnet
-    df = df.rename(columns={"adjusted_population": "pop_Country", "ADM1_EN": "ADMIN1"})
-
-    # calculate percentage of population per analysis period and level
-    for period in ["CS", "ML1", "ML2"]:
-        # IPC level goes up to 5, so define range up to 6
-        for i in range(1, 6):
-            c = f"{period}_{i}"
-            df[f"perc_{c}"] = df[c] / df[f"pop_{period}"] * 100
-        # get pop and perc in IPC3+ and IPC2-
-        # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
-        df[f"{period}_3p"] = df[[f"{period}_{i}" for i in range(3, 6)]].sum(axis=1)
-        df[f"perc_{period}_3p"] = df[f"{period}_3p"] / df[f"pop_{period}"] * 100
-        df[f"{period}_4p"] = df[[f"{period}_{i}" for i in range(4, 6)]].sum(axis=1)
-        df[f"perc_{period}_4p"] = df[f"{period}_4p"] / df[f"pop_{period}"] * 100
-        df[f"{period}_2m"] = df[[f"{period}_{i}" for i in range(1, 3)]].sum(axis=1)
-        df[f"perc_{period}_2m"] = df[f"{period}_2m"] / df[f"pop_{period}"] * 100
-    df["perc_inc_ML2_3p"] = df["perc_ML2_3p"] - df["perc_CS_3p"]
-    df["perc_inc_ML1_3p"] = df["perc_ML1_3p"] - df["perc_CS_3p"]
-    return df
-
-
-def get_trigger(row, period, level, perc):
+def define_trigger_percentage(row, period, level, perc):
     """
     Return 1 if percentage of population in row for period in level "level" or higher, equals or larger than perc
     """
@@ -61,7 +32,7 @@ def get_trigger(row, period, level, perc):
 
 
 # TODO: we are not using the relative increase at the moment, do we want to remove it?
-def get_trigger_increase_rel(row, level, perc):
+def define_trigger_increase_rel(row, level, perc):
     """
     Return 1 if population in row for >="level" at ML1 is expected to be larger than (current (CS) population in >=level) * (1+(perc/100))
     """
@@ -83,7 +54,7 @@ def get_trigger_increase_rel(row, level, perc):
         return 0
 
 
-def get_trigger_increase(row, period, level, perc):
+def define_trigger_increase(row, period, level, perc):
     """
     Return 1 for "row", if the expected increase in the percentage of the population in "level" or higher at time "period" compared to currently (CS) is expected to be larger than "perc"
     For Global IPC the population analysed in ML2 is sometimes different than in CS. That is why we work dirrectly with percentages and not anymore with (pop period level+ - pop CS level+) / pop CS
@@ -105,15 +76,15 @@ def compute_trigger(df):
     # TODO: would be great if we can define in config or so which triggers to compute. Not sure how..
     #TODO: move this to country specific scripts/notebooks
     # get yes/no for different thresholds, i.e. column value for row will be 1 if threshold is met and 0 if it isnt
-    df["threshold_ML1_4_20"] = df.apply(lambda x: get_trigger(x, "ML1", 4, 20), axis=1)
-    df["threshold_ML1_3_30"] = df.apply(lambda x: get_trigger(x, "ML1", 3, 30), axis=1)
+    df["threshold_ML1_4_20"] = df.apply(lambda x: define_trigger_percentage(x, "ML1", 4, 20), axis=1)
+    df["threshold_ML1_3_30"] = df.apply(lambda x: define_trigger_percentage(x, "ML1", 3, 30), axis=1)
     df["threshold_ML1_3_5i"] = df.apply(
-        lambda x: get_trigger_increase(x, "ML1", 3, 5), axis=1
+        lambda x: define_trigger_increase(x, "ML1", 3, 5), axis=1
     )
-    df["threshold_ML2_4_20"] = df.apply(lambda x: get_trigger(x, "ML2", 4, 20), axis=1)
-    df["threshold_ML2_3_30"] = df.apply(lambda x: get_trigger(x, "ML2", 3, 30), axis=1)
+    df["threshold_ML2_4_20"] = df.apply(lambda x: define_trigger_percentage(x, "ML2", 4, 20), axis=1)
+    df["threshold_ML2_3_30"] = df.apply(lambda x: define_trigger_percentage(x, "ML2", 3, 30), axis=1)
     df["threshold_ML2_3_5i"] = df.apply(
-        lambda x: get_trigger_increase(x, "ML2", 3, 5), axis=1
+        lambda x: define_trigger_increase(x, "ML2", 3, 5), axis=1
     )
 
     df["trigger_ML1"] = (df["threshold_ML1_4_20"] == 1) | (
