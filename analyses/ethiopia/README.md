@@ -1,4 +1,4 @@
-# [COUNTRY NAME] Anticipatory Action
+# Ethiopia Anticipatory Action
 
 ## Background information
 
