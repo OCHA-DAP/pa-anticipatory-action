@@ -257,7 +257,8 @@ def process_globalipc(country, admin_level, config, parameters,ipc_dir):
         ipc_cols = [f"{period}_{i}" for period in config.IPC_PERIOD_NAMES for i in [1, 2, 3, 4, 5]]
         pop_cols = [f"pop_{period}" for period in config.IPC_PERIOD_NAMES]
         adm_cols = [f"ADMIN{a}" for a in range(0, int(admin_level) + 1)]
-        df_ipc_agg = df_ipc_agg[["date"] + adm_cols + ipc_cols + pop_cols]
+        perc_cols = [c for c in df_ipc_agg.columns if "perc" in c]
+        df_ipc_agg = df_ipc_agg[["date"] + adm_cols + ipc_cols + perc_cols + pop_cols]
 
         # TODO: idea to also add total population per admin region, now only have population per admin that was included in the IPC analysis
         #  Would have to use WorldPop data for that, see process_fewsnet_worldpop.py

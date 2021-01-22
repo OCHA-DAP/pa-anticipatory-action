@@ -240,3 +240,44 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
     fig.tight_layout()
 
     return fig
+
+def plot_boundaries_binary(gdf,binary_col,subplot_col="date",subplot_str_col=None,region_col="ADM1_EN",only_show_reached=True,colp_num=2,print_reg=True,title_str="",labelsize=8):
+    #will only plot the regions present in gdf
+    #assumes a binary column where 1 indicates some condition is reached and 0 that it isn't. The 1s will be shown as red regions, the 0s as grey
+
+    # # initialize empty figure, to circumvent that figures from different functions are overlapping
+    # plt.figure()
+    # plt.clf()
+    #will only create subplots for the unque values of subplot_col if for that value at least one region has a value of 1 for binary_col
+    if not isinstance(gdf,gpd.GeoDataFrame):
+        logger.error("Input dataframe has to be a GeoDataFrame, add a geometry column and convert to GeoDatFrame type.")
+    if only_show_reached:
+        gdf_group = gdf.groupby(subplot_col, as_index=False).sum()
+        gdf_col_reached = gdf_group[gdf_group[binary_col] >= 1]
+        gdf = gdf[gdf[subplot_col].isin(gdf_col_reached[subplot_col].unique())]
+
+    num_plots = len(gdf[subplot_col].unique())
+
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+
+    fig = plt.figure(1, figsize=(3*colp_num, 3 * rows))
+    for i, d in enumerate(gdf[subplot_col].unique()):
+        ax = fig.add_subplot(rows, colp_num, position[i])
+        gdf.plot(ax=ax, color='#DDDDDD', edgecolor='#BBBBBB')
+        regions = gdf[region_col].loc[(gdf[subplot_col] == d) & (gdf[binary_col]==1)].sort_values().unique()
+        if len(regions) > 0:
+            gdf.loc[gdf[region_col].isin(regions)].plot(ax=ax, color='red')
+        trig_regions = ", ".join(regions)
+        if subplot_str_col is not None:
+            subplot_str = gdf.loc[gdf[subplot_col] == d, subplot_str_col].unique()[0]
+        else:
+            subplot_str = ""
+        if print_reg and len(regions) > 0:
+            title = f"{title_str} {subplot_str}\n Regions: {trig_regions}"
+        else:
+            title = f"{title_str} {subplot_str} \n"
+        plt.title(title,fontsize=labelsize)
+        ax.axis("off")
+    fig.tight_layout()
+    return fig
