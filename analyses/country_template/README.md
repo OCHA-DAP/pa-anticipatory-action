@@ -1,5 +1,12 @@
 # [COUNTRY NAME] Anticipatory Action
 
+##  Table of Contents
+1. [Background Information](#background-information)
+2. [Overview of analysis](#overview-of-analysis)
+3. [Data description](#data-description)
+4. [Directory structure](#directory-structure)
+5. [Reproducing this analysis](#reproducing-this-analysis)
+
 ## Background information
 
 Provide a basic overview of the context of anticipatory action in this country. Link to the GDrive Trigger Card document for greater context and details.  

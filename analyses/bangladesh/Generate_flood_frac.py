@@ -46,12 +46,17 @@ def get_adm_shp(adm, adm_dir):
     :param adm_dir: shapefile directory, specified in config file
     :return: geopandas df with admin regions
     """
-    adm_grp = adm + '_PCODE'  # Need to do by pcode because admin names are not unique
-    adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_{adm}_bbs_20201113.shp'))
-    adm_shp = adm_shp[adm_shp['ADM2_EN'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
+    if adm == 'MAUZ':
+        adm_shp = gpd.read_file(os.path.join(adm_dir, 'selected_distict_mauza.shp'))
+        adm_shp = adm_shp[adm_shp['DISTNAME'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
+        adm_shp.rename(columns={'OBJECTID': 'MAUZ_PCODE', 'MAUZNAME': 'MAUZ_EN'}, inplace=True) # Treat OBJECTID as PCODE field
+    else:
+        #adm_grp = adm + '_PCODE'  # Need to do by pcode because admin names are not unique
+        adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_{adm}_bbs_20201113.shp'))
+        adm_shp = adm_shp[adm_shp['ADM2_EN'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
+        #if adm_grp != 'ADM4_EN':  # Dissolve the shp if necessary
+        #    adm_shp = adm_shp.dissolve(by=adm_grp).reset_index()
     adm_shp = adm_shp.to_crs('ESRI:54009')
-    if adm_grp != 'ADM4_EN':  # Dissolve the shp if necessary
-        adm_shp = adm_shp.dissolve(by=adm_grp).reset_index()
     adm_shp.loc[:, 'adm_area'] = adm_shp['geometry'].area
     return adm_shp
 
@@ -101,7 +106,6 @@ def get_flood_area(adm_grp, adm_shp, date, gee_dir):
     output_df_part = pd.merge(adm_shp, not_flooded.to_frame(), left_on=adm_grp, right_index=True)
     output_df_part.loc[:, 'flooded_area'] = output_df_part['adm_area'] - output_df_part['not_flooded_area']
     output_df_part.loc[:, 'date'] = datetime.datetime.strptime(date[:10], '%Y-%m-%d')
-
     return output_df_part
 
 
@@ -125,13 +129,12 @@ def main(adm, adm_dir, gee_dir, data_dir):
     # Subtract river area from flooded area
     output_df.loc[:, 'non_river_area'] = output_df['adm_area_y'] - output_df['river_area']
     # Calculate the flooded fraction
-    output_df.loc[:, 'flood_fraction'] = output_df['flooded_area'] / output_df['non_river_area']
+    output_df.loc[:, 'flood_fraction'] = round(output_df['flooded_area'] / output_df['non_river_area'],4)
     # Clean the dataframe
     output_df['date'] = pd.to_datetime(output_df['date'], format="%Y-%m-%d").dt.strftime('%Y-%m-%d')
     output_df = output_df[[(adm + '_EN_y'), (adm + '_PCODE'), 'flood_fraction', 'date']]
     output_df.columns = [adm + '_EN', (adm + '_PCODE'), 'flood_fraction', 'date']
-    #output_df = clean_df(output_df, adm)
-    output_df.to_csv(os.path.join(data_dir, f'{adm}_flood_extent_sentinel_scratch_2.csv'), index=False)
+    output_df.to_csv(os.path.join(data_dir, f'{adm}_flood_extent_sentinel.csv'), index=False)
     return output_df
 
 

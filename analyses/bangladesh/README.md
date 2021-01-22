@@ -97,7 +97,7 @@ conda activate bang_floods
 
 2. Edit the ```config.yml``` file to include the location of the directory where your output shapefiles are stored (```gee_dir```), the admin areas are stored (```adm_dir```) and the location where you want your output data to go (```data_dir```).
 
-3. Run a Python script from the terminal in the repository root directory to generate .CSV files that include the flood fraction over time within admin areas. This script can be run by aggregating to ```ADM4```, ```ADM3```, and ```ADM2``` levels. For example: 
+3. Run a Python script from the terminal in the repository root directory to generate .CSV files that include the flood fraction over time within admin areas. This script can be run by aggregating to ```ADM4```, ```ADM3```, and ```ADM2``` levels, or to the mauza level (with ```MAUZ```). For example: 
 
 ```
 python Generate_flood_frac.py ADM4 
@@ -107,5 +107,11 @@ python Generate_flood_frac.py ADM4
 
 ```
 python Generate_interpolated.py ADM4
+```
+
+5. Visualise the results through basic choropleth mapping, using the same input aggregation level as the previous steps.
+
+```
+python Make_plots.py ADM4
 ```
 
