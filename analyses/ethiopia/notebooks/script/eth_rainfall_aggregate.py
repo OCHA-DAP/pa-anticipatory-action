@@ -7,16 +7,20 @@
 # 
 # To develop the approach further there are two main aspects we have to better understand:
 # 1) How can we combine the forecasts provided by different organizations? \
-# 2) How can we aggregate the forecasts from raster cells to the spatial level which is used for decision-making?
+# 2) How can we aggregate the forecasts from raster cells to the spatial level which is used for decision-making?    
 # 
 # This highest priority is with 2), and this is what this notebook explores
 # 
-# For 2), two main factors have to be decided upon, namely the spatial level of decision making, and the aggregation from raster cells to that spatial level.
+# For 2), three main factors have to be decided upon, namely     
+# - the spatial level of decision making     
+# - the aggregation from raster cells to that spatial level     
+# - the probability threshold after aggregation.
 
 # ### The level of decision making
 # Ultimately we would like to have a drought-indicator per livelihood zone but this is not realistic due to the high uncertainty in forecasts with a longer lead time.   
 # At the minimum we need an indication per admin1.    
-# For large admin1 regions with different weather patterns, it would be great to be able to have an indication per admin2 (or weather type region). 
+# For large admin1 regions with different weather patterns, it would be great to be able to have an indication per admin2 (or weather type region).     
+# We should also take into account the livelihood types and seasonal calendar to determine the impact of below-average rainfall
 
 # ### Possible methodologies for aggregating to decision level
 # Ultimately we want to know which regions meet a certain threshold of probability of below-average precipitation. 
@@ -33,17 +37,19 @@
 # 3) Compute the **percentage of the admin region** that has a value higher than *probability_threshold* and trigger if this percentage is larger than *trigger_threshold_percentage*
 
 # ### Our proposal
-# **Note: this is a very early stage proposal and meant to guide the discussion**     
-# Compute the average value of all cells with their centre in an admin1 region. If this value is higher than 45% probability, activate    
-# Compute the maximum value of cells touching an admin2 per admin2. If any of the admin2's have a maximum value that is higher than 47.5%, raise a warning and decide with the team if that area should have an activation
+# **Note: this is a very early stage proposal and meant to guide the discussion**    
+# a) Overlay with livelihood types and seasonal calendar to determine the regions impacted by less rainfall    
+# b) Compute the average value of all cells with their centre in an admin1 region. If this value is higher than 45% probability, activate       
+# c) Compute the maximum value of cells touching an admin2 per admin2. If any of the admin2's have a maximum value that is higher than 47.5%, activate    
 
 # ### Spatial level questions:
 # - Could we look beyond admin regions but instead focus on e.g. climatic regions?
-# - Should we take into account the livelihood types?
+# - Should we take into account the livelihood types and if so how?
 
 # ### Aggregation methodology questions:
 # - Are there other possible aggregation methodologies than those mentioned above?
 # - Which methodology best fits our purpose?
+# - What is a reasonable threshold?
 # 
 # 
 
