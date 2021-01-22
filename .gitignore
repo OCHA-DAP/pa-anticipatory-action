@@ -35,3 +35,6 @@ __MACOSX/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+
+#nbautoexport
+.nbautoexport
