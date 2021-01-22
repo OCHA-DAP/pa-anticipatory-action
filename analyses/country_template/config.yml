@@ -2,6 +2,7 @@
 country_name: #lower case
 iso3_code:
 iso2_code:
+#TODO: change path_admin... to file_admin...
 path_admin0_shp: #can generally be downloaded from the datagrid of hdx (https://data.humdata.org)
 path_admin1_shp: #can generally be downloaded from the datagrid of hdx (https://data.humdata.org)
 path_admin2_shp: #can generally be downloaded from the datagrid of hdx (https://data.humdata.org)

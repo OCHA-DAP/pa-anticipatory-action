@@ -2,7 +2,6 @@ import logging
 import os
 import argparse
 from pathlib import Path
-import datetime
 import urllib.error
 import pandas as pd
 
@@ -33,7 +32,7 @@ def parse_args():
     )
     return parser.parse_args()
 
-def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
+def download_fewsnet(date, iso2_code, region, regioncode,output_dir):
     """
     Retrieve the raw fewsnet data. Depending on the region, this date is published per region or per country. This function tries to retrieve both.
     The download_url always downloads the given url, but sometimes this doesn't return a valid zip file. This means that data doesn't exist. This happens often, since for most countries the classifications are on earlier dates only published per region and later on per country. This is not bad, and the function will remove the invalid zip files
@@ -88,7 +87,7 @@ def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
                 logger.warning(f"No FewsNet data for date {date} found that covers {iso2_code}")
             os.remove(zip_filename_region)
 
-def get_worldpop_data(country_iso3, year, output_dir, config):
+def download_worldpop(country_iso3, year, output_dir, config):
     #create directory if doesn't exist
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     url = config.WORLDPOP_URL.format(country_iso3_upper=country_iso3.upper(),country_iso3_lower=country_iso3.lower(),year=year)
