@@ -17,6 +17,28 @@ from indicators.drought.config import Config
 
 logger = logging.getLogger(__name__)
 
+def plot_histogram(hist_array, xlabel=None):
+    """
+    Plot a generic histogram
+    Args:
+        hist_array (np array): array with the values to be plotted
+        xlabel (str): string to set as xlabel (if None, no label will be shown)
+
+    Returns:
+        fig (fig): fig object with the histogram
+    """
+    # initialize empty figure, to circumvent that figures from different functions are overlapping
+    plt.figure()
+
+    fig = plt.figure(1, figsize=(16, 4))
+    ax = fig.add_subplot(1, 1, 1)
+    plt.hist(hist_array)
+    plt.title(f"Histogram  \n NaN values: {np.count_nonzero(np.isnan(hist_array))}")
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    return fig
 
 def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat',forec_val='prob_below'):
     #TODO: at some point this function can be deleted/integrated with plot_raster_boundaries_test, but for now keeping for debugging

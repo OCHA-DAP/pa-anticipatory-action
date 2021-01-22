@@ -2,3 +2,4 @@ DIRS:
   adm_dir: "data/ADM_Shp"
   data_dir: "data/FE_Results"
   gee_dir: "data/GEE_Output"
+  plot_dir: "results/figures/flood_extent"
