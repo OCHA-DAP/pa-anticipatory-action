@@ -50,7 +50,7 @@ __Related script(s)__: [Get permanent water](https://github.com/OCHA-DAP/pa-anti
 
 ### 4. Sentinel-1 synthetic aperture radar (SAR) imagery 
 
-__Description__: The Sentinel-1 mission, developed by the European Space Agency (ESA) as part of the Copernicus Program, includes C-band synthetic aperture radar (SAR) imaging. Sentinel-1 data is thus not impeded by cloud cover and can be collected during both day and night.
+__Description__: The Sentinel-1 mission, developed by the European Space Agency (ESA) as part of the Copernicus Program, includes C-band synthetic aperture radar (SAR) imaging. Sentinel-1 data is thus not impeded by cloud cover and can be collected during both day and night. Sentinel-1 SAR data is frequently used to map flood extent. 
 
 __Format__: Raster. Approx 30 x 30m resolution.   
 
