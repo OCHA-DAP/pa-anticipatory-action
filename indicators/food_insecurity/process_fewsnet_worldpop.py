@@ -50,22 +50,23 @@ def compute_total_admin_population(df_fews, admin_path, pop_path, config):
         pop_admfews = (
                 df_fews[f"pop_total_{period}"].sum() / df_adm["pop"].sum() * 100
         )
-
+        date = ''.join(df_fews['date'].dt.strftime('%Y-%m').unique())
         if pop_admfews < 95:
             logger.warning(
-                f"For date {d} and period {period} only {pop_admfews:.2f}% of the country's population is included in the region covered by the FewsNet shapefile"
+                f"For period {period} and date {date} only {pop_admfews:.2f}% of the country's population is included in the region covered by the FewsNet shapefile"
             )
 
         # In some cases a large fraction of the country's population doesn't have an IPC phase assigned (mostly 99).
         # This mostly occurs if FewsNet didn't cover the country. Due to small disreperancies between the FN and admin shapefile a small fraction can then still be assigned to an IPC phase.
         # If more than 50% doesn't have a phase assigned, raise a warning
         # TODO: if perc_ipcclass is really small for the country fewsnet data, check if region fewsnet data does contain data. Not sure how to.. But for SOM 201307 ML2 it is the case that the country fewsnet data does contain data but the east-africa not. Might happen other way around as well..
+        # TODO: return NaN instead of zeroes if no data
         perc_ipcclass = (
                 df_fews[f"pop_{period}"].sum() / df_adm["pop"].sum() * 100
         )
         if perc_ipcclass < 50:
             logger.warning(
-                f"For period {period} and date {d} only {perc_ipcclass:.2f}% of the population is assigned to an IPC class"
+                f"For period {period} and date {date} only {perc_ipcclass:.2f}% of the population is assigned to an IPC class"
             )
     return df_fews
 
