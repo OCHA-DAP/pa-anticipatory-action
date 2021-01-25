@@ -12,7 +12,7 @@ This repository contains the triggers that are part of the several AAF pilots.
 While the triggers are adjusted to the local context, most of the data processing is transferable to other countries.
 
 The AAF pilots implemented as of January 2021 are:
-- Bangladesh, flood
+- [Bangladesh, flood](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/)
 - Somalia, food insecurity
 - Ethiopia, drought-related food insecurity
 - Malawi and Chad, exploratory phase
