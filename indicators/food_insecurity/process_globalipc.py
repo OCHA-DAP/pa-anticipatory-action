@@ -293,7 +293,7 @@ def retrieve_globalipc(country, admin_level, suffix="", download=False, config=N
     if os.path.exists(os.path.join(globalipc_dir,config.GLOBALIPC_FILENAME_RAW.format(country=country))):
         df_ipc = process_globalipc(country, int(admin_level), config, parameters, globalipc_dir)
         if df_ipc is not None:
-            df_ipc.to_csv(os.path.join(output_dir,config.GLOBALIPC_FILENAME_PROCESSED.format(country=country, admin_level=admin_level,suffix=suffix)))
+            df_ipc.to_csv(os.path.join(output_dir,config.GLOBALIPC_FILENAME_PROCESSED.format(country=country, admin_level=admin_level,suffix=suffix)),index=False)
     else:
         logger.error(f"File doesn't exist at path {os.path.join(globalipc_dir,config.GLOBALIPC_FILENAME_RAW.format(country=country))}. Download the data first by using the -d args")
 
