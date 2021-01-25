@@ -20,7 +20,8 @@ def download_icpac(config):
     Args:
         config (Config): config for the drought indicator
     """
-    #TODO: would be nicer to directly download from their ftp but couldn't figure out yet how (something with certificates)
+    #TODO: would like to download directly from the ftp server instead of uploading to GDrive and downloading from there.
+    # But with ftplib getting error 522 Data connections must be encrypted
     gclient = auth_googleapi()
     gzip_output_file=os.path.join(config.DROUGHTDATA_DIR, f'{config.ICPAC_DIR}.zip')
     if os.path.exists(os.path.join(config.DROUGHTDATA_DIR, config.ICPAC_DIR)):
@@ -31,9 +32,9 @@ def download_icpac(config):
     for path in Path(os.path.join(config.DROUGHTDATA_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_RAW):
         #opening with rioxarray better than xarray, with xarray gets some lat lon inversion
         icpac_ds = rioxarray.open_rasterio(path)
-        #TODO: selection of below is needed to save crs correctly but don't understand why
+        #selection of below is needed to save crs correctly, apparently cannot handle several variables
         icpac_sel = icpac_ds[config.ICPAC_LOWERTERCILE]
-        path_crs = f"{str(path)[:-3]}_crs.nc"
+        path_crs = f"{str(path)[:-3]}_{config.LOWERTERCILE}_crs.nc"
         if os.path.exists(path_crs):
             os.remove(path_crs)
         icpac_sel.rio.write_crs("EPSG:4326").to_netcdf(path_crs)
@@ -56,9 +57,10 @@ def get_icpac_data(config,pubyear,pubmonth,download=False):
         download_icpac(config)
     #TODO: check if better way to find the file
     try:
-        for path in Path(os.path.join(config.DROUGHTDATA_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear)):
+        for path in Path(os.path.join(config.DROUGHTDATA_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)):
 
             #rioxarray reads the icpac data correctly while xarray somehow messes up stuff but still not sure what exactly goes wrong there
+            #only has one time entry so squeeze the time dimension
             icpac_ds = rioxarray.open_rasterio(path,masked=True).squeeze()
             icpac_ds = icpac_ds.rename({config.ICPAC_LON: config.LONGITUDE, config.ICPAC_LAT: config.LATITUDE, config.ICPAC_LOWERTERCILE:config.LOWERTERCILE})
 
@@ -67,4 +69,4 @@ def get_icpac_data(config,pubyear,pubmonth,download=False):
                 transform = src.transform
         return icpac_ds, transform
     except UnboundLocalError:
-        logger.error(f"ICPAC forecast with regex {config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear)} not found")
+        logger.error(f"ICPAC forecast with regex {config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)} not found")

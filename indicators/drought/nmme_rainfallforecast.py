@@ -28,7 +28,7 @@ def download_nmme(config,date):
     NMME_dir = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR)
     Path(NMME_dir).mkdir(parents=True, exist_ok=True)
     NMME_filepath = os.path.join(NMME_dir, config.NMME_NC_FILENAME_RAW.format(date=date))
-    # TODO: decide if only download if file doesn't exist. Not sure if ever gets updated
+    #assuming the files don't get updated so only download if doesn't exist yet
     if not os.path.exists(NMME_filepath):
         download_ftp(config.NMME_FTP_URL_SEASONAL.format(date=date), NMME_filepath)
 
@@ -41,12 +41,12 @@ def download_nmme(config,date):
         nmme_ds = fix_calendar(nmme_ds, timevar='target')
         nmme_ds = fix_calendar(nmme_ds, timevar='initial_time')
         nmme_ds = xr.decode_cf(nmme_ds)
-        NMME_filepath_crs = os.path.join(NMME_dir, config.NMME_NC_FILENAME_CRS.format(date=date))
+        NMME_filepath_crs = os.path.join(NMME_dir, config.NMME_NC_FILENAME_CRS.format(date=date,tercile=config.LOWERTERCILE))
 
         # strange things happen when just overwriting the file, so delete it first if it already exists
         if os.path.exists(NMME_filepath_crs):
             os.remove(NMME_filepath_crs)
-        #TODO: crs is only saved correctly when saving one var. Don't understand why
+        #crs is only saved correctly when saving one var. Don't understand why exactly but hence, only save one tercile
         nmme_ds[config.NMME_LOWERTERCILE].rio.write_crs("EPSG:4326").to_netcdf(NMME_filepath_crs)
 
 def get_nmme_data(config,date,download=False):
@@ -63,7 +63,7 @@ def get_nmme_data(config,date,download=False):
     """
     if download:
         download_nmme(config,date)
-    NMME_filepath = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR, config.NMME_NC_FILENAME_CRS.format(date=date))
+    NMME_filepath = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR, config.NMME_NC_FILENAME_CRS.format(date=date,tercile=config.LOWERTERCILE))
 
     nmme_ds = rioxarray.open_rasterio(NMME_filepath)
     #nmme's data comes in fractions while other sources come in percentages, so convert to percentages
