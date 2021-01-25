@@ -54,12 +54,12 @@ class Config:
     LATITUDE = "lat"
 
     ### IRI
-    # currently downloading from november 2020 till latest date available
-    # and only the belowaverage data
-    # this can be changed but if downloading all historical data, it can take about half an hour
+    # currently downloading from 2017 till the latest available forecast
+    #set enddate to Jan next year, to make sure the latest date is always included in the download
+    #If download takes too long, you can change the url to only download from a shorter time period
     IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Mar%202017)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
     IRI_DIR = "IRI"
-    #currently it is solely downloading belowaverage data, this can be changed but will make downloading times longer.
+    #downloads data from 2017 till the latest date available for the current year
     IRI_NC_FILENAME_RAW = f"IRI_2017{TODAY_YEAR}.nc"
     IRI_NC_FILENAME_CRS = f"IRI_2017{TODAY_YEAR}_crs.nc"
     IRI_LOWERTERCILE = "prob"
