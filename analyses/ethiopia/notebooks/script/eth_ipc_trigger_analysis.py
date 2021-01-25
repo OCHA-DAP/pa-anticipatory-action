@@ -36,7 +36,7 @@ sys.path.append(path_mod)
 # from indicators.drought.nmme_rainfallforecast import get_nmme_data
 from indicators.food_insecurity.config import Config
 from indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase, define_trigger_increase_rel
-from utils_general.plotting import plot_boundaries_binary
+from utils_general.plotting import plot_spatial_binary_column
 
 
 country="ethiopia"

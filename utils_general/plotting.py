@@ -241,7 +241,7 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
 
     return fig
 
-def plot_boundaries_binary(gdf,binary_col,subplot_col="date",subplot_str_col=None,region_col="ADM1_EN",only_show_reached=True,colp_num=2,print_reg=True,title_str="",labelsize=8):
+def plot_spatial_binary_column(gdf,binary_col,subplot_col="date",subplot_str_col=None,region_col="ADM1_EN",only_show_reached=True,colp_num=2,print_reg=True,title_str="",labelsize=8):
     #will only plot the regions present in gdf
     #assumes a binary column where 1 indicates some condition is reached and 0 that it isn't. The 1s will be shown as red regions, the 0s as grey
 

@@ -28,7 +28,7 @@ sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
 from indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase, define_trigger_increase_rel
 from indicators.food_insecurity.utils import compute_percentage_columns
-from utils_general.plotting import plot_boundaries_binary
+from utils_general.plotting import plot_spatial_binary_column
 
 
 country="ethiopia"
