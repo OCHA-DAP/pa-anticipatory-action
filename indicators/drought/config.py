@@ -72,6 +72,8 @@ class Config:
     ICPAC_DIR = "icpac"
     #Raw data can be processed for all dates, for the one with crs, we only want to one of interest
     ICPAC_PROBFORECAST_REGEX_RAW = "ForecastProb*.nc"
+    #The raw ICPAC data consists of 3 bands: below normal, average, and above normal
+    #when adding the crs, only one band can be saved correctly, hence add to the name the tercile we are saving
     ICPAC_PROBFORECAST_REGEX_CRS = "ForecastProb*{month}{year}_{tercile}_crs.nc"
     ICPAC_LOWERTERCILE = "below"
     ICPAC_LON = "x"
