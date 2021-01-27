@@ -42,15 +42,6 @@ df=df.replace(0,np.nan)
 df["date"]=pd.to_datetime(df["date"])
 df["year"]=df["date"].dt.year
 df["month"]=df["date"].dt.month
-df["trigger_ML1_4_20"]=df.apply(lambda x: define_trigger_percentage(x,"ML1",4,20),axis=1)
-df["trigger_ML1_3_30"]=df.apply(lambda x: define_trigger_percentage(x,"ML1",3,30),axis=1)
-df["trigger_ML1_3_5i"]=df.apply(lambda x: define_trigger_increase(x,"ML1",3,5),axis=1)
-df[f"threshold_reached_ML1"]=np.where((df[f"trigger_ML1_4_20"]==1) | ((df[f"trigger_ML1_3_30"]==1) & (df[f"trigger_ML1_3_5i"]==1)),1,0)
-
-df["trigger_ML2_4_20"]=df.apply(lambda x: define_trigger_percentage(x,"ML2",4,20),axis=1)
-df["trigger_ML2_3_30"]=df.apply(lambda x: define_trigger_percentage(x,"ML2",3,30),axis=1)
-df["trigger_ML2_3_5i"]=df.apply(lambda x: define_trigger_increase(x,"ML2",3,5),axis=1)
-df[f"threshold_reached_ML2"]=np.where((df[f"trigger_ML2_4_20"]==1) | ((df[f"trigger_ML2_3_30"]==1) & (df[f"trigger_ML2_3_5i"]==1)),1,0)
 
 df["trigger_ML1_3_20"] = df.apply(lambda x: define_trigger_percentage(x,"ML1",3,20),axis=1)
 df["trigger_ML1_3_5in"] = df.apply(lambda x: define_trigger_increase(x,"ML1",3,5),axis=1)
