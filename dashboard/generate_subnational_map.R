@@ -10,7 +10,7 @@ library(tmap)
 ipc_indices_data <- read.csv("Nov2020_FewsNetGlobalIPC.csv")
 
 # import shapefiles
-eth_adm1 <- st_read("shapefiles/ET_Admin1_OCHA_2019/eth_admbnda_adm1_csa_bofed_20190827.shp", stringsAsFactors = F)
+eth_adm1 <- st_read("data/shapefiles/ET_Admin1_OCHA_2019/eth_admbnda_adm1_csa_bofed_20190827.shp", stringsAsFactors = F)
 
 # build datasets per country, source. Ensures all regions are represented if no projections in certain regions
 # ETH FN
