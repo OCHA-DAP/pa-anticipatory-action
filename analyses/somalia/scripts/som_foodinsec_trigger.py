@@ -18,8 +18,8 @@ sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
 from indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase
 
-admin_level=1
-country="ethiopia"
+admin_level=0
+country="somalia"
 #suffix of filenames
 suffix=""
 config=Config()
@@ -52,13 +52,18 @@ df["trigger_ML2_3_30"]=df.apply(lambda x: define_trigger_percentage(x,"ML2",3,30
 df["trigger_ML2_3_5i"]=df.apply(lambda x: define_trigger_increase(x,"ML2",3,5),axis=1)
 df[f"threshold_reached_ML2"]=np.where((df[f"trigger_ML2_4_20"]==1) | ((df[f"trigger_ML2_3_30"]==1) & (df[f"trigger_ML2_3_5i"]==1)),1,0)
 
-df[df.date=="2020-10-01"]["period_ML1"]="Oct 2020 - Jan 2021"
-df[df.date=="2020-10-01"]["period_ML2"]="Feb 2021 - May 2021"
+df["trigger_ML1_3_20"] = df.apply(lambda x: define_trigger_percentage(x,"ML1",3,20),axis=1)
+df["trigger_ML1_3_5in"] = df.apply(lambda x: define_trigger_increase(x,"ML1",3,5),axis=1)
+df["trigger_ML1_4_2half"] = df.apply(lambda x: define_trigger_percentage(x,"ML1",4,2.5),axis=1)
 
-# gdf=gpd.read_file(adm_bound_path).rename(columns={parameters[f"shp_adm{admin_level}c"]:f"ADMIN{admin_level}"})
-# df=gdf[[f"ADMIN{admin_level}","geometry"]].merge(df,how="right")
-# df=df[(df["source"]=="FewsNet") & (df["date"]==df["date"].max())]
-df.to_csv(os.path.join(config.DIR_PATH,"dashboard","data","foodinsecurity","ethiopia_foodinsec_trigger.csv"))
+df["trigger_ML2_3_20"] = df.apply(lambda x: define_trigger_percentage(x,"ML2",3,20),axis=1)
+df["trigger_ML2_3_5in"] = df.apply(lambda x: define_trigger_increase(x,"ML2",3,5),axis=1)
+df["trigger_ML2_4_2half"] = df.apply(lambda x: define_trigger_percentage(x,"ML2",4,2.5),axis=1)
 
-# fig_boundbin=plot_spatial_binary_column(df,"trigger_ML1",subplot_col="year",subplot_str_col="year",region_col="ADMIN1",colp_num=4,only_show_reached=False,title_str="Regions triggered")
-# plt.show()
+# determine whether national trigger is met
+df['threshold_reached_ML1'] =  np.where((df['trigger_ML1_3_20']==1) & ((df['trigger_ML1_3_5in'] )==1 | (df['trigger_ML1_4_2half'] == 1)), 1, 0)
+df['threshold_reached_ML2'] =  np.where((df['trigger_ML2_3_20']==1) & ((df['trigger_ML2_3_5in'] )==1 | (df['trigger_ML2_4_2half'] == 1)), 1, 0)
+
+df.loc[df.date=="2020-10-01","period_ML1"]="Oct 2020 - Jan 2021"
+df.loc[df.date=="2020-10-01","period_ML2"]="Feb 2021 - May 2021"
+df.to_csv(os.path.join(config.DIR_PATH,"dashboard","data","foodinsecurity",f"{country}_foodinsec_trigger.csv"))
