@@ -7,6 +7,8 @@ library(tidyverse)
 library(sf)
 library(raster)
 
+# load functions
+source("scripts/mwi_chirps_dry_spells_functions.R")
 
 ## setup
 rasterOptions(maxmemory = 1e+09)
@@ -45,21 +47,49 @@ ncol(chirps) # number of columns in a layer
 nlayers(chirps) # number of layers (days)
 dim(chirps) # (nrow, ncol, nlayers)
 
+chirps_projection <- projection(chirps)
+
 # crop and mask down to MWI
 chirps_cropped <- crop(x = chirps, y = extent(mwi_adm2_spatial_extent))
 chirps_masked <- mask(chirps_cropped, mask = mwi_adm2)
 chirps_masked
 plot(chirps_masked) # visual inspection
 
-## compute precipitation total per adm2
-# extract individual layer ( = 1 day)
-chirps_20100101 <- subset(chirps_masked, 1)
+# create list of regions
+region_list <- mwi_adm2[,c('ADM2_PCODE', 'ADM2_EN', 'geometry')]
 
-# compute summary statistics for every adm2
-chirps_20100101.max <- extract(chirps_20100101, mwi_adm2, fun = max)
-chirps_20100101.ave <- extract(chirps_20100101, mwi_adm2, fun = mean)
+## compute precipitation totals per adm2
 
-# add daily ave and max to vector data
-mwi_adm2.data <- cbind(mwi_adm2, chirps_20100101.max) 
-mwi_adm2.data <- cbind(mwi_adm2.data, chirps_20100101.ave) 
+# loop through layers/days to compile MAX values across layers/days
+nbr_layers <- nlayers(chirps_masked)
+chirps_max_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
+for (i in seq_along(1:nbr_layers)) {
+  
+        chirps_max_values <- computeLayerStat(i, max, chirps_max_values)
+        
+      }
+
+# compute per-region 14-d rolling sums
+chirps_max_sums <- compute14dSum(chirps_max_values)
+
+## identify dry spells per adm2
+
+# list days with 14-day rolling sums of 2mm or less of rain
+chirps_max_sums$dry_spell_day_bin <- ifelse(chirps_max_sums$rollsum_14d <= 2, 1, 0)
+
+# identify beginning, end and duration of dry spells per region
+dry_spells_list <- chirps_max_sums %>%
+                  mutate(dry_spell_day_bin = ifelse(is.na(dry_spell_day_bin), 0, dry_spell_day_bin)) %>%  # remove NAs with 0
+                  group_by(pcode, spell = cumsum(c(0, diff(dry_spell_day_bin) != 0))) %>% # groups consecutive "dry spell" days 
+                  filter(dry_spell_day_bin == 1 & n() > 1) %>%
+                  summarize(first_dry_spell_day = min(date), # first day on which the dry spell criterion is met (14+ days with <= 2mm of rain)
+                            first_dry_day_date = first_dry_spell_day - 13, # spell started 14th day prior to first day of dry spell 
+                            last_dry_day_date = max(date),
+                            duration_days = as.numeric((last_dry_day_date - first_dry_day_date + 1))) %>%
+                  ungroup() %>%
+                  as.data.frame() %>%
+                  dplyr::select(-spell)
+
+
+  
