@@ -5,8 +5,8 @@ account: humdata
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3265667
-bundleId: 4126803
+bundleId: 4156984
 url: https://humdata.shinyapps.io/dashboard/
-when: 1611255914.30457
+when: 1611914534.83111
 asMultiple: FALSE
 asStatic: FALSE
