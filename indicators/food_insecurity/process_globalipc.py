@@ -119,7 +119,7 @@ def aggregate_adminlevel(df_ipc,admin_level,country,config):
     # The reasons for disagreement are not entirely clear. One cause is the inclusion of IDPs on adm1 and not on adm2, but this doesn't explain all the differences
     df_ipc_adm2=df_ipc[(df_ipc["date"].notnull()) & (df_ipc[f"ADMIN2"].notnull())]
     if admin_level == 0:
-        df_ipc_agg = df_ipc_adm2.groupby("date",as_index=False).sum()
+        df_ipc_agg = df_ipc_adm2.groupby(["date","period_ML1","period_ML2"],as_index=False,dropna=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
 
 
@@ -127,12 +127,12 @@ def aggregate_adminlevel(df_ipc,admin_level,country,config):
         # we assume that the admin1_col contains the name of the adm1 region for each admin2,
         # but that the summed numbers of adm1s are given in the adm0 column and thus not in the admin1
         # thus we can groupby the admin1 col to get the sums of the adm2s per adm1
-        df_ipc_agg = df_ipc_adm2.groupby([config.ADMIN1_COL, "date"], as_index=False).sum()
+        df_ipc_agg = df_ipc_adm2.groupby([config.ADMIN1_COL, "date","period_ML1","period_ML2"], as_index=False,dropna=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
 
     elif admin_level == 2:
         #it can occur that an adm2 name occurs in two adm1s, hence groupby adm1-adm2 combination and not only adm2
-        df_ipc_agg = df_ipc_adm2.groupby(["date", config.ADMIN1_COL, config.ADMIN2_COL], dropna=False, as_index=False).sum()
+        df_ipc_agg = df_ipc_adm2.groupby(["date","period_ML1","period_ML2", config.ADMIN1_COL, config.ADMIN2_COL], dropna=False, as_index=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
     else:
         logger.error(f"Admin level {admin_level} has not been implemented")
@@ -258,7 +258,8 @@ def process_globalipc(country, admin_level, config, parameters,ipc_dir):
         pop_cols = [f"pop_{period}" for period in config.IPC_PERIOD_NAMES]
         adm_cols = [f"ADMIN{a}" for a in range(0, int(admin_level) + 1)]
         perc_cols = [c for c in df_ipc_agg.columns if "perc" in c]
-        df_ipc_agg = df_ipc_agg[["date"] + adm_cols + ipc_cols + perc_cols + pop_cols]
+        period_cols = ["date","period_ML1","period_ML2"]
+        df_ipc_agg = df_ipc_agg[period_cols + adm_cols + ipc_cols + perc_cols + pop_cols]
 
         # TODO: idea to also add total population per admin region, now only have population per admin that was included in the IPC analysis
         #  Would have to use WorldPop data for that, see process_fewsnet_worldpop.py
