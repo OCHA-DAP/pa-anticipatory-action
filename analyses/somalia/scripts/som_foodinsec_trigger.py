@@ -1,9 +1,9 @@
 #Compute the trigger information needed for the dashboard. Ugly now for first mock-up, should be improved later on
 
-# IPC trigger design as of 08-10-2020:
-# EITHER: At least 20% population of one or more ADMIN1 regions projected at IPC4+ in 3 months
-# OR:
-# At least 30% of ADMIN1 population projected at IPC3+ AND increase by 5 percentage points in ADMIN1 pop.  projected in IPC3+ in 3 months compared to current state
+# IPC trigger design as of 01-02-2021:
+# The projected national population in Phase 3 and above exceed20 %, AND
+# (The national population in Phase 3 is projected to increase by 5 percentage points, OR
+# The projected national population in Phase 4 or above is 2.5 %)
 import pandas as pd
 import geopandas as gpd
 import numpy as np
