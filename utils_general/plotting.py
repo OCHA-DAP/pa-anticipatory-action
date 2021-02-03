@@ -110,6 +110,8 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     df_bound = gpd.read_file(boundary_path)
 
     num_plots = len(ds_list)
+    if num_plots==1:
+        colp_num=1
     rows = math.ceil(num_plots / colp_num)
     position = range(1, num_plots + 1)
 
