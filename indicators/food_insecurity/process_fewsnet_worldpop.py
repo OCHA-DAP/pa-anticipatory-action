@@ -60,7 +60,7 @@ def fewsnet_validperiod(row):
             year_ml1 = year + 1
             year_ml2 = year + 1
         else:
-            logger.info("Period of ML1 and ML2 cannot be added for non-regular publishing date. Add manually.")
+            logger.info(f"Period of ML1 and ML2 cannot be added for non-regular publishing date {year}-{month}. Add manually.")
             row["period_ML1"] = np.nan
             row["period_ML2"] = np.nan
             return row
@@ -91,7 +91,7 @@ def compute_total_admin_population(df_fews, admin_path, pop_path, config):
 
         # there can be a slight disperancy between the fewsnet and admin shapefile. Since we take the intersection of the fewsnet and admin shapefile, some small areas might hence be lost
         # here we calculate the total population based on the admin shape, and compare it to the total population of the overlay of the admin and fewsnet shapefiles
-        # if the disperancy causes more than 5% of the population to be excluded, raise a warning
+        # if the discrepancy causes more than 5% of the population to be excluded, raise a warning
         pop_admfews = (
                 df_fews[f"pop_total_{period}"].sum() / df_adm["pop"].sum() * 100
         )
@@ -112,6 +112,10 @@ def compute_total_admin_population(df_fews, admin_path, pop_path, config):
         if perc_ipcclass < 50:
             logger.warning(
                 f"For period {period} and date {date} only {perc_ipcclass:.2f}% of the population is assigned to an IPC class"
+            )
+        if perc_ipcclass > 110:
+            logger.warning(
+                f"For period {period} and date {date} more than 100 ({perc_ipcclass:.2f}%) of the population is assigned to an IPC class. Check your FewsNet source data and processing"
             )
     return df_fews
 
@@ -137,7 +141,8 @@ def assign_population_fewsnet(adm_cols, fews_path, adm_path, pop_path, date, per
     # TODO: overlay takes really long to compute, but could not find a better method
     #only use geometry and period since in newer FN data there might also admin columns be present that interfere with the admin columns of df_adm
     df_fewsadm = gpd.overlay(df_adm, df_fews[["geometry",period]], how="intersection")
-
+    #encountered with Chad (2018-06) that all polygons were included twice in the data. Not sure if this fixes all future cases, but only keep first occurence of same polygon and IPc phase seems safe enough to do
+    df_fewsadm=df_fewsadm.drop_duplicates(subset=["geometry",period])
     # calculate population per "geometry", where geometry is the area of a livelihood within an admin zone
     # In pop_path, the value per raster cell is the population of that cell, so sum the cells within a geometry to get the total population
     # in the calculation a cell is considered to belong to an area if the center of that cell is inside the area.
@@ -212,9 +217,10 @@ def process_fewsnet_worldpop(
                 logger.warning(f"FewsNet file for {d} and {period} not found. Skipping to next date and period.")
 
             # path to population data
-            #TODO: somehow use data from previous year if current year doesn't exist. I.e. in beginning of 2021, there wasn't yet worldpop data of 2021 but could use that of 2020
             pop_path = f"{folder_pop}/{config.WORLDPOP_FILENAME.format(country_iso3=country_iso3,year=d[:4])}"
-
+            #bit of ugly fix, but use worldpop data of previous year if that of current year does not exist
+            if not os.path.exists(pop_path):
+                pop_path= f"{folder_pop}/{config.WORLDPOP_FILENAME.format(country_iso3=country_iso3,year=int(d[:4])-1)}"
             if os.path.exists(pop_path) and fews_path:
                 df_fews = assign_population_fewsnet(adm_cols, fews_path, admin_path, pop_path, d, period, config, parameters)
                 df_fews_list.append(df_fews)
