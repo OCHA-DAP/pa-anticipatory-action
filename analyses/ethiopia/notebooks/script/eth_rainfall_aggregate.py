@@ -74,6 +74,10 @@ import matplotlib.colors as mcolors
 import xarray as xr
 import cftime
 import math
+import rioxarray
+from shapely.geometry import mapping
+import cartopy.crs as ccrs
+import matplotlib as mpl
 
 
 from pathlib import Path
@@ -117,6 +121,26 @@ def load_iri(config):
     iri_ds_below = iri_ds.sel(C=0)
 
     return iri_ds_below, transform
+
+
+def fix_calendar(ds, timevar='F'):
+    """
+    Some datasets come with a wrong calendar attribute that isn't recognized by xarray
+    So map this attribute that can be read by xarray
+    Args:
+        ds (xarray dataset): dataset of interest
+        timevar (str): variable that contains the time in ds
+
+    Returns:
+        ds (xarray dataset): modified dataset
+    """
+    if "calendar" in ds[timevar].attrs.keys():
+        if ds[timevar].attrs['calendar'] == '360':
+            ds[timevar].attrs['calendar'] = '360_day'
+    elif "units" in ds[timevar].attrs.keys():
+        if "months since" in ds[timevar].attrs['units']:
+            ds[timevar].attrs['calendar'] = '360_day'
+    return ds
 
 
 def resample_raster(file_path,upscale_factor):
@@ -269,24 +293,143 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
         fig.suptitle(title, fontsize=14, y=0.92)
 
 
-# ### Load data and compute aggregations
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8):
+    #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
+    """
+    Plot a raster file and a shapefile on top of each other.
+    Several datasets can given and for each dataset a separate subplot will be generated
+    Args:
+        ds_nc (xarray dataset): dataset that should be plotted, all bands contained in this dataset will be plotted
+        boundary_path (str): path to the shapefile
+        clipped (bool): if True, clip the raster extent to the shapefile
+        lon (str): name of the longitude coordinate in ds_nc
+        lat (str): name of the latitude coordinate in ds_nc
+        forec_val (str): name of the variable that contains the values to be plotted in ds_nc
+        title_list (list of strs): titles of subplots. If None, no subtitles will be used
+        suptitle (str): general figure title. If None, no title will be used
+        colp_num (int): number of columns in figure
+        predef_bins (array/list): array/list with bins to classify the values in
+        figsize(tuple): width, height of the figure in inches
+        labelsize(float): size of legend labels and subplot titles
+    Returns:
+        fig (fig): two subplots with the raster and the country and world boundaries
+    """
+    #initialize empty figure, to circumvent that figures from different functions are overlapping
+    plt.figure()
+
+    # load admin boundaries shapefile
+    df_bound = gpd.read_file(boundary_path)
+
+    num_plots = len(ds_list)
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+
+    norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
+    cmap="YlOrRd" #plt.cm.jet
+    fig, axes = plt.subplots(rows, colp_num,figsize=figsize)
+    if num_plots==1:
+        axes.set_axis_off()
+    else:
+        [axi.set_axis_off() for axi in axes.ravel()]
+
+    for i, ds in enumerate(ds_list):
+        #TODO: decide if want to use projection and if Robinson is then good one
+        ax = fig.add_subplot(rows, colp_num, position[i],projection=ccrs.Robinson())
+
+        if clipped:
+            ds = ds.rio.set_spatial_dims(x_dim=lon,y_dim=lat).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+        lons = ds.coords[lon]
+        lats = ds.coords[lat]
+        prob = ds[forec_val]
+
+        im = plt.pcolormesh(lons, lats, prob, cmap=cmap, norm=norm)
+
+        if title_list is not None:
+            plt.title(title_list[i], size=labelsize)
+
+        df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
+        ax.axis("off")
+
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    cb = plt.colorbar(im, cax=cbar_ax, orientation="vertical", pad=0.02, aspect=16, shrink=0.8)
+    cb.set_label(forec_val, size=labelsize, rotation=90, labelpad=15)
+    cb.ax.tick_params(labelsize=labelsize)
+
+    if suptitle is not None:
+        fig.suptitle(suptitle, size=10)
+    return fig
+
+
+# ### Load data and interpolate
 
 ds,transform=load_iri(config)
 
 
-# ds
+ds
 
 
-#MAM season
-ds_l2=ds.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2)
+# Interpolate the values to get a more granular grid. This gives a more realistic idea of the actual forecast when using an average or percentage-based aggregation. 
+# On boundaries of two raster cells, the interpolation doesn't always seem entirely correct. I don't know what this is caused by and [asked the StackOverflow](https://stackoverflow.com/questions/65934263/how-does-xarrays-interp-nearest-method-choose-the-nearest-center) community but without success so far. 
+# 
 
+def interpolate_ds(ds,transform,upscale_factor):
+    # Interpolated data
+    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims["lon"] * upscale_factor)
+    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims["lat"] * upscale_factor)
+
+    #choose nearest as interpolation method to assure no new values are introduced but instead old values are divided into smaller raster cells
+    dsi = ds.interp(lat=new_lat, lon=new_lon,method="nearest")
+    transform_interp=transform*transform.scale(len(ds.lon)/len(dsi.lon),len(ds.lat)/len(dsi.lat))
+    
+    return dsi, transform_interp
+
+
+ds_interp,transform_interp=interpolate_ds(ds,transform,4)
+
+
+df_bound=gpd.read_file(adm1_bound_path)
+ds_interp_clip = ds_interp.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+
+
+#inspired from https://xarray-contrib.github.io/xarray-tutorial/scipy-tutorial/04_plotting_and_visualization.html#facet
+ds_interp_clip_l2=ds_interp_clip.sel(L=2)
+g=ds_interp_clip_l2.prob_below.plot(
+    col="F",
+    col_wrap=4,
+#     row="L",
+    cmap=mpl.cm.YlOrRd, #mpl.cm.RdORYlBu_r,
+#     robust=True,
+    cbar_kwargs={
+        "orientation": "horizontal",
+        "shrink": 0.8,
+        "aspect": 40,
+        "pad": 0.1,
+    },
+)
+df_bound = gpd.read_file(adm1_bound_path)
+for ax in g.axes.flat:
+    df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
+    ax.axis("off")
+
+
+# ### Compute aggregations for 2021 MAM season
+# Focus on one date first for experimentation
 
 #threshold of probability of below average, used to compute percentage of area above that probability
 probability_threshold=50
 
 
+#MAM season
+ds_l2=ds.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2)
+ds_l2_interp=ds_interp.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2)
+
+
+fig=plot_raster_boundaries_clip([ds_l2,ds_l2_interp],adm1_bound_path,colp_num=2,predef_bins=np.arange(30,70,2.5),figsize=(32,9),suptitle="Raw data of Jan 2021 forecast for MAM",title_list=["Original","Interpolated"])
+
+
 #compute the different aggregation methodologies per admin1
-df_stats=compute_raster_statistics(adm1_bound_path,ds_l2["prob_below"].values,transform,probability_threshold)
+df_stats=compute_raster_statistics(adm1_bound_path,ds_l2_interp["prob_below"].values,transform_interp,probability_threshold)
 
 
 stats_cols=['max_cell', 'max_cell_touched', 'avg_cell', 'avg_cell_touched']
@@ -308,10 +451,10 @@ plot_spatial_columns(df_stats,stats_perc_cols,
                 title="Analysis of IRI forecast",predef_bins=bins_perc_list)
 
 
-# ### ADM2
+# #### Aggregations on ADM2 level
 
 #compute the different aggregation methodologies per admin1
-df_stats_adm2=compute_raster_statistics(adm2_bound_path,ds_l2["prob_below"].values,transform,probability_threshold)
+df_stats_adm2=compute_raster_statistics(adm2_bound_path,ds_l2_interp["prob_below"].values,transform_interp,probability_threshold)
 
 
 #orange is max values
@@ -328,7 +471,8 @@ plot_spatial_columns(df_stats_adm2[df_stats_adm2.ADM1_EN=="Oromia"],stats_cols,
                 title="Analysis of IRI forecast",predef_bins=bins_list)
 
 
-# ### Historical analysis
+# ### Aggregation for all historical data
+# We have data from March 2017
 
 probability_threshold=50
 percentage_threshold=20
@@ -383,7 +527,14 @@ def alldates_statistics(ds,transform,prob_threshold,perc_threshold,leadtime,adm_
 
 
 #compute aggregated values on adm1 for all dates since Jan 2017
-df_hist=alldates_statistics(ds,transform,probability_threshold,percentage_threshold,leadtime,adm1_bound_path)
+df_hist=alldates_statistics(ds_interp,transform_interp,probability_threshold,percentage_threshold,leadtime,adm1_bound_path)
+
+
+df_hist[df_hist.date=="2021-01-16"][["ADM1_EN"]+stats_cols+stats_perc_cols]
+
+
+#highlight the max values
+df_stats[["ADM1_EN"]+stats_cols+stats_perc_cols].style.highlight_max(color = 'orange', axis = 0)
 
 
 prob_histograms(df_hist,stats_cols,xlim=(0,60))
@@ -406,7 +557,7 @@ df_hist.value_counts("perc_threshold").sort_index(ascending=False)
 
 # #### Historical analysis admin2
 
-df_hist_adm2=alldates_statistics(ds,transform,probability_threshold,percentage_threshold,leadtime,adm2_bound_path)
+df_hist_adm2=alldates_statistics(ds_interp,transform_interp,probability_threshold,percentage_threshold,leadtime,adm2_bound_path)
 
 
 prob_histograms(df_hist_adm2,stats_cols,xlim=(0,60))
@@ -422,32 +573,194 @@ plot_spatial_columns(df_hist_adm2[df_hist_adm2.date=="2020-10-16"],stats_cols,
 # December-February 2021 has been one of the driest season forecasted by IRI since 2017. With CHIRPS data from Dec 1st till mid Jan, it seems there is indeed below average rainfall, but in the lower part of ethipia instead of mid/upper part as forecasted    
 # CHIRPS data: https://data.chc.ucsb.edu/products/CHIRPS-2.0/moving_12pentad/pngs/africa_east/Anomaly_12PentAccum_Current.png
 
-# ### Past activations 
-# If using     
-# ADMIN 1 average of all cells with its center inside the region is >=45    
+# ### Test thresholds
+# Test different possibilities for the trigger threshold and analyze on which historical dates, the trigger would be met
+
+# #### Option 1: the area with a below average probability of 50% of larger is at least 1 % of the total area
+
+df_hist[df_hist.perc_threshold>0][["date","forec_valid","ADM1_EN","perc_threshold","perc_threshold_touched"]].set_index(["date","forec_valid","ADM1_EN"])
+
+
+# #### Option 2  
+# On ADMIN 1 level the average of all cells with a value larger than 40, is larger than 45
 # OR    
-# ADMIN 2 maximum value of all cells touching the region is >= 47.5
+# On ADMIN 2 level the maximum value of all cells within the region is >= 47.5
+# 
+# Variations on this idea are to not first select cells that are larger than 40, and to use the maximum value of cells touching a region instead of having their centre within the region
 
-act_adm1=df_hist[df_hist.avg_cell>=45][["date","forec_valid","ADM1_EN","avg_cell"]]
-
-
-act_adm1
-
-
-df_hist_adm2[(df_hist_adm2.max_cell>=47.5) & ~(df_hist_adm2.date.isin(act_adm1.date.values))][["date","forec_valid","ADM1_EN","ADM2_EN","max_cell_touched"]].sort_values(by=["date","ADM1_EN"]).set_index(["date","forec_valid","ADM1_EN","ADM2_EN"])
+#select only the cells with a value larger than 40
+ds_interp_40=ds_interp.where(ds_interp.prob_below>=40)
 
 
-#for reference, the difference when using max cell touched
-df_hist_adm2[(df_hist_adm2.max_cell_touched>=47.5) & ~(df_hist_adm2.date.isin(act_adm1.date.values))][["date","forec_valid","ADM1_EN","ADM2_EN","max_cell_touched"]].sort_values(by=["date","ADM1_EN"]).set_index(["date","forec_valid","ADM1_EN","ADM2_EN"])
+#example of cells above 40
+fig=plot_raster_boundaries_clip([ds_interp.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2),ds_interp_40.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2)],adm1_bound_path,colp_num=2,predef_bins=np.arange(30,70,2.5),figsize=(19,6),title_list=["All cells","Cells value >=40"],suptitle="Raw data of Jan 2021 forecast for MAM")
 
 
-# #### Detail questions later in process
-# - Do we want to upsample the resolution if using an average or percentage based methodology?   
-#     - If so, what is the best upsampling methodology for our use case? Main difference between methodologies is smoother values vs introducing new values. [This](https://gisgeography.com/raster-resampling/) is a nice explanation of the different methods (now using bilinear)
-# - How should we define a dry mask?
+#compute aggregated values on adm1 for all dates since Jan 2017
+df_hist_40=alldates_statistics(ds_interp_40,transform_interp,probability_threshold,percentage_threshold,leadtime,adm1_bound_path)
 
 
+act_adm1_40=df_hist_40[df_hist_40.avg_cell>=45][["date","forec_valid","ADM1_EN","avg_cell"]]
 
 
+act_adm1_40.sort_values(by=["date","ADM1_EN"]).set_index(["date","forec_valid","ADM1_EN"])
 
+
+#Date-ADM1 combinations that are not in the avg>=40 list, but where the maximum value of the cells within an admin2 is >= 47.5
+act_adm1_tuples = pd.MultiIndex.from_frame(act_adm1_40[["date","ADM1_EN"]])
+df_hist_adm2[(df_hist_adm2.max_cell>=47.5) & ~pd.MultiIndex.from_frame(df_hist_adm2[["date","ADM1_EN"]]).isin(act_adm1_tuples)][["date","forec_valid","ADM1_EN","ADM2_EN","max_cell"]].sort_values(by=["date","ADM1_EN"]).set_index(["date","forec_valid","ADM1_EN","ADM2_EN"])
+
+
+# None of the two methods would trigger now, while the consensus that the coming MAM season is expected to have below average rainfall that might cause drought.. 
+
+df_hist[df_hist.forec_valid=="Mar - May 2021"][["date","forec_valid","ADM1_EN","perc_threshold","perc_threshold_touched"]+stats_cols]
+
+
+# ### Analyze CHIRPS data and correlation forecasts
+
+from indicators.drought.chirps_rainfallobservations import get_chirps_data
+
+
+#years to load data for
+years=range(2000,2021)
+#years used to compute average "climatology"
+#should maybe take years more back in the past
+years_climate=slice('2000-01-01', '2016-12-31')
+
+
+#load all chirps data
+dict_ds={}
+for i in years:
+    ds,transform = get_chirps_data(config, i,download=True)
+    
+    df_bound = gpd.read_file(adm1_bound_path)
+    #clip global to ethiopia to speed up calculating rolling sum
+    ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+    dict_ds[i]=ds_clip
+ds_all=xr.merge([dict_ds[i] for i in years])
+
+
+#for each combination of 3 months (refered to season), compute the climatological average and the sum for each year
+#key refers to start month of season
+seasons={1:"JFM",2:"FMA",3:"MAM",4:"AMJ",5:"MJJ",6:"JJA",7:"JAS",8:"ASO",9:"SON",10:"OND",11:"NDJ",12:"DJF"}
+seas_len=3
+dict_ds_allseas={v:{} for v in seasons.values()}
+
+for k,v in seasons.items():
+    #months within the season
+    months=[p%12 if p%12!=0 else 12 for p in range(k,k+seas_len)]
+    ds_months=ds_all.sel(time=ds_all.time.dt.month.isin([months]))
+    #total precipitation for season per year
+    dict_ds_allseas[v]["year"]=ds_months.groupby('time.year').sum(dim='time').rename({'year':'time'})
+    ds_months_climate=dict_ds_allseas[v]["year"].sel(time=years_climate)
+    #average total precipitation for season
+    dict_ds_allseas[v]["avg"]=ds_months_climate.mean(dim='time')
+    #anomaly in total precipitation per year for season
+    dict_ds_allseas[v]["anom"]=dict_ds_allseas[v]["year"]-dict_ds_allseas[v]["avg"]
+
+
+dict_ds_allseas["MAM"]["anom"]
+
+
+for v in seasons.values():
+    dict_ds_allseas[v]["anom"]=dict_ds_allseas[v]["anom"].expand_dims({"seas":[v]})
+    #select data where precipitation is below average
+    dict_ds_allseas[v]["belowavg"]=dict_ds_allseas[v]["anom"].where(dict_ds_allseas[v]["anom"].precip<0).dropna("time",how="all")
+#     dict_ds_allseas[v]["sel"]["seas_time"]=[f"{v} {y}" for y in dict_ds_allseas[v]["sel"]["time"].values]
+
+
+ds_belowavg=xr.merge([dict_ds_allseas[v]["belowavg"] for v in dict_ds_allseas.keys()])
+ds_belowavg=ds_belowavg.reindex(seas=list(seasons.values()))
+
+
+#check anomaly values
+np.unique(ds_belowavg.precip.values.flatten()[~np.isnan(ds_belowavg.precip.values.flatten())])
+
+
+#select only years IRI forecasts available
+ds_belowavg_sel=ds_belowavg.sel(time=slice(2017,2020))
+
+
+g=ds_belowavg_sel.precip.plot(
+    col="seas",
+    row="time",
+#     cmap=mpl.cm.RdYlBu_r,
+#     robust=True,
+    cbar_kwargs={
+        "orientation": "horizontal",
+        "shrink": 0.8,
+        "aspect": 40,
+        "pad": 0.1,
+    },
+#     figsize=(100,20)
+)
+
+df_bound = gpd.read_file(adm1_bound_path)
+for ax in g.axes.flat:
+    df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
+    ax.axis("off")
+
+
+# From the CHIRPS plot we can see that for example FMA 2019 had quite some below average rainfall, so check how the forecasts were for that season (with two months leadtime). 
+# 
+# From there we can see that the forecast didn't indicate a very high probability of below average rainfall. The admin with the highest probability of below average rainfall was SNNP and this does correspond with the rainfall pattern
+
+df_hist[df_hist.forec_valid=="Feb - Apr 2019"][["date","forec_valid","ADM1_EN","perc_threshold","perc_threshold_touched"]+stats_cols]
+
+
+# ### RPSS score
+# Compute RPSS score per 3-month period for a given leadtime
+
+leadtime
+
+
+rpss_ds = xr.open_dataset(f"http://iridl.ldeo.columbia.edu/home/.jingyuan/.NMME_seasonal_hindcast_verification/.monthly_RPSS_seasonal_hindcast_precip_ELR/.lead{leadtime}/RPSS/dods",decode_times=False,)
+rpss_ds=rpss_ds.rename({"X":"lon","Y":"lat"})
+rpss_ds=fix_calendar(rpss_ds,timevar="T")
+rpss_ds = xr.decode_cf(rpss_ds)
+
+
+rpss_ds_clipped=rpss_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.clip(df_bound.geometry.apply(mapping),df_bound.crs,all_touched=True)
+
+
+rpss_ds_clipped
+
+
+rpss_ds_list_clipped=[rpss_ds_clipped.sel(T=m) for m in rpss_ds_clipped["T"]]
+rpss_bins_clipped=np.linspace(rpss_ds_clipped["RPSS"].min(),rpss_ds_clipped["RPSS"].max(),10)
+seasons={1:"JFM",2:"FMA",3:"MAM",4:"AMJ",5:"MJJ",6:"JJA",7:"JAS",8:"ASO",9:"SON",10:"OND",11:"NDJ",12:"DJF"}
+list_seasons=[(m+leadtime)%12 if (m+leadtime)%12!=0 else 12 for m in rpss_ds_clipped["T"].dt.month.values]
+title_list_clipped=[f'{seasons[s]} (issued in {m})' for s,m in zip(list_seasons,rpss_ds_clipped["T"].dt.strftime("%b").values)]
+
+
+#RPSS per season
+fig_clip = plot_raster_boundaries_clip(rpss_ds_list_clipped, adm1_bound_path, figsize=(20,10),title_list=title_list_clipped, forec_val="RPSS", colp_num=4,clipped=False,predef_bins=rpss_bins_clipped)
+
+
+# #### Experimentation
+
+# #this si not correct yet!
+# from datetime import timedelta
+# seasons={1:"JFM",2:"FMA",3:"MAM",4:"AMJ",5:"MJJ",6:"JJA",7:"JAS",8:"ASO",9:"SON",10:"OND",11:"NDJ",12:"DJF"}
+# ds_interp_clip.expand_dims({"seas":[seasons[(m+d)%12] if (m+d)%12!=0 else seasons[12] for m in ds_interp_clip.F.dt.month.values for d in ds_interp_clip.L.values]})
+# ds_interp_clip_l2=ds_interp_clip.sel(L=2).expand_dims({"seas":[f"{seasons[(m.dt.month.values+2)%12]} {m.dt.year.values}" if (m.dt.month.values+2)%12!=0 else seasons[12] for m in ds_interp_clip.F]})
+
+
+# g=ds_interp_clip.sel(F=cftime.Datetime360Day(2018, 12, 16, 0, 0, 0, 0)).prob_below.plot(
+#     col="L",
+#     col_wrap=4,
+# #     row="L",
+#     cmap=mpl.cm.YlOrRd, #mpl.cm.RdORYlBu_r,
+# #     robust=True,
+#     cbar_kwargs={
+#         "orientation": "horizontal",
+#         "shrink": 0.8,
+#         "aspect": 40,
+#         "pad": 0.1,
+#     },
+# )
+# df_bound = gpd.read_file(adm1_bound_path)
+# for ax in g.axes.flat:
+#     df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
+#     ax.axis("off")
 
