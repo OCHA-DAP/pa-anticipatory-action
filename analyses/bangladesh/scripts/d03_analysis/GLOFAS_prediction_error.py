@@ -13,7 +13,7 @@ GLOFAS_DS_ENSEMBLE_FILENAME='10daysleadtime_19972018_allensemble.xls'
 GLOFAS_DS_FOLDER='GLOFAS_data'
 
 def get_glofas_df():
-    glofas_df=pd.DataFrame(columns=['dis24'])
+    glofas_df=pd.DataFrame(['dis24_Noonkhawa'])
     for year in range(1979,2021):
         glofas_fn=GLOFAS_DS_FILENAME.format(year)
         glofas_df=glofas_df.append(pd.read_csv('{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,glofas_fn),
@@ -40,11 +40,11 @@ all_projections=pd.merge(glofas_ens_df,glofas_df, left_index=True,right_index=Tr
 fig1,(ax1, ax2) = plt.subplots(2,figsize=[15,7],sharex=True)
 # ax1=plt.subplot(211)
 # draw GLOFAS
-all_projections['dis24'].plot(label='GLOFAS water discharge - reanalysis',ax=ax1,c='green')
+all_projections['dis24_Noonkhawa'].plot(label='GLOFAS water discharge - reanalysis',ax=ax1,c='green')
 all_projections['dis24_avg'].plot(label='GLOFAS water discharge - projection (10 days shifted)',ax=ax1,c='blue')
 ax1.legend(loc='best')
 
-all_projections['rel_diff']=(all_projections['dis24_avg']-all_projections['dis24'])/all_projections['dis24']
+all_projections['rel_diff']=(all_projections['dis24_avg']-all_projections['dis24_Noonkhawa'])/all_projections['dis24_Noonkhawa']
 # print(all_projections.index.month)
 all_projections=all_projections[all_projections.index.month.isin([6,7,8,9])]
 
