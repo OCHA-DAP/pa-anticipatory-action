@@ -53,7 +53,7 @@ def get_adm_shp(adm, adm_dir):
         adm_shp.rename(columns={'OBJECTID': 'MAUZ_PCODE', 'MAUZNAME': 'MAUZ_EN'}, inplace=True) # Treat OBJECTID as PCODE field
     else:
         #adm_grp = adm + '_PCODE'  # Need to do by pcode because admin names are not unique
-        adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_adm{adm}_bbs_20201113.shp'))
+        adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_{adm}_bbs_20201113.shp'))
         adm_shp = adm_shp[adm_shp['ADM2_EN'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
         #if adm_grp != 'ADM4_EN':  # Dissolve the shp if necessary
         #    adm_shp = adm_shp.dissolve(by=adm_grp).reset_index()
