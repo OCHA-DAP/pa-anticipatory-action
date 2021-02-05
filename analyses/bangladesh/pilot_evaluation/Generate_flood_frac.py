@@ -69,7 +69,7 @@ def get_river_area(adm, adm_dir):
     :param adm_dir: shapefile directory, specified in config file
     :return: geopandas df with the river area by adm unit
     """
-    adm_grp = 'ADM' + adm + '_PCODE'
+    adm_grp = adm + '_PCODE'
     river_shp = gpd.read_file(os.path.join(adm_dir, 'river_extent.shp'))
     river_shp = river_shp.to_crs('ESRI:54009')
     adm_shp = get_adm_shp(adm, adm_dir)
@@ -79,7 +79,7 @@ def get_river_area(adm, adm_dir):
     river_extent = river_extent.rename('not_river_area')
     output_df = pd.merge(adm_shp, river_extent.to_frame(), left_on=adm_grp, right_index=True)
     output_df.loc[:, 'river_area'] = output_df['adm_area'] - output_df['not_river_area']
-    output_df = output_df[[adm_grp, 'ADM' + adm+'_EN', 'adm_area', 'river_area']]
+    output_df = output_df[[adm_grp, adm+'_EN', 'adm_area', 'river_area']]
     return output_df
 
 
