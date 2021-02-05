@@ -37,6 +37,7 @@ sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
 from indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase, define_trigger_increase_rel
 from utils_general.plotting import plot_spatial_binary_column
+from indicators.food_insecurity.utils import compute_percentage_columns
 
 
 country="ethiopia"
@@ -61,6 +62,17 @@ df_fadm=pd.read_csv(os.path.join(fewsnet_dir,fewsnet_filename))
 df_fadm["date"]=pd.to_datetime(df_fadm["date"])
 df_fadm["year"]=df_fadm["date"].dt.year
 df_fadm["month"]=df_fadm["date"].dt.month
+
+
+#the data of 2020-11 is an update and thus doesn't include CS data or projected periods
+#add them here manually, where the CS data is set to that of 2020-10
+CS_cols=[c for c in df_fadm.columns if 'CS' in c]
+for c in CS_cols:
+    for a in df_fadm[f"ADMIN{admin_level}"].unique():
+        df_fadm.loc[(df_fadm.date=="2021-01-01")&(df_fadm[f"ADMIN{admin_level}"]==a),c]=df_fadm.loc[(df_fadm.date=="2020-10-01")&(df_fadm[f"ADMIN{admin_level}"]==a),c].values
+df_fadm[df_fadm.date=="2021-01-01"]=compute_percentage_columns(df_fadm[df_fadm.date=="2021-01-01"],config)
+df_fadm.loc[df_fadm.date=="2021-01-01","period_ML1"]="Jan - Jan 2021"
+df_fadm.loc[df_fadm.date=="2021-01-01","period_ML2"]="Feb - May 2021"
 
 
 df_fadm.tail()
@@ -130,7 +142,7 @@ dict_fan={}
 
 #currently (Oct 2020) selected trigger
 df_an1=df_fadm.loc[(df_fadm["trigger_ML1_4_20"]==1) | ((df_fadm["trigger_ML1_3_30"]==1) & (df_fadm["trigger_ML1_3_5i"]==1))]
-display(df_an1.groupby(['year', 'month'], as_index=False)[f"ADMIN{admin_level}",'perc_ML1_4p','perc_CS_3p','perc_ML1_3p','perc_inc_ML1_3p'].agg(lambda x: list(x)))
+display(df_an1.groupby(['year', 'month',"period_ML1"], as_index=False)[f"ADMIN{admin_level}",'perc_ML1_4p','perc_CS_3p','perc_ML1_3p','perc_inc_ML1_3p'].agg(lambda x: list(x)))
 dict_fan["an1"]={"df":df_an1,"trig_cols":["ML1_3p","CS_3p","ML1_4"],"desc":"At least 20% of ADMIN1 population in IPC4+ at ML1 OR (At least 30% of ADMIN1 population projected at IPC3+  AND increase by 5 percentage points in ADMIN1 pop.  projected in IPC3+ compared to current state)"}
 
 
@@ -178,7 +190,7 @@ dict_fan["an3"]={"df":df_an3,"trig_cols":["ML1_3","CS_3","CS_4","ML1_4"],"desc":
 
 #Analysis 11: At least 20% of population projected in ML2 in IPC4+ OR (30% in ML2 in IPC3+ AND 5% increase in IPC3+ in ML2 compared to CS)
 df_an11=df_fadm.loc[(df_fadm["trigger_ML2_4_20"]) | ((df_fadm["trigger_ML2_3_30"]==1)&(df_fadm["trigger_ML2_3_5i"]==1))]
-display(df_an11.groupby(['year', 'month'], as_index=False)[f"ADMIN{admin_level}",'perc_CS_3p','perc_ML2_3p','perc_ML2_4'].agg(lambda x: list(x)))
+display(df_an11.groupby(['year', 'month',"period_ML2"], as_index=False)[f"ADMIN{admin_level}",'perc_CS_3p','perc_ML2_3p','perc_ML2_4'].agg(lambda x: list(x)))
 dict_fan["an11"]={"df":df_an11,"trig_cols":["ML2_3","ML2_4"],"desc":"20% in ML2 in IPC4 OR (30% in ML2 in IPC3+ AND 5% increase in IPC3+ in ML2 compared to CS)"}
 
 
