@@ -3,6 +3,7 @@ import geopandas as gpd
 import pandas as pd
 import datetime
 import os
+import logging
 
 # This script takes the flood extent shapefiles output from the GEE Sentinel-1 data processing script
 # and outputs a .csv file that provides a time series of the flooding fraction by admin units in Bangladesh.
@@ -16,128 +17,183 @@ import os
 # Directory locations for the input and output files should be specified in the 'config.yml' file.
 
 # TODO: Fix variable hard-coding. Currently hard-coded variables include:
-# - Bangladesh shapefile name
-# - River extent shapefile name
-# - CRS for shapefiles
 # - Bangladesh districts in the region of interest
-
-parameters = utils.parse_yaml('config.yml')['DIRS']
-adm_dir = parameters['adm_dir']
-gee_dir = parameters['gee_dir']
-output_dir = parameters['data_dir']
+# - Column names for shapefiles
 
 
-def get_gee_files(gee_dir):
-    """
-    Get the file names from the GEE outputs.
-    """
-    dates = []
-    for d in os.listdir(gee_dir):
-        sp = d.split('-')
-        if d.startswith('BGD') and d.endswith('shp'):
-            dates.append((sp[1] + '-' + sp[2] + '-' + sp[3] + '-' + sp[4] + '-' + sp[5]).split('.')[0])
-    return dates
+dirs = utils.parse_yaml('config.yml')['DIRS']
+SHP_DIR = dirs['gee_dir']
+OUT_DIR = dirs['data_dir']
+
+files = utils.parse_yaml('config.yml')['FILES']
+ADM_SHP = files['adm_shp']
+RIVER_SHP = files['river_shp']
+
+params = utils.parse_yaml('config.yml')['PARAMS']
+CRS = params['crs']
+ADM = params['adm']
+
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 
-def get_adm_shp(adm, adm_dir):
+def get_adm_shp(shp_admin: str) -> gpd.GeoDataFrame:
     """
     Loads and processes the admin region shapefile.
-    :param adm: admin level of aggregation
-    :param adm_dir: shapefile directory, specified in config file
+    :param shp_admin: name of admin shapefile
     :return: geopandas df with admin regions
     """
-    if adm == 'MAUZ':
-        adm_shp = gpd.read_file(os.path.join(adm_dir, 'selected_distict_mauza.shp'))
-        adm_shp = adm_shp[adm_shp['DISTNAME'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
-        adm_shp.rename(columns={'OBJECTID': 'MAUZ_PCODE', 'MAUZNAME': 'MAUZ_EN'}, inplace=True) # Treat OBJECTID as PCODE field
+
+    shp = gpd.read_file(shp_admin).to_crs(CRS)
+    aoi = ['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj']
+    if ADM == 'MAUZ':
+        shp = shp[shp['DISTNAME'].isin(aoi)]
+        shp.rename(columns={'OBJECTID': 'MAUZ_PCODE', 'MAUZNAME': 'MAUZ_EN'}, inplace=True)
     else:
-        #adm_grp = adm + '_PCODE'  # Need to do by pcode because admin names are not unique
-        adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_{adm}_bbs_20201113.shp'))
-        adm_shp = adm_shp[adm_shp['ADM2_EN'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
-        #if adm_grp != 'ADM4_EN':  # Dissolve the shp if necessary
-        #    adm_shp = adm_shp.dissolve(by=adm_grp).reset_index()
-    adm_shp = adm_shp.to_crs('ESRI:54009')
-    adm_shp.loc[:, 'adm_area'] = adm_shp['geometry'].area
-    return adm_shp
+        shp = shp[shp['ADM2_EN'].isin(aoi)]
+    shp.loc[:, 'adm_area'] = shp['geometry'].area
+
+    logging.info(f'Area of interest contains {len(shp.index)} admin units.')
+
+    try:
+        assert len(shp[f'{ADM}_PCODE'].unique() == len(shp.index)), 'PCODE field is not unique.'
+    except AssertionError as error:
+        logging.error(error)
+
+    return shp
 
 
-def get_river_area(adm, adm_dir):
+def get_river_area(shp_river: str, gdf_admin: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
-    Calculates the river area by admin unit. River area shp comes from JRC Global Surface Water
-    :param adm: admin level of aggregation
-    :param adm_dir: shapefile directory, specified in config file
-    :return: geopandas df with the river area by adm unit
+    Subtract the river area from admin units. River area shp comes from JRC Global Surface Water
+    :param shp_river: shapefile delineating the river area
+    :param gdf_admin: geodataframe with admin areas
+    :return: geodataframe with land area by admin unit
     """
-    adm_grp = adm + '_PCODE'
-    river_shp = gpd.read_file(os.path.join(adm_dir, 'river_extent.shp'))
-    river_shp = river_shp.to_crs('ESRI:54009')
-    adm_shp = get_adm_shp(adm, adm_dir)
-    intersection = gpd.overlay(adm_shp, river_shp, how='difference')
-    intersection = intersection.dissolve(by=adm_grp)
-    river_extent = intersection['geometry'].area
-    river_extent = river_extent.rename('not_river_area')
-    output_df = pd.merge(adm_shp, river_extent.to_frame(), left_on=adm_grp, right_index=True)
-    output_df.loc[:, 'river_area'] = output_df['adm_area'] - output_df['not_river_area']
-    output_df = output_df[[adm_grp, adm+'_EN', 'adm_area', 'river_area']]
-    return output_df
+
+    gdf_river = gpd.read_file(shp_river).to_crs(CRS)
+    gdf_intersection = gpd.overlay(gdf_admin, gdf_river, how='difference')
+    gdf_intersection['land_area'] = gdf_intersection['geometry'].area
+    gdf_admin_river = gdf_admin.merge(gdf_intersection[['land_area', f'{ADM}_PCODE']], on=f'{ADM}_PCODE', how='left')
+    gdf_admin_river.loc[:, 'land_area'] = gdf_admin_river['land_area'].fillna(0)
+    gdf_admin_river.loc[:, 'river_area'] = gdf_admin_river['adm_area'] - gdf_admin_river['land_area']
+
+    num_all_river = len(gdf_admin.index) - len(gdf_intersection.index)
+    if num_all_river > 0: logging.info(f'There are {num_all_river} admin units that are entirely covered by the river.')
+
+    try:
+        assert len(gdf_admin_river[gdf_admin_river['river_area'] < 0]) == 0, 'Output has negative river area.'
+        assert len(gdf_admin_river[gdf_admin_river['land_area'] < 0]) == 0, 'Output has negative land area.'
+        assert len(gdf_admin_river.index) == len(
+            gdf_admin.index), 'Output does not have same number of admin units as input.'
+
+    except AssertionError as error:
+        logging.error(error)
+
+    return gdf_admin_river[[f'{ADM}_PCODE', 'geometry', 'adm_area', 'land_area']]
 
 
-def get_flood_area(adm_grp, adm_shp, date, gee_dir):
+def get_flood_area(gdf_admin_river: gpd.GeoDataFrame, shp_dir: str) -> gpd.GeoDataFrame:
     """
     Calculate the flooded area for each admin region for a given point in time
-    :param adm_grp: Unique column to identify admin levels (eg. ADM4_PCODE)
-    :param adm_shp: Shapefile with admin boundaries
-    :param date: Date of flooding - used to read in the flooding shapefiles which are named by date
-    :param gee_dir: Shapefile directory
+    :param gdf_admin_river: Shapefile with admin boundaries
+    :param shp_dir: Shapefile directory
     :return: dataframe with the total flooded area by admin region
     """
-    fname = os.path.join(gee_dir + f'/BGD_Floods-{date}.shp')
-    flood_shp = gpd.read_file(fname)
-    flood_shp = flood_shp.to_crs('ESRI:54009')
 
-    # We need to calculate the flood area with a method that is robust
-    # to admin areas that have zero intersection (ie. zero flooding).
-    # So here we identify the area that ISN'T flooded and subtract from
-    # the total area to get the area that IS flooded.
-    intersection = gpd.overlay(adm_shp, flood_shp, how='difference')
-    intersection = intersection.dissolve(by=adm_grp)
-    not_flooded = intersection['geometry'].area
-    not_flooded = not_flooded.rename('not_flooded_area')
-    output_df_part = pd.merge(adm_shp, not_flooded.to_frame(), left_on=adm_grp, right_index=True)
-    output_df_part.loc[:, 'flooded_area'] = output_df_part['adm_area'] - output_df_part['not_flooded_area']
-    output_df_part.loc[:, 'date'] = datetime.datetime.strptime(date[:10], '%Y-%m-%d')
-    return output_df_part
+    df_output = pd.DataFrame()
+
+    for fname in os.listdir(shp_dir):
+        if fname.startswith('BGD_Floods') and fname.endswith('.shp'):
+
+            date = fname[11:21]
+            logging.info(f'Processing flooding from {date}.')
+
+            gdf_flood = gpd.read_file(os.path.join(SHP_DIR, fname)).to_crs(CRS)
+
+            # Challenge here is to make sure that both the admin units with 0% flooding and
+            # 100% flooding are accounted for.
+            gdf_intersection = gpd.overlay(gdf_admin_river, gdf_flood, how='difference')
+            gdf_intersection['not_flooded_area'] = gdf_intersection['geometry'].area
+            gdf_admin_flooded = gdf_admin_river.merge(gdf_intersection[['not_flooded_area', f'{ADM}_PCODE']],
+                                                      on=f'{ADM}_PCODE', how='left')
+            gdf_admin_flooded['not_flooded_area'].fillna(0, inplace=True)  # NA values encountered when the area is all flooded
+            gdf_admin_flooded.loc[:, 'flooded_area'] = gdf_admin_flooded['adm_area'] - gdf_admin_flooded['not_flooded_area']
+            gdf_admin_flooded.loc[:, 'flooded_fraction'] = round(
+                gdf_admin_flooded['flooded_area'] / gdf_admin_flooded['land_area'], 4)
+            gdf_admin_flooded.loc[:, 'date'] = date
+
+            df_output = df_output.append(gdf_admin_flooded[[f'{ADM}_PCODE', 'flooded_fraction', 'date']])
+
+            try:
+                assert len(gdf_admin_flooded.index) == len(gdf_admin_river.index), f'Output from {date} does not have same number of admin units as input.'
+                assert len(gdf_admin_flooded[gdf_admin_flooded['flooded_fraction'] > 1]) == 0, f'Output from {date} has flooded fraction greater than 1.'
+                assert len(gdf_admin_flooded[gdf_admin_flooded['flooded_fraction'] < 0]) == 0, f'Output from {date} has flooded fraction less than 0.'
+            except AssertionError as error:
+                logging.error(error)
+
+    return df_output
 
 
-def main(adm, adm_dir, gee_dir, data_dir):
+def get_dates(shp_dir):
     """
-    Calculate the extent of flooding for ADM4 regions using the shapefiles output from GEE script.
-    dirname = name of folder with the shapefiles output from
+    Get the dates with imagery by parsing the file names
+    in the Google Earth Engine (GEE) output directory.
+    Assumes the file naming convention specified in the GEE script.
+    Also assumes that the GEE output files are the only things
+    in the directory that start with 'BGD'.
     """
-    adm_grp = adm + '_PCODE'  # Need to do by pcode because admin names are not unique
-    adm_shp = get_adm_shp(adm, adm_dir)
-    dates = get_gee_files(gee_dir)
-    river_area = get_river_area(adm, adm_dir)
-    output_df = pd.DataFrame()
-    # Loop through all shapefiles and calculate the flood extent
-    for date in dates:
-        print(date)
-        df_flood_frac = get_flood_area(adm_grp, adm_shp, date, gee_dir)
-        output_df = output_df.append(df_flood_frac)
-    # Merge with the river area measurements
-    output_df = pd.merge(output_df, river_area, on=adm_grp)
-    # Subtract river area from flooded area
-    output_df.loc[:, 'non_river_area'] = output_df['adm_area_y'] - output_df['river_area']
-    # Calculate the flooded fraction
-    output_df.loc[:, 'flood_fraction'] = round(output_df['flooded_area'] / output_df['non_river_area'],4)
-    # Clean the dataframe
-    output_df['date'] = pd.to_datetime(output_df['date'], format="%Y-%m-%d").dt.strftime('%Y-%m-%d')
-    output_df = output_df[[(adm + '_EN_y'), (adm + '_PCODE'), 'flood_fraction', 'date']]
-    output_df.columns = [adm + '_EN', (adm + '_PCODE'), 'flood_fraction', 'date']
-    output_df.to_csv(os.path.join(data_dir, f'{adm}_flood_extent_sentinel.csv'), index=False)
-    return output_df
+
+    dates = [fname[11:21] for fname in os.listdir(shp_dir) if fname.startswith('BGD')]
+    return set(dates)
+
+
+def sentinel_output_qa(df_ts: pd.DataFrame, df_shp: gpd.GeoDataFrame) -> None:
+    """
+    Basic quality checks to validate calculations of flooding fraction by admin unit
+    from the Sentinel-1 derived shapefiles:
+
+    Number of unique admin units in the output csv matches those in the shapefile.
+    Flooding fraction is within the [0,1] range.
+    Number of data points for each admin unit is equal to the number of dates with imagery.
+
+    Also reports on any admin units that did not experience any flooding.
+    And the number of NA values for flooding in the admin units.
+    """
+
+    num_dates = len(get_dates(SHP_DIR))
+    num_admin_ts = len(set(df_ts[f'{ADM}_PCODE']))
+    num_admin_shp = len(df_shp.index)
+    df_group_count = df_ts.groupby(f'{ADM}_PCODE').count().reset_index()
+    less_dates = df_group_count[df_group_count['date'] < num_dates]
+    more_dates = df_group_count[df_group_count['date'] > num_dates]
+
+    try:
+        assert num_admin_shp == num_admin_ts, 'Mismatching number of admin units between the shp and output file.'
+        assert len(less_dates.index) == 0, 'Some admin units have missing data points.'
+        assert len(more_dates.index) == 0, 'Some admin units have too many points.'
+        assert len(df_ts[df_ts.flooded_fraction < 0].index) == 0, 'Flood fraction goes below 0 in some admin units.'
+        assert len(df_ts[df_ts.flooded_fraction > 1].index) == 0, 'Flood fraction goes above 1 in some admin units.'
+
+    except AssertionError as error:
+        logging.error(error)
+
+    df_group = df_ts.groupby(f'{ADM}_PCODE').mean().reset_index()
+    no_flood = len(df_group[df_group['flooded_fraction'] == 0])
+    if no_flood > 0: logging.info(f'There are {no_flood} admin units with no flooding.')
+
+    num_nan = df_ts['flooded_fraction'].isna().sum()
+    logging.info(f'There are {num_nan} instances of NaN values in the flooded fraction column.')
+
+
+def main():
+    gdf_admin = get_adm_shp(ADM_SHP)
+    gdf_admin_land = get_river_area(RIVER_SHP, gdf_admin)
+    df_flooded_frac = get_flood_area(gdf_admin_land, SHP_DIR)
+    if not os.path.exists(OUT_DIR):
+        os.makedirs(OUT_DIR)
+    df_flooded_frac.to_csv(os.path.join(OUT_DIR, f'{ADM}_flood_extent_sentinel.csv'), index=False)
+    sentinel_output_qa(df_flooded_frac, gdf_admin)
 
 
 if __name__ == "__main__":
-    arg = utils.parse_args()
-    main(arg.adm_level, adm_dir, gee_dir, output_dir)
+    main()

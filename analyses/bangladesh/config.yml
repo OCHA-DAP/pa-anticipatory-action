@@ -3,3 +3,9 @@ DIRS:
   data_dir: "data/FE_Results"
   gee_dir: "data/GEE_Output"
   plot_dir: "results/figures/flood_extent"
+FILES:
+  adm_shp: 'data/ADM_Shp/selected_distict_mauza.shp'
+  river_shp: 'data/ADM_Shp/river_extent.shp'
+PARAMS:
+  crs: 'EPSG:32646'
+  adm: 'MAUZ'
