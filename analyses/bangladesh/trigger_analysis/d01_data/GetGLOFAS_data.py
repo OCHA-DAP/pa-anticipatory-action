@@ -8,6 +8,8 @@ import numpy as np
 from datetime import date, timedelta
 import shutil
 
+# TODO: refactor & move to utils_general
+
 # Download raster data from GLOFAS and extracts time series of water discharge in selected locations, matching the FFWC stations 
 # data from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
 
@@ -25,7 +27,7 @@ FFWC_Stations_lonlat={
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 GLOFAS_DS_FILENAME='CEMS_ECMWF_dis24_{}_glofas_v2.1.nc'
-GLOFAS_DS_FOLDER='../../data/raw/GLOFAS_data'
+GLOFAS_DS_FOLDER='../../data/GLOFAS_Data'
 
 def unzip(zip_file_path, save_path):
     print(f'Unzipping {zip_file_path}')
