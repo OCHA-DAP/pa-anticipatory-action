@@ -1,8 +1,9 @@
-from scripts import utils
 import geopandas as gpd
 import pandas as pd
 import datetime
 import os
+
+import utils
 
 # This script takes the flood extent shapefiles output from the GEE Sentinel-1 data processing script
 # and outputs a .csv file that provides a time series of the flooding fraction by admin units in Bangladesh.
@@ -21,7 +22,7 @@ import os
 # - CRS for shapefiles
 # - Bangladesh districts in the region of interest
 
-parameters = utils.parse_yaml('config.yml')['DIRS']
+parameters = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
 adm_dir = parameters['adm_dir']
 gee_dir = parameters['gee_dir']
 output_dir = parameters['data_dir']
@@ -52,7 +53,7 @@ def get_adm_shp(adm, adm_dir):
         adm_shp.rename(columns={'OBJECTID': 'MAUZ_PCODE', 'MAUZNAME': 'MAUZ_EN'}, inplace=True) # Treat OBJECTID as PCODE field
     else:
         #adm_grp = adm + '_PCODE'  # Need to do by pcode because admin names are not unique
-        adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_{adm}_bbs_20201113.shp'))
+        adm_shp = gpd.read_file(os.path.join(adm_dir, f'bgd_admbnda_adm{adm}_bbs_20201113.shp'))
         adm_shp = adm_shp[adm_shp['ADM2_EN'].isin(['Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'])]
         #if adm_grp != 'ADM4_EN':  # Dissolve the shp if necessary
         #    adm_shp = adm_shp.dissolve(by=adm_grp).reset_index()
@@ -68,7 +69,7 @@ def get_river_area(adm, adm_dir):
     :param adm_dir: shapefile directory, specified in config file
     :return: geopandas df with the river area by adm unit
     """
-    adm_grp = adm + '_PCODE'
+    adm_grp = 'ADM' + adm + '_PCODE'
     river_shp = gpd.read_file(os.path.join(adm_dir, 'river_extent.shp'))
     river_shp = river_shp.to_crs('ESRI:54009')
     adm_shp = get_adm_shp(adm, adm_dir)
@@ -78,7 +79,7 @@ def get_river_area(adm, adm_dir):
     river_extent = river_extent.rename('not_river_area')
     output_df = pd.merge(adm_shp, river_extent.to_frame(), left_on=adm_grp, right_index=True)
     output_df.loc[:, 'river_area'] = output_df['adm_area'] - output_df['not_river_area']
-    output_df = output_df[[adm_grp, adm+'_EN', 'adm_area', 'river_area']]
+    output_df = output_df[[adm_grp, 'ADM' + adm+'_EN', 'adm_area', 'river_area']]
     return output_df
 
 

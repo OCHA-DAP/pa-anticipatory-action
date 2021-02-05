@@ -1,5 +1,5 @@
-from scripts.d03_analysis import FE_fit_function as ff
-from scripts import utils
+from d03_analysis import FE_fit_function as ff
+import utils
 import pandas as pd
 from datetime import datetime
 import numpy as np
@@ -27,7 +27,7 @@ import logging
 # 'Optimal parameters not found: Number of calls to function has reached maxfev = 5000'
 np.seterr(all='raise')
 
-parameters = utils.parse_yaml('config.yml')['DIRS']
+parameters = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
 output_dir = parameters['data_dir']
 logger = logging.getLogger()
 
