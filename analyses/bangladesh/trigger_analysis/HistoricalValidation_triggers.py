@@ -1,12 +1,8 @@
-import os
 import pandas as pd
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import date, timedelta
 
-
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 Water_threshold=19.5+0.85
 ndays_threshold_ffwc=3
@@ -15,20 +11,19 @@ ndays_threshold_ffwc=3
 FFWC_RL_LOG_FILENAME='Forecast Log Sheet - 2020.xlsx - FFWC.csv'
 # from Hassan
 FFWC_RL_HIS_FILENAME='2020-06-07 Water level data Bahadurabad Upper danger level.xlsx'
-FFWC_RL_FOLDER='FFWC_DATA'
+FFWC_RL_FOLDER='data/FFWC_Data'
 
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 Discharge_threshold=100000
 ndays_threshold_glofas=2
 GLOFAS_DS_FILENAME='{}.csv'
-GLOFAS_DS_FOLDER='GLOFAS_data'
-
+GLOFAS_DS_FOLDER='data/GLOFAS_Data'
 
 def get_glofas_df():
     glofas_df=pd.DataFrame(columns=['dis24_Noonkhawa'])
     for year in range(1979,2021):
         glofas_fn=GLOFAS_DS_FILENAME.format(year)
-        glofas_df=glofas_df.append(pd.read_csv('{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,glofas_fn),
+        glofas_df=glofas_df.append(pd.read_csv('{}/{}'.format(GLOFAS_DS_FOLDER,glofas_fn),
                                                 index_col=0))
     glofas_df.index=pd.to_datetime(glofas_df.index,format='%Y-%m-%d')
     return glofas_df
@@ -43,7 +38,7 @@ def get_glofas_df():
 #     return ffwc_df
 
 def get_ffwc_his_df():
-    ffwc_rl_name='{}/{}/{}'.format(DIR_PATH,FFWC_RL_FOLDER,FFWC_RL_HIS_FILENAME)
+    ffwc_rl_name='{}/{}'.format(FFWC_RL_FOLDER,FFWC_RL_HIS_FILENAME)
     ffwc_df=pd.read_excel(ffwc_rl_name,index_col=0,header=0)
     ffwc_df.index=pd.to_datetime(ffwc_df.index,format='%d/%m/%y')
     # ffwc_df=ffwc_df['WL']

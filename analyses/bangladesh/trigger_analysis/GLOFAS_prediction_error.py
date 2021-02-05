@@ -1,28 +1,25 @@
 import os
 import pandas as pd
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import date, timedelta
 
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 GLOFAS_DS_FILENAME='{}.csv'
 GLOFAS_DS_ENSEMBLE_FILENAME='10daysleadtime_19972018_allensemble.xls'
-GLOFAS_DS_FOLDER='GLOFAS_data'
+GLOFAS_DS_FOLDER='data/GLOFAS_Data'
 
 def get_glofas_df():
     glofas_df=pd.DataFrame(['dis24_Noonkhawa'])
     for year in range(1979,2021):
         glofas_fn=GLOFAS_DS_FILENAME.format(year)
-        glofas_df=glofas_df.append(pd.read_csv('{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,glofas_fn),
+        glofas_df=glofas_df.append(pd.read_csv('{}/{}'.format(GLOFAS_DS_FOLDER,glofas_fn),
                                                 index_col=0))
     glofas_df.index=pd.to_datetime(glofas_df.index)
     return glofas_df
 
 def get_glofas_ensemble_df():
-    glofas_ens_df=pd.read_excel('{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
+    glofas_ens_df=pd.read_excel('{}/{}'.format(GLOFAS_DS_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
                                     index_col=0)
     glofas_ens_df.index=pd.to_datetime(glofas_ens_df.index,format='%Y-%m-%d')
     # shift 10 days
