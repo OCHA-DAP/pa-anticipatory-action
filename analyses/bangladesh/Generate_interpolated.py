@@ -25,7 +25,9 @@ import logging
 # 'underflow encountered in exp'
 # 'divide by zero encountered in true_divide'
 # 'Optimal parameters not found: Number of calls to function has reached maxfev = 5000'
-np.seterr(all='raise')
+# 'array must not contain infs or NaNs' - this is from the na values introduced when admin
+# area is fully covered by the river
+#np.seterr(all='raise')
 
 parameters = utils.parse_yaml('config.yml')['DIRS']
 output_dir = parameters['data_dir']
@@ -47,65 +49,82 @@ def make_data(df, adm_grp):
         x, y = ff.get_xy(df2)[0], ff.get_xy(df2)[1]  # Get the x and y
         x_new = np.linspace(x[0], x[-1], 85)  # Generate new x data (at daily intervals)
 
-        try:
-            # New y values using same x data to calc the error
-            y_g_old = ff.gauss(x, *ff.gauss_fit(x, y))  # Generate Gaussian fitted y data
-            y_p_old = ff.poly_fit(x, x, y, 3)  # Generate polynomial fitted y data - degree 3
-        except Exception as e:
-            logger.warning(e)
-            no_fit.append(adm)
-            continue
-        # New y values using daily x data to get better peak estimate
-        y_g_new = ff.gauss(x_new, *ff.gauss_fit(x, y))  # Generate Gaussian fitted y data
-        y_p_new = ff.poly_fit(x_new, x, y, 3)  # Generate polynomial fitted y data - degree 3
+        # Catch the edge cases where there is no flooding
+        # And where the admin area is covered by water
+        # TODO: Control flow is a bit convoluted here
+        if y.mean() == 0:
+            y_new = np.ones(85)*0
+            cov = None
+            rmse_g = None
+            date_actual = None
+            date_g = None
+            act_g = None
+            fwhm = None
 
-        # Calc the rmse to compare poly vs gauss
-        rmse_g = ff.rmse(y_g_old, y)
-        rmse_p = ff.rmse(y_p_old, y)
+        else:
+            try:
+                # New y values using same x data to calc the error
+                y_old = ff.gauss(x, *ff.gauss_fit(x, y)[0])  # Generate Gaussian fitted y data
+                # New y values using daily x data to get better peak estimate
+                y_new = ff.gauss(x_new, *ff.gauss_fit(x, y)[0])  # Generate Gaussian fitted y data
 
-        # Get the peak dates
-        date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
-        date_g = datetime.strptime(ff.get_peak(x_new, y_g_new), "%Y-%m-%d")
-        date_p = datetime.strptime(ff.get_peak(x_new, y_p_new), "%Y-%m-%d")
+            except Exception as e:
+                logger.warning(e)
+                no_fit.append(adm)
 
-        # Calculate the difference between dates
-        act_g = (date_actual - date_g).days
-        act_p = (date_actual - date_p).days
+                y_new = np.empty(85) * np.nan
+                cov = None
+                rmse_g = None
+                date_actual = None
+                date_g = None
+                act_g = None
+                fwhm = None
 
-        # Get the FWHM from the Gaussian fitting
-        # Tells us the length of time that flooding was at at least 50% of peak
-        sigma = ff.gauss_fit(x, y)[3]
-        fwhm = ff.get_fwhm(sigma)
+            else:
+                # Get one standard deviation errors on the parameters
+                # We will focus just on the mean of the Gaussian (ie. date)
+                # In some cases this returns a negative value
+                # https://stackoverflow.com/questions/28702631/scipy-curve-fit-returns-negative-variance
+                # ^ Seems to indicate that it's just done a bad job of fitting
+                pcov = ff.gauss_fit(x, y)[1]
+                cov = np.sqrt(np.diag(pcov)[2])
+                cov = cov / 86400  # Convert from seconds to days
+                # Calc the rmse to compare poly vs gauss
+                rmse_g = ff.rmse(y_old, y)
+                # Get the peak dates
+                date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
+                date_g = datetime.strptime(ff.get_peak(x_new, y_new), "%Y-%m-%d")
+                # Calculate the difference between dates
+                act_g = (date_actual - date_g).days
+                # Get the FWHM from the Gaussian fitting
+                # Tells us the length of time that flooding was at at least 50% of peak
+                sigma = ff.gauss_fit(x, y)[0][3]
+                fwhm = ff.get_fwhm(sigma)
 
         # Create dict with the results - flood extent
         flood_extent = pd.DataFrame(
             {'PCODE': adm,
              'DATE': x_new,
-             'FLOOD_EXTENT_G': y_g_new,
-             'FLOOD_EXTENT_P': y_p_new})
+             'FLOOD_EXTENT': y_new})
         flood_extents = flood_extents.append(flood_extent, ignore_index=True)
 
         # Create dict with the results - peak dates
         result = {'PCODE': adm,
-                  'RMSE_G': rmse_g,
-                  'RMSE_P': rmse_p,
-                  'PEAK_ACT': date_actual,
-                  'PEAK_G': date_g,
-                  'PEAK_P': date_p,
-                  'DIFF_ACT_G': act_g,
-                  'DIFF_ACT_P': act_p,
-                  'FWHM': fwhm}
+                  'RMSE': rmse_g,
+                  'PEAK_SAT': date_actual,
+                  'PEAK': date_g,
+                  'DIFF_SAT': act_g,
+                  'FWHM': fwhm,
+                  'COV': cov}
         dates = dates.append(result, ignore_index=True)
 
     # Get the maximum flooding extent and add it to the results dataframe
-    max_flood_G = flood_extents.groupby('PCODE')['FLOOD_EXTENT_G'].max().reset_index()
-    max_flood_P = flood_extents.groupby('PCODE')['FLOOD_EXTENT_P'].max().reset_index()
+    max_flood_G = flood_extents.groupby('PCODE')['FLOOD_EXTENT'].max().reset_index()
     dates = dates.merge(max_flood_G, on='PCODE')
-    dates = dates.merge(max_flood_P, on='PCODE')
-    dates.rename(columns={"FLOOD_EXTENT_G": "MAX_G", "FLOOD_EXTENT_P": "MAX_P"}, inplace=True)
+    dates.rename(columns={"FLOOD_EXTENT": "MAX"}, inplace=True)
 
     # Save the files to output directory
-    flood_extents['DATE'] = flood_extents['DATE'].apply(lambda x: datetime.utcfromtimestamp(x).strftime('%d/%m/%Y'))
+    flood_extents['DATE'] = flood_extents['DATE'].apply(lambda x: datetime.utcfromtimestamp(x).strftime("%Y-%m-%d"))
     dates.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_summary.csv'), index=False)
     flood_extents.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_extent_interpolated.csv'), index=False)
     pd.DataFrame(no_fit, columns=['No_Fit']).to_csv(os.path.join(output_dir, f'{adm_grp}_no_fit.csv'), index=False)

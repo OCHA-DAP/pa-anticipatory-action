@@ -1,7 +1,6 @@
 from scripts import utils
 import geopandas as gpd
 import pandas as pd
-import datetime
 import os
 import logging
 
@@ -19,6 +18,8 @@ import logging
 # TODO: Fix variable hard-coding. Currently hard-coded variables include:
 # - Bangladesh districts in the region of interest
 # - Column names for shapefiles
+# TODO: Consider treatment of nan values when an admin area is totally covered by the river
+# TODO: Move tests to separate file
 
 
 dirs = utils.parse_yaml('config.yml')['DIRS']
@@ -78,7 +79,8 @@ def get_river_area(shp_river: str, gdf_admin: gpd.GeoDataFrame) -> gpd.GeoDataFr
     gdf_admin_river.loc[:, 'river_area'] = gdf_admin_river['adm_area'] - gdf_admin_river['land_area']
 
     num_all_river = len(gdf_admin.index) - len(gdf_intersection.index)
-    if num_all_river > 0: logging.info(f'There are {num_all_river} admin units that are entirely covered by the river.')
+    if num_all_river > 0:
+        logging.info(f'There are {num_all_river} admin units that are entirely covered by the river.')
 
     try:
         assert len(gdf_admin_river[gdf_admin_river['river_area'] < 0]) == 0, 'Output has negative river area.'
