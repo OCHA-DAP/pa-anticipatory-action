@@ -56,10 +56,11 @@ def make_data(df, adm_grp):
             y_new = np.ones(85)*0
             cov = None
             rmse_g = None
-            date_actual = None
+            date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
             date_g = None
             act_g = None
             fwhm = None
+            max_actual = y.max()
 
         else:
             try:
@@ -75,10 +76,11 @@ def make_data(df, adm_grp):
                 y_new = np.empty(85) * np.nan
                 cov = None
                 rmse_g = None
-                date_actual = None
+                date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
                 date_g = None
                 act_g = None
                 fwhm = None
+                max_actual = y.max()
 
             else:
                 # Get one standard deviation errors on the parameters
@@ -100,6 +102,7 @@ def make_data(df, adm_grp):
                 # Tells us the length of time that flooding was at at least 50% of peak
                 sigma = ff.gauss_fit(x, y)[0][3]
                 fwhm = ff.get_fwhm(sigma)
+                max_actual = y.max()
 
         # Create dict with the results - flood extent
         flood_extent = pd.DataFrame(
@@ -112,16 +115,17 @@ def make_data(df, adm_grp):
         result = {'PCODE': adm,
                   'RMSE': rmse_g,
                   'PEAK_SAT': date_actual,
-                  'PEAK': date_g,
+                  'PEAK_G': date_g,
                   'DIFF_SAT': act_g,
                   'FWHM': fwhm,
-                  'COV': cov}
+                  'COV': cov,
+                  'MAX_SAT': max_actual}
         dates = dates.append(result, ignore_index=True)
 
     # Get the maximum flooding extent and add it to the results dataframe
     max_flood_G = flood_extents.groupby('PCODE')['FLOOD_EXTENT'].max().reset_index()
     dates = dates.merge(max_flood_G, on='PCODE')
-    dates.rename(columns={"FLOOD_EXTENT": "MAX"}, inplace=True)
+    dates.rename(columns={"FLOOD_EXTENT": "MAX_G"}, inplace=True)
 
     # Save the files to output directory
     flood_extents['DATE'] = flood_extents['DATE'].apply(lambda x: datetime.utcfromtimestamp(x).strftime("%Y-%m-%d"))
