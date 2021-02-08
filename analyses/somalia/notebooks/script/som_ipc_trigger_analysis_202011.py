@@ -153,8 +153,14 @@ df_neat_ml2[df_neat_ml2["Publication date"].isin(["2016-02-01","2017-02-01","201
 df[df.date.isin(["2015-10-01","2016-10-01","2017-10-01","2018-10-01","2019-10-01","2020-11-01"])][["date","period_ML1","period_ML2","CS_3p","perc_CS_3p","CS_4p","perc_CS_4p","ML1_3p","perc_ML1_3p","ML1_4p","perc_ML1_4p","ML2_3p","perc_ML2_3p","ML2_4p","perc_ML2_4p"]]
 
 
-df[df.threshold_reached_ML1==1][["date","perc_ML1_3p","perc_ML1_4p","perc_CS_3p","perc_inc_ML1_3p"]]
+df[df.threshold_reached_ML1==1][["date","perc_ML1_3p","perc_ML1_4p","perc_CS_3p","perc_inc_ML1_3p","source"]]
 
 
-df[df.threshold_reached_ML2==1][["date","perc_ML2_3p","perc_ML2_4p","perc_CS_3p","perc_inc_ML2_3p"]]
+df[df.threshold_reached_ML2==1][["date","perc_ML2_3p","perc_ML2_4p","perc_CS_3p","perc_inc_ML2_3p","source"]]
+
+
+df_gipc=df[df.source=="GlobalIPC"]
+
+
+df_gipc[df_gipc.date.isin(["2017-01","2017-07","2018-01"])][["date","perc_ML1_3p","perc_CS_3p"]]
 
