@@ -26,7 +26,7 @@ country="Somalia"
 
 # load world-pop-weighted fewsnet data
 # note CS_99 denotes missing values
-df_fadm=pd.read_csv(f"../Data/FewsNetWorldPop/som_admin1_fewsnet_worldpop.csv",index_col=0)
+df_fadm=pd.read_csv(f"../Data/FewsNetWorldPop/somalia_fewsnet_worldpop_admin1.csv",index_col=0)
 adm1c="ADMIN1" 
 admc="ADMIN1" #"admin1Name"
 
