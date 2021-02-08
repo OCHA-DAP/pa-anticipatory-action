@@ -7,9 +7,11 @@ icpac/
 nmme/
 copernicus/
 chirps/
+analyses/bangladesh/data/*
 
 #Local experiments
 Experiments
+analyses/bangladesh/notebooks/scratch/*
 
 # IDEs
 .idea/*
