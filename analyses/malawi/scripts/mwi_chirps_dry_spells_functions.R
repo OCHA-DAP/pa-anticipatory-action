@@ -1,34 +1,34 @@
 
-computeLayerStat <- function(layer, stat, chirps_stat_values){
+computeLayerStat <- function(layer, stat, data_stat_values){
   
   # select 1 layer
-  chirps_layer <- subset(chirps_masked, layer)
+  data_layer <- subset(data, layer)
   
   # extract values from raster cells and compute stat
-  chirps_layer.stat <- raster::extract(chirps_layer, mwi_adm2, fun = stat, df = T)
+  data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = stat, df = T)
   
   # add daily stat to dataframe
-  chirps_stat_values <- merge(chirps_stat_values, chirps_layer.stat, by = "ID", all.x = T)
+  data_stat_values <- merge(data_stat_values, data_layer.stat, by = "ID", all.x = T)
   
-  return(chirps_stat_values)
+  return(data_stat_values)
 }
 
-compute14dSum <- function(chirps_compiled.stat){
+compute14dSum <- function(data_compiled.stat){
   
   # add pcodes to identify each polygon
-  chirps_compiled.stat$pcode <- mwi_adm2$ADM2_PCODE
+  data_compiled.stat$pcode <- mwi_adm2$ADM2_PCODE
   
   # convert wide to long to get dates as rows
-  chirps_compiled.stat_long <- gather(chirps_compiled.stat, date, total_prec, 2:(nbr_layers+1))
+  data_compiled.stat_long <- gather(data_compiled.stat, date, total_prec, 2:(nbr_layers+1))
   
   # assign "zero" values to NA in total_prec
-  chirps_compiled.stat_long$total_prec[is.na(chirps_compiled.stat_long$total_prec)] <- 0
+  data_compiled.stat_long$total_prec[is.na(data_compiled.stat_long$total_prec)] <- 0
   
   # reformat 'date' to a date format
-  chirps_compiled.stat_long$date <- as.Date(chirps_compiled.stat_long$date, format = "X%Y.%m.%d")
+  data_compiled.stat_long$date <- as.Date(data_compiled.stat_long$date, format = "X%Y.%m.%d")
   
   # convert to wide
-  rolling_sum <-  chirps_compiled.stat_long %>%
+  rolling_sum <-  data_compiled.stat_long %>%
     arrange(pcode, date) %>%
     group_by(pcode) %>%
     mutate(rollsum_14d = zoo::rollsum(total_prec, k = 14, fill = NA, align = 'right')
