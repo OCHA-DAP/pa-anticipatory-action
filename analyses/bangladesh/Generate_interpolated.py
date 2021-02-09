@@ -6,9 +6,10 @@ import numpy as np
 import os
 import logging
 
-# This script takes the output file from Generate_flood_frac.py and fits Gaussian
-# and polynomial functions to the data, to interpolate between dates without Sentinel-1
-# coverage.
+# This script takes the output file from Generate_flood_frac.py and fits a Gaussian
+# function to the data, to interpolate between dates without Sentinel-1
+# coverage. Note that admin areas with insignificant flooding (zero or near zero)
+# will not fit to the Gaussian distribution.
 
 # Required inputs are:
 # 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir' in the config.yml
@@ -21,6 +22,7 @@ ADM = params['adm']
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
+# TODO: Move quality checks to separate file
 
 def make_data(df, adm_grp):
 
@@ -42,8 +44,7 @@ def make_data(df, adm_grp):
         x_new = np.linspace(x[0], x[-1], 85)
 
         # Before attempting to fit to a Gaussian, we need to
-        # catch the edge cases where there is no flooding
-        # or where the admin area is covered by water.
+        # catch the edge cases where there is no flooding.
         if y.mean() == 0:
             y_new = np.ones(85)*0
             cov = None
@@ -115,11 +116,39 @@ def make_data(df, adm_grp):
     flood_extents.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_extent_interpolated.csv'), index=False)
     pd.DataFrame(no_fit, columns=['No_Fit']).to_csv(os.path.join(output_dir, f'{adm_grp}_no_fit.csv'), index=False)
     logging.info(f'Output files saved to {output_dir}')
+    return flood_extents, dates, no_fit
+
+
+def qc_gaussian(df_interpolated, df_summary, no_fit):
+
+    num_admin = len(df_interpolated['PCODE'].unique())
+    logging.info(f'There are {num_admin} admin units in the results.')
+    logging.info(f'There are {len(no_fit)} admin units with no fit.')
+
+    num_na = df_interpolated.FLOOD_EXTENT.isna().sum()
+    if num_na > 0:
+        logging.info(f'There are {num_na} NaN values.')
+
+    df_summary_copy = df_summary.copy()
+    df_summary_copy['NO_FIT'] = df_summary['FWHM'].isna()
+    df_summary_copy['OOR'] = df_summary['MAX_G'] > 1
+    df_summary_copy['NEG'] = (df_summary_copy['COV'].isna()) & (df_summary_copy['NO_FIT'] == False)
+    df_summary_copy['RIVER'] = df_summary['MAX_SAT'].isna()
+    df_summary_copy['FWHM_ERR'] = (df_summary['FWHM'] > 500) | (df_summary['FWHM'] < 0)
+    df_summary_copy.to_csv(os.path.join(output_dir, f'{ADM}_flood_summary_QA.csv'), index=False)
+
+    try:
+        assert len(df_interpolated[df_interpolated['FLOOD_EXTENT'] > 1]) == 0, 'Flood fraction greater than 1.'
+        assert len(df_interpolated[df_interpolated['FLOOD_EXTENT'] < 0]) == 0, 'Flood fraction less than 0.'
+        assert num_admin * 85 == len(df_interpolated.index)
+    except AssertionError as error:
+        logging.error(error)
 
 
 if __name__ == "__main__":
     try:
         sentinel = pd.read_csv(os.path.join(output_dir, f'{ADM}_flood_extent_sentinel.csv'))
-        make_data(sentinel, ADM)
+        df_flood, df_summary, no_fit = make_data(sentinel, ADM)
+        qc_gaussian(df_flood, df_summary, no_fit)
     except FileNotFoundError:
         logging.error('Input CSV file not found. Run Generate_flood_frac.py to generate the required file.')
