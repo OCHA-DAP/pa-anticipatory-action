@@ -11,30 +11,15 @@ import logging
 # coverage.
 
 # Required inputs are:
-# 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir'
-# 2) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), specified as a command-line argument
-
-# Directory locations for the input and output files should be specified in the 'config.yml' file.
-
-# TODO: handle the potential errors and warnings more specifically
-# TODO: fill in zeros across y where the fit doesn't work?
-
-# To raise all warnings so that they are caught in the exception
-# Warnings encountered are mathematical:
-# 'invalid value encountered in double_scalars'
-# 'underflow encountered in exp'
-# 'divide by zero encountered in true_divide'
-# 'Optimal parameters not found: Number of calls to function has reached maxfev = 5000'
-# 'array must not contain infs or NaNs' - this is from the na values introduced when admin
-# area is fully covered by the river
-# np.seterr(all='raise')
+# 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir' in the config.yml
+# 2) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), located in the config.yml
 
 dirs = utils.parse_yaml('config.yml')['DIRS']
 output_dir = dirs['data_dir']
 params = utils.parse_yaml('config.yml')['PARAMS']
 ADM = params['adm']
 
-logger = logging.getLogger()
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 
 def make_data(df, adm_grp):
@@ -78,7 +63,7 @@ def make_data(df, adm_grp):
             # In case the function doesn't converge to estimate the Gaussian parameters,
             # we will add in empty data to the summary output.
             except Exception as e:
-                logger.warning(e)
+                logging.warning(e)
                 no_fit.append(adm)
 
                 y_new = np.empty(85) * np.nan
@@ -129,15 +114,12 @@ def make_data(df, adm_grp):
     dates.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_summary.csv'), index=False)
     flood_extents.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_extent_interpolated.csv'), index=False)
     pd.DataFrame(no_fit, columns=['No_Fit']).to_csv(os.path.join(output_dir, f'{adm_grp}_no_fit.csv'), index=False)
-    logger.info(f'Output files saved to {output_dir}')
+    logging.info(f'Output files saved to {output_dir}')
 
 
 if __name__ == "__main__":
-    utils.config_logger()
-    # Read in the dataframe output from Generate_flood_frac.py
     try:
         sentinel = pd.read_csv(os.path.join(output_dir, f'{ADM}_flood_extent_sentinel.csv'))
-        # Calculate the fitted data
         make_data(sentinel, ADM)
     except FileNotFoundError:
-        logger.error('Input CSV file not found. Run Generate_flood_frac.py to generate the required file.')
+        logging.error('Input CSV file not found. Run Generate_flood_frac.py to generate the required file.')
