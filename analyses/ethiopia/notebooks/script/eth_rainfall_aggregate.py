@@ -578,7 +578,7 @@ plot_spatial_columns(df_hist_adm2[df_hist_adm2.date=="2020-10-16"],stats_cols,
 
 # #### Option 1: the area with a below average probability of 50% of larger is at least 1 % of the total area
 
-df_hist[df_hist.perc_threshold>0][["date","forec_valid","ADM1_EN","perc_threshold","perc_threshold_touched"]].set_index(["date","forec_valid","ADM1_EN"])
+df_hist[df_hist.perc_threshold>0][["date","forec_valid","ADM1_EN","perc_threshold"]].set_index(["date","forec_valid","ADM1_EN"])
 
 
 # #### Option 2  
@@ -594,6 +594,27 @@ ds_interp_40=ds_interp.where(ds_interp.prob_below>=40)
 
 #example of cells above 40
 fig=plot_raster_boundaries_clip([ds_interp.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2),ds_interp_40.sel(F=cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),L=2)],adm1_bound_path,colp_num=2,predef_bins=np.arange(30,70,2.5),figsize=(19,6),title_list=["All cells","Cells value >=40"],suptitle="Raw data of Jan 2021 forecast for MAM")
+
+
+#inspired from https://xarray-contrib.github.io/xarray-tutorial/scipy-tutorial/04_plotting_and_visualization.html#facet
+ds_interp_40_l2=ds_interp_40.sel(L=2)
+g=ds_interp_40_l2.prob_below.plot(
+    col="F",
+    col_wrap=4,
+#     row="L",
+    cmap=mpl.cm.YlOrRd, #mpl.cm.RdORYlBu_r,
+#     robust=True,
+    cbar_kwargs={
+        "orientation": "horizontal",
+        "shrink": 0.8,
+        "aspect": 40,
+        "pad": 0.1,
+    },
+)
+df_bound = gpd.read_file(adm1_bound_path)
+for ax in g.axes.flat:
+    df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
+    ax.axis("off")
 
 
 #compute aggregated values on adm1 for all dates since Jan 2017
@@ -622,22 +643,68 @@ from indicators.drought.chirps_rainfallobservations import get_chirps_data
 
 
 #years to load data for
-years=range(2000,2021)
+years=range(1982,2021)
 #years used to compute average "climatology"
 #should maybe take years more back in the past
-years_climate=slice('2000-01-01', '2016-12-31')
+years_climate=slice('1982-01-01', '2010-12-31') #slice('2000-01-01', '2016-12-31')
+
+
+chirps_dir = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR)
+
+
+
 
 
 #load all chirps data
+years=range(1982,2021)
 dict_ds={}
 for i in years:
     ds,transform = get_chirps_data(config, i,download=True)
-    
+    ds_year=ds.groupby("time.year").sum(dim='time').rename({'year':'time'})
+#     df_bound = gpd.read_file(adm1_bound_path)
+#     #clip global to ethiopia to speed up calculating rolling sum
+#     #for some unexplainable reason chirps of 1995 doesn't want to include the CRS when saving it to a file, so add write_crs here...
+#     ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+    dict_ds[i]=ds_year
+ds_year_all=xr.merge([dict_ds[i] for i in years])
+
+
+ds_year_all.to_netcdf("../Data/CHIRPS_19822020_yearsum.nc")
+
+
+
+
+
+#load all chirps data
+years=range(1982,2021)
+dict_ds={}
+for i in years:
+    ds,transform = get_chirps_data(config, i,download=True)
     df_bound = gpd.read_file(adm1_bound_path)
     #clip global to ethiopia to speed up calculating rolling sum
-    ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+    #for some unexplainable reason chirps of 1995 doesn't want to include the CRS when saving it to a file, so add write_crs here...
+    ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+    dict_ds[i]=ds
+ds_all=xr.merge([dict_ds[i] for i in years])
+
+
+ds_all.to_netcdf("../Data/CHIRPS_19822020.nc")
+
+
+#load all chirps data
+years=range(1982,2021)
+dict_ds={}
+for i in years:
+    ds,transform = get_chirps_data(config, i,download=True)
+    df_bound = gpd.read_file(adm1_bound_path)
+    #clip global to ethiopia to speed up calculating rolling sum
+    #for some unexplainable reason chirps of 1995 doesn't want to include the CRS when saving it to a file, so add write_crs here...
+    ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
     dict_ds[i]=ds_clip
 ds_all=xr.merge([dict_ds[i] for i in years])
+
+
+# ds_all.to_netcdf("../Data/CHIRPS_merged_eth.nc")
 
 
 #for each combination of 3 months (refered to season), compute the climatological average and the sum for each year
@@ -678,7 +745,7 @@ np.unique(ds_belowavg.precip.values.flatten()[~np.isnan(ds_belowavg.precip.value
 
 
 #select only years IRI forecasts available
-ds_belowavg_sel=ds_belowavg.sel(time=slice(2017,2020))
+ds_belowavg_sel=ds_belowavg.sel(time=slice(2010,2020))
 
 
 g=ds_belowavg_sel.precip.plot(
@@ -691,6 +758,7 @@ g=ds_belowavg_sel.precip.plot(
         "shrink": 0.8,
         "aspect": 40,
         "pad": 0.1,
+        "label":"Anomaly total precipitation (mm)"
     },
 #     figsize=(100,20)
 )
@@ -699,6 +767,9 @@ df_bound = gpd.read_file(adm1_bound_path)
 for ax in g.axes.flat:
     df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
     ax.axis("off")
+
+
+# g.fig.savefig('../results/drought/chirps_anom.png', bbox_inches='tight')
 
 
 # From the CHIRPS plot we can see that for example FMA 2019 had quite some below average rainfall, so check how the forecasts were for that season (with two months leadtime). 
