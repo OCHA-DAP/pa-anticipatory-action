@@ -20,18 +20,17 @@ def get_xy(df):
     return x, y
 
 
-def gauss(x, H, A, x0, sigma):
+def gauss(x, A, x0, sigma):
     """
     Defines a Gaussian function.
     Adapted from https://gist.github.com/cpascual/a03d0d49ddd2c87d7e84b9f4ad2df466
+    x: x values
+    A: amplitude
+    x0: mean
+    sigma: sigma
     """
 
-    #if A > 1:
-    #    A = 1
-    #    print(A)
-    #H = 07
-
-    return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
+    return A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
 
 def gauss_fit(x, y):
@@ -42,7 +41,12 @@ def gauss_fit(x, y):
 
     mean = sum(x * y) / sum(y)
     sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-    popt, pcov = curve_fit(gauss, x, y, p0=[min(y), max(y), mean, sigma], maxfev=5000)
+    popt, pcov = curve_fit(gauss,
+                           x,
+                           y,
+                           p0=[max(y), mean, sigma],
+                           bounds=((0, 1591401600, -np.inf), (1, 1598745600, np.inf)),
+                           maxfev=5000)
     return popt, pcov
 
 
