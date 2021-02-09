@@ -27,55 +27,63 @@ import logging
 # 'Optimal parameters not found: Number of calls to function has reached maxfev = 5000'
 # 'array must not contain infs or NaNs' - this is from the na values introduced when admin
 # area is fully covered by the river
-#np.seterr(all='raise')
+# np.seterr(all='raise')
 
-parameters = utils.parse_yaml('config.yml')['DIRS']
-output_dir = parameters['data_dir']
+dirs = utils.parse_yaml('config.yml')['DIRS']
+output_dir = dirs['data_dir']
+params = utils.parse_yaml('config.yml')['PARAMS']
+ADM = params['adm']
+
 logger = logging.getLogger()
 
 
 def make_data(df, adm_grp):
 
-    # Output dataframes
+    # Initialize the dataframe that will hold the output data
     dates = pd.DataFrame([])
     flood_extents = pd.DataFrame([])
-    no_fit = []  # To output the list of admin units with no interpolated data
+    no_fit = []
 
     sel_col = adm_grp + '_PCODE'
     for adm in df[sel_col].unique():
 
-        # Fit the data
+        # Get the x (time) and y (flooding fraction) data
+        # from the sentinel estimates which we will use to
+        # estimate the Gaussian parameters. We'll generate new
+        # x values at daily intervals to interpolate the corresponding
+        # flooding fraction on a daily basis.
         df2 = df.loc[df[sel_col] == adm].reset_index()
-        x, y = ff.get_xy(df2)[0], ff.get_xy(df2)[1]  # Get the x and y
-        x_new = np.linspace(x[0], x[-1], 85)  # Generate new x data (at daily intervals)
+        x, y = ff.get_xy(df2)[0], ff.get_xy(df2)[1]
+        x_new = np.linspace(x[0], x[-1], 85)
 
-        # Catch the edge cases where there is no flooding
-        # And where the admin area is covered by water
-        # TODO: Control flow is a bit convoluted here
+        # Before attempting to fit to a Gaussian, we need to
+        # catch the edge cases where there is no flooding
+        # or where the admin area is covered by water.
         if y.mean() == 0:
             y_new = np.ones(85)*0
             cov = None
-            rmse_g = None
+            rmse = None
             date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
             date_g = None
             act_g = None
             fwhm = None
             max_actual = y.max()
 
+        # But if some flooding has occurred, we will try to
+        # fit the time series to a Gaussian distribution.
         else:
             try:
-                # New y values using same x data to calc the error
-                y_old = ff.gauss(x, *ff.gauss_fit(x, y)[0])  # Generate Gaussian fitted y data
-                # New y values using daily x data to get better peak estimate
-                y_new = ff.gauss(x_new, *ff.gauss_fit(x, y)[0])  # Generate Gaussian fitted y data
+                popt, pcov = ff.gauss_fit(x, y)
 
+            # In case the function doesn't converge to estimate the Gaussian parameters,
+            # we will add in empty data to the summary output.
             except Exception as e:
                 logger.warning(e)
                 no_fit.append(adm)
 
                 y_new = np.empty(85) * np.nan
                 cov = None
-                rmse_g = None
+                rmse = None
                 date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
                 date_g = None
                 act_g = None
@@ -83,37 +91,26 @@ def make_data(df, adm_grp):
                 max_actual = y.max()
 
             else:
-                # Get one standard deviation errors on the parameters
-                # We will focus just on the mean of the Gaussian (ie. date)
-                # In some cases this returns a negative value
-                # https://stackoverflow.com/questions/28702631/scipy-curve-fit-returns-negative-variance
-                # ^ Seems to indicate that it's just done a bad job of fitting
-                pcov = ff.gauss_fit(x, y)[1]
-                cov = np.sqrt(np.diag(pcov)[2])
-                cov = cov / 86400  # Convert from seconds to days
-                # Calc the rmse to compare poly vs gauss
-                rmse_g = ff.rmse(y_old, y)
-                # Get the peak dates
+                y_fit = ff.gauss(x, *popt)
+                y_new = ff.gauss(x_new, *popt)
+                # Standard deviation of the errors for the mean (x0) parameter
+                # Convert from seconds (from unix time) to hours.
+                cov = np.sqrt(np.diag(pcov)[1]) / 86400
+                rmse = ff.rmse(y_fit, y)
                 date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
                 date_g = datetime.strptime(ff.get_peak(x_new, y_new), "%Y-%m-%d")
-                # Calculate the difference between dates
                 act_g = (date_actual - date_g).days
-                # Get the FWHM from the Gaussian fitting
-                # Tells us the length of time that flooding was at at least 50% of peak
-                sigma = ff.gauss_fit(x, y)[0][3]
-                fwhm = ff.get_fwhm(sigma)
+                fwhm = ff.get_fwhm(popt[2])
                 max_actual = y.max()
 
-        # Create dict with the results - flood extent
+        # Create dictionaries to append to the output dataframes
         flood_extent = pd.DataFrame(
             {'PCODE': adm,
              'DATE': x_new,
              'FLOOD_EXTENT': y_new})
         flood_extents = flood_extents.append(flood_extent, ignore_index=True)
-
-        # Create dict with the results - peak dates
         result = {'PCODE': adm,
-                  'RMSE': rmse_g,
+                  'RMSE': rmse,
                   'PEAK_SAT': date_actual,
                   'PEAK_G': date_g,
                   'DIFF_SAT': act_g,
@@ -136,12 +133,11 @@ def make_data(df, adm_grp):
 
 
 if __name__ == "__main__":
-    arg = utils.parse_args()
     utils.config_logger()
     # Read in the dataframe output from Generate_flood_frac.py
     try:
-        sentinel = pd.read_csv(os.path.join(output_dir, f'{arg.adm_level}_flood_extent_sentinel.csv'))
+        sentinel = pd.read_csv(os.path.join(output_dir, f'{ADM}_flood_extent_sentinel.csv'))
         # Calculate the fitted data
-        make_data(sentinel, arg.adm_level)
+        make_data(sentinel, ADM)
     except FileNotFoundError:
         logger.error('Input CSV file not found. Run Generate_flood_frac.py to generate the required file.')
