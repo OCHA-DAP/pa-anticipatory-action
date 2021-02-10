@@ -47,7 +47,6 @@ df_fn.loc[df_fn.date=="2021-01-01","period_ML2"]="Feb - May 2021"
 df_fn["source"]="FewsNet"
 df_gipc=pd.read_csv(globalipc_path)
 df_gipc["source"]="GlobalIPC"
-df_gipc["date"]=pd.to_datetime(df_gipc["date"])
 
 df=pd.concat([df_fn,df_gipc])
 
