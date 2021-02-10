@@ -84,7 +84,7 @@ for (i in seq_along(1:nbr_layers)) {
         
       }
 
-## identify yearly rainy season start date per region
+## identify rainy season start date per region, year
 
 # transpose data, create Year column
 data_max_values_long <- convertToLongFormat(data_max_values)
@@ -113,18 +113,19 @@ rainy_season_starts <- rainy_streaks %>%
                         dplyr::select(year, pcode, date, streak_length) %>% # remove and reorder columns
                         rename(earliest_streak_start_date = date) %>%
                         data.frame() %>%
-                        left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) 
-                                                
+                        left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+                        mutate(start_month = lubridate::month(earliest_streak_start_date)) 
+                          
 # check that there is a start date per adm2 and year
 nrow(rainy_season_starts) == (n_distinct(mwi_adm2_ids$ADM2_PCODE)*11)
 
 # check for which years adm2's don't have a start date in Oct-Dec
 rainy_season_starts %>%
-        group_by(pcode) %>%
-        mutate(nbr_yrs_with_OND_start = n_distinct(year)) %>%
-        dplyr::select(pcode, nbr_yrs_with_OND_start) %>%
-        unique() %>%
-        data.frame()
+  group_by(pcode) %>%
+  mutate(nbr_yrs_with_OND_start = n_distinct(year)) %>%
+  dplyr::select(pcode, nbr_yrs_with_OND_start) %>%
+  unique() %>%
+  data.frame()
 
 # identify years without an OND start
 rainy_season_starts %>%
@@ -134,6 +135,18 @@ rainy_season_starts %>%
   dplyr::select(pcode, ADM2_EN, OND_years) %>%
   unique() %>%
   data.frame()
+
+# check frequency of start month per adm2 ## TO DO: Verify that Blantyre and Blantyre City are separate districts (305, 315)
+rainy_season_starts %>%
+  dplyr::select(pcode, ADM2_EN, start_month) %>%
+  mutate(start_month_name = lubridate::month(start_month, label = T, abbr = T)) %>% # names months to use a column name in next step
+  dplyr::select(-start_month) %>% # remove start_month 
+  group_by(pcode, ADM2_EN, start_month_name) %>%
+  add_count(start_month_name) %>%
+  unique() %>%
+  spread(key = start_month_name, value = n) %>% # convert to wide format
+  replace(is.na(.), 0) %>%
+  print(n = 35)
 
 ## identify dry spells per adm2
 
@@ -146,8 +159,8 @@ data_max_sums$rollsum_ds_bin <- ifelse(data_max_sums$rollsum_14d <= 2, 1, 0)
 # identify beginning, end and duration of dry spells per region
 dry_spells_list <- data_max_sums %>%
                       mutate(rollsum_ds_bin = ifelse(is.na(rollsum_ds_bin), 0, rollsum_ds_bin)) %>%  # replace NAs with 0
-                      group_by(pcode, spell = cumsum(c(0, diff(rollsum_ds_bin) != 0))) %>% # groups consecutive days with rolling sum <= 2mm. [c(0) is to start the array with zero]
-                      filter(rollsum_ds_bin == 1 & n() > 1) %>%
+                      group_by(pcode, spell = cumsum(c(0, diff(rollsum_ds_bin) != 0))) %>% # groups consecutive days with rolling sum <= 2mm. [c(0) is to start the array with zero]. "spell" creates IDs for streaks of rollsum_ds_bin == 0 or == 1.
+                      filter(rollsum_ds_bin == 1 & n() >= 1) %>% # keep all streaks of dates on which the 14-day rolling sum was <=2mm even if only 1 date's rolling sum met the criterion
                       summarize(dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (14+ days with <= 2mm of rain)
                                 dry_spell_first_date = dry_spell_confirmation - 13, # spell started 14th day prior to first day of dry spell 
                                 dry_spell_last_date = max(date),
