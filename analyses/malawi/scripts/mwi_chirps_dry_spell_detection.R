@@ -36,12 +36,6 @@ mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
 
 # read in CHIRPS data (multiple multi-layer raster files) into a single stack
-all_chirps_filenames <- list.files(chirps_path,
-                            full.names = TRUE,
-                            pattern = "p25.nc$")
-
-length(all_chirps_filenames) # number of files/years
-
 s2010 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2010_p25.nc") # each file has to be read in separately or layer names get lost
 s2011 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2011_p25.nc")
 s2012 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2012_p25.nc")
@@ -90,23 +84,74 @@ for (i in seq_along(1:nbr_layers)) {
         
       }
 
-# compute per-region 14-d rolling sums
-data_max_sums <- compute14dSum(data_max_values)
+## identify yearly rainy season start date per region
+
+# transpose data, create Year column
+data_max_values_long <- convertToLongFormat(data_max_values)
+data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
+data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
+
+# find rainy days (total_prec > 0) after 1 Oct every year
+rainy_streaks <- data_max_values_long %>%
+                  filter(month >= 10) %>%  # keep oct-nov-dec data
+                  mutate(rainy_day_bin = ifelse(total_prec > 0, 1, 0)) %>%
+                  group_by(year, pcode) %>%        
+                  arrange(pcode, date) %>%
+                  mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # number each group of consecutive days with/without rain per adm2 and year
+                  filter(rainy_day_bin == 1) %>% # keep the rainy streaks
+                  ungroup 
+
+# find earliest streak with 7+ days per adm2 and year
+rainy_season_starts <- rainy_streaks %>%
+                        arrange(pcode, year, date) %>%
+                        group_by(year, pcode, streak_number) %>%
+                        mutate(streak_length = n()) %>% # count nbr of days in streaks
+                        filter(streak_length >= 7) %>% # keep streaks of at least 7 days
+                        ungroup(streak_number) %>% # remove streak_number from grouping
+                        slice(which.min(date)) %>% # select earliest per year and pcode
+                        ungroup %>%  
+                        dplyr::select(year, pcode, date, streak_length) %>% # remove and reorder columns
+                        rename(earliest_streak_start_date = date) %>%
+                        data.frame() %>%
+                        left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) 
+                                                
+# check that there is a start date per adm2 and year
+nrow(rainy_season_starts) == (n_distinct(mwi_adm2_ids$ADM2_PCODE)*11)
+
+# check for which years adm2's don't have a start date in Oct-Dec
+rainy_season_starts %>%
+        group_by(pcode) %>%
+        mutate(nbr_yrs_with_OND_start = n_distinct(year)) %>%
+        dplyr::select(pcode, nbr_yrs_with_OND_start) %>%
+        unique() %>%
+        data.frame()
+
+# identify years without an OND start
+rainy_season_starts %>%
+  group_by(pcode) %>%
+  mutate(OND_years = paste(year, collapse = ',')) %>%
+  ungroup() %>%
+  dplyr::select(pcode, ADM2_EN, OND_years) %>%
+  unique() %>%
+  data.frame()
 
 ## identify dry spells per adm2
+
+# compute per-region 14-d rolling sums
+data_max_sums <- compute14dSum(data_max_values)
 
 # list days on which 14-day rolling sum is 2mm or less of rain
 data_max_sums$rollsum_ds_bin <- ifelse(data_max_sums$rollsum_14d <= 2, 1, 0)
 
 # identify beginning, end and duration of dry spells per region
 dry_spells_list <- data_max_sums %>%
-                      mutate(rollsum_ds_bin = ifelse(is.na(rollsum_ds_bin), 0, rollsum_ds_bin)) %>%  # remove NAs with 0
-                      group_by(pcode, spell = cumsum(c(0, diff(rollsum_ds_bin) != 0))) %>% # groups consecutive days with rolling sum <= 2mm
+                      mutate(rollsum_ds_bin = ifelse(is.na(rollsum_ds_bin), 0, rollsum_ds_bin)) %>%  # replace NAs with 0
+                      group_by(pcode, spell = cumsum(c(0, diff(rollsum_ds_bin) != 0))) %>% # groups consecutive days with rolling sum <= 2mm. [c(0) is to start the array with zero]
                       filter(rollsum_ds_bin == 1 & n() > 1) %>%
                       summarize(dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (14+ days with <= 2mm of rain)
-                                first_dry_spell_date = dry_spell_confirmation - 13, # spell started 14th day prior to first day of dry spell 
-                                last_dry_spell_date = max(date),
-                                duration_days = as.numeric((last_dry_spell_date - first_dry_spell_date + 1))) %>%
+                                dry_spell_first_date = dry_spell_confirmation - 13, # spell started 14th day prior to first day of dry spell 
+                                dry_spell_last_date = max(date),
+                                duration_days = as.numeric((dry_spell_last_date - dry_spell_first_date + 1))) %>%
                       ungroup() %>%
                       as.data.frame() %>%
                       dplyr::select(-spell)
@@ -114,7 +159,7 @@ dry_spells_list <- data_max_sums %>%
 # add region names for ease of communication
 dry_spells_list <- dry_spells_list %>% 
                       left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
-                      dplyr::select(pcode, ADM2_EN, dry_spell_confirmation, first_dry_spell_date, last_dry_spell_date, duration_days)
+                      dplyr::select(pcode, ADM2_EN, dry_spell_confirmation, dry_spell_first_date, dry_spell_last_date, duration_days)
 
 # summary stats per region ## FIX ME: no CHIRPS data for Likoma, Mwanza?
 dry_spells_summary_per_region <- dry_spells_list %>%
@@ -123,5 +168,7 @@ dry_spells_summary_per_region <- dry_spells_list %>%
                                               median_duration = mean(duration_days),
                                               min_duration = min(duration_days),
                                               max_duration = max(duration_days))
+
+
 
   

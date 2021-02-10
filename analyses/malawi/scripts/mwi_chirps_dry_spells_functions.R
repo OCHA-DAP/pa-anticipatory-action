@@ -13,6 +13,24 @@ computeLayerStat <- function(layer, stat, data_stat_values){
   return(data_stat_values)
 }
 
+convertToLongFormat <- function(data.wideformat){
+  
+  # add pcodes to identify each polygon
+  data.wideformat$pcode <- mwi_adm2$ADM2_PCODE
+  
+  # convert wide to long to get dates as rows
+  data.longformat <- gather(data.wideformat, date, total_prec, 2:(nbr_layers+1))
+  
+  # assign "zero" values to NA in total_prec
+  data.longformat$total_prec[is.na(data.longformat$total_prec)] <- 0
+  
+  # reformat 'date' to a date format
+  data.longformat$date <- as.Date(data.longformat$date, format = "X%Y.%m.%d")
+  
+  return(data.longformat)
+}
+
+## TO DO: refactor to use convertToLongFormat()
 compute14dSum <- function(data_compiled.stat){
   
   # add pcodes to identify each polygon
@@ -34,4 +52,10 @@ compute14dSum <- function(data_compiled.stat){
     mutate(rollsum_14d = zoo::rollsum(total_prec, k = 14, fill = NA, align = 'right')
     ) 
   return(rolling_sum)
+}
+
+## user-defined run-length encoding function in base R
+runlengthEncoding <- function(x) {
+     x <- rle(x)$lengths
+     rep(seq_along(x), times=x)
 }
