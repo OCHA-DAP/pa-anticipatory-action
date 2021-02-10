@@ -119,7 +119,7 @@ def aggregate_adminlevel(df_ipc,admin_level,country,config):
     # The reasons for disagreement are not entirely clear. One cause is the inclusion of IDPs on adm1 and not on adm2, but this doesn't explain all the differences
     df_ipc_adm2=df_ipc[(df_ipc["date"].notnull()) & (df_ipc[f"ADMIN2"].notnull())]
     if admin_level == 0:
-        df_ipc_agg = df_ipc_adm2.groupby(["date","period_ML1","period_ML2"],as_index=False,dropna=False).sum()
+        df_ipc_agg = df_ipc_adm2.groupby(["date"],as_index=False,dropna=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
 
 
@@ -127,12 +127,12 @@ def aggregate_adminlevel(df_ipc,admin_level,country,config):
         # we assume that the admin1_col contains the name of the adm1 region for each admin2,
         # but that the summed numbers of adm1s are given in the adm0 column and thus not in the admin1
         # thus we can groupby the admin1 col to get the sums of the adm2s per adm1
-        df_ipc_agg = df_ipc_adm2.groupby([config.ADMIN1_COL, "date","period_ML1","period_ML2"], as_index=False,dropna=False).sum()
+        df_ipc_agg = df_ipc_adm2.groupby([config.ADMIN1_COL, "date"], as_index=False,dropna=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
 
     elif admin_level == 2:
         #it can occur that an adm2 name occurs in two adm1s, hence groupby adm1-adm2 combination and not only adm2
-        df_ipc_agg = df_ipc_adm2.groupby(["date","period_ML1","period_ML2", config.ADMIN1_COL, config.ADMIN2_COL], dropna=False, as_index=False).sum()
+        df_ipc_agg = df_ipc_adm2.groupby(["date", config.ADMIN1_COL, config.ADMIN2_COL], dropna=False, as_index=False).sum()
         df_ipc_agg[config.ADMIN0_COL] = country
     else:
         logger.error(f"Admin level {admin_level} has not been implemented")
@@ -171,6 +171,33 @@ def compute_population_admin(df,admin_level,config):
     return df
 
 
+def compute_ml_period(df_ipc_agg, df_ipc):
+    """
+    Retrieve the ML1 and ML2 period for each date.
+    This is included in the data, but for some dates the whole country might not have ml1/ml2 data and for some dates some admins might not have ml1/ml2 data
+    Therefore, we cannot do a simple groupby of ML1 and ML2 period when aggregating
+    So check all unique values and only assign this value if there is one unique value that is not nan.
+    Args:
+        df_ipc_agg: aggregated dataframe on admin_level
+        df_ipc: original dataframe
+
+    Returns:
+        df_ipc_agg: aggregated dataframe on admin_level with ML1 and ML2 period column
+    """
+    for d in df_ipc_agg["date"].unique():
+        df_ipc_d = df_ipc[df_ipc["date"] == d]
+        for m in ["period_ML1", "period_ML2"]:
+            df_ipc_d_per = df_ipc_d[m].dropna().unique()
+            if len(df_ipc_d_per) == 1:
+                df_ipc_agg.loc[df_ipc_agg["date"] == d, m] = df_ipc_d_per[0]
+            elif len(df_ipc_d_per) > 1:
+                logger.warning(f"Several values for {m} on date {d}. Setting to NaN, but check your data.")
+                df_ipc_agg.loc[df_ipc_agg["date"] == d, m] = np.nan
+            else:
+                logger.warning(f"No {m} found for {d}, setting {m} to NaN")
+                df_ipc_agg.loc[df_ipc_agg["date"] == d, m] = np.nan
+    return df_ipc_agg
+
 def download_globalipc(country,config,parameters,output_dir):
     """
     Retrieve the Global IPC data from their Population Tracking Tool and save to output_file
@@ -205,7 +232,6 @@ def process_globalipc(country, admin_level, config, parameters,ipc_dir):
     Returns:
         df_ipc_agg (pd.DataFrame): dataframe with the processed data and aggregated to admin_level
     """
-    #TODO: include analysis period
 
     # ipc file columns are always on line 11
     df_ipc = pd.read_excel(os.path.join(ipc_dir,config.GLOBALIPC_FILENAME_RAW.format(country=country)), header=[11])
@@ -252,6 +278,15 @@ def process_globalipc(country, admin_level, config, parameters,ipc_dir):
         #raise a warning if this occurs
         #purely to be aware of the data quality, but can still continue to use the data based on aggregation from adm2
         test_mismatch_adminlevels(df_ipc_agg,df_ipc,admin_level,country,config)
+
+
+        #set columns to nan instead of 0 if the sum of ipc numbers is 0 (i.e. pop of period is 0)
+        for p in ["CS","ML1","ML2"]:
+            p_cols = [c for c in df_ipc_agg.columns if p in c ]
+            df_ipc_agg.loc[df_ipc_agg[f"pop_{p}"]==0,p_cols]=np.nan
+
+        # Add period_ML1 and period_ML2 columns
+        compute_ml_period(df_ipc_agg, df_ipc)
 
         #remove columns that haven't been processed
         ipc_cols = [f"{period}_{i}" for period in config.IPC_PERIOD_NAMES for i in [1, 2, 3, 4, 5]]
