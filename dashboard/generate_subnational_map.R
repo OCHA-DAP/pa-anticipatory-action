@@ -14,7 +14,7 @@ ipc_indices_data_latest_gbl <- ipc_indices_data %>% filter(source == "GlobalIPC"
 ipc_indices_data_latest <- rbind(ipc_indices_data_latest_fn,ipc_indices_data_latest_gbl)
 
 # import shapefiles
-eth_adm1 <- st_read("data/shapefiles/ET_Admin1_OCHA_2019/eth_admbnda_adm1_csa_bofed_20190827.shp", stringsAsFactors = F)
+eth_adm1 <- st_read("data/shapefiles/ET_Admin_OCHA_2020/eth_admbnda_adm1_csa_bofed_20201008.shp", stringsAsFactors = F)
 
 # build datasets per country, source. Ensures all regions are represented if no projections in certain regions
 # ETH FN
