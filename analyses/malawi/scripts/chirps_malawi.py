@@ -23,7 +23,7 @@ def main(download, config=None):
     parameters = config.parameters(country)
     output_dir=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,'results','drought')
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-
+    resolution="25"
     # create list of years of interest
     years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
     years=[2020]
@@ -32,7 +32,7 @@ def main(download, config=None):
 
     adm1_path=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR,parameters['path_admin1_shp'])
     for i in years:
-        ds,transform = get_chirps_data(config, i, download = download)
+        ds,transform = get_chirps_data(config, i, download = download,resolution=resolution)
         df_bound = gpd.read_file(adm1_path)
         #clip global to malawi to speed up calculating rolling sum
         ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.clip(

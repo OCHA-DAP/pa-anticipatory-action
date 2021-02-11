@@ -40,13 +40,13 @@ def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
 
     return fig_histog,fig_clip
 
-def download_chirps(config,year,resolution=25):
+def download_chirps(config,year,resolution="25"):
     """
         Download the CHIRPS data for year from their ftp server
         Args:
             config (Config): config for the drought indicator
             year (str or int): year for which the data should be downloaded in YYYY format
-            resolution (str or int): resolution of the data to be downloaded. Can be 25 or 5
+            resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         """
     chirps_dir = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
@@ -69,12 +69,13 @@ def download_chirps(config,year,resolution=25):
         except urllib.error.HTTPError as e:
             logging.error(f"{e}. Date might be later than last reported datapoint. URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}")
 
-def get_chirps_data(config, year, resolution=25, download=False):
+def get_chirps_data(config, year, resolution="25", download=False):
     """
     Load CHIRP's NetCDF file as xarray dataset
     Args:
         config (Config): config for the drought indicator
         year (str or int): year for which the data should be loaded in YYYY format
+        resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         download (bool): if True, download data
 
     Returns:
