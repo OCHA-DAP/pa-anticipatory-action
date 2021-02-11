@@ -12,6 +12,7 @@ source("scripts/mwi_chirps_dry_spells_functions.R")
 
 ## setup
 rasterOptions(maxmemory = 1e+09)
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
 
 ## load data 
 # set file paths
@@ -84,14 +85,14 @@ for (i in seq_along(1:nbr_layers)) {
         
       }
 
-## identify rainy season start date per region, year
+## identify rainy season start date per region, year/rainy season
 
 # transpose data, create Year column
 data_max_values_long <- convertToLongFormat(data_max_values)
 data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
 data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
 
-# find rainy days (total_prec > 0) per rainy season (= Oct through April incl) #@ TO DO: instead of streaks, use X days in Y?
+# find rainy days (total_prec > 0) per rainy season (= Oct through April incl) ## TO DO: instead of streaks, use X days in Y?
 rainy_streaks <- data_max_values_long %>%
                   mutate(rainy_day_bin = ifelse(total_prec > 0, 1, 0),
                          rainy_season = ifelse(month >= 10, year, ifelse(month <= 4, year - 1, 'outside rainy season'))) %>% # identify year the rainy season started & across calendar years
@@ -99,30 +100,38 @@ rainy_streaks <- data_max_values_long %>%
                   arrange(pcode, date) %>%
                   mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # number each group of consecutive days with/without rain per adm2 and year
                   filter(rainy_day_bin == 1) %>% # keep the rainy streaks
-                  ungroup 
+                  ungroup() 
 
-# find earliest streak with 7+ days per adm2 and year
+# find earliest streak with 7+ days per adm2 and rainy season (no data for 2020 rainy season after 31 Dec 2020)
 rainy_season_starts <- rainy_streaks %>%
+                        filter(rainy_season != 'outside rainy season' & rainy_season != '2009') %>% # keep streaks during rainy season. remove 2009 bc no 2009 OND data
                         arrange(pcode, rainy_season, date) %>%
                         group_by(rainy_season, pcode, streak_number) %>%
                         mutate(streak_length = n()) %>% # count nbr of days in streaks
-                        filter(streak_length >= 7 & rainy_season != 'outside rainy season' & rainy_season != '2009') %>% # keep streaks of at least 7 days and during rainy season. removed 2009 bc no OND 2009 data
+                        filter(streak_length >= 7) %>% # keep streaks of at least 7 days 
                         ungroup(streak_number) %>% # remove streak_number from grouping
                         slice(which.min(date)) %>% # select earliest per year and pcode
-                        ungroup %>%  
+                        ungroup() %>%  
                         dplyr::select(rainy_season, pcode, date, streak_length) %>% # remove and reorder columns
                         rename(earliest_streak_start_date = date) %>%
                         data.frame() %>%
-                        left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
-                        mutate(start_month = lubridate::month(earliest_streak_start_date)) 
+                        mutate(start_month = lubridate::month(earliest_streak_start_date))  # extract start month of rainy season
                           
-# check that there is a start date per adm2 and year
+# ensure every rainy season is represented for every adm2
+year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) 
+names(year_by_adm2)[2] <- 'pcode'
+
+rainy_season_starts <- year_by_adm2 %>%
+           left_join(rainy_season_starts, by = c('year' = 'rainy_season', 'pcode' = 'pcode'))
+
+
+# check that there is a start date per adm2 and rainy season (Fall 2010-Fall 2020 incl)
 nrow(rainy_season_starts) == (n_distinct(mwi_adm2_ids$ADM2_PCODE)*11)
 
 # check for which years adm2's don't have a start date in Oct-Dec
 rainy_season_starts %>%
   group_by(pcode) %>%
-  mutate(nbr_yrs_with_OND_start = n_distinct(rainy_season)) %>%
+  mutate(nbr_yrs_with_OND_start = sum(start_month %in% c(10:12))) %>%
   dplyr::select(pcode, nbr_yrs_with_OND_start) %>%
   unique() %>%
   data.frame()
@@ -130,6 +139,7 @@ rainy_season_starts %>%
 # identify years without an OND start
 rainy_season_starts %>%
   group_by(pcode) %>%
+  filter(!start_month %in% c(10:12)) %>% # keep rainy seasons that started outside OND
   mutate(OND_years = paste(rainy_season, collapse = ',')) %>%
   ungroup() %>%
   dplyr::select(pcode, ADM2_EN, OND_years) %>%
