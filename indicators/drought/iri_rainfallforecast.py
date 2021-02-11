@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 import rasterio
 import xarray as xr
+#pycharm is indicating that rioxarray is not used, but actually is used when calling .rio
+import rioxarray
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
@@ -22,10 +24,10 @@ def download_iri(iri_auth,config,chunk_size=128):
         config (Config): config for the drought indicator
         chunk_size (int): number of bytes to download at once
     """
-    #TODO: it would be way nicer to download with opendap instead of requests, since then the file doesn't even have to be saved and is hopefully faster. Only, cannot figure out how to do that with cookie authentication
+    #TODO: it would be nicer to download with opendap instead of requests, since then the file doesn't even have to be saved and is hopefully faster.
+    # But haven't been able to figure out how to do that with cookie authentication
     IRI_dir = os.path.join(config.DROUGHTDATA_DIR,config.IRI_DIR)
     Path(IRI_dir).mkdir(parents=True, exist_ok=True)
-    #TODO: decide if only download if file doesn't exist. Also depends on whether want one IRI file with always newest data, or one IRI file per month
     IRI_filepath = os.path.join(IRI_dir, config.IRI_NC_FILENAME_RAW)
     # strange things happen when just overwriting the file, so delete it first if it already exists
     if os.path.exists(IRI_filepath):
@@ -36,6 +38,7 @@ def download_iri(iri_auth,config,chunk_size=128):
         '__dlauth_id': iri_auth,
     }
     #TODO fix/understand missing certificate verification warning
+    #For now leaving it as it is since it is a trustable site and we couldn't figure how to improve it
     logger.info("Downloading IRI NetCDF file. This might take some time")
     response = requests.get(config.IRI_URL, cookies=cookies, verify=False)
     with open(IRI_filepath, "wb") as fd:
@@ -49,7 +52,6 @@ def download_iri(iri_auth,config,chunk_size=128):
     if os.path.exists(IRI_filepath_crs):
         os.remove(IRI_filepath_crs)
 
-    #TODO: not sure if this block fits better here or in get_iri_data
     #invert_latlon assumes lon and lat to be the names of the coordinates
     iri_ds=iri_ds.rename({config.IRI_LON: config.LONGITUDE, config.IRI_LAT: config.LATITUDE})
     #often IRI latitude is flipped so check for that and invert if needed
@@ -85,6 +87,8 @@ def get_iri_data(config, download=False):
     iri_ds = xr.decode_cf(iri_ds)
 
     #TODO: understand rasterio warnings "CPLE_AppDefined in No UNIDATA NC_GLOBAL:Conventions attribute" and "CPLE_AppDefined in No 1D variable is indexed by dimension C"
+    # Conventions attribute is caused by the fact that rasterio is expecting a conventions instead of Conventions. Shouldn't impact performance
+    # no 1D variable is indexed by C I am not entirely sure what is meant
     with rasterio.open(IRI_filepath) as src:
         transform = src.transform
 

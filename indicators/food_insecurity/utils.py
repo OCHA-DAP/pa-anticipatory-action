@@ -1,22 +1,23 @@
-import zipfile
 import logging
 import os
 import argparse
-import requests
-import yaml
-import coloredlogs
-import locale
-import pandas as pd
 from pathlib import Path
-from urllib.request import urlretrieve
-import datetime
+import urllib.error
+import pandas as pd
+
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
+from utils_general.utils import download_ftp, download_url, unzip
 
 logger = logging.getLogger(__name__)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("country_iso3", help="Country ISO3")
+    # parser.add_argument("-c", "--country", help="Country name")
+    parser.add_argument("country", help="Country name")
+    # parser.add_argument("country_iso3", help="Country ISO3")
     parser.add_argument("-a", "--admin_level", default=1)
     # Prefix for filenames
     parser.add_argument(
@@ -31,55 +32,7 @@ def parse_args():
     )
     return parser.parse_args()
 
-
-def parse_yaml(filename):
-    with open(filename, "r") as stream:
-        config = yaml.safe_load(stream)
-    return config
-
-
-def config_logger(level="INFO"):
-    # Colours selected from here:
-    # http://humanfriendly.readthedocs.io/en/latest/_images/ansi-demo.png
-    coloredlogs.install(
-        level=level,
-        fmt="%(asctime)s %(name)s %(levelname)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        field_styles={
-            "name": {"color": 8},
-            "asctime": {"color": 248},
-            "levelname": {"color": 8, "bold": True},
-        },
-    )
-
-def download_url(url, save_path, chunk_size=128):
-    # Remove file if already exists
-    try:
-        os.remove(save_path)
-    except OSError:
-        pass
-    # Download
-    r = requests.get(url, stream=True)
-    with open(save_path, "wb") as fd:
-        for chunk in r.iter_content(chunk_size=chunk_size):
-            fd.write(chunk)
-
-def download_ftp(url, save_path):
-    logger.info(f'Downloading "{url}" to "{save_path}"')
-    urlretrieve(url, filename=save_path)
-
-def unzip(zip_file_path, save_path):
-    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-        zip_ref.extractall(save_path)
-
-def convert_to_numeric(df_col,zone="en_US"):
-    if df_col.dtype == "object":
-        locale.setlocale(locale.LC_NUMERIC, zone)
-        df_col = df_col.apply(lambda x: locale.atof(x))
-        df_col = pd.to_numeric(df_col, errors="coerce")
-    return df_col
-
-def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
+def download_fewsnet(date, iso2_code, region, regioncode,output_dir):
     """
     Retrieve the raw fewsnet data. Depending on the region, this date is published per region or per country. This function tries to retrieve both.
     The download_url always downloads the given url, but sometimes this doesn't return a valid zip file. This means that data doesn't exist. This happens often, since for most countries the classifications are on earlier dates only published per region and later on per country. This is not bad, and the function will remove the invalid zip files
@@ -134,23 +87,39 @@ def get_fewsnet_data(date, iso2_code, region, regioncode,output_dir):
                 logger.warning(f"No FewsNet data for date {date} found that covers {iso2_code}")
             os.remove(zip_filename_region)
 
-def get_worldpop_data(country_iso3, year, output_dir, config):
+def download_worldpop(country_iso3, year, output_dir, config):
     #create directory if doesn't exist
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     url = config.WORLDPOP_URL.format(country_iso3_upper=country_iso3.upper(),country_iso3_lower=country_iso3.lower(),year=year)
     output_file=os.path.join(output_dir, url.split("/")[-1])
     if not os.path.exists(output_file):
-        download_ftp(url, output_file)
+        try:
+            download_ftp(url, output_file)
+        except urllib.error.URLError as e:
+            logger.warning(f"{e}. Data of the year of interest might not exist on the WorldPop FTP.")
 
-def get_globalipc_data(country_iso3, country_iso2, output_dir, config):
-    #create directory if doesn't exist
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-    min_year=2010 #first year to retrieve data for. Doesn't matter if global ipc only started including data for later years
-    max_year=datetime.datetime.now().year #last date to retrieve data for. Doesn't matter if this is in the future
-    url = config.GLOBALIPC_URL.format(min_year=min_year,max_year=max_year,country_iso2=country_iso2)
-    output_file=os.path.join(output_dir, config.GLOBALIPC_FILENAME.format(country_iso3=country_iso3))
-    #have one file with all data, so also download if file already exists to make sure it contains the newest data (contrary to fewsnet)
-    try:
-        download_url(url, output_file)
-    except Exception:
-        logger.warning(f"Cannot download GlobalIPC data for {country_iso3}")
+def compute_percentage_columns(df,config):
+    """
+    calculate percentage of population per analysis period and level
+    Args:
+        df (pd.DataFrame): input df, should include columns of the IPC_PERIOD_NAMES for eah period in range(1,6)
+        config (Config): food-insecurity config class
+    Returns:
+        df(pd.DataFrame): input df with added percentage columns
+    """
+    for period in config.IPC_PERIOD_NAMES:
+        # IPC level goes up to 5, so define range up to 6
+        for i in range(1, 6):
+            c = f"{period}_{i}"
+            df[f"perc_{c}"] = df[c] / df[f"pop_{period}"] * 100
+        # get pop and perc in IPC3+ and IPC2-
+        # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
+        df[f"{period}_3p"] = df[[f"{period}_{i}" for i in range(3, 6)]].sum(axis=1)
+        df[f"perc_{period}_3p"] = df[f"{period}_3p"] / df[f"pop_{period}"] * 100
+        df[f"{period}_4p"] = df[[f"{period}_{i}" for i in range(4, 6)]].sum(axis=1)
+        df[f"perc_{period}_4p"] = df[f"{period}_4p"] / df[f"pop_{period}"] * 100
+        df[f"{period}_2m"] = df[[f"{period}_{i}" for i in range(1, 3)]].sum(axis=1)
+        df[f"perc_{period}_2m"] = df[f"{period}_2m"] / df[f"pop_{period}"] * 100
+    df["perc_inc_ML2_3p"] = df["perc_ML2_3p"] - df["perc_CS_3p"]
+    df["perc_inc_ML1_3p"] = df["perc_ML1_3p"] - df["perc_CS_3p"]
+    return df

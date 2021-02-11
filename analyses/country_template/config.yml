@@ -1,0 +1,25 @@
+#general country information
+country_name: #lower case
+iso3_code:
+iso2_code:
+#TODO: change path_admin... to file_admin...
+path_admin0_shp: #can generally be downloaded from the datagrid of hdx (https://data.humdata.org)
+path_admin1_shp: #can generally be downloaded from the datagrid of hdx (https://data.humdata.org)
+path_admin2_shp: #can generally be downloaded from the datagrid of hdx (https://data.humdata.org)
+shp_adm0c: #column name of adm0 column in shapefile
+shp_adm1c: #column name of adm1 column in shapefile
+shp_adm2c: #column name of adm2 column in shapefile
+
+foodinsecurity:
+  region: #as defined by fewsnet, e.g. east-africa
+  regioncode: #as defined by fewsnet, e.g. EA
+  fewsnet_dates_add: #list of dates that should be included in analysis besides the standard publication dates as defined by FEWSNET_DATES in indicators/food_insecurity/config
+  fewsnet_dates_remove: #list of dates that should be removed from the standard publication dates as defined by FEWSNET_DATES in indicators/food_insecurity/config
+  pop_filename: # if using admin2 (or 1) population statistics to aggregate fewsnet data. Subnational population statistics can generally be downloaded from the datagrid of hdx (https://data.humdata.org)
+  pop_col: #column name of column that contains the population numbers
+  adm0c_pop: #column name of adm0 column in subnational population data
+  adm1c_pop: #column name of adm1 column in subnational population data
+  adm2c_pop: #column name of adm2 column in subnational population data
+  pop_adm1_mapping: #dict with names of admin1 regions that differ in population data and admin shapefile. Give a dict where the key corresponds with the name in the population data, and the value with the name in the admin shapefile
+  pop_adm2_mapping: #dict with names of admin2 regions that differ in population data and admin shapefile. Give a dict where the key corresponds with the name in the population data, and the value with the name in the admin shapefile
+  globalipc_adm_mapping: #dict with names of admin regions (admin1 and 2) that differ in globalipc data and admin shapefile. Give a dict where the key corresponds with the name in the globalipc data, and the value with the name in the admin shapefile. These names are not changed, just provided as a warning

@@ -33,10 +33,12 @@ def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
     ds_list = [ds_clip.sel(time=p) for p in ds_clip["time"]]
 
     #create list of titles for subplots
-    ds_list_date_str=[pd.to_datetime(str(x)).strftime("%Y-%m-%d") for x in ds_clip["time"].values]
+    #TODO: find better way to format title list regardless of x being datetime object
+    # ds_list_date_str=[pd.to_datetime(str(x)).strftime("%Y-%m-%d") for x in ds_clip["time"].values]
+    ds_list_date_str=[x for x in ds_clip["time"].values]
     if predef_bins is None:
         predef_bins=np.linspace(ds_clip.precip.min(), ds_clip.precip.max(), 10)
-    fig_clip = plot_raster_boundaries_clip(ds_list, adm1_path, title_list=ds_list_date_str, forec_val=config.CHIRPS_VARNAME, colp_num=10, figsize=(90,60),labelsize=40,predef_bins=predef_bins) #figszie=18*colp_num,6*rows
+    fig_clip = plot_raster_boundaries_clip(ds_list, adm1_path, title_list=ds_list_date_str, forec_val=config.CHIRPS_VARNAME, colp_num=3, figsize=(90,60),labelsize=40,predef_bins=predef_bins) #figszie=18*colp_num,6*rows
 
     return fig_histog,fig_clip
 

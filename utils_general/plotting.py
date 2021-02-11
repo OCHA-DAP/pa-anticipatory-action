@@ -128,7 +128,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     fig.suptitle(f'{country} forecasted values and shape boundaries')
     return fig
 
-def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8):
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8,legend_label=None):
     #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
     """
     Plot a raster file and a shapefile on top of each other.
@@ -156,6 +156,8 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     df_bound = gpd.read_file(boundary_path)
 
     num_plots = len(ds_list)
+    if num_plots==1:
+        colp_num=1
     rows = math.ceil(num_plots / colp_num)
     position = range(1, num_plots + 1)
 
@@ -190,7 +192,9 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
     cb = plt.colorbar(im, cax=cbar_ax, orientation="vertical", pad=0.02, aspect=16, shrink=0.8)
-    cb.set_label(forec_val, size=labelsize, rotation=0, labelpad=15)
+    if legend_label is None:
+        legend_label=forec_val
+    cb.set_label(legend_label, size=labelsize, rotation=90, labelpad=10)
     cb.ax.tick_params(labelsize=labelsize)
 
     if suptitle is not None:
@@ -285,4 +289,45 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
         fig.suptitle(title, fontsize=14, y=0.92)
     fig.tight_layout()
 
+    return fig
+
+def plot_spatial_binary_column(gdf,binary_col,subplot_col="date",subplot_str_col=None,region_col="ADM1_EN",only_show_reached=True,colp_num=2,print_reg=True,title_str="",labelsize=8):
+    #will only plot the regions present in gdf
+    #assumes a binary column where 1 indicates some condition is reached and 0 that it isn't. The 1s will be shown as red regions, the 0s as grey
+
+    # # initialize empty figure, to circumvent that figures from different functions are overlapping
+    # plt.figure()
+    # plt.clf()
+    #will only create subplots for the unque values of subplot_col if for that value at least one region has a value of 1 for binary_col
+    if not isinstance(gdf,gpd.GeoDataFrame):
+        logger.error("Input dataframe has to be a GeoDataFrame, add a geometry column and convert to GeoDatFrame type.")
+    if only_show_reached:
+        gdf_group = gdf.groupby(subplot_col, as_index=False).sum()
+        gdf_col_reached = gdf_group[gdf_group[binary_col] >= 1]
+        gdf = gdf[gdf[subplot_col].isin(gdf_col_reached[subplot_col].unique())]
+
+    num_plots = len(gdf[subplot_col].unique())
+
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+
+    fig = plt.figure(1, figsize=(3*colp_num, 3 * rows))
+    for i, d in enumerate(gdf[subplot_col].unique()):
+        ax = fig.add_subplot(rows, colp_num, position[i])
+        gdf.plot(ax=ax, color='#DDDDDD', edgecolor='#BBBBBB')
+        regions = gdf[region_col].loc[(gdf[subplot_col] == d) & (gdf[binary_col]==1)].sort_values().unique()
+        if len(regions) > 0:
+            gdf.loc[gdf[region_col].isin(regions)].plot(ax=ax, color='red')
+        trig_regions = ", ".join(regions)
+        if subplot_str_col is not None:
+            subplot_str = gdf.loc[gdf[subplot_col] == d, subplot_str_col].unique()[0]
+        else:
+            subplot_str = ""
+        if print_reg and len(regions) > 0:
+            title = f"{title_str} {subplot_str}\n Regions: {trig_regions}"
+        else:
+            title = f"{title_str} {subplot_str} \n"
+        plt.title(title,fontsize=labelsize)
+        ax.axis("off")
+    fig.tight_layout()
     return fig
