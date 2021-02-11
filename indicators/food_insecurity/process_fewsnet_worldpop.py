@@ -26,6 +26,51 @@ def retrieve_admcols(admin_level,config):
 
     return adm_cols
 
+
+def fewsnet_validperiod(row):
+    """
+    Add the period for which FewsNet's projections are valid.
+    Till 2016 FN published a report 4 times a year, where each projection period had a validity of 3 months
+    From 2017 this has changed to thrice a year, where each projection period has a validity of 4 months
+    Args:
+        row: row of dataframe containing the date the FN data was published (i.e. CS period) as timestamp
+
+    Returns:
+
+    """
+    #make own mapping, to be able to use mod 12 to calculate months of projections
+    month_abbr={1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",0:"Dec"}
+    year = row["date"].year
+    month = row["date"].month
+    if year <= 2015:
+        if month == 10:
+            year_ml2 = year + 1
+        else:
+            year_ml2 = year
+        period_ML1 = f"{month_abbr[month]} - {month_abbr[(month + 2) % 12]} {year}"
+        period_ML2 = f"{month_abbr[(month + 3) % 12]} - {month_abbr[(month + 5) % 12]} {year_ml2}"
+    if year > 2015:
+        if month == 2:
+            year_ml1 = year
+            year_ml2 = year
+        elif month == 6:
+            year_ml1 = year
+            year_ml2 = year + 1
+        elif month == 10:
+            year_ml1 = year + 1
+            year_ml2 = year + 1
+        else:
+            logger.info("Period of ML1 and ML2 cannot be added for non-regular publishing date. Add manually.")
+            row["period_ML1"] = np.nan
+            row["period_ML2"] = np.nan
+            return row
+        period_ML1 = f"{month_abbr[month]} - {month_abbr[(month + 3) % 12]} {year_ml1}"
+        period_ML2 = f"{month_abbr[(month + 4) % 12]} - {month_abbr[(month + 7) % 12]} {year_ml2}"
+    row["period_ML1"]=period_ML1
+    row["period_ML2"]=period_ML2
+    return row
+
+
 def compute_total_admin_population(df_fews, admin_path, pop_path, config):
     # calculate total population of every admin, to use for comparison of population given by intersection of admin shape and fewsnet
     df_adm = gpd.read_file(admin_path)
@@ -195,6 +240,7 @@ def process_fewsnet_worldpop(
             df = df.append(df_comb, ignore_index=True)
 
     if not df.empty:
+        df=df.apply(fewsnet_validperiod,axis=1)
         df=df.sort_values(by="date")
         df.to_csv(os.path.join(result_folder,config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country.lower(),admin_level=str(admin_level),suffix=suffix)),index=False)
 

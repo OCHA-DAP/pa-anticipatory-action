@@ -2,15 +2,16 @@
 indicators/food_insecurity/Data/FewsNetRaw/*
 analyses/*/Data/WorldPop/*
 analyses/*/Data/GlobalIPC
-analyses/*/Data/GlobalIPCProcessed
 IRI/
 icpac/
 nmme/
 copernicus/
 chirps/
+analyses/bangladesh/data/*
 
 #Local experiments
 Experiments
+analyses/bangladesh/notebooks/scratch/*
 
 # IDEs
 .idea/*
