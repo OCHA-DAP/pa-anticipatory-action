@@ -92,6 +92,8 @@ data_max_values_long <- convertToLongFormat(data_max_values)
 data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
 data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
 
+## TO DO: Remove/adjust below once rainy season definition confirmed 
+
 # find rainy days (total_prec > 0) per rainy season (= Nov through April incl) ## TO DO: use WFP's definition of onset and create separate function to compute it
 rainy_streaks <- data_max_values_long %>%
                   mutate(rainy_day_bin = ifelse(total_prec > 0, 1, 0),
@@ -101,6 +103,7 @@ rainy_streaks <- data_max_values_long %>%
                   mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # number each group of consecutive days with/without rain per adm2 and year
                   filter(rainy_day_bin == 1) %>% # keep the rainy streaks
                   ungroup() 
+
 
 # find earliest streak with 7+ days per adm2 and rainy season (no data for 2020 rainy season after 31 Dec 2020)
 rainy_season_starts <- rainy_streaks %>%
@@ -113,19 +116,19 @@ rainy_season_starts <- rainy_streaks %>%
                         slice(which.min(date)) %>% # select earliest per year and pcode
                         ungroup() %>%  
                         dplyr::select(rainy_season, pcode, date, streak_length) %>% # remove and reorder columns
-                        rename(earliest_streak_start_date = date) %>%
+                        rename(earliest_rain_streak_start_date = date) %>%
                         data.frame() %>%
-                        mutate(start_month = lubridate::month(earliest_streak_start_date))  # extract start month of rainy season
+                        mutate(start_month = lubridate::month(earliest_rain_streak_start_date))  # extract start month of rainy season
                           
-# ensure every rainy season is represented for every adm2
-year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) 
+# ensure there is an onset date for every rainy season/year and for every adm2
+year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
 names(year_by_adm2)[2] <- 'pcode'
 
 rainy_season_starts <- year_by_adm2 %>%
-           left_join(rainy_season_starts, by = c('year' = 'rainy_season', 'pcode' = 'pcode'))
+            left_join(rainy_season_starts, by = c('year' = 'rainy_season', 'pcode' = 'pcode')) %>% # resulting NAs indicate lack of streaks meeting onset definition
+            rename(rainy_season = year)
 
-
-# check that there is a start date per adm2 and rainy season (Fall 2010-Fall 2020 incl)
+# check that there is a record for a start date per adm2 and rainy season (Fall 2010-Fall 2020 incl)
 nrow(rainy_season_starts) == (n_distinct(mwi_adm2_ids$ADM2_PCODE)*11)
 
 # check for which years adm2's don't have a start date in Nov-Dec
@@ -158,6 +161,26 @@ rainy_season_starts %>%
   replace(is.na(.), 0) %>%
   print(n = 35)
 
+## TO DO Compute end of rainy season once definition is confirmed. Temporary workaround below (last rainy streak in season).
+rainy_season_ends <- rainy_streaks %>%
+                        filter(rainy_season != 'outside rainy season' & rainy_season != '2009') %>% # keep streaks during rainy season. remove 2009 bc no 2009 ND data
+                        arrange(pcode, rainy_season, date) %>%
+                        group_by(rainy_season, pcode, streak_number) %>%
+                        mutate(streak_length = n()) %>% # count nbr of days in streaks
+                        filter(streak_length >= 7) %>% # keep streaks of at least 7 days 
+                        ungroup(streak_number) %>% # remove streak_number from grouping
+                        slice(which.max(date)) %>% # select earliest per year and pcode
+                        ungroup() %>%  
+                        dplyr::select(rainy_season, pcode, date, streak_length) %>% # remove and reorder columns
+                        rename(last_rain_streak_start_date = date) %>%
+                        data.frame() %>%
+                        mutate(end_date = last_rain_streak_start_date + streak_length) 
+
+# compile start and end date of each season for every adm2
+rainy_season_dates <- rainy_season_starts %>%
+                        dplyr::select(rainy_season, pcode, earliest_rain_streak_start_date) %>%
+                        inner_join(rainy_season_ends[,c('rainy_season', 'pcode', 'end_date')], by = c('rainy_season' = 'rainy_season', 'pcode' = 'pcode'))
+
 ## identify dry spells per adm2
 
 # compute per-region 14-d rolling sums
@@ -165,10 +188,16 @@ data_max_sums <- compute14dSum(data_max_values)
 
 # list days on which 14-day rolling sum is 2mm or less of rain
 data_max_sums$rollsum_ds_bin <- ifelse(data_max_sums$rollsum_14d <= 2, 1, 0)
+data_max_sums$rollsum_ds_bin <- ifelse(is.na(rollsum_ds_bin), 0, rollsum_ds_bin) # replace NAs with 0
 
-# identify beginning, end and duration of dry spells per region
+# extract year and month of records
+data_max_sums$year <- lubridate::year(data_max_sums$date) 
+data_max_sums$month <- lubridate::month(data_max_sums$date) 
+
+# identify beginning, end and duration of dry spells per region ## TO DO use proper rainy season start and end date
 dry_spells_list <- data_max_sums %>%
-                      mutate(rollsum_ds_bin = ifelse(is.na(rollsum_ds_bin), 0, rollsum_ds_bin)) %>%  # replace NAs with 0
+                      mutate(rainy_season = ifelse(month >= 10, year, ifelse(month <= 5, year - 1, 'outside rainy season'))) %>% # identify year the rainy season started & across calendar years)
+                      filter(rainy_season != 'outside rainy season' & !rainy_season %in% c('2009', '2020')) %>% # keep streaks during rainy season. remove 2009 and 2020 seasons because incomplete data
                       group_by(pcode, spell = cumsum(c(0, diff(rollsum_ds_bin) != 0))) %>% # groups consecutive days with rolling sum <= 2mm. [c(0) is to start the array with zero]. "spell" creates IDs for streaks of rollsum_ds_bin == 0 or == 1.
                       filter(rollsum_ds_bin == 1 & n() >= 1) %>% # keep all streaks of dates on which the 14-day rolling sum was <=2mm even if only 1 date's rolling sum met the criterion
                       summarize(dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (14+ days with <= 2mm of rain)
