@@ -63,6 +63,7 @@ class Config:
     FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
     FEWSWORLDPOP_PROCESSED_FILENAME = "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
     FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
+    FEWSADMPOP_PROCESSED_FILENAME = "{country}_fewsnet_admin{admin_level}{suffix}.csv"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
 
 
