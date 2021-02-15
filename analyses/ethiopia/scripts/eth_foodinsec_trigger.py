@@ -21,19 +21,28 @@ from indicators.food_insecurity.utils import compute_percentage_columns
 
 admin_level=1
 country="ethiopia"
+fn_process="admpop" #worldpop
 #suffix of filenames
 suffix=""
 config=Config()
 parameters = config.parameters(country)
 country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-fewsnet_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
-fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
+if fn_process=="worldpop":
+    fewsnet_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
+    fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
+elif fn_process=="admpop":
+    fewsnet_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSADMPOP_PROCESSED_DIR)
+    fewsnet_filename = config.FEWSADMPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
 globalipc_dir=os.path.join(country_folder,config.DATA_DIR, config.GLOBALIPC_PROCESSED_DIR)
 globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv")
 
 adm_bound_path= os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
 
 df_fn=pd.read_csv(os.path.join(fewsnet_dir,fewsnet_filename))
+#TODO: rename these in process_fewsnet_admpop script
+df_fn=df_fn.rename(columns={"ADM1_EN":"ADMIN1","ADM2_EN":"ADMIN2"})
+#TODO: add percentages in process_fewsnet_admpop script
+df_fn=compute_percentage_columns(df_fn,config)
 #TODO: figure out a way to automatically add data to the updates in the FN processing script
 #the data of 2021-01 is an update and thus doesn't include CS data or projected periods
 #add them here manually, where the CS data is set to that of 2020-10
