@@ -9,7 +9,7 @@ from pathlib import Path
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args, get_fewsnet_data
+from indicators.food_insecurity.utils import parse_args, download_fewsnet
 from utils_general.utils import config_logger, convert_to_numeric
 
 logger = logging.getLogger(__name__)
@@ -458,7 +458,7 @@ def aggr_admin1(df, adm1c):
     return df_adm
 
 
-def main(country, suffix,download_fewsnet, config=None):
+def main(country, suffix,download, config=None):
     """
     This script takes the FEWSNET IPC shapefiles provided by on fews.net and overlays them with an admin2 shapefile, in order
     to provide an IPC value for each admin2 district. In the case where there are multiple values per district, the IPC value
@@ -510,9 +510,9 @@ def main(country, suffix,download_fewsnet, config=None):
     # create output dir if it doesn't exist yet
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    if download_fewsnet:
+    if download:
         for d in fewsnet_dates:
-            get_fewsnet_data(d,iso2_code,region,regioncode,fewsnet_raw_dir)
+            download_fewsnet(d,iso2_code,region,regioncode,fewsnet_raw_dir)
 
     perioddf_dict = {}
     for period in config.IPC_PERIOD_NAMES:
