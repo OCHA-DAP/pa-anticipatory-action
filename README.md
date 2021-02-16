@@ -40,39 +40,26 @@ The indicators and analyses folders contain more specific information on the dat
 |    |    └── README        <- indicator specific information
 |    |
 |    ├── flooding
-|    |
 |    ├── food_insecurity
-|    |
 |    └── cholera
 |
-├── analyses <- analyses at the country level 
+├── analyses                <- analyses at the country level 
 |    ├── country_template   <- contains standardized country directory structure
 |    |    ├── notebooks     <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
-|    |    |
 |    |    ├── results       <- Results from analysis which may include model outputs, figures, reports.  
-|    |    |
 |    |    ├── scripts       <- Scripts to perform generalized data processing and analysis steps. These scripts might refer to the indicators folders
-|    |    |
 |    |    ├── data          <- Can include raw data as well as processed data
-|    |    |
 |    |    ├── config.yml    <- config file to specify country specific variables   
-|    |    |
 |    |    └── README.md     <- details about the project, instructions to reproduce the analysis
+|    |    
 |    ├── bangladesh
-|    |
 |    ├── chad
-|    |
 |    ├── ethiopia
-|    |
 |    ├── malawi
-|    |
 |    └── somalia
 |
 ├── utils_general           <-- All-purpose code that is generalizable across indicators and/or countries
-|
 ├── requirements.txt
-|
 ├── README
-|
 └── LICENSE
 ```

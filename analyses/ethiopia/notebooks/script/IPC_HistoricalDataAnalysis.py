@@ -17,107 +17,126 @@ import geopandas as gpd
 import warnings
 warnings.filterwarnings('ignore')
 
+from pathlib import Path
+import os
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
+sys.path.append(path_mod)
+from indicators.food_insecurity.config import Config
+
 
 country="ethiopia"
+admin_level=1
 #suffix of filenames
-suffix="_shape"
+suffix=""
+config=Config()
+parameters = config.parameters(country)
+country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+adm1_bound_path= os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
+fnwp_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
+fnwp_path = os.path.join(fnwp_dir,config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix))
 
 
 # #### Load FewsNet data
 
-df_fadm=pd.read_csv(f"Data/FewsNetProcessed/{country}_fewsnet_admin1{suffix}.csv",index_col=0)
+df_fadm=pd.read_csv(fnwp_path)
 df_fadm.date=pd.to_datetime(df_fadm.date)
 
 
-def add_columns(df):
-    df["date"] = pd.to_datetime(df["date"])
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-
-    # calculate percentage of population per analysis period and level
-    for period in ["CS", "ML1", "ML2"]:
-        # IPC level goes up to 5, so define range up to 6
-        for i in range(1, 6):
-            c = f"{period}_{i}"
-            df[f"perc_{c}"] = df[c] / df[f"pop_{period}"] * 100
-        # get pop and perc in IPC3+ and IPC2-
-        # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
-        df[f"{period}_3p"] = df[[f"{period}_{i}" for i in range(3, 6)]].sum(axis=1)
-        df[f"perc_{period}_3p"] = df[f"{period}_3p"] / df[f"pop_{period}"] * 100
-        df[f"{period}_2m"] = df[[f"{period}_{i}" for i in range(1, 3)]].sum(axis=1)
-        df[f"perc_{period}_2m"] = df[f"{period}_2m"] / df[f"pop_{period}"] * 100
-    df["perc_inc_ML2_3p"] = df["perc_ML2_3p"] - df["perc_CS_3p"]
-    df["perc_inc_ML1_3p"] = df["perc_ML1_3p"] - df["perc_CS_3p"]
-    return df
+#these are updates without new CS data, remove for cleanness
+df_fadm=df_fadm[~df_fadm.date.isin(["2020-08-01","2020-09-01"])]
 
 
-df_fadm=add_columns(df_fadm)
+df_fadm["date"]=pd.to_datetime(df_fadm["date"])
 
 
-#group to country
-df_fnat=df_fadm.groupby("date",as_index=False).sum()
-#to make the plotting code work
-df_fnat["ADM1_EN"]=country.capitalize()
-df_fnat=add_columns(df_fnat)
+df_fnat=pd.read_csv(os.path.join(fnwp_dir,config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=0,suffix=suffix)))
+
+
+#these are updates without new CS data, remove for cleanness
+df_fnat=df_fnat[~df_fnat.date.isin(["2020-08-01","2020-09-01"])]
+
+
+df_fnat["date"]=pd.to_datetime(df_fnat["date"])
 
 
 # ##### Check for missing data
 
-print("Number of date-admin1 combinations with no IPC CS data:", len(df_fadm[df_fadm.adjusted_population==0]))
+print("Number of date-admin1 combinations with no IPC CS data:", len(df_fadm[df_fadm.pop_CS==0]))
 
 
-print("Percentage of missing data:",len(df_fadm[df_fadm.adjusted_population==0])/len(df_fadm)*100)
+print("Percentage of missing data:",len(df_fadm[df_fadm.pop_CS==0])/len(df_fadm)*100)
 
 
 # #### Load Global IPC data
 
-df_gadm=pd.read_csv(f"Data/GlobalIPCProcessed/{country}_globalipc_admin1{suffix}.csv",index_col=0)
+globalipc_dir=os.path.join(country_folder,config.DATA_DIR, config.GLOBALIPC_PROCESSED_DIR)
+globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv")
+
+
+df_gadm=pd.read_csv(globalipc_path)
+
+
+df_gadm["date"]=pd.to_datetime(df_gadm["date"])
+df_gadm["year"]=df_gadm["date"].dt.year
+df_gadm["month"]=df_gadm["date"].dt.month
 
 
 glob_adm1c="ADMIN1"
 
 
-df_gadm=add_columns(df_gadm)
-
-
 #group to country
-df_gnat=df_gadm.groupby("date",as_index=False).sum()
-#to make the plotting code work
-df_gnat[glob_adm1c]=country.capitalize()
-df_gnat=add_columns(df_gnat)
+df_gnat=pd.read_csv(os.path.join(globalipc_dir,f"{country}_globalipc_admin0{suffix}.csv"))
+
+
+df_gnat["date"]=pd.to_datetime(df_gnat["date"])
+
+
+df_gnat.loc[df_gnat["date"]=="2019-09-01","pop_total_CS"]=df_fnat.loc[df_fnat["date"]=="2019-10-01","pop_total_CS"].values
+df_gnat.loc[df_gnat["date"]=="2020-08-01","pop_total_CS"]=df_fnat.loc[df_fnat["date"]=="2020-10-01","pop_total_CS"].values
+df_gnat.loc[df_gnat["date"]=="2020-10-01","pop_total_CS"]=df_fnat.loc[df_fnat["date"]=="2020-10-01","pop_total_CS"].values
 
 
 # ### Analysis of historical IPC values
 # To get a better understanding of the country's typical values and history, both on national and admin1 level
 
-def plot_ipclevels(df,adm1c="ADM1_EN",pop_col="adjusted_population",status="CS",figsize=(30,30),width=75):
+def plot_ipclevels(df,adm1c="ADMIN1",pop_col="pop_total_CS",status="CS",perc=False,figsize=(30,30),width=75,title=None):
     color_map = {1:'#C9E1C5', 2:'#F2E65D', 3:'#DD8236', 4:'#BD3430', 5:'#551010', 99: '#CCCCCC'}
     
 #     width = 75
     count = 1
     fig, ax = plt.subplots(figsize=figsize)
-    if f"{status}_12" not in df.columns:
-        df[f"{status}_12"]=df[f"{status}_1"]+df[f"{status}_2"]
+    if perc:
+        perc_str="perc_"
+    else:
+        perc_str=""
+    if f"{perc_str}{status}_12" not in df.columns:
+        df[f"{perc_str}{status}_12"]=df[f"{perc_str}{status}_1"]+df[f"{perc_str}{status}_2"]
     for region in df[adm1c].unique():
         ax = plt.subplot(6,2,count)
         df_c=df.copy()
         data = df_c.loc[df_c[adm1c]==region,:]
-
-        p4 = plt.bar(data['date'], data[f'{status}_5'], width=width, color=color_map[5],label="IPC 5")
-        p4 = plt.bar(data['date'], data[f'{status}_4'], width=width, color=color_map[4],label="IPC 4")
-        p3 = plt.bar(data['date'], data[f'{status}_3'], width=width, color=color_map[3], bottom=(data[f'{status}_4']+data[f'{status}_5']).to_numpy(),label="IPC 3")
-        p2 = plt.bar(data['date'], data[f'{status}_12'], width=width, color=color_map[1], bottom=(data[f'{status}_3']+data[f'{status}_4']+data[f'{status}_5']).to_numpy(),label="IPC 1 and 2")
-        data["pop_miss"]=data[pop_col]-(data[f"pop_{status}"].replace(np.nan,0))
-        p1 = plt.bar(data['date'], data['pop_miss'], width=width, color=color_map[99], bottom=(data[f"{status}_12"]+data[f'{status}_3']+data[f'{status}_4']+data[f'{status}_5']).to_numpy(),label="Missing data")
-
-        plt.title(f"{region} {status}")
+        
+        p4 = plt.bar(data['date'], data[f'{perc_str}{status}_5'], width=width, color=color_map[5],label="IPC 5")
+        p4 = plt.bar(data['date'], data[f'{perc_str}{status}_4'], width=width, color=color_map[4],label="IPC 4")
+        p3 = plt.bar(data['date'], data[f'{perc_str}{status}_3'], width=width, color=color_map[3], bottom=(data[f'{perc_str}{status}_4']+data[f'{perc_str}{status}_5']).to_numpy(),label="IPC 3")
+        p2 = plt.bar(data['date'], data[f'{perc_str}{status}_12'], width=width, color=color_map[1], bottom=(data[f'{perc_str}{status}_3']+data[f'{perc_str}{status}_4']+data[f'{perc_str}{status}_5']).to_numpy(),label="IPC 1 and 2")
+        if not perc:
+            data["pop_miss"]=data[pop_col]-(data[f"pop_{status}"].replace(np.nan,0))
+            p1 = plt.bar(data['date'], data['pop_miss'], width=width, color=color_map[99], bottom=(data[f"{perc_str}{status}_12"]+data[f'{perc_str}{status}_3']+data[f'{perc_str}{status}_4']+data[f'{perc_str}{status}_5']).to_numpy(),label="Missing data")
+        if title is not None:
+            plt.title(title)
+        else:
+            plt.title(f"{region} {perc_str}{status}")
         ax.legend(bbox_to_anchor=(1.04, 1),frameon=False)
 
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         ax.set_xlabel("Date")
-        ax.set_ylabel("Population")
-        
+        if not perc:
+            ax.set_ylabel("Population")
+        else:
+            ax.set_ylabel("Percentage of population")
         ax.xaxis.set_minor_locator(dates.MonthLocator())
         ax.xaxis.set_minor_formatter(dates.DateFormatter('%b'))
         ax.xaxis.set_major_locator(dates.YearLocator())
@@ -134,7 +153,10 @@ def plot_ipclevels(df,adm1c="ADM1_EN",pop_col="adjusted_population",status="CS",
 
 # #### FewsNet
 
-plot_ipclevels(df_fnat)
+plot_ipclevels(df_fnat,adm1c="ADMIN0")
+
+
+plot_ipclevels(df_fnat,adm1c="ADMIN0",status="CS",perc=True,title="Percentage of analyzed population in current situation per IPC phase")
 
 
 plot_ipclevels(df_fadm,figsize=(30,45))
@@ -142,7 +164,10 @@ plot_ipclevels(df_fadm,figsize=(30,45))
 
 # #### Global IPC
 
-plot_ipclevels(df_gnat,adm1c=glob_adm1c,pop_col="pop_CS",figsize=(30,45),width=10)
+plot_ipclevels(df_gnat,adm1c="ADMIN0",pop_col="pop_total_CS",figsize=(30,45),width=10)
+
+
+plot_ipclevels(df_gnat,adm1c="ADMIN0",status="CS",perc=True)
 
 
 plot_ipclevels(df_gadm,adm1c=glob_adm1c,pop_col="pop_CS",figsize=(30,45),width=10)
@@ -209,43 +234,62 @@ df_fnat["Source"]="FewsNet"
 df_gnat["Source"]="Global"
 
 
-df_gnat.columns
-
-
-col_list=["Source","pop_Country","date","pop_CS","pop_ML1","pop_ML2"]+[f"CS_{i}" for i in range(1,6)]+[f"ML1_{i}" for i in range(1,6)]+[f"ML2_{i}" for i in range(1,6)]+[f"perc_CS_{i}" for i in range(1,6)]+[f"perc_ML1_{i}" for i in range(1,6)]+[f"perc_ML2_{i}" for i in range(1,6)]
-df_fnat=df_fnat.rename(columns={"adjusted_population":"pop_Country"})
-df_gnat=df_gnat.rename(columns={"pop_ADMIN1":"pop_Country"})
-df_fnats=df_fnat[col_list]
-df_gnats=df_gnat[col_list]
-
-
 #manually select the closes dates of Global IPC and FewsNet..
-list(df_gnats.date.dt.date.unique())
+list(df_gnat.date.dt.date.unique())
 
 
-df_fnats.date.dt.date.unique()
+df_fnat.date.dt.date.unique()
 
 
-df_fnatsd=df_fnats[df_fnats.date.isin(["2019-10","2020-10"])]
+df_gnatd=df_gnat[df_gnat.date.isin(["2019-9","2020-08"])]
 
 
-df_comb=pd.concat([df_gnats,df_fnatsd])
+df_fnatd=df_fnat[df_fnat.date.isin(["2019-10","2020-10"])]
+
+
+df_fnatd[["period_ML1","period_ML2"]]
+
+
+df_fnatd["perc_ML1_2m"]
+
+
+df_comb=pd.concat([df_gnatd,df_fnatd])
 
 
 df_comb
 
 
-df_comb.columns
+df_combm=df_comb.melt(id_vars=["Source","date"],value_name="percentage",value_vars=['perc_CS_2m','perc_CS_3',"perc_CS_4","perc_CS_5"])
 
 
-df_comb=add_columns(df_comb)
+df_combm["year"]=df_combm.date.dt.year
 
 
-df_combm=df_comb.melt(id_vars=["Source","date","year"],value_name="percentage",value_vars=['perc_CS_2m','perc_CS_3',"perc_CS_4","perc_CS_5"])
+fig=px.bar(df_combm,x="variable",y="percentage",color="Source",facet_row="year",barmode="group",height=600,width=800,title="Current situation") #,facet_row="year"
+fig.update_xaxes(ticktext=["IPC2-","IPC3","IPC4","IPC5"],tickvals=["perc_CS_2m","perc_CS_3","perc_CS_4","perc_CS_5"])
+
+fig.show()
 
 
-fig=px.bar(df_combm,x="variable",y="percentage",color="Source",facet_row="year",barmode="group",height=600,width=800) #,facet_row="year"
-fig.update_xaxes(ticktext=["IPC2-","IPC3","IPC4","IPC5"],tickvals=["perc_CS_2-","perc_CS_3","perc_CS_4","perc_CS_5"])
+df_combm=df_comb.melt(id_vars=["Source","date"],value_name="percentage",value_vars=['perc_ML1_2m','perc_ML1_3',"perc_ML1_4","perc_ML1_5"])
+
+
+df_combm["year"]=df_combm.date.dt.year
+
+
+fig=px.bar(df_combm,x="variable",y="percentage",color="Source",facet_row="year",barmode="group",height=600,width=800,title="Short term projections") #,facet_row="year"
+fig.update_xaxes(ticktext=["IPC2-","IPC3","IPC4","IPC5"],tickvals=["perc_ML1_2m","perc_ML1_3","perc_ML1_4","perc_ML1_5"])
+fig.show()
+
+
+df_combm=df_comb.melt(id_vars=["Source","date"],value_name="percentage",value_vars=['perc_ML2_2m','perc_ML2_3',"perc_ML2_4","perc_ML2_5"])
+
+
+df_combm["year"]=df_combm.date.dt.year
+
+
+fig=px.bar(df_combm,x="variable",y="percentage",color="Source",facet_row="year",barmode="group",height=600,width=800,title="Medium term projections") #,facet_row="year"
+fig.update_xaxes(ticktext=["IPC2-","IPC3","IPC4","IPC5"],tickvals=["perc_ML2_2m","perc_ML2_3","perc_ML2_4","perc_ML2_5"])
 fig.show()
 
 
