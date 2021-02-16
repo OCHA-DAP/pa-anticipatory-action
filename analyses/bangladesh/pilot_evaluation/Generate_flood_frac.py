@@ -1,8 +1,9 @@
-from scripts import utils
 import geopandas as gpd
 import pandas as pd
 import datetime
 import os
+
+import utils
 
 # This script takes the flood extent shapefiles output from the GEE Sentinel-1 data processing script
 # and outputs a .csv file that provides a time series of the flooding fraction by admin units in Bangladesh.
@@ -21,7 +22,7 @@ import os
 # - CRS for shapefiles
 # - Bangladesh districts in the region of interest
 
-parameters = utils.parse_yaml('config.yml')['DIRS']
+parameters = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
 adm_dir = parameters['adm_dir']
 gee_dir = parameters['gee_dir']
 output_dir = parameters['data_dir']

@@ -60,22 +60,25 @@ The content within this repository is structured as follows:
 
 ├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
 │
+├── pilot_evaluation          <- Scripts related to the trigger evaluation
+│   ├── d01_data              <- Scripts to load in datasets. 
+│   ├── d02_processing        <- Scripts to perform basic cleaning and preprocessing on data.
+│   ├── d03_analysis          <- Scripts to conduct more in-depth analysis of data
+│   ├── d04_visualization     <- Scripts to create visualizations. 
+│   ├── config.yml                <- Global variables.
+│   ├── Generate_flood_frac.py <- Top level script to generate flood extent from GEE output shapefiles.
+│   └── Generate_interpolated.py <- Top level script to generate interpolated flood extent estimates. 
+│
 ├── results                   <- Summary documentation and final outputs of analyses. 
 │   ├── figures               <- Output figures to summarize results. 
 │   └── write_up              <- Summary documentation addressing methodology and results.  
 │
-├── scripts                   <- Scripts to perform data processing and analysis.    
-│   ├── d01_data              <- Scripts to load in datasets. 
-│   ├── d02_processing        <- Scripts to perform basic cleaning and preprocessing on data.
-│   ├── d03_analysis          <- Scripts to conduct more in-depth analysis of data
-│   └── d04_visualization     <- Scripts to create visualizations. 
+├── trigger_analysis          <- Scripts related to the trigger analysis
+│   ├── GetGLOFAS_Data.py     <- Download GloFAS data from CDS
+│   ├── GLOFAS_prediction_error.py <- Compare GLoFAS forecast with observations
+│   └── HistoricalValidation_triggers.py <- Plot GloFAS forecast against FFWC triggers  
 │
-├── Generate_flood_frac.py    <- Top level script to generate flood extent from GEE output shapefiles.
-├── Generate_interpolated.py  <- Top level script to generate interpolated flood extent estimates. 
-├── README.md                 <- Description of this project.
-├── config.yml                <- Global variables.
-└── environment.yml           <- Contains dependencies to set up a conda environment. 
-
+└── README.md                 <- Description of this project.
 ```
 
 Larger raw and processed data files are currently not included within this repository. As described below, the historical analysis of flood extent can be reproduced using shapefiles generated from a Google Earth Engine script. Note that this requires a Google Earth Engine account. 

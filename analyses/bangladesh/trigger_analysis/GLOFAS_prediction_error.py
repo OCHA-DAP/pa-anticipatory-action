@@ -1,28 +1,25 @@
 import os
 import pandas as pd
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import date, timedelta
 
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 GLOFAS_DS_FILENAME='{}.csv'
 GLOFAS_DS_ENSEMBLE_FILENAME='10daysleadtime_19972018_allensemble.xls'
-GLOFAS_DS_FOLDER='GLOFAS_data'
+GLOFAS_DS_FOLDER='data/GLOFAS_Data'
 
 def get_glofas_df():
-    glofas_df=pd.DataFrame(columns=['dis24'])
+    glofas_df=pd.DataFrame(['dis24_Noonkhawa'])
     for year in range(1979,2021):
         glofas_fn=GLOFAS_DS_FILENAME.format(year)
-        glofas_df=glofas_df.append(pd.read_csv('{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,glofas_fn),
+        glofas_df=glofas_df.append(pd.read_csv('{}/{}'.format(GLOFAS_DS_FOLDER,glofas_fn),
                                                 index_col=0))
     glofas_df.index=pd.to_datetime(glofas_df.index)
     return glofas_df
 
 def get_glofas_ensemble_df():
-    glofas_ens_df=pd.read_excel('{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
+    glofas_ens_df=pd.read_excel('{}/{}'.format(GLOFAS_DS_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
                                     index_col=0)
     glofas_ens_df.index=pd.to_datetime(glofas_ens_df.index,format='%Y-%m-%d')
     # shift 10 days
@@ -40,11 +37,11 @@ all_projections=pd.merge(glofas_ens_df,glofas_df, left_index=True,right_index=Tr
 fig1,(ax1, ax2) = plt.subplots(2,figsize=[15,7],sharex=True)
 # ax1=plt.subplot(211)
 # draw GLOFAS
-all_projections['dis24'].plot(label='GLOFAS water discharge - reanalysis',ax=ax1,c='green')
+all_projections['dis24_Noonkhawa'].plot(label='GLOFAS water discharge - reanalysis',ax=ax1,c='green')
 all_projections['dis24_avg'].plot(label='GLOFAS water discharge - projection (10 days shifted)',ax=ax1,c='blue')
 ax1.legend(loc='best')
 
-all_projections['rel_diff']=(all_projections['dis24_avg']-all_projections['dis24'])/all_projections['dis24']
+all_projections['rel_diff']=(all_projections['dis24_avg']-all_projections['dis24_Noonkhawa'])/all_projections['dis24_Noonkhawa']
 # print(all_projections.index.month)
 all_projections=all_projections[all_projections.index.month.isin([6,7,8,9])]
 
