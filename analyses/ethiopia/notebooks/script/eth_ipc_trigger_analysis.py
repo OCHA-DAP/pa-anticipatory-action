@@ -2,6 +2,7 @@
 # coding: utf-8
 
 # ### Test different thresholds of IPC levels for FewsNet and Global IPC
+# **Note: this notebook uses FewsNet data with WorldPop population data, but the framework endorsed in October 2020 was based on the usage of Admin2 population data**    
 # For the anticipatory action framework, we want to define the trigger mechanism based on data. One of the possible data sources are IPC levels. Based on the historical analysis of FewsNet and Global IPC, and conversations with partners, different triggers were tested. This notebook provides a subset of tested triggers and the code to easily test any triggers of interest.    
 # 
 # IPC trigger design as of 08-10-2020:   
