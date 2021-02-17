@@ -1,4 +1,5 @@
 """
+# TODO: refactor & move to utils_general
 Download raster data from GLOFAS and extracts time series of water discharge in selected locations,
 matching the FFWC stations data
 """
@@ -12,8 +13,8 @@ import numpy as np
 import pandas as pd
 import cdsapi
 from netCDF4 import Dataset
+import xarray as xr
 
-# TODO: refactor & move to utils_general
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
 FFWC_STATIONS = {
@@ -40,6 +41,8 @@ GlofasContainer = namedtuple(
         "system_version_minor",
     ],
 )
+# Reanalysis:
+# https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical
 GLOFAS_REANALYSIS = GlofasContainer(
     year_min=1979,
     year_max=2020,
@@ -48,22 +51,24 @@ GLOFAS_REANALYSIS = GlofasContainer(
     datasets=["consolidated_reanalysis"],
     system_version_minor=1,
 )
+# Reforecast:
+# https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-reforecast
 GLOFAS_REFORECAST = GlofasContainer(
     year_min=1999,
     year_max=2018,
-    leadtime_hours=[240, 480, 600, 720],
+    leadtime_hours=[120, 240, 360, 480, 600, 720],
     cds_name="cems-glofas-reforecast",
     datasets=["control_reforecast", "ensemble_perturbed_reforecasts"],
     system_version_minor=2,
 )
 
-
 cdsapi_client = cdsapi.Client()
 
 
 def main():
-    #download_glofas_reanalysis()
-    download_glofas_reforecast()
+    # download_glofas_reanalysis()
+    # download_glofas_reforecast()
+    process_glofas_reanalysis()
     """"
     for year in range(1979, 2021):
         print(year)
@@ -80,10 +85,6 @@ def download_glofas_reanalysis(
     year_min: int = GLOFAS_REANALYSIS.year_min,
     year_max: int = GLOFAS_REANALYSIS.year_max,
 ):
-    """
-    Reanalysis:
-    https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical
-    """
     for year in range(year_min, year_max + 1):
         download_glofas_zip(
             system_version_minor=GLOFAS_REANALYSIS.system_version_minor,
@@ -98,10 +99,6 @@ def download_glofas_reforecast(
     year_max: int = GLOFAS_REFORECAST.year_max,
     leadtime_hours: list = None,
 ):
-    """
-    Reforecast:
-    https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-reforecast
-    """
     if leadtime_hours is None:
         leadtime_hours = GLOFAS_REFORECAST.leadtime_hours
     for year in range(year_min, year_max + 1):
@@ -196,14 +193,41 @@ def get_area(stations_lon_lat: dict = None, buffer=0.5):
     # TODO: refactor this out
     if stations_lon_lat is None:
         stations_lon_lat = FFWC_STATIONS
-    lon_list = [lon_lat[0] for lon_lat in stations_lon_lat.values()]
-    lat_list = [lon_lat[1] for lon_lat in stations_lon_lat.values()]
+    lon_list = [lon for (lon, lat) in stations_lon_lat.values()]
+    lat_list = [lat for (lon, lat) in stations_lon_lat.values()]
     return [
         max(lat_list) + buffer,
         min(lon_list) - buffer,
         min(lat_list) - buffer,
         max(lon_list) + buffer,
     ]
+
+
+def process_glofas_reanalysis():
+    df_reanalysis = pd.DataFrame()
+    for year in range(GLOFAS_REANALYSIS.year_min, GLOFAS_REANALYSIS.year_max + 1):
+        filepath = get_glofas_filepath(
+            cds_name=GLOFAS_REANALYSIS.cds_name,
+            dataset=GLOFAS_REANALYSIS.datasets[0],
+            year=year,
+        )
+        ds = xr.open_dataset(filepath, engine="cfgrib")
+        df_year = pd.DataFrame()
+        for station_name, lon_lat in FFWC_STATIONS.items():
+            lat_index = np.abs(ds.latitude - lon_lat[0]).argmin()
+            lon_index = np.abs(ds.longitude - lon_lat[1]).argmin()
+            df_station = (
+                ds.isel(latitude=lat_index, longitude=lon_index)
+                .drop_vars(names=["step", "surface", "latitude", "longitude", "valid_time"])
+                .to_dataframe()
+                .rename(columns={'dis24': station_name})
+            )
+            df_year = df_year.merge(df_station, left_index=True,
+                                                right_index=True, how='outer')
+        df_reanalysis = df_reanalysis.append(df_year)
+
+
+######################
 
 
 def extract_dis24_values(date, folder, glofas_df):
