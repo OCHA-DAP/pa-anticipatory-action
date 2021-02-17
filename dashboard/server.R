@@ -79,12 +79,12 @@ server <- function(input, output) {
     # Display rainfall maps as temp projections. NOte single quotes must be outer set because string must include double quotes to be processed as HTML
     
     
-    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/jan2021/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
-    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/Feb-April-GHA-Rainfall.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
+    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/feb2021/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
+    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/MAM_GHA_Rainfall.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
     output$chc <- renderText({c('<img src="','https://blog.chc.ucsb.edu/wp-content/uploads/2021/01/Screen-Shot-2021-01-20-at-5.21.51-PM.png"','width = "500px" height = "500px"', '>')})
-    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/NMME/prob/images/prob_ensemble_prate_season1.png"','width = "500px" height = "500px"', '>')})
-    output$eth_nma <- renderText("No forecast for the 2021 Belg season available from the NMA.")
-    output$copernicus <- renderText({c('<img src="','https://stream.ecmwf.int/data/gorax-blue-005/data/scratch/20201222-0920/c3/convert_image-gorax-blue-005-6fe5cac1a363ec1525f54343b6cc9fd8-b9q_5d.png"','width = "500px" height = "500px"', '>')})    
+    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/international/nmme/probabilistic_seasonal/africa_nmme_prec_3catprb_FebIC_Mar2021-May2021.png"','width = "600px" height = "500px"', '>')})
+    #output$eth_nma <- renderText("No forecast for the 2021 Belg season available from the NMA.")
+    output$copernicus <- renderText({c('<img src="','https://apps.ecmwf.int/webapps/opencharts/streaming/20210216-0810/87/pdf2svg-worker-commands-69c6db9bf8-d9qk2-6fe5cac1a363ec1525f54343b6cc9fd8-6Xzy4c.svg"','width = "500px" height = "500px"', '>')})    
     
     # create conditional lists of triggered regions
     output$triggered_regions_list <- renderText({
