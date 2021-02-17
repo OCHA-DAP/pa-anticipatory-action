@@ -1,117 +1,257 @@
-import cdsapi
-import zipfile
+"""
+Download raster data from GLOFAS and extracts time series of water discharge in selected locations,
+matching the FFWC stations data
+"""
 import os
+import zipfile
 from pathlib import Path
-import pandas as pd
-from netCDF4 import Dataset
+from datetime import date, timedelta, datetime
+from collections import namedtuple
+
 import numpy as np
-from datetime import date, timedelta
-import shutil
+import pandas as pd
+import cdsapi
+from netCDF4 import Dataset
 
 # TODO: refactor & move to utils_general
-
-# Download raster data from GLOFAS and extracts time series of water discharge in selected locations, matching the FFWC stations 
-# data from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
-
-# location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
-# some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-FFWC_Stations_lonlat={
-    'Noonkhawa':[89.9509,25.9496],
-    'Chilmari':[89.7476,25.5451],
-    'Bahadurabad':[89.6607,25.1028],
-    'Sariakandi':[89.6518,24.8901],
-    'Kazipur':[89.7498,24.6637],
-    'Serajganj':[89.7479,24.4676],
-    'Aricha':[89.6550,23.9032]
+# Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
+# Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
+FFWC_STATIONS = {
+    "Noonkhawa": [89.9509, 25.9496],
+    "Chilmari": [89.7476, 25.5451],
+    "Bahadurabad": [89.6607, 25.1028],
+    "Sariakandi": [89.6518, 24.8901],
+    "Kazipur": [89.7498, 24.6637],
+    "Serajganj": [89.7479, 24.4676],
+    "Aricha": [89.6550, 23.9032],
 }
-
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-GLOFAS_DS_FILENAME='CEMS_ECMWF_dis24_{}_glofas_v2.1.nc'
-GLOFAS_DS_FOLDER='data/GLOFAS_Data'
+GLOFAS_DS_FILENAME = "CEMS_ECMWF_dis24_{}_glofas_v2.1.nc"
+GLOFAS_DS_FOLDER = Path("data/GLOFAS_Data")
 
-def unzip(zip_file_path, save_path):
-    print(f'Unzipping {zip_file_path}')
-    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-        zip_ref.extractall(save_path)
+GlofasContainer = namedtuple(
+    "Container",
+    [
+        "year_min",
+        "year_max",
+        "leadtime_hours",
+        "cds_name",
+        "datasets",
+        "system_version_minor",
+    ],
+)
+GLOFAS_REANALYSIS = GlofasContainer(
+    year_min=1979,
+    year_max=2020,
+    leadtime_hours=None,
+    cds_name="cems-glofas-historical",
+    datasets=["consolidated_reanalysis"],
+    system_version_minor=1,
+)
+GLOFAS_REFORECAST = GlofasContainer(
+    year_min=1999,
+    year_max=2018,
+    leadtime_hours=[240, 480, 600, 720],
+    cds_name="cems-glofas-reforecast",
+    datasets=["control_reforecast", "ensemble_perturbed_reforecasts"],
+    system_version_minor=2,
+)
 
-def get_GLOFAS_zip(c_api,year,folder):
-    
-    Path(folder).mkdir(parents=True, exist_ok=True)
 
-    c_api.retrieve(
-    'cems-glofas-historical',
-    {
-        'format': 'zip',
-        'dataset': 'Consolidated reanalysis',
-        'variable': 'River discharge',
-        'version': '2.1',
-        'year': '{}'.format(year),
-        'month': [
-            '01', '02', '03',
-            '04', '05', '06',
-            '07', '08', '09',
-            '10', '11', '12',
-        ],
-        'day': [
-            '01', '02', '03',
-            '04', '05', '06',
-            '07', '08', '09',
-            '10', '11', '12',
-            '13', '14', '15',
-            '16', '17', '18',
-            '19', '20', '21',
-            '22', '23', '24',
-            '25', '26', '27',
-            '28', '29', '30',
-            '31',
-        ],
-    },
-    '{}/download_{}.zip'.format(folder,year))
+cdsapi_client = cdsapi.Client()
 
-def extract_dis24_values(date,folder,glofas_df):
+
+def main():
+    #download_glofas_reanalysis()
+    download_glofas_reforecast()
+    """"
+    for year in range(1979, 2021):
+        print(year)
+        folder = '{}/{}/{}'.format(DIR_PATH, GLOFAS_DS_FOLDER, year)
+        # get_GLOFAS_zip(c,year,folder)
+        unzip('{}/download_{}.zip'.format(folder, year), folder)
+        glofas_df = get_glofas_df(year, folder)
+        glofas_df.to_csv('{}/{}/{}.csv'.format(DIR_PATH, GLOFAS_DS_FOLDER, year))
+        shutil.rmtree(folder)
+   """
+
+
+def download_glofas_reanalysis(
+    year_min: int = GLOFAS_REANALYSIS.year_min,
+    year_max: int = GLOFAS_REANALYSIS.year_max,
+):
+    """
+    Reanalysis:
+    https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical
+    """
+    for year in range(year_min, year_max + 1):
+        download_glofas_zip(
+            system_version_minor=GLOFAS_REANALYSIS.system_version_minor,
+            cds_name=GLOFAS_REANALYSIS.cds_name,
+            dataset=GLOFAS_REANALYSIS.datasets[0],
+            year=year,
+        )
+
+
+def download_glofas_reforecast(
+    year_min: int = GLOFAS_REFORECAST.year_min,
+    year_max: int = GLOFAS_REFORECAST.year_max,
+    leadtime_hours: list = None,
+):
+    """
+    Reforecast:
+    https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-reforecast
+    """
+    if leadtime_hours is None:
+        leadtime_hours = GLOFAS_REFORECAST.leadtime_hours
+    for year in range(year_min, year_max + 1):
+        for month in range(1, 13):
+            for leadtime_hour in leadtime_hours:
+                for dataset in GLOFAS_REFORECAST.datasets:
+                    download_glofas_zip(
+                        system_version_minor=GLOFAS_REFORECAST.system_version_minor,
+                        cds_name=GLOFAS_REFORECAST.cds_name,
+                        dataset=dataset,
+                        year=year,
+                        month=month,
+                        leadtime_hour=leadtime_hour,
+                    )
+
+
+def download_glofas_zip(
+    cds_name: str,
+    system_version_minor: int,
+    dataset: str,
+    year: int,
+    month: int = None,
+    leadtime_hour: int = None,
+):
+    filepath = get_glofas_filepath(
+        cds_name=cds_name,
+        dataset=dataset,
+        year=year,
+        month=month,
+        leadtime_hour=leadtime_hour,
+    )
+    Path(filepath.parent).mkdir(parents=True, exist_ok=True)
+    print(filepath)
+    cdsapi_client.retrieve(
+        name=cds_name,
+        request=get_glofas_query(
+            system_version_minor=system_version_minor,
+            dataset=dataset,
+            year=year,
+            month=month,
+            leadtime_hour=leadtime_hour,
+        ),
+        target=filepath,
+    )
+
+
+def get_glofas_filepath(
+    cds_name: str, dataset: str, year: int, month: int = None, leadtime_hour: int = None
+):
+    directory = Path(GLOFAS_DS_FOLDER) / Path(cds_name) / Path(dataset)
+    filename = f"{year}"
+    if month is not None:
+        filename += f"-{str(month).zfill(2)}"
+    if leadtime_hour is not None:
+        filename += f"_lt{str(leadtime_hour).zfill(4)}"
+    filename += ".grib"
+    return directory / Path(filename)
+
+
+def get_glofas_query(
+    system_version_minor: int,
+    dataset: str,
+    year: int,
+    month: int = None,
+    leadtime_hour: int = None,
+):
+    query = {
+        "system_version": f"version_2_{system_version_minor}",
+        "variable": "river_discharge_in_the_last_24_hours",
+        "format": "grib",
+        "hyear": str(year),
+        "hmonth": [str(x).zfill(2) for x in range(1, 13)]
+        if month is None
+        else str(month).zfill(2),
+        "hday": [str(x).zfill(2) for x in range(1, 32)],
+        "area": get_area(),
+    }
+    if system_version_minor == 1:
+        query["dataset"] = dataset
+    elif system_version_minor == 2:
+        query["product_type"] = dataset
+    if leadtime_hour is not None:
+        query["leadtime_hour"] = str(leadtime_hour)
+    print(query)
+    return query
+
+
+def get_area(stations_lon_lat: dict = None, buffer=0.5):
+    """
+    Format is: [N, W, S, E]
+    """
+    # TODO: refactor this out
+    if stations_lon_lat is None:
+        stations_lon_lat = FFWC_STATIONS
+    lon_list = [lon_lat[0] for lon_lat in stations_lon_lat.values()]
+    lat_list = [lon_lat[1] for lon_lat in stations_lon_lat.values()]
+    return [
+        max(lat_list) + buffer,
+        min(lon_list) - buffer,
+        min(lat_list) - buffer,
+        max(lon_list) + buffer,
+    ]
+
+
+def extract_dis24_values(date, folder, glofas_df):
     try:
-        glofas_ds_name='{}/{}'.format(folder,GLOFAS_DS_FILENAME.format(date.strftime("%Y%m%d")))
-        glofas = Dataset(glofas_ds_name,'r')
+        glofas_ds_name = "{}/{}".format(
+            folder, GLOFAS_DS_FILENAME.format(date.strftime("%Y%m%d"))
+        )
+        glofas = Dataset(glofas_ds_name, "r")
 
-        lats = glofas.variables['lat'][:] 
-        lons = glofas.variables['lon'][:]
-        
+        lats = glofas.variables["lat"][:]
+        lons = glofas.variables["lon"][:]
+
         # loop over stations
-        for station_name, station_lonlat in FFWC_Stations_lonlat.items():
+        for station_name, station_lonlat in FFWC_STATIONS.items():
             # latitude lower and upper index
-            lonbound = np.argmin(np.abs( lons - station_lonlat[0]))
-            latbound = np.argmin(np.abs( lats - station_lonlat[1]))
+            lonbound = np.argmin(np.abs(lons - station_lonlat[0]))
+            latbound = np.argmin(np.abs(lats - station_lonlat[1]))
             # variables are lon,lat,time,dis24
-            discharge = glofas.variables['dis24'][:,latbound,lonbound]
+            discharge = glofas.variables["dis24"][:, latbound, lonbound]
             if discharge is not None:
-                glofas_df.at[date,f'dis24_{station_name}']=discharge
+                glofas_df.at[date, f"dis24_{station_name}"] = discharge
         return glofas_df
     except Exception as e:
-        print(f'discharge data not available for {date}')
+        print(f"discharge data not available for {date}")
         print(e)
         return glofas_df
 
-def get_glofas_df(year,folder):
+
+def get_glofas_df(year, folder):
     start_date = date(year, 1, 1)
     end_date = date(year, 12, 31)
     delta = timedelta(days=1)
-    glofas_df=pd.DataFrame()
+    glofas_df = pd.DataFrame()
     while start_date <= end_date:
         # print(start_date.strftime("%Y-%m-%d"))
-        glofas_df=extract_dis24_values(start_date,folder,glofas_df)
+        glofas_df = extract_dis24_values(start_date, folder, glofas_df)
         start_date += delta
-    glofas_df.index=pd.to_datetime(glofas_df.index)
-    glofas_df.index.name = 'date'
-    glofas_df = glofas_df.resample('D').mean().interpolate(method='linear')
+    glofas_df.index = pd.to_datetime(glofas_df.index)
+    glofas_df.index.name = "date"
+    glofas_df = glofas_df.resample("D").mean().interpolate(method="linear")
     return glofas_df
 
-c = cdsapi.Client()
 
-for year in range(1979,2021):
-    print(year)
-    folder='{}/{}/{}'.format(DIR_PATH,GLOFAS_DS_FOLDER,year)
-    get_GLOFAS_zip(c,year,folder)
-    unzip('{}/download_{}.zip'.format(folder,year),folder)
-    glofas_df=get_glofas_df(year,folder)
-    glofas_df.to_csv('{}/{}/{}.csv'.format(DIR_PATH,GLOFAS_DS_FOLDER,year))
-    shutil.rmtree(folder)
+def unzip(zip_file_path, save_path):
+    print(f"Unzipping {zip_file_path}")
+    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
+        zip_ref.extractall(save_path)
+
+
+if __name__ == "__main__":
+    main()
