@@ -11,10 +11,15 @@ library(tmap)
 #and the percentage per ipc phase columns, i.e. perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4
 # the threshold_reached columns should have boolean values
 ipc_indices_data <- read.csv("data/foodinsecurity/ethiopia_foodinsec_trigger.csv") 
-#last date of fewsnet and global ipc can differ, so select them separately and combine them
-ipc_indices_data_latest_fn <- ipc_indices_data %>% filter(source == "FewsNet") %>% filter(date == max(date))
-ipc_indices_data_latest_gbl <- ipc_indices_data %>% filter(source == "GlobalIPC") %>% filter(date == max(date))
-ipc_indices_data_latest <- rbind(ipc_indices_data_latest_fn,ipc_indices_data_latest_gbl)
+
+# convert date string as a Date format
+ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%m/%d/%y")
+
+#last date of fewsnet and global ipc can differ, so select them separately 
+ipc_indices_data_latest <- ipc_indices_data %>%  
+                            group_by(source) %>%
+                            slice(which.max(date)) %>% # keep only latest date
+                            ungroup()
 
 # import shapefiles
 eth_adm1 <- st_read("data/shapefiles/ET_Admin_OCHA_2020/eth_admbnda_adm1_csa_bofed_20201008.shp", stringsAsFactors = F)
