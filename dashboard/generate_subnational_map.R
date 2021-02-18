@@ -13,13 +13,12 @@ library(tmap)
 ipc_indices_data <- read.csv("data/foodinsecurity/ethiopia_foodinsec_trigger.csv") 
 
 # convert date string as a Date format
-ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%m/%d/%y")
+#ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%m/%d/%y")
 
 #last date of fewsnet and global ipc can differ, so select them separately 
-ipc_indices_data_latest <- ipc_indices_data %>%  
-                            group_by(source) %>%
-                            slice(which.max(date)) %>% # keep only latest date
-                            ungroup()
+ipc_indices_data_latest_fn <- ipc_indices_data %>% filter(source == "FewsNet") %>% filter(date == max(date))
+ipc_indices_data_latest_gbl <- ipc_indices_data %>% filter(source == "GlobalIPC") %>% filter(date == max(date))
+ipc_indices_data_latest <- rbind(ipc_indices_data_latest_fn,ipc_indices_data_latest_gbl)
 
 # import shapefiles
 eth_adm1 <- st_read("data/shapefiles/ET_Admin_OCHA_2020/eth_admbnda_adm1_csa_bofed_20201008.shp", stringsAsFactors = F)
