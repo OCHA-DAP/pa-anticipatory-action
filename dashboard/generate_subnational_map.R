@@ -7,7 +7,10 @@ library(sf)
 library(tmap)
 
 # read in data to display
-ipc_indices_data <- read.csv("data/foodinsecurity/ethiopia_foodinsec_trigger.csv") #Nov2020_FewsNetGlobalIPC.csv")
+# the csv should contain several columns, namely a source, date, ADMIN1, period_ML1, period_ML2, threshold_reached_ML1, threshold_reached_ML2
+#and the percentage per ipc phase columns, i.e. perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4
+# the threshold_reached columns should have boolean values
+ipc_indices_data <- read.csv("data/foodinsecurity/ethiopia_foodinsec_trigger.csv") 
 #last date of fewsnet and global ipc can differ, so select them separately and combine them
 ipc_indices_data_latest_fn <- ipc_indices_data %>% filter(source == "FewsNet") %>% filter(date == max(date))
 ipc_indices_data_latest_gbl <- ipc_indices_data %>% filter(source == "GlobalIPC") %>% filter(date == max(date))
