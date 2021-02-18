@@ -13,7 +13,7 @@ library(tmap)
 ipc_indices_data <- read.csv("data/foodinsecurity/ethiopia_foodinsec_trigger.csv") 
 
 # convert date string as a Date format
-#ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%m/%d/%y")
+ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%Y-%m-%d")
 
 #last date of fewsnet and global ipc can differ, so select them separately 
 ipc_indices_data_latest_fn <- ipc_indices_data %>% filter(source == "FewsNet") %>% filter(date == max(date))
