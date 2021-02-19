@@ -1,8 +1,8 @@
 DIRS:
   adm_dir: "data/ADM_Shp"
-  data_dir: "data/FE_Results_06_02"
-  gee_dir: "data/GEE_Output_06_02"
-  plot_dir: "results/figures/flood_extent"
+  data_dir: "data/FE_Results_18_02"
+  gee_dir: "data/GEE_Output_18_02"
+  plot_dir: "results/figures/flood_extent/Results_18_02"
 FILES:
   adm_shp: 'data/ADM_Shp/selected_distict_mauza.shp'
   river_shp: 'data/ADM_Shp/river_extent.shp'

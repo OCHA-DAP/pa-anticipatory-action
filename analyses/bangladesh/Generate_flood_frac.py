@@ -11,14 +11,14 @@ import logging
 # 1) The shapefiles of flood extent output from the GEE script, located within the same 'gee_dir'
 # 2) Shapefile of admin regions in Bangladesh, located in the 'adm_dir'
 # 3) Shapefile with permanent water bodies in Bangladesh, located in the 'adm_dir' folder
-# 4) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), specified as a command-line argument
+# 4) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), located in the 'config.yml'
 
 # Directory locations for the input and output files should be specified in the 'config.yml' file.
 
+# TODO: Look for ways to optimize. Currently is very slow, likely due to the geopandas overlay operations. 
 # TODO: Fix variable hard-coding. Currently hard-coded variables include:
 # - Bangladesh districts in the region of interest
 # - Column names for shapefiles
-# TODO: Consider treatment of nan values when an admin area is totally covered by the river
 # TODO: Move tests to separate file
 
 
@@ -56,7 +56,7 @@ def get_adm_shp(shp_admin: str) -> gpd.GeoDataFrame:
     logging.info(f'Area of interest contains {len(shp.index)} admin units.')
 
     try:
-        assert len(shp[f'{ADM}_PCODE'].unique() == len(shp.index)), 'PCODE field is not unique.'
+        assert len(shp[f'{ADM}_PCODE'].unique() == len(shp.index)), 'PCODE field is not unique'
     except AssertionError as error:
         logging.error(error)
 
@@ -80,11 +80,11 @@ def get_river_area(shp_river: str, gdf_admin: gpd.GeoDataFrame) -> gpd.GeoDataFr
 
     num_all_river = len(gdf_admin.index) - len(gdf_intersection.index)
     if num_all_river > 0:
-        logging.info(f'There are {num_all_river} admin units that are entirely covered by the river.')
+        logging.info(f'There are {num_all_river} admin units that are entirely covered by the river')
 
     try:
-        assert len(gdf_admin_river[gdf_admin_river['river_area'] < 0]) == 0, 'Output has negative river area.'
-        assert len(gdf_admin_river[gdf_admin_river['land_area'] < 0]) == 0, 'Output has negative land area.'
+        assert len(gdf_admin_river[gdf_admin_river['river_area'] < 0]) == 0, 'Output has negative river area'
+        assert len(gdf_admin_river[gdf_admin_river['land_area'] < 0]) == 0, 'Output has negative land area'
         assert len(gdf_admin_river.index) == len(
             gdf_admin.index), 'Output does not have same number of admin units as input.'
 
@@ -108,7 +108,7 @@ def get_flood_area(gdf_admin_river: gpd.GeoDataFrame, shp_dir: str) -> gpd.GeoDa
         if fname.startswith('BGD_Floods') and fname.endswith('.shp'):
 
             date = fname[11:21]
-            logging.info(f'Processing flooding from {date}.')
+            logging.info(f'Processing flooding from {date}')
 
             gdf_flood = gpd.read_file(os.path.join(SHP_DIR, fname)).to_crs(CRS)
 
@@ -127,9 +127,9 @@ def get_flood_area(gdf_admin_river: gpd.GeoDataFrame, shp_dir: str) -> gpd.GeoDa
             df_output = df_output.append(gdf_admin_flooded[[f'{ADM}_PCODE', 'flooded_fraction', 'date']])
 
             try:
-                assert len(gdf_admin_flooded.index) == len(gdf_admin_river.index), f'Output from {date} does not have same number of admin units as input.'
-                assert len(gdf_admin_flooded[gdf_admin_flooded['flooded_fraction'] > 1]) == 0, f'Output from {date} has flooded fraction greater than 1.'
-                assert len(gdf_admin_flooded[gdf_admin_flooded['flooded_fraction'] < 0]) == 0, f'Output from {date} has flooded fraction less than 0.'
+                assert len(gdf_admin_flooded.index) == len(gdf_admin_river.index), f'Output from {date} does not have same number of admin units as input'
+                assert len(gdf_admin_flooded[gdf_admin_flooded['flooded_fraction'] > 1]) == 0, f'Output from {date} has flooded fraction greater than 1'
+                assert len(gdf_admin_flooded[gdf_admin_flooded['flooded_fraction'] < 0]) == 0, f'Output from {date} has flooded fraction less than 0'
             except AssertionError as error:
                 logging.error(error)
 
@@ -170,21 +170,21 @@ def sentinel_output_qa(df_ts: pd.DataFrame, df_shp: gpd.GeoDataFrame) -> None:
     more_dates = df_group_count[df_group_count['date'] > num_dates]
 
     try:
-        assert num_admin_shp == num_admin_ts, 'Mismatching number of admin units between the shp and output file.'
-        assert len(less_dates.index) == 0, 'Some admin units have missing data points.'
-        assert len(more_dates.index) == 0, 'Some admin units have too many points.'
-        assert len(df_ts[df_ts.flooded_fraction < 0].index) == 0, 'Flood fraction goes below 0 in some admin units.'
-        assert len(df_ts[df_ts.flooded_fraction > 1].index) == 0, 'Flood fraction goes above 1 in some admin units.'
+        assert num_admin_shp == num_admin_ts, 'Mismatching number of admin units between the shp and output file'
+        assert len(less_dates.index) == 0, 'Some admin units have missing data points'
+        assert len(more_dates.index) == 0, 'Some admin units have too many points'
+        assert len(df_ts[df_ts.flooded_fraction < 0].index) == 0, 'Flood fraction goes below 0 in some admin units'
+        assert len(df_ts[df_ts.flooded_fraction > 1].index) == 0, 'Flood fraction goes above 1 in some admin units'
 
     except AssertionError as error:
         logging.error(error)
 
     df_group = df_ts.groupby(f'{ADM}_PCODE').mean().reset_index()
     no_flood = len(df_group[df_group['flooded_fraction'] == 0])
-    if no_flood > 0: logging.info(f'There are {no_flood} admin units with no flooding.')
+    if no_flood > 0: logging.info(f'There are {no_flood} admin units with no flooding')
 
     num_nan = df_ts['flooded_fraction'].isna().sum()
-    logging.info(f'There are {num_nan} instances of NaN values in the flooded fraction column.')
+    logging.info(f'There are {num_nan} instances of NaN values in the flooded fraction column')
 
 
 def main():
