@@ -48,6 +48,7 @@ def invert_latlon(ds):
         # ds=np.flip(ds.squeeze('F'),axis=1)
     return ds
 
+#TODO: understand when to change longitude range for rasterstats to work and when not!!! For IRI seasonal forecast, outputs are wrong when not changing to -180 180, while for IRI CAMS observational terciles outputs are wrong WHEN changing to -180 180 instead of 0 360...
 def change_longitude_range(ds):
     """
     If longitude ranges from 0 to 360, change it to range from -180 to 180.

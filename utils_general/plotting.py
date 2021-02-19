@@ -82,7 +82,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     fig.suptitle(f'{country} forecasted values and shape boundaries')
     return fig
 
-def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8,legend_label=None):
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8,legend_label=None,cmap=None):
     #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
     """
     Plot a raster file and a shapefile on top of each other.
@@ -116,7 +116,8 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     position = range(1, num_plots + 1)
 
     norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
-    cmap=plt.cm.jet
+    if not cmap:
+        cmap=plt.cm.jet
     # cmap.set_bad(color='red')
     fig, axes = plt.subplots(rows, colp_num,figsize=figsize)
     if num_plots==1:

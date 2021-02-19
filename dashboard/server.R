@@ -12,10 +12,10 @@ source("generate_subnational_map.R")
 server <- function(input, output) {
     
     # create variables for period values
-    fn_ml1 <- ipc_indices_data %>% filter(Source == 'FewsNet') %>% select(ML1_period) %>% unique() %>% as.character()
-    fn_ml2 <- ipc_indices_data %>% filter(Source == 'FewsNet') %>% select(ML2_period) %>% unique() %>% as.character()
-    gbl_ml1 <- ipc_indices_data %>% filter(Source == 'GlobalIPC') %>% select(ML1_period) %>% unique() %>% as.character()
-    gbl_ml2 <- ipc_indices_data %>% filter(Source == 'GlobalIPC') %>% select(ML2_period) %>% unique() %>% as.character()
+    fn_ml1 <- ipc_indices_data_latest %>% filter(source == 'FewsNet') %>% select(period_ML1) %>% unique() %>% as.character()
+    fn_ml2 <- ipc_indices_data_latest %>% filter(source == 'FewsNet') %>% select(period_ML2) %>% unique() %>% as.character()
+    gbl_ml1 <- ipc_indices_data_latest %>% filter(source == 'GlobalIPC') %>% select(period_ML1) %>% unique() %>% as.character()
+    gbl_ml2 <- ipc_indices_data_latest %>% filter(source == 'GlobalIPC') %>% select(period_ML2) %>% unique() %>% as.character()
 
     # conditionally select correct map
     output$trigger_map <- renderPlot({
@@ -34,13 +34,13 @@ server <- function(input, output) {
     
     # dynamically create options for period radio buttons
     output$projectionPeriods <- renderUI({
-        source <- switch(input$source,
+        source_chosen <- switch(input$source,
                        fn = 'FewsNet',
                        gbl = 'GlobalIPC') 
         
-        period_options <- ipc_indices_data %>%
-                             filter(Source == source) %>% 
-                             select(ML1_period, ML2_period) %>%
+        period_options <- ipc_indices_data_latest %>%
+                             filter(source == source_chosen) %>% 
+                             select(period_ML1, period_ML2) %>%
                              unique() %>% 
                              as.character()
         
@@ -51,8 +51,8 @@ server <- function(input, output) {
     
     # Generate a summary of the data ----
     output$projections_table<- DT::renderDataTable({
-        projections_table <- ipc_indices_data %>%
-            select(Source, ADMIN1, perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4) %>%
+        projections_table <- ipc_indices_data_latest %>%
+            select(source, ADMIN1, perc_CS_3p, perc_CS_4, perc_ML1_3p, perc_ML1_4, perc_ML2_3p, perc_ML2_4) %>%
             rename(Current_Situation_IPC3plus = perc_CS_3p,
                    Current_Situation_IPC4plus = perc_CS_4,
                    Short_term_proj_IPC3plus = perc_ML1_3p,
@@ -79,12 +79,12 @@ server <- function(input, output) {
     # Display rainfall maps as temp projections. NOte single quotes must be outer set because string must include double quotes to be processed as HTML
     
     
-    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/jan2021/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
-    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/Feb-April-GHA-Rainfall.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
+    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/feb2021/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
+    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/MAM_GHA_Rainfall.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
     output$chc <- renderText({c('<img src="','https://blog.chc.ucsb.edu/wp-content/uploads/2021/01/Screen-Shot-2021-01-20-at-5.21.51-PM.png"','width = "500px" height = "500px"', '>')})
-    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/NMME/prob/images/prob_ensemble_prate_season2.png"','width = "500px" height = "500px"', '>')})
-    output$eth_nma <- renderText("No forecast for the 2021 Belg season available from the NMA.")
-    output$copernicus <- renderText({c('<img src="','https://stream.ecmwf.int/data/gorax-blue-005/data/scratch/20201222-0920/c3/convert_image-gorax-blue-005-6fe5cac1a363ec1525f54343b6cc9fd8-b9q_5d.png"','width = "500px" height = "500px"', '>')})    
+    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/international/nmme/probabilistic_seasonal/africa_nmme_prec_3catprb_FebIC_Mar2021-May2021.png"','width = "600px" height = "500px"', '>')})
+    #output$eth_nma <- renderText("No forecast for the 2021 Belg season available from the NMA.")
+    output$copernicus <- renderText({c('<img src="','https://apps.ecmwf.int/webapps/opencharts/streaming/20210216-0810/87/pdf2svg-worker-commands-69c6db9bf8-d9qk2-6fe5cac1a363ec1525f54343b6cc9fd8-6Xzy4c.svg"','width = "500px" height = "500px"', '>')})    
     
     # create conditional lists of triggered regions
     output$triggered_regions_list <- renderText({

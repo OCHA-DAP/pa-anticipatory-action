@@ -11,7 +11,7 @@ shp_adm2c: "admin2Name"
 foodinsecurity:
   region: "east-africa"
   regioncode: "EA"
-  fewsnet_dates_add: ["202008"]
+  fewsnet_dates_add: ["202008","202011"]
   fewsnet_dates_remove: ["200907"]
   pop_filename: "som_pplp_adm2.csv" #downloaded from https://data.humdata.org/dataset/6cac9c64-2716-4809-9e82-440839d421f6/resource/a63d9729-c8fa-4456-a3fd-11034dd2117b/download/som_pplp_adm2.csv
   pop_col: "Pop2014UNFPA"

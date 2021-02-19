@@ -63,6 +63,7 @@ class Config:
     FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
     FEWSWORLDPOP_PROCESSED_FILENAME = "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
     FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
+    FEWSADMPOP_PROCESSED_FILENAME = "{country}_fewsnet_admin{admin_level}{suffix}.csv"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
 
 
@@ -92,8 +93,8 @@ class Config:
     #Analysis name, Country Population, % of total county Pop, Area Phase are not being used in our current analysis so not mapping them
     # Not entirely sure if Area always equals Admin2 regions
     GLOBALIPC_COLUMNNAME_MAPPING = {'Country':'ADMIN0','Level 1 Name':'ADMIN1','Area':'ADMIN2','Area ID':'ADMIN2_ID','Date of Analysis':'date','#':'reported_pop_CS','Analysis Period':"CS_val",'#.1':'CS_1','%':'perc_CS_1','#.2':'CS_2', '%.1':'perc_CS_2', '#.3':'CS_3', '%.2':'perc_CS_3',
-       '#.4':'CS_4', '%.3':'perc_CS_4', '#.5':'CS_5','%.4':'perc_CS_5', '#.6':'CS_3p', '%.5':'perc_CS_3p', '#.7':'reported_pop_ML1','Analysis Period.1':'ML1_val', '#.8':'ML1_1',
+       '#.4':'CS_4', '%.3':'perc_CS_4', '#.5':'CS_5','%.4':'perc_CS_5', '#.6':'CS_3p', '%.5':'perc_CS_3p', '#.7':'reported_pop_ML1','Analysis Period.1':'period_ML1', '#.8':'ML1_1',
        '%.6':'perc_ML1_1', '#.9':'ML1_2', '%.7':'perc_ML1_2', '#.10':'ML1_3', '%.8':'perc_ML1_3', '#.11':'ML1_4', '%.9':'perc_ML1_4', '#.12':'ML1_5', '%.10':'perc_ML1_5',
-       '#.13':'ML1_3p', '%.11':'perc_ML1_3p','#.14':'reported_pop_ML2','Analysis Period.2':'ML2_val','#.15':"ML2_1", '%.12':'perc_ML2_1', '#.16':'ML2_2', '%.13':'perc_ML2_2', '#.17':'ML2_3', '%.14':'perc_ML2_3',
+       '#.13':'ML1_3p', '%.11':'perc_ML1_3p','#.14':'reported_pop_ML2','Analysis Period.2':'period_ML2','#.15':"ML2_1", '%.12':'perc_ML2_1', '#.16':'ML2_2', '%.13':'perc_ML2_2', '#.17':'ML2_3', '%.14':'perc_ML2_3',
        '#.18':'ML2_4', '%.15':'perc_ML2_4', '#.19':'ML2_5', '%.16':'perc_ML2_5', '#.20':'ML2_3p', '%.17':'perc_ML2_3p'}
 

@@ -11,7 +11,7 @@ shp_adm2c: "ADM2_EN"
 foodinsecurity:
   region: "east-africa"
   regioncode: "EA"
-  fewsnet_dates_add: ["202008","202009"]
+  fewsnet_dates_add: ["202008","202009","202101"]
   fewsnet_dates_remove: []
   pop_filename: "Population_OCHA_2020/eth_admpop_adm2_20201028.csv" #downloaded from https://data.humdata.org/dataset/ethiopia-population-data-_-admin-level-0-3
   pop_col: "Total"
