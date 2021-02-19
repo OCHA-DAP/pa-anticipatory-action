@@ -37,24 +37,24 @@ mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
 
 # read in CHIRPS data (multiple multi-layer raster files) into a single stack
-s2010 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2010_p25.nc") # each file has to be read in separately or layer names get lost
-s2011 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2011_p25.nc")
-s2012 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2012_p25.nc")
-s2013 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2013_p25.nc")
-s2014 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2014_p25.nc")
-s2015 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2015_p25.nc")
-s2016 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2016_p25.nc")
-s2017 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2017_p25.nc")
-s2018 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2018_p25.nc")
-s2019 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2019_p25.nc")
-s2020 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2020_p25.nc")
+s2010 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2010_p05.nc") # each file has to be read in separately or layer names get lost
+s2011 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2011_p05.nc")
+s2012 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2012_p05.nc")
+s2013 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2013_p05.nc")
+s2014 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2014_p05.nc")
+s2015 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2015_p05.nc")
+s2016 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2016_p05.nc")
+s2017 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2017_p05.nc")
+s2018 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2018_p05.nc")
+s2019 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2019_p05.nc")
+s2020 <- raster::stack("../../indicators/drought/Data/chirps/chirps_global_daily_2020_p05.nc")
 
 s2010_s2020 <- stack(s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020) # all files combined into a stack
 
 # crop and masked area outside of MWI
 s2010_s2020_cropped <- crop(x = s2010_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
 data <- mask(s2010_s2020_cropped, mask = mwi_adm2)
-
+#saveRDS(data,"../Data/transformed/data_20210219_r5.rds")
 plot(data) # visual inspection
 
 # explore compiled raster file ("brick")
@@ -84,6 +84,7 @@ for (i in seq_along(1:nbr_layers)) {
         data_max_values <- computeLayerStat(i, max, data_max_values)
         
       }
+#saveRDS(data_max_values,"../Data/transformed/data_max_values_20210219_r5.rds")
 
 ## identify rainy season start date per region, year/rainy season
 
