@@ -43,7 +43,9 @@ fluidPage(
             
             # Tabset w/ plot, summary, and table
             tabsetPanel(type = "tabs",
-                        tabPanel("Triggered Regions", textOutput("triggered_regions_list")),
+                        tabPanel("Food Insecurity Trigger", 
+                                 textOutput("triggered_regions_list")
+                                 ),
                         tabPanel("Trigger Map", plotOutput("trigger_map")),
                         tabPanel("Projections", DT::dataTableOutput("projections_table")),
                         tabPanel("Rainfall Forecasts", 
