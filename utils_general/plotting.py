@@ -82,7 +82,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     fig.suptitle(f'{country} forecasted values and shape boundaries')
     return fig
 
-def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8):
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8,legend_label=None):
     #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
     """
     Plot a raster file and a shapefile on top of each other.
@@ -110,6 +110,8 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     df_bound = gpd.read_file(boundary_path)
 
     num_plots = len(ds_list)
+    if num_plots==1:
+        colp_num=1
     rows = math.ceil(num_plots / colp_num)
     position = range(1, num_plots + 1)
 
@@ -144,7 +146,9 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     fig.subplots_adjust(right=0.8)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
     cb = plt.colorbar(im, cax=cbar_ax, orientation="vertical", pad=0.02, aspect=16, shrink=0.8)
-    cb.set_label(forec_val, size=labelsize, rotation=0, labelpad=15)
+    if legend_label is None:
+        legend_label=forec_val
+    cb.set_label(legend_label, size=labelsize, rotation=90, labelpad=10)
     cb.ax.tick_params(labelsize=labelsize)
 
     if suptitle is not None:
