@@ -41,7 +41,7 @@ latest_fs <-  eth_adm1 %>%
 
 
 # generate list of triggered regions across sources. Feb-May 2021 is ML2 for FewsNet and Jan-June 2021 is ML1 for GlobalIPC
-trigger_list <- latest_fs %>%
+fs_trigger_list <- latest_fs %>%
                   mutate(threshold_reached_H1_2021 = ifelse((source == 'FewsNet' & threshold_reached_ML2 == 'True') | (source == 'GlobalIPC' & threshold_reached_ML1 == 'True'), 1, 0)) %>%
                   group_by(ADM1_EN) %>%
                   mutate(threshold_reached_H1_2021 = ifelse(sum(threshold_reached_H1_2021) > 0, 1, 0)) %>% # assigns 1 to threshold_reached_H1_2021 if either source met threshold
@@ -52,7 +52,7 @@ trigger_list <- latest_fs %>%
 # produce  map of triggered regions across sources
 trigger_palette <- c("#EEEEEE", "#F2645A") # grey first, tomato second
 
-trigger_map <- trigger_list %>% 
+fs_trigger_map <- fs_trigger_list %>% 
                             tm_shape() +
                             tm_polygons("threshold_reached_H1_2021", 
                                         palette = trigger_palette, 
