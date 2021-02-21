@@ -28,8 +28,8 @@ def make_time_series(df_shp, df_data, id_col):
     # Working on a figure of small multiples
     # Drawn from:
     # http://jonathansoma.com/lede/data-studio/classes/small-multiples/long-explanation-of-using-plt-subplots-to-create-small-multiples/
-    # Get the axes set up - we have 17 dates in total
-    fig, axes = plt.subplots(nrows=4, ncols=5, sharex=True, sharey=True, figsize=(15,20))
+    # Get the axes set up - we have 27 dates in total
+    fig, axes = plt.subplots(nrows=4, ncols=7, sharex=True, sharey=True, figsize=(15,20))
     axes_list = [item for sublist in axes for item in sublist]
 
     # Loop through to make the plots
