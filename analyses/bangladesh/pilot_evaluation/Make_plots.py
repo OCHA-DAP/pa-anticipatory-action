@@ -2,7 +2,7 @@ import pandas as pd
 import geopandas as gpd
 import os
 import matplotlib.pyplot as plt
-import utils
+import utils_evaluation as utils
 import logging
 
 # This script takes the output interpolated data from the Generate_interpolated.py script
