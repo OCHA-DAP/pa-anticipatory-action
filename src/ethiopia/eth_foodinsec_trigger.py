@@ -26,7 +26,7 @@ fn_process="admpop" #worldpop
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DATA_DIR, 'raw', country)
+country_folder = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
 if fn_process=="worldpop":
     fewsnet_dir = os.path.join(country_folder, config.FEWSWORLDPOP_PROCESSED_DIR)
     fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)

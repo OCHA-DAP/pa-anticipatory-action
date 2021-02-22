@@ -13,10 +13,10 @@ warnings.filterwarnings('ignore')
 from pathlib import Path
 import os
 import sys
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase
+from src.indicators.food_insecurity.config import Config
+from src.indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase
 
 admin_level=0
 country="somalia"
@@ -24,10 +24,10 @@ country="somalia"
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-fewsnet_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
+country_folder = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
+fewsnet_dir = os.path.join(country_folder, config.FEWSWORLDPOP_PROCESSED_DIR)
 fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
-globalipc_dir=os.path.join(country_folder,config.DATA_DIR, config.GLOBALIPC_PROCESSED_DIR)
+globalipc_dir=os.path.join(country_folder, config.GLOBALIPC_PROCESSED_DIR)
 globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv")
 
 adm_bound_path= os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
@@ -57,4 +57,4 @@ df['threshold_reached_ML2'] =  np.where((df['trigger_ML2_3_20']==1) & ((df['trig
 
 df.loc[df.date=="2020-10-01","period_ML1"]="Oct 2020 - Jan 2021"
 df.loc[df.date=="2020-10-01","period_ML2"]="Feb 2021 - May 2021"
-df.to_csv(os.path.join(config.DIR_PATH,"dashboard","data","foodinsecurity",f"{country}_foodinsec_trigger.csv"))
+df.to_csv(os.path.join("dashboard","data","foodinsecurity",f"{country}_foodinsec_trigger.csv"))
