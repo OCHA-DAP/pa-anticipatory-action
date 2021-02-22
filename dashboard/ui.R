@@ -1,9 +1,8 @@
+
 # This is the front-end of the dashboard
+library(DT)
 
 fluidPage(
-    
-    # styling
-  #  theme = "bootstrap.css",
     
    # logo (must be in a subfolder named www that is sister to ui.r and not be listed with its path)
     img(src="double_logo_header.jpg", align = "center", width=1275, height=100),

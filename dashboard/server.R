@@ -1,6 +1,3 @@
-#
-# This is the server logic of the dashboard.
-# About deploying to ShinyApps.io: You should not have an explicit install.packages() call within your ui.R or server.R files.
 
 # load libraries
 library(DT)
@@ -57,16 +54,13 @@ server <- function(input, output) {
                                         projections_table <- rbind(projections_table_fn, projections_table_gb)
                                         
         projections_table_searchable <- datatable(projections_table,
-                                               #   filter = list(position = 'top', clear = FALSE),
+                                                  filter = list(position = 'top', clear = FALSE),
                                                   options = list(
                                                         columnDefs = list(list(className = 'dt-center', targets = "_all")),
                                                       #  search = list(regex = TRUE, caseInsensitive = TRUE),
                                                         pageLength = 20))
                                                   
         projections_table_searchable                                     
-                                                  
-                                        
-                                        
     })
     
     # Display rainfall maps as temp projections. Note single quotes must be outer set because string must include double quotes to be processed as HTML
