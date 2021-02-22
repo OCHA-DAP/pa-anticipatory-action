@@ -1,4 +1,3 @@
-from d03_analysis import FE_fit_function as ff
 import utils
 import pandas as pd
 from datetime import datetime
@@ -40,7 +39,7 @@ def make_data(df, adm_grp):
         # x values at daily intervals to interpolate the corresponding
         # flooding fraction on a daily basis.
         df2 = df.loc[df[sel_col] == adm].reset_index()
-        x, y = ff.get_xy(df2)[0], ff.get_xy(df2)[1]
+        x, y = utils.get_xy(df2)[0], utils.get_xy(df2)[1]
         x_new = np.linspace(x[0], x[-1], 85)
 
         # Before attempting to fit to a Gaussian, we need to
@@ -49,7 +48,7 @@ def make_data(df, adm_grp):
             y_new = np.ones(85)*0
             cov = None
             rmse = None
-            date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
+            date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
             date_g = None
             act_g = None
             fwhm = None
@@ -59,7 +58,7 @@ def make_data(df, adm_grp):
         # fit the time series to a Gaussian distribution.
         else:
             try:
-                popt, pcov = ff.gauss_fit(x, y)
+                popt, pcov = utils.gauss_fit(x, y)
 
             # In case the function doesn't converge to estimate the Gaussian parameters,
             # we will add in empty data to the summary output.
@@ -70,23 +69,23 @@ def make_data(df, adm_grp):
                 y_new = np.empty(85) * np.nan
                 cov = None
                 rmse = None
-                date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
+                date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
                 date_g = None
                 act_g = None
                 fwhm = None
                 max_actual = y.max()
 
             else:
-                y_fit = ff.gauss(x, *popt)
-                y_new = ff.gauss(x_new, *popt)
+                y_fit = utils.gauss(x, *popt)
+                y_new = utils.gauss(x_new, *popt)
                 # Standard deviation of the errors for the mean (x0) parameter
                 # Convert from seconds (from unix time) to hours.
                 cov = np.sqrt(np.diag(pcov)[1]) / 86400
-                rmse = ff.rmse(y_fit, y)
-                date_actual = datetime.strptime(ff.get_peak(x, y), "%Y-%m-%d")
-                date_g = datetime.strptime(ff.get_peak(x_new, y_new), "%Y-%m-%d")
+                rmse = utils.rmse(y_fit, y)
+                date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
+                date_g = datetime.strptime(utils.get_peak(x_new, y_new), "%Y-%m-%d")
                 act_g = (date_actual - date_g).days
-                fwhm = ff.get_fwhm(popt[2])
+                fwhm = utils.get_fwhm(popt[2])
                 max_actual = y.max()
 
         # Create dictionaries to append to the output dataframes
