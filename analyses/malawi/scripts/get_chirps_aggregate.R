@@ -7,7 +7,8 @@ library(rasterVis)
 library(dplyr)
 library(exactextractr)
 
-shapefile_path <- shapefiles_path <- "Data/Shapefiles/mwi_adm_nso_20181016_shp"
+data_dir <- Sys.getenv("AA_DATA_DIR")
+shapefile_path <- shapefiles_path <-  paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
 mwi_adm2 <- st_read(paste0(shapefiles_path, "/mwi_admbnda_adm2_nso_20181016.shp"))
 
 
