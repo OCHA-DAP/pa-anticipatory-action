@@ -19,7 +19,7 @@ server <- function(input, output) {
     
     # display map of food insecurity triggered regions
     output$trigger_map <- renderPlot({
-        trigger_map
+        fs_trigger_map
     })
     
     # Generate a summary of the data ----
