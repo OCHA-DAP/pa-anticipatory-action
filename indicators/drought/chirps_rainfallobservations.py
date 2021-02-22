@@ -42,7 +42,7 @@ def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
 
     return fig_histog,fig_clip
 
-def download_chirps(config,year,resolution="25"):
+def download_chirps(config,year,resolution="25",write_crs=False):
     """
         Download the CHIRPS data for year from their ftp server
         Args:
@@ -62,12 +62,15 @@ def download_chirps(config,year,resolution="25"):
             if os.path.exists(chirps_filepath):
                 os.remove(chirps_filepath)
             download_ftp(config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution), chirps_filepath)
-            # ds=rioxarray.open_rasterio(chirps_filepath)
-            ds=xr.open_dataset(chirps_filepath)
-            chirps_filepath_crs = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_CRS.format(year=year,resolution=resolution))
-            if os.path.exists(chirps_filepath_crs):
-                os.remove(chirps_filepath_crs)
-            ds.rio.write_crs("EPSG:4326").to_netcdf(chirps_filepath_crs)
+            if write_crs:
+                #Xarray (python) expects a crs and cannot read this for some undefined reason from the current file, so for this purpose save it as a separate file that includes the crs
+                #In R when working with bricks, this issue doesn't seem to appear
+                # ds=rioxarray.open_rasterio(chirps_filepath)
+                ds=xr.open_dataset(chirps_filepath)
+                chirps_filepath_crs = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_CRS.format(year=year,resolution=resolution))
+                if os.path.exists(chirps_filepath_crs):
+                    os.remove(chirps_filepath_crs)
+                ds.rio.write_crs("EPSG:4326").to_netcdf(chirps_filepath_crs)
         except urllib.error.HTTPError as e:
             logging.error(f"{e}. Date might be later than last reported datapoint. URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}")
 

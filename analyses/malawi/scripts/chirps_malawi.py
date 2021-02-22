@@ -13,7 +13,7 @@ from indicators.drought.config import Config
 from utils_general.plotting import plot_raster_boundaries, plot_timeseries
 from indicators.drought.utils import parse_args
 from utils_general.utils import config_logger
-from indicators.drought.chirps_rainfallobservations import get_chirps_data,chirps_plot_alldates
+from indicators.drought.chirps_rainfallobservations import get_chirps_data,chirps_plot_alldates, download_chirps
 
 
 def main(download, config=None):
@@ -23,15 +23,17 @@ def main(download, config=None):
     parameters = config.parameters(country)
     output_dir=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,'results','drought')
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    resolution="25"
+    resolution="05" #25
     # create list of years of interest
     years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
-    years=[2020]
+    # years=[2020]
     # get data for each year
     # ADD ME warning message if data unavailable
 
     adm1_path=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR,parameters['path_admin1_shp'])
     for i in years:
+        #if only want to download uncomment everythin except the next line
+        # download_chirps(config, i, resolution)
         ds,transform = get_chirps_data(config, i, download = download,resolution=resolution)
         df_bound = gpd.read_file(adm1_path)
         #clip global to malawi to speed up calculating rolling sum

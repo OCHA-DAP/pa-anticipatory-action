@@ -76,7 +76,9 @@ The content within this repository is structured as follows:
 ├── trigger_analysis          <- Scripts related to the trigger analysis
 │   ├── GetGLOFAS_Data.py     <- Download GloFAS data from CDS
 │   ├── GLOFAS_prediction_error.py <- Compare GLoFAS forecast with observations
-│   └── HistoricalValidation_triggers.py <- Plot GloFAS forecast against FFWC triggers  
+│   ├── HistoricalValidation_triggers.py <- Plot GloFAS forecast against FFWC triggers  
+│   ├── station_comparison.py <- calculates the time offset between different stations 
+│   └── utils.py              <- methods shared by the various trigger scripts 
 │
 └── README.md                 <- Description of this project.
 ```
