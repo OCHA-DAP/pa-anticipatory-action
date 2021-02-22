@@ -11,8 +11,9 @@ from src.utils_general.utils import parse_yaml
 
 class Config:
     ### general directories
-    ANALYSES_DIR="analyses"
-    DATA_DIR = "Data"
+    RAW_DIR="raw"
+    PROCESSED_DIR="processed"
+    DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
 
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
@@ -20,7 +21,7 @@ class Config:
             self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
         )
         self.DIR_PATH = DIR_PATH
-        self.DROUGHTDATA_DIR= os.path.join(os.environ['AA_DATA_DIR'], 'raw', 'drought')
+        self.DROUGHTDATA_DIR= os.path.join(self.DATA_DIR, self.RAW_DIR,  'drought')
         self._parameters = None
 
 

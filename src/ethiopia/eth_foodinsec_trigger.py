@@ -13,11 +13,11 @@ warnings.filterwarnings('ignore')
 from pathlib import Path
 import os
 import sys
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase
-from indicators.food_insecurity.utils import compute_percentage_columns
+from src.indicators.food_insecurity.config import Config
+from src.indicators.food_insecurity.ipc_definemetrics import define_trigger_percentage, define_trigger_increase
+from src.indicators.food_insecurity.utils import compute_percentage_columns
 
 admin_level=1
 country="ethiopia"
@@ -26,14 +26,14 @@ fn_process="admpop" #worldpop
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+country_folder = os.path.join(config.DATA_DIR, 'raw', country)
 if fn_process=="worldpop":
-    fewsnet_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
+    fewsnet_dir = os.path.join(country_folder, config.FEWSWORLDPOP_PROCESSED_DIR)
     fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
 elif fn_process=="admpop":
-    fewsnet_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSADMPOP_PROCESSED_DIR)
+    fewsnet_dir = os.path.join(country_folder, config.FEWSADMPOP_PROCESSED_DIR)
     fewsnet_filename = config.FEWSADMPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
-globalipc_dir=os.path.join(country_folder,config.DATA_DIR, config.GLOBALIPC_PROCESSED_DIR)
+globalipc_dir=os.path.join(country_folder, config.GLOBALIPC_PROCESSED_DIR)
 globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv")
 
 adm_bound_path= os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
@@ -76,7 +76,7 @@ df["trigger_ML2_3_30"]=df.apply(lambda x: define_trigger_percentage(x,"ML2",3,30
 df["trigger_ML2_3_5i"]=df.apply(lambda x: define_trigger_increase(x,"ML2",3,5),axis=1)
 df[f"threshold_reached_ML2"]=np.where((df[f"trigger_ML2_4_20"]==1) | ((df[f"trigger_ML2_3_30"]==1) & (df[f"trigger_ML2_3_5i"]==1)),True,False)
 print(df.columns)
-df.to_csv(os.path.join(config.DIR_PATH,"dashboard","data","foodinsecurity","ethiopia_foodinsec_trigger.csv"),index=False)
+df.to_csv(os.path.join("dashboard","data","foodinsecurity","ethiopia_foodinsec_trigger.csv"),index=False)
 
 # fig_boundbin=plot_spatial_binary_column(df,"trigger_ML1",subplot_col="year",subplot_str_col="year",region_col="ADMIN1",colp_num=4,only_show_reached=False,title_str="Regions triggered")
 # plt.show()

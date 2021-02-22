@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from utils_general.utils import parse_yaml
+from src.utils_general.utils import parse_yaml
 from datetime import datetime
 import ftplib
 import re
@@ -23,21 +23,21 @@ def retrieve_worldpop_dirname():
 
 class Config:
     ### general directories
-    ANALYSES_DIR = "analyses"
-    DATA_DIR = "Data"
+    RAW_DIR = 'raw'
+    DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
         DIR_PATH = getattr(
             self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
         )
         self.DIR_PATH = DIR_PATH
-        self.FOODINSECURITYDATA_DIR = os.path.join(DIR_PATH, 'indicators', 'food_insecurity', 'Data')
+        self.FOODINSECURITYDATA_DIR = os.path.join(self.DATA_DIR, 'raw', 'food_insecurity')
         self._parameters = None
 
 
     def parameters(self, country):
         if self._parameters is None:
-            self._parameters = parse_yaml(os.path.join(self.DIR_PATH, self.ANALYSES_DIR, country.lower(), 'config.yml'))
+            self._parameters = parse_yaml(os.path.join(self.DIR_PATH, country.lower(), 'config.yml'))
         return self._parameters
 
     #General date objects
