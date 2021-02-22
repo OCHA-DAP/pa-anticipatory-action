@@ -33,22 +33,22 @@ def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
     ds_list = [ds_clip.sel(time=p) for p in ds_clip["time"]]
 
     #create list of titles for subplots
+    #TODO: find better way to format title list regardless of x being datetime object
     # ds_list_date_str=[pd.to_datetime(str(x)).strftime("%Y-%m-%d") for x in ds_clip["time"].values]
     ds_list_date_str=[x for x in ds_clip["time"].values]
     if predef_bins is None:
         predef_bins=np.linspace(ds_clip.precip.min(), ds_clip.precip.max(), 10)
     fig_clip = plot_raster_boundaries_clip(ds_list, adm1_path, title_list=ds_list_date_str, forec_val=config.CHIRPS_VARNAME, colp_num=3, figsize=(90,60),labelsize=40,predef_bins=predef_bins) #figszie=18*colp_num,6*rows
-    # import matplotlib.pyplot as plt
-    # plt.tight_layout()
+
     return fig_histog,fig_clip
 
-def download_chirps(config,year,resolution=25):
+def download_chirps(config,year,resolution="25",write_crs=False):
     """
         Download the CHIRPS data for year from their ftp server
         Args:
             config (Config): config for the drought indicator
             year (str or int): year for which the data should be downloaded in YYYY format
-            resolution (str or int): resolution of the data to be downloaded. Can be 25 or 5
+            resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         """
     chirps_dir = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
@@ -62,21 +62,25 @@ def download_chirps(config,year,resolution=25):
             if os.path.exists(chirps_filepath):
                 os.remove(chirps_filepath)
             download_ftp(config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution), chirps_filepath)
-            # ds=rioxarray.open_rasterio(chirps_filepath)
-            ds=xr.open_dataset(chirps_filepath)
-            chirps_filepath_crs = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_CRS.format(year=year,resolution=resolution))
-            if os.path.exists(chirps_filepath_crs):
-                os.remove(chirps_filepath_crs)
-            ds.rio.write_crs("EPSG:4326").to_netcdf(chirps_filepath_crs)
+            if write_crs:
+                #Xarray (python) expects a crs and cannot read this for some undefined reason from the current file, so for this purpose save it as a separate file that includes the crs
+                #In R when working with bricks, this issue doesn't seem to appear
+                # ds=rioxarray.open_rasterio(chirps_filepath)
+                ds=xr.open_dataset(chirps_filepath)
+                chirps_filepath_crs = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_CRS.format(year=year,resolution=resolution))
+                if os.path.exists(chirps_filepath_crs):
+                    os.remove(chirps_filepath_crs)
+                ds.rio.write_crs("EPSG:4326").to_netcdf(chirps_filepath_crs)
         except urllib.error.HTTPError as e:
             logging.error(f"{e}. Date might be later than last reported datapoint. URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}")
 
-def get_chirps_data(config, year, resolution=25, download=False):
+def get_chirps_data(config, year, resolution="25", download=False):
     """
     Load CHIRP's NetCDF file as xarray dataset
     Args:
         config (Config): config for the drought indicator
         year (str or int): year for which the data should be loaded in YYYY format
+        resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         download (bool): if True, download data
 
     Returns:
