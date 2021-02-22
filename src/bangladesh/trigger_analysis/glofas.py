@@ -5,13 +5,14 @@ from collections import namedtuple
 from pathlib import Path
 import logging
 import time
+import os
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 import cdsapi
 
-DATA_DIR = Path("data")
+DATA_DIR = Path(os.environ["AA_DATA_DIR"], "raw")
 GLOFAS_DIR = Path("GLOFAS_Data")
 
 CDSAPI_CLIENT = cdsapi.Client()

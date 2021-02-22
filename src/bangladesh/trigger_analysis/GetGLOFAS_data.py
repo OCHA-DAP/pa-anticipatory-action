@@ -16,7 +16,7 @@ import glofas
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-COUNTRY_ISO3 = 'bgd'
+COUNTRY_ISO3 = 'bangladesh' # change to iso3 later
 FFWC_STATIONS = {
     "Noonkhawa": [89.9509, 25.9496],
     "Chilmari": [89.7476, 25.5451],

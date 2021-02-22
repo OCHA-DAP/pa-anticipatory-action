@@ -4,7 +4,6 @@ import numpy as np
 from scipy.signal import correlate
 from scipy.interpolate import interp1d
 import pandas as pd
-import matplotlib.pyplot as plt
 
 STATION_LIST = [
     'Noonkhawa',

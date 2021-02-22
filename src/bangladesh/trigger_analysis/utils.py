@@ -1,9 +1,11 @@
 from pathlib import Path
+import os
 
 import pandas as pd
 
 
-GLOFAS_DS_FOLDER = Path('data/GLOFAS_Data')
+GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'raw/bangladesh/GLOFAS_Data'
+print(GLOFAS_DS_FOLDER)
 
 
 def get_glofas_df(glofas_dir: Path = GLOFAS_DS_FOLDER,
