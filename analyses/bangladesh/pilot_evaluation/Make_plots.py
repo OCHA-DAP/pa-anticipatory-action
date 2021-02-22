@@ -2,7 +2,7 @@ import pandas as pd
 import geopandas as gpd
 import os
 import matplotlib.pyplot as plt
-from scripts import utils
+import utils
 import logging
 
 # This script takes the output interpolated data from the Generate_interpolated.py script
@@ -17,7 +17,7 @@ import logging
 
 # TODO: Implement functionality to remove outliers from map - (needed for FWHM)
 # TODO: Reclass admin units with no flooding as zero rather than na?
-# TODO: Fix hard coding with aoi selection, shapefile naming
+# TODO: Fix hard coding with aoi selection, shapefile naming, plot numbers
 
 logger = logging.getLogger()
 
@@ -87,14 +87,13 @@ def make_graphs(adm):
 
 
 if __name__ == "__main__":
-    parameters = utils.parse_yaml('config.yml')['DIRS']
-    input_dir = parameters['data_dir']
-    output_dir = parameters['plot_dir']
-    shp_dir = parameters['adm_dir']
+    params = utils.parse_yaml('pilot_evaluation/config.yml')['PARAMS']
+    adm = params['adm']
+    dirs = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
+    input_dir = dirs['data_dir']
+    output_dir = dirs['plot_dir']
+    shp_dir = dirs['adm_dir']
 
-    arg = utils.parse_args()
-    utils.config_logger()
-    adm = arg.adm_level
     output_dir = os.path.join(output_dir, f'{adm}_Plots')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
