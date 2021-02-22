@@ -7,13 +7,13 @@ import geopandas as gpd
 from shapely.geometry import mapping
 import numpy as np
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from indicators.drought.config import Config
-from utils_general.plotting import plot_raster_boundaries, plot_timeseries
-from indicators.drought.utils import parse_args
-from utils_general.utils import config_logger
-from indicators.drought.chirps_rainfallobservations import get_chirps_data,chirps_plot_alldates, download_chirps
+from src.indicators.drought.config import Config
+from src.utils_general.plotting import plot_raster_boundaries, plot_timeseries
+from src.indicators.drought.utils import parse_args
+from src.utils_general.utils import config_logger
+from src.indicators.drought.chirps_rainfallobservations import get_chirps_data,chirps_plot_alldates, download_chirps
 
 
 def main(download, config=None):
