@@ -14,7 +14,7 @@ server <- function(input, output) {
     # Display  last update date
     output$last_update <- renderText({paste0("Analysis last updated: ", "16 Feb 2021")})
     
-    url <-  a("Detailed Summary", href="https://docs.google.com/document/d/1xa8AmYVpw1z7moYwFrZoQ4S2o5g-QbC8U-G-3Zlpgjw/edit?usp=sharing")
+    url <-  a("Detailed Summary. ", href="https://docs.google.com/document/d/1xa8AmYVpw1z7moYwFrZoQ4S2o5g-QbC8U-G-3Zlpgjw/edit?usp=sharing")
     output$summary_link <- renderUI({
         tagList("Read the full", url)
     })
@@ -57,7 +57,7 @@ server <- function(input, output) {
                                         projections_table <- rbind(projections_table_fn, projections_table_gb)
                                         
         projections_table_searchable <- datatable(projections_table,
-                                                  filter = list(position = 'top', clear = FALSE),
+                                               #   filter = list(position = 'top', clear = FALSE),
                                                   options = list(
                                                         columnDefs = list(list(className = 'dt-center', targets = "_all")),
                                                       #  search = list(regex = TRUE, caseInsensitive = TRUE),
