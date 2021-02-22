@@ -12,7 +12,8 @@ import pandas as pd
 import xarray as xr
 import cdsapi
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"], "raw")
+DATA_DIR = Path(os.environ["AA_DATA_DIR"])
+RAW_DATA_DIR = DATA_DIR / "raw"
 GLOFAS_DIR = Path("GLOFAS_Data")
 
 CDSAPI_CLIENT = cdsapi.Client()
@@ -73,6 +74,7 @@ class UnknownGlofasDatasetType(Exception):
 
 
 def download_glofas_reanalysis(
+    country_name: str,
     country_iso3: str,
     stations_lon_lat: dict,
     year_min: int = None,
@@ -88,6 +90,7 @@ def download_glofas_reanalysis(
     for year in range(year_min, year_max + 1):
         logger.info(f'...{year}')
         download_glofas(
+            country_name=country_name,
             country_iso3=country_iso3,
             system_version_minor=glofas_object.system_version_minor,
             cds_name=glofas_object.cds_name,
@@ -98,6 +101,7 @@ def download_glofas_reanalysis(
 
 
 def download_glofas_reforecast(
+    country_name: str,
     country_iso3: str,
     stations_lon_lat: dict,
     year_min: int = None,
@@ -119,6 +123,7 @@ def download_glofas_reforecast(
             for leadtime_hour in leadtime_hours:
                 for dataset in glofas_object.datasets:
                     download_glofas(
+                        country_name=country_name,
                         country_iso3=country_iso3,
                         system_version_minor=glofas_object.system_version_minor,
                         cds_name=glofas_object.cds_name,
@@ -130,8 +135,8 @@ def download_glofas_reforecast(
                     )
 
 
-
 def download_glofas(
+    country_name: str,
     country_iso3: str,
     cds_name: str,
     system_version_minor: int,
@@ -143,6 +148,7 @@ def download_glofas(
     use_cache: bool = True
 ):
     filepath = get_glofas_filepath(
+        country_name=country_name,
         country_iso3=country_iso3,
         cds_name=cds_name,
         dataset=dataset,
@@ -176,6 +182,7 @@ def download_glofas(
 
 
 def get_glofas_filepath(
+    country_name: str,
     country_iso3: str,
     cds_name: str,
     dataset: str,
@@ -183,7 +190,7 @@ def get_glofas_filepath(
     month: int = None,
     leadtime_hour: int = None,
 ):
-    directory = DATA_DIR / country_iso3 / GLOFAS_DIR / cds_name / dataset
+    directory = RAW_DATA_DIR / country_name / GLOFAS_DIR / cds_name / dataset
     filename = f"{country_iso3}_{cds_name}_{dataset}_{year}"
     if month is not None:
         filename += f"-{str(month).zfill(2)}"
@@ -242,12 +249,13 @@ def get_area(stations_lon_lat: dict = None, buffer=0.5) -> list:
     ]
 
 
-def process_glofas_reanalysis(country_iso3: str, stations_lon_lat: dict):
+def process_glofas_reanalysis(country_name: str, country_iso3: str, stations_lon_lat: dict):
     glofas_object = get_glofas_object(dataset_type="reanalysis")
     df_reanalysis = pd.DataFrame()
     ds_reanalysis = xr.Dataset()
     for year in range(glofas_object.year_min, glofas_object.year_max + 1):
         filepath = get_glofas_filepath(
+            country_name=country_name,
             country_iso3=country_iso3,
             cds_name=glofas_object.cds_name,
             dataset=glofas_object.datasets[0],

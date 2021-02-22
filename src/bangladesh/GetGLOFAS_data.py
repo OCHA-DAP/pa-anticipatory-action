@@ -16,7 +16,8 @@ import glofas
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-COUNTRY_ISO3 = 'bangladesh' # change to iso3 later
+COUNTRY_NAME = 'bangladesh'
+COUNTRY_ISO3 = 'bgd'
 FFWC_STATIONS = {
     "Noonkhawa": [89.9509, 25.9496],
     "Chilmari": [89.7476, 25.5451],
@@ -35,9 +36,9 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    glofas.download_glofas_reanalysis(country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
-    glofas.download_glofas_reforecast(country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
-    glofas.process_glofas_reanalysis(country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
+    glofas.download_glofas_reanalysis(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
+    glofas.download_glofas_reforecast(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
+    glofas.process_glofas_reanalysis(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
     """"
     for year in range(1979, 2021):
         print(year)
