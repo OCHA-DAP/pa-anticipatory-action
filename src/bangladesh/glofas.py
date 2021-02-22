@@ -14,6 +14,7 @@ import cdsapi
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 RAW_DATA_DIR = DATA_DIR / "raw"
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
 GLOFAS_DIR = Path("GLOFAS_Data")
 
 CDSAPI_CLIENT = cdsapi.Client()
@@ -64,7 +65,7 @@ def get_glofas_object(dataset_type: str) -> GlofasContainer:
             msg=f"GloFAS dataset type {dataset_type} not found. "
             f'Must be one of: "reanalysis", "reforecast".'
         )
-    logger.debug(f'Retrieved GloFAS object for {dataset_type}: {glofas_object}')
+    logger.debug(f"Retrieved GloFAS object for {dataset_type}: {glofas_object}")
     return glofas_object
 
 
@@ -86,9 +87,9 @@ def download_glofas_reanalysis(
         year_min = glofas_object.year_min
     if year_max is None:
         year_max = glofas_object.year_max
-    logger.info(f'Downloading GloFAS reanalysis for years {year_min} - {year_max}')
+    logger.info(f"Downloading GloFAS reanalysis for years {year_min} - {year_max}")
     for year in range(year_min, year_max + 1):
-        logger.info(f'...{year}')
+        logger.info(f"...{year}")
         download_glofas(
             country_name=country_name,
             country_iso3=country_iso3,
@@ -116,9 +117,11 @@ def download_glofas_reforecast(
         year_max = glofas_object.year_max
     if leadtime_hours is None:
         leadtime_hours = glofas_object.leadtime_hours
-    logger.info(f'Downloading GloFAS reanalysis for years {year_min} - {year_max} and leadtime hours {leadtime_hours}')
+    logger.info(
+        f"Downloading GloFAS reanalysis for years {year_min} - {year_max} and leadtime hours {leadtime_hours}"
+    )
     for year in range(year_min, year_max + 1):
-        logger.info(f'...{year}')
+        logger.info(f"...{year}")
         for month in range(1, 13):
             for leadtime_hour in leadtime_hours:
                 for dataset in glofas_object.datasets:
@@ -145,7 +148,7 @@ def download_glofas(
     year: int,
     month: int = None,
     leadtime_hour: int = None,
-    use_cache: bool = True
+    use_cache: bool = True,
 ):
     filepath = get_glofas_filepath(
         country_name=country_name,
@@ -158,10 +161,10 @@ def download_glofas(
     )
     # If caching is on and file already exists, don't downlaod again
     if use_cache and filepath.exists():
-        logger.debug(f'{filepath} already exists and cache is set to True, skipping')
+        logger.debug(f"{filepath} already exists and cache is set to True, skipping")
         return filepath
     Path(filepath.parent).mkdir(parents=True, exist_ok=True)
-    logger.debug(f'Querying for {filepath}...')
+    logger.debug(f"Querying for {filepath}...")
     CDSAPI_CLIENT.retrieve(
         name=cds_name,
         request=get_glofas_query(
@@ -174,7 +177,7 @@ def download_glofas(
         ),
         target=filepath,
     )
-    logger.debug(f'...successfully downloaded {filepath}')
+    logger.debug(f"...successfully downloaded {filepath}")
     # Wait 2 seconds between requests or else API hangs
     # TODO make sure this actually works
     time.sleep(2)
@@ -249,32 +252,43 @@ def get_area(stations_lon_lat: dict = None, buffer=0.5) -> list:
     ]
 
 
-def process_glofas_reanalysis(country_name: str, country_iso3: str, stations_lon_lat: dict):
+def process_glofas_reanalysis(
+    country_name: str, country_iso3: str, stations_lon_lat: dict
+):
     glofas_object = get_glofas_object(dataset_type="reanalysis")
-    df_reanalysis = pd.DataFrame()
-    ds_reanalysis = xr.Dataset()
-    for year in range(glofas_object.year_min, glofas_object.year_max + 1):
-        filepath = get_glofas_filepath(
+    filepath_list = [
+        get_glofas_filepath(
             country_name=country_name,
             country_iso3=country_iso3,
             cds_name=glofas_object.cds_name,
             dataset=glofas_object.datasets[0],
             year=year,
         )
-        ds = xr.open_dataset(filepath, engine="cfgrib")
-        df_year = pd.DataFrame()
-        for station_name, lon_lat in stations_lon_lat.items():
-            lat_index = np.abs(ds.latitude - lon_lat[0]).argmin()
-            lon_index = np.abs(ds.longitude - lon_lat[1]).argmin()
-            df_station = (
-                ds.isel(latitude=lat_index, longitude=lon_index)
-                .drop_vars(
-                    names=["step", "surface", "latitude", "longitude", "valid_time"]
-                )
-                .to_dataframe()
-                .rename(columns={"dis24": station_name})
+        for year in range(glofas_object.year_min, glofas_object.year_max + 1)
+    ]
+    ds = xr.open_mfdataset(filepath_list, engine="cfgrib")
+    # Create a new dataset with just the station pixels
+    logger.info("Looping through stations, this takes some time")
+    ds_new = xr.Dataset(
+        data_vars={
+            station_name: (
+                "time",
+                ds.isel(
+                    latitude=np.abs(ds.latitude - lat).argmin(),
+                    longitude=np.abs(ds.longitude - lon).argmin(),
+                )["dis24"],
             )
-            df_year = df_year.merge(
-                df_station, left_index=True, right_index=True, how="outer"
-            )
-        df_reanalysis = df_reanalysis.append(df_year)
+            for station_name, (lon, lat) in stations_lon_lat.items()
+        },
+        coords={"time": ds.time},
+    )
+    # Write out the new dataset to a file
+    filepath = (
+        PROCESSED_DATA_DIR
+        / country_name
+        / GLOFAS_DIR
+        / f"{country_iso3}_{glofas_object.cds_name}_{glofas_object.datasets[0]}.nc"
+    )
+    Path(filepath.parent).mkdir(parents=True, exist_ok=True)
+    logger.info(f"Writing to {filepath}")
+    ds_new.to_netcdf(filepath)
