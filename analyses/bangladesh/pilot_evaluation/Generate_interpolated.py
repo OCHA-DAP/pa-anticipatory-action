@@ -79,7 +79,7 @@ def make_data(df, adm_grp):
                 y_fit = utils.gauss(x, *popt)
                 y_new = utils.gauss(x_new, *popt)
                 # Standard deviation of the errors for the mean (x0) parameter
-                # Convert from seconds (from unix time) to hours.
+                # Convert from seconds (from unix time) to days.
                 cov = np.sqrt(np.diag(pcov)[1]) / 86400
                 rmse = utils.rmse(y_fit, y)
                 date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
