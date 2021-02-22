@@ -28,14 +28,14 @@ def make_time_series(df_shp, df_data, id_col):
     # Working on a figure of small multiples
     # Drawn from:
     # http://jonathansoma.com/lede/data-studio/classes/small-multiples/long-explanation-of-using-plt-subplots-to-create-small-multiples/
-    # Get the axes set up - we have 17 dates in total
-    fig, axes = plt.subplots(nrows=4, ncols=5, sharex=True, sharey=True, figsize=(15,20))
+    # Get the axes set up - we have 27 dates in total
+    fig, axes = plt.subplots(nrows=4, ncols=7, sharex=True, sharey=True, figsize=(15,20))
     axes_list = [item for sublist in axes for item in sublist]
 
     # Loop through to make the plots
     for date, selection in df_merged.groupby("date"):
         ax = axes_list.pop(0)
-        selection.plot(column='flood_fraction', label=date, ax=ax, legend=False)
+        selection.plot(column='flooded_fraction', label=date, ax=ax, legend=False)
         ax.set_title(date)
         ax.spines['left'].set_visible(False)
         ax.spines['top'].set_visible(False)
@@ -81,7 +81,7 @@ def make_graphs(adm):
         id_col = adm + '_PCODE'
 
     make_time_series(df_adm, df_sat_ext, id_col)
-    cols = ['FWHM', 'MAX_G', 'MAX_P', 'RMSE_G', 'RMSE_P']
+    cols = ['FWHM', 'MAX_G', 'MAX_SAT', 'COV', 'RMSE']
     for col in cols:
         make_choropleth(df_adm, df_int_sum, id_col, col, col)
 

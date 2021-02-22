@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import date, timedelta
+
+import utils
 
 
 Water_threshold=19.5+0.85
@@ -16,17 +19,7 @@ FFWC_RL_FOLDER='data/FFWC_Data'
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 Discharge_threshold=100000
 ndays_threshold_glofas=2
-GLOFAS_DS_FILENAME='{}.csv'
-GLOFAS_DS_FOLDER='data/GLOFAS_Data'
-
-def get_glofas_df():
-    glofas_df=pd.DataFrame(columns=['dis24_Noonkhawa'])
-    for year in range(1979,2021):
-        glofas_fn=GLOFAS_DS_FILENAME.format(year)
-        glofas_df=glofas_df.append(pd.read_csv('{}/{}'.format(GLOFAS_DS_FOLDER,glofas_fn),
-                                                index_col=0))
-    glofas_df.index=pd.to_datetime(glofas_df.index,format='%Y-%m-%d')
-    return glofas_df
+GLOFAS_DS_FOLDER = Path('data/GLOFAS_Data')
 
 # def get_ffwc_log_df():
 #     ffwc_rl_name='{}/{}/{}'.format(DIR_PATH,FFWC_RL_FOLDER,FFWC_RL_LOG_FILENAME)
@@ -65,7 +58,7 @@ def calculate_activations(days_above,ndays_threshold):
     activations = activations[activations['ndays']>=ndays_threshold]
     return activations
 
-glofas_df=get_glofas_df()
+glofas_df = utils.get_glofas_df(district_list=['dis24_Noonkhawa'])
 # ffwc_log_df=get_ffwc_log_df()
 ffwc_his_df=get_ffwc_his_df()
 

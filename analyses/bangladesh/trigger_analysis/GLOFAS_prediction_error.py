@@ -1,22 +1,14 @@
-import os
+from datetime import  timedelta
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from datetime import date, timedelta
+
+import utils
 
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
-GLOFAS_DS_FILENAME='{}.csv'
 GLOFAS_DS_ENSEMBLE_FILENAME='10daysleadtime_19972018_allensemble.xls'
-GLOFAS_DS_FOLDER='data/GLOFAS_Data'
 
-def get_glofas_df():
-    glofas_df=pd.DataFrame(['dis24_Noonkhawa'])
-    for year in range(1979,2021):
-        glofas_fn=GLOFAS_DS_FILENAME.format(year)
-        glofas_df=glofas_df.append(pd.read_csv('{}/{}'.format(GLOFAS_DS_FOLDER,glofas_fn),
-                                                index_col=0))
-    glofas_df.index=pd.to_datetime(glofas_df.index)
-    return glofas_df
 
 def get_glofas_ensemble_df():
     glofas_ens_df=pd.read_excel('{}/{}'.format(GLOFAS_DS_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
@@ -30,7 +22,9 @@ def get_glofas_ensemble_df():
     # print(glofas_ens_df)
     return glofas_ens_df
 
-glofas_df=get_glofas_df()
+
+glofas_df = utils.get_glofas_df(district_list=['dis24_Noonkhawa'])
+
 glofas_ens_df=get_glofas_ensemble_df()
 all_projections=pd.merge(glofas_ens_df,glofas_df, left_index=True,right_index=True,how='left')
 
