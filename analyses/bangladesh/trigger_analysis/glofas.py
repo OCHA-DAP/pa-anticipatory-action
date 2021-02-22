@@ -4,6 +4,7 @@ Download raster data from GLOFAS and extracts time series of water discharge in 
 from collections import namedtuple
 from pathlib import Path
 import logging
+import time
 
 import numpy as np
 import pandas as pd
@@ -128,6 +129,7 @@ def download_glofas_reforecast(
                     )
 
 
+
 def download_glofas(
     country_iso3: str,
     cds_name: str,
@@ -166,6 +168,9 @@ def download_glofas(
         target=filepath,
     )
     logger.debug(f'...successfully downloaded {filepath}')
+    # Wait 2 seconds between requests or else API hangs
+    # TODO make sure this actually works
+    time.sleep(2)
     return filepath
 
 
@@ -239,6 +244,7 @@ def get_area(stations_lon_lat: dict = None, buffer=0.5) -> list:
 def process_glofas_reanalysis(country_iso3: str, stations_lon_lat: dict):
     glofas_object = get_glofas_object(dataset_type="reanalysis")
     df_reanalysis = pd.DataFrame()
+    ds_reanalysis = xr.Dataset()
     for year in range(glofas_object.year_min, glofas_object.year_max + 1):
         filepath = get_glofas_filepath(
             country_iso3=country_iso3,

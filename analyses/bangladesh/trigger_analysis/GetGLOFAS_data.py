@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    logger.debug('TEST')
     glofas.download_glofas_reanalysis(country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
     glofas.download_glofas_reforecast(country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
     glofas.process_glofas_reanalysis(country_iso3=COUNTRY_ISO3, stations_lon_lat=FFWC_STATIONS)
