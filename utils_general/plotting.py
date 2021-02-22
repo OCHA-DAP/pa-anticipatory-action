@@ -40,6 +40,52 @@ def plot_histogram(hist_array, xlabel=None):
     ax.spines['top'].set_visible(False)
     return fig
 
+
+def plot_timeseries(df, x_col, y_col, subplot_col=None, colp_num=2, ylim=None):
+    import matplotlib.dates as dates
+    import matplotlib
+    # initialize empty figure, to circumvent that figures from different functions are overlapping
+    plt.figure()
+    plt.clf()
+    #TODO: see if only having one subplot can be defined in a neater way
+    if subplot_col is not None:
+        num_plots = len(df[subplot_col].unique())
+    else:
+        num_plots=1
+        subplot_col="randomcol"
+        df["randomcol"]="placeholder"
+        colp_num=1
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+
+    fig = plt.figure(1, figsize=(16, 6 * rows))
+    for i, subplot_val in enumerate(df[subplot_col].unique()):
+        ax = fig.add_subplot(rows, colp_num, position[i])
+        data = df.loc[df[subplot_col] == subplot_val, :]
+
+        ax.plot(data[x_col], data[y_col], color="blue")
+        plt.title(f"{subplot_val} {y_col}")
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.set_xlabel(x_col)
+        ax.set_ylabel(y_col)
+
+        # only format if x_col is of datetime type else can give incorrect results
+        if np.issubdtype(df[x_col].dtype, np.datetime64):
+            ax.xaxis.set_minor_locator(dates.MonthLocator())
+            ax.xaxis.set_minor_formatter(dates.DateFormatter('%b'))
+            ax.xaxis.set_major_locator(dates.YearLocator())
+            ax.xaxis.set_major_formatter(dates.DateFormatter('\n\n%Y'))
+            plt.setp(ax.xaxis.get_minorticklabels(), rotation=90)
+            ax.set_xticks(data[x_col].values, minor=True)
+        ax.get_yaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+        if ylim is not None:
+            ax.set_ylim(ylim[0], ylim[1])
+
+    fig.tight_layout(pad=3.0)
+    return fig
+
 def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat',forec_val='prob_below'):
     #TODO: at some point this function can be deleted/integrated with plot_raster_boundaries_test, but for now keeping for debugging
     """
@@ -82,7 +128,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     fig.suptitle(f'{country} forecasted values and shape boundaries')
     return fig
 
-def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8,legend_label=None):
+def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',lat='lat',forec_val='prob_below',title_list=None,suptitle=None,colp_num=2,predef_bins = np.arange(30, 61, 2.5),figsize=(6.4, 4.8),labelsize=8,legend_label=None,cmap=None):
     #compared to plot_raster_boundaries, this function is working with clipped values and a list of datasets
     """
     Plot a raster file and a shapefile on top of each other.
@@ -116,7 +162,8 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
     position = range(1, num_plots + 1)
 
     norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
-    cmap=plt.cm.jet
+    if not cmap:
+        cmap=plt.cm.jet
     # cmap.set_bad(color='red')
     fig, axes = plt.subplots(rows, colp_num,figsize=figsize)
     if num_plots==1:
