@@ -29,6 +29,10 @@ Create a virtual environment and install the requirements with
    ```
 If an error occurs you might have to install spatialindex, on MacOS this can be done with `brew install spatialindex`
 
+Sync [this](https://drive.google.com/drive/u/3/folders/1RVpnCUpxHQ-jokV_27xLRqOs6qR_8mqQ)
+directory from Google drive to your local machine. Create an environment variable called
+`AA_DATA_DIR` that points to this directory.
+
 The indicators and analyses folders contain more specific information on the data, processing and how to run the scripts. 
 
 

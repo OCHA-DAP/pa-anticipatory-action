@@ -1,19 +1,15 @@
 import requests
 import os
 import logging
-import sys
 from pathlib import Path
 import rasterio
 import xarray as xr
-#pycharm is indicating that rioxarray is not used, but actually is used when calling .rio
-import rioxarray
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-from indicators.drought.config import Config
-from utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar
+from src.indicators.drought.config import Config
+from src.utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar
 
 logger = logging.getLogger(__name__)
+
 
 def download_iri(iri_auth,config,chunk_size=128):
     """

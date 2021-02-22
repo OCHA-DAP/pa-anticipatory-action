@@ -5,16 +5,18 @@ import numpy as np
 import cftime
 import calendar
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from indicators.drought.iri_rainfallforecast import get_iri_data
-from indicators.drought.nmme_rainfallforecast import get_nmme_data
-from utils_general.plotting import plot_spatial_columns, plot_raster_boundaries, plot_raster_boundaries_clip
-from utils_general.raster_manipulation import compute_raster_statistics
 
-from indicators.drought.config import Config
-from indicators.drought.utils import parse_args
-from utils_general.utils import config_logger
+from src.indicators.drought.iri_rainfallforecast import get_iri_data
+from src.indicators.drought.nmme_rainfallforecast import get_nmme_data
+from src.utils_general.plotting import plot_spatial_columns, plot_raster_boundaries, plot_raster_boundaries_clip
+from src.utils_general.raster_manipulation import compute_raster_statistics
+
+from src.indicators.drought.config import Config
+from src.indicators.drought.utils import parse_args
+from src.utils_general.utils import config_logger
+
 
 
 def main(download, config=None):
@@ -35,9 +37,9 @@ def main(download, config=None):
     if config is None:
         config = Config()
     parameters = config.parameters(country)
-    output_dir=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,'results','drought')
+    output_dir=os.path.join(os.environ['AA_DATA_DIR'], 'processed', country, 'drought')
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    adm_path=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR, parameters['path_admin1_shp'])
+    adm_path=os.path.join(os.environ['AA_DATA_DIR'], 'raw', country, config.SHAPEFILE_DIR, parameters['path_admin1_shp'])
     statlist_plot=['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched']
 
     provider="IRI"
