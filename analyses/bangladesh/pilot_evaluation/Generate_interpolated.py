@@ -130,10 +130,10 @@ def qc_gaussian(df_interpolated, df_summary, no_fit):
 
     df_summary_copy = df_summary.copy()
     df_summary_copy['NO_FIT'] = df_summary['FWHM'].isna()
-    df_summary_copy['OOR'] = df_summary['MAX_G'] > 1
     df_summary_copy['NEG'] = (df_summary_copy['COV'].isna()) & (df_summary_copy['NO_FIT'] == False)
     df_summary_copy['RIVER'] = df_summary['MAX_SAT'].isna()
-    df_summary_copy['FWHM_ERR'] = (df_summary['FWHM'] > 500) | (df_summary['FWHM'] < 0)
+    df_summary_copy['FWHM_ERR'] = (df_summary['FWHM'] > 200) | (df_summary['FWHM'] < 0)
+    df_summary_copy['MAX_DIFF'] = abs(df_summary_copy['MAX_SAT'] - df_summary_copy['MAX_G']) > 0.5
     df_summary_copy.to_csv(os.path.join(output_dir, f'{ADM}_flood_summary_QA.csv'), index=False)
 
     try:
