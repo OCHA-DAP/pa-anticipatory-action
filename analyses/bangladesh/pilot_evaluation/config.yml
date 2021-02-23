@@ -2,10 +2,10 @@ DIRS:
   adm_dir: "data/ADM_Shp"
   data_dir: "data/FE_Results"
   gee_dir: "data/GEE_Output"
-  plot_dir: "results/figures/flood_extent/Results_18_02"
+  plot_dir: "results/summary"
 FILES:
-  adm_shp: 'data/ADM_Shp/selected_distict_mauza.shp'
+  adm_shp: 'data/ADM_Shp/bgd_admbnda_adm4_bbs_20201113.shp'
   river_shp: 'data/ADM_Shp/river_extent.shp'
 PARAMS:
   crs: 'EPSG:32646'
-  adm: 'MAUZ'
+  adm: 'ADM4'

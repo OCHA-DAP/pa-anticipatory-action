@@ -17,20 +17,18 @@ df_flooding <- df_flooding %>%
                                       as.Date('2020-06-01', format = '%Y-%m-%d')))%>%
   mutate(PEAK_G_DAYS = as.integer(PEAK_G -
                                     as.Date('2020-06-01', format = '%Y-%m-%d')))%>%
-  mutate(MAX_DIFF = MAX_G - MAX_SAT)%>%
+  mutate(MAX_DIFF = abs(MAX_G - MAX_SAT))%>%
   mutate(FWHM_NO = ifelse(FWHM < 200, FWHM, NA))
+
 
 df_ts_intp <- read.csv('data/FE_Results/MAUZ_flood_extent_interpolated.csv')
 df_ts_sent <- read.csv('data/FE_Results/MAUZ_flood_extent_sentinel.csv')
 
-
 # 2. Identify the edge case mauzas for Gaussian fit --------------------------------
 
-
-slice_max()
-
+# jUST ADJUST THE FILTER PARAMETER TO GET DIFF SUBSETS OF THE DATA
 sel <- df_flooding %>%
-  filter(FWHM > 19 | FWHM < 20)%>%
+  filter(MAX_DIFF > 0.5)%>%
   select(PCODE)
 
 ts_intp <- df_ts_intp %>%
@@ -52,5 +50,5 @@ ggplot(data=ts, aes(date, flooded_fraction, color=type))+
   theme_minimal()+
   theme(strip.text.x = element_blank())
 
-ggsave('results/fwhm_15_to_20.png')
+ggsave('results/max_diff_over_30.png')
 
