@@ -8,6 +8,7 @@ nmme/
 copernicus/
 chirps/
 analyses/bangladesh/data/*
+analyses/bangladesh/results/*/archive/*
 
 #Local experiments
 Experiments
