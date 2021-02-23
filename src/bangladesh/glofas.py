@@ -25,7 +25,6 @@ GlofasContainer = namedtuple(
     [
         "year_min",
         "year_max",
-        "leadtime_hours",
         "cds_name",
         "dataset",
         "system_version_minor",
@@ -44,7 +43,6 @@ def get_glofas_object(dataset_type: str) -> GlofasContainer:
         glofas_object = GlofasContainer(
             year_min=1979,
             year_max=2020,
-            leadtime_hours=None,
             cds_name="cems-glofas-historical",
             dataset=["consolidated_reanalysis"],
             system_version_minor=1,
@@ -54,7 +52,6 @@ def get_glofas_object(dataset_type: str) -> GlofasContainer:
         glofas_object = GlofasContainer(
             year_min=1999,
             year_max=2018,
-            leadtime_hours=[120, 240, 480, 600, 720],
             cds_name="cems-glofas-reforecast",
             dataset=["control_reforecast", "ensemble_perturbed_reforecasts"],
             system_version_minor=2,
@@ -94,7 +91,7 @@ def download_glofas_reanalysis(
             country_iso3=country_iso3,
             system_version_minor=glofas_object.system_version_minor,
             cds_name=glofas_object.cds_name,
-            dataset=glofas_object.datasets[0],
+            dataset=glofas_object.dataset,
             area=area,
             year=year,
         )
@@ -103,10 +100,10 @@ def download_glofas_reanalysis(
 def download_glofas_reforecast(
     country_name: str,
     country_iso3: str,
+    leadtime_hours: list,
     stations_lon_lat: dict,
     year_min: int = None,
     year_max: int = None,
-    leadtime_hours: list = None,
 ):
     glofas_object = get_glofas_object(dataset_type="reforecast")
     area = get_area(stations_lon_lat=stations_lon_lat)
@@ -114,8 +111,6 @@ def download_glofas_reforecast(
         year_min = glofas_object.year_min
     if year_max is None:
         year_max = glofas_object.year_max
-    if leadtime_hours is None:
-        leadtime_hours = glofas_object.leadtime_hours
     logger.info(
         f"Downloading GloFAS reanalysis for years {year_min} - {year_max} and leadtime hours {leadtime_hours}"
     )
@@ -249,8 +244,8 @@ def get_area(stations_lon_lat: dict = None, buffer=0.5) -> list:
 
 
 def process_glofas_reanalysis(
-            country_name: str, country_iso3: str, stations_lon_lat: dict
-    ):
+    country_name: str, country_iso3: str, stations_lon_lat: dict
+):
     glofas_object = get_glofas_object(dataset_type="reanalysis")
     filepath_list = [
         get_glofas_filepath(
@@ -261,54 +256,10 @@ def process_glofas_reanalysis(
         )
         for year in range(glofas_object.year_min, glofas_object.year_max + 1)
     ]
-    ds = xr.open_mfdataset(filepath_list, engine="cfgrib")
-    # Create a new dataset with just the station pixels
-    logger.info("Looping through stations, this takes some time")
-    ds_new = xr.Dataset(
-        data_vars={
-            station_name: (
-                "time",
-                ds.isel(
-                    latitude=np.abs(ds.latitude - lat).argmin(),
-                    longitude=np.abs(ds.longitude - lon).argmin(),
-                )["dis24"],
-            )
-            for station_name, (lon, lat) in stations_lon_lat.items()
-        },
-        coords={"time": ds.time},
+    logger.info(f"Reading in {len(filepath_list)} files")
+    ds = xr.open_mfdataset(
+        filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}
     )
-    # Write out the new dataset to a file
-    filepath = (
-            PROCESSED_DATA_DIR
-            / country_name
-            / GLOFAS_DIR
-            / f"{country_iso3}_{glofas_object.cds_name}.nc"
-    )
-    Path(filepath.parent).mkdir(parents=True, exist_ok=True)
-    logger.info(f"Writing to {filepath}")
-    ds_new.to_netcdf(filepath)
-
-
-def process_glofas_reforecast(
-    country_name: str, country_iso3: str, stations_lon_lat: dict
-):
-    """WIP"""
-    glofas_object = get_glofas_object(dataset_type="reforecast")
-    filepath_list = [
-        get_glofas_filepath(
-            country_name=country_name,
-            country_iso3=country_iso3,
-            cds_name=glofas_object.cds_name,
-            year=year,
-            month=month,
-            leadtime_hour=leadtime_hour
-        )
-        for year in range(glofas_object.year_min, 2003)#glofas_object.year_max + 1)
-        for month in range(1, 13)
-        for leadtime_hour in glofas_object.leadtime_hours
-    ]
-    ds = xr.open_mfdataset(filepath_list, engine="cfgrib")
-    print(ds)
     # Create a new dataset with just the station pixels
     logger.info("Looping through stations, this takes some time")
     ds_new = xr.Dataset(
@@ -329,8 +280,90 @@ def process_glofas_reforecast(
         PROCESSED_DATA_DIR
         / country_name
         / GLOFAS_DIR
-        / f"{country_iso3}_{glofas_object.cds_name}_{glofas_object.datasets[0]}.nc"
+        / f"{country_iso3}_{glofas_object.cds_name}.nc"
     )
     Path(filepath.parent).mkdir(parents=True, exist_ok=True)
     logger.info(f"Writing to {filepath}")
     ds_new.to_netcdf(filepath)
+
+
+def process_glofas_reforecast(
+    country_name: str, country_iso3: str, stations_lon_lat: dict, leadtime_hours: list
+):
+    glofas_object = get_glofas_object(dataset_type="reforecast")
+    for leadtime_hour in leadtime_hours:
+        logger.info(f"For lead time {leadtime_hour}")
+        filepath_list = [
+            get_glofas_filepath(
+                country_name=country_name,
+                country_iso3=country_iso3,
+                cds_name=glofas_object.cds_name,
+                year=year,
+                month=month,
+                leadtime_hour=leadtime_hour,
+            )
+            # TODO: use full year range once download finishes
+            for year in range(
+                glofas_object.year_min, 2006  # glofas_object.year_max + 1
+            )
+            for month in range(1, 13)
+        ]
+        # Read in both the control and ensemble perturbed forecast and combine
+        ds_list = []
+        for data_type in ["cf", "pf"]:
+            ds = xr.open_mfdataset(
+                filepath_list,
+                concat_dim=["latitude", "longitude", "time", "step"],
+                engine="cfgrib",
+                backend_kwargs={
+                    "indexpath": "",
+                    "filter_by_keys": {"dataType": data_type},
+                },
+            )
+            # Delete history for merging
+            del ds.attrs["history"]
+            if data_type == "cf":
+                # Would be best to use xr.expand_dims here, but this causes a strange bug with Dask similar to
+                # https://github.com/pydata/xarray/issues/873 (shoudl be fixed though)
+                # So instead I will just make a new dataset
+                ds = xr.Dataset(
+                    data_vars={
+                        "dis24": (
+                            ["number", "time", "latitude", "longitude"],
+                            np.expand_dims(ds["dis24"].values, 0),
+                        )
+                    },
+                    coords={
+                        "longitude": ds.longitude,
+                        "latitude": ds.latitude,
+                        "number": [ds.number],
+                        "time": ds.time,
+                    },
+                )
+            ds_list.append(ds)
+        ds = xr.combine_by_coords(ds_list)
+        # Create a new dataset with just the station pixels
+        logger.info("Looping through stations, this takes some time")
+        ds_new = xr.Dataset(
+            data_vars={
+                station_name: (
+                    ["number", "time"],
+                    ds.isel(
+                        latitude=np.abs(ds.latitude - lat).argmin(),
+                        longitude=np.abs(ds.longitude - lon).argmin(),
+                    )["dis24"].values,
+                )
+                for station_name, (lon, lat) in stations_lon_lat.items()
+            },
+            coords={"number": ds.number.values, "time": ds.time.values},
+        )
+        # Write out the new dataset to a file
+        filepath = (
+            PROCESSED_DATA_DIR
+            / country_name
+            / GLOFAS_DIR
+            / f"{country_iso3}_{glofas_object.cds_name}_{leadtime_hour}.nc"
+        )
+        Path(filepath.parent).mkdir(parents=True, exist_ok=True)
+        logger.info(f"Writing to {filepath}")
+        ds_new.to_netcdf(filepath)
