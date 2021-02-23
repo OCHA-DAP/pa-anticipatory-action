@@ -8,7 +8,6 @@ import time
 import os
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 import cdsapi
 
@@ -28,7 +27,7 @@ GlofasContainer = namedtuple(
         "year_max",
         "leadtime_hours",
         "cds_name",
-        "datasets",
+        "dataset",
         "system_version_minor",
     ],
 )
@@ -47,7 +46,7 @@ def get_glofas_object(dataset_type: str) -> GlofasContainer:
             year_max=2020,
             leadtime_hours=None,
             cds_name="cems-glofas-historical",
-            datasets=["consolidated_reanalysis"],
+            dataset=["consolidated_reanalysis"],
             system_version_minor=1,
         )
     elif dataset_type == "reforecast":
@@ -55,9 +54,9 @@ def get_glofas_object(dataset_type: str) -> GlofasContainer:
         glofas_object = GlofasContainer(
             year_min=1999,
             year_max=2018,
-            leadtime_hours=[120, 240, 360, 480, 600, 720],
+            leadtime_hours=[120, 240, 480, 600, 720],
             cds_name="cems-glofas-reforecast",
-            datasets=["control_reforecast", "ensemble_perturbed_reforecasts"],
+            dataset=["control_reforecast", "ensemble_perturbed_reforecasts"],
             system_version_minor=2,
         )
     else:
@@ -124,18 +123,17 @@ def download_glofas_reforecast(
         logger.info(f"...{year}")
         for month in range(1, 13):
             for leadtime_hour in leadtime_hours:
-                for dataset in glofas_object.datasets:
-                    download_glofas(
-                        country_name=country_name,
-                        country_iso3=country_iso3,
-                        system_version_minor=glofas_object.system_version_minor,
-                        cds_name=glofas_object.cds_name,
-                        dataset=dataset,
-                        area=area,
-                        year=year,
-                        month=month,
-                        leadtime_hour=leadtime_hour,
-                    )
+                download_glofas(
+                    country_name=country_name,
+                    country_iso3=country_iso3,
+                    system_version_minor=glofas_object.system_version_minor,
+                    cds_name=glofas_object.cds_name,
+                    dataset=glofas_object.dataset,
+                    area=area,
+                    year=year,
+                    month=month,
+                    leadtime_hour=leadtime_hour,
+                )
 
 
 def download_glofas(
@@ -143,7 +141,7 @@ def download_glofas(
     country_iso3: str,
     cds_name: str,
     system_version_minor: int,
-    dataset: str,
+    dataset: list,
     area: list,
     year: int,
     month: int = None,
@@ -154,7 +152,6 @@ def download_glofas(
         country_name=country_name,
         country_iso3=country_iso3,
         cds_name=cds_name,
-        dataset=dataset,
         year=year,
         month=month,
         leadtime_hour=leadtime_hour,
@@ -188,13 +185,12 @@ def get_glofas_filepath(
     country_name: str,
     country_iso3: str,
     cds_name: str,
-    dataset: str,
     year: int,
     month: int = None,
     leadtime_hour: int = None,
 ):
-    directory = RAW_DATA_DIR / country_name / GLOFAS_DIR / cds_name / dataset
-    filename = f"{country_iso3}_{cds_name}_{dataset}_{year}"
+    directory = RAW_DATA_DIR / country_name / GLOFAS_DIR / cds_name
+    filename = f"{country_iso3}_{cds_name}_{year}"
     if month is not None:
         filename += f"-{str(month).zfill(2)}"
     if leadtime_hour is not None:
@@ -205,7 +201,7 @@ def get_glofas_filepath(
 
 def get_glofas_query(
     system_version_minor: int,
-    dataset: str,
+    dataset: list,
     area: list,
     year: int,
     month: int = None,
@@ -253,20 +249,66 @@ def get_area(stations_lon_lat: dict = None, buffer=0.5) -> list:
 
 
 def process_glofas_reanalysis(
-    country_name: str, country_iso3: str, stations_lon_lat: dict
-):
+            country_name: str, country_iso3: str, stations_lon_lat: dict
+    ):
     glofas_object = get_glofas_object(dataset_type="reanalysis")
     filepath_list = [
         get_glofas_filepath(
             country_name=country_name,
             country_iso3=country_iso3,
             cds_name=glofas_object.cds_name,
-            dataset=glofas_object.datasets[0],
             year=year,
         )
         for year in range(glofas_object.year_min, glofas_object.year_max + 1)
     ]
     ds = xr.open_mfdataset(filepath_list, engine="cfgrib")
+    # Create a new dataset with just the station pixels
+    logger.info("Looping through stations, this takes some time")
+    ds_new = xr.Dataset(
+        data_vars={
+            station_name: (
+                "time",
+                ds.isel(
+                    latitude=np.abs(ds.latitude - lat).argmin(),
+                    longitude=np.abs(ds.longitude - lon).argmin(),
+                )["dis24"],
+            )
+            for station_name, (lon, lat) in stations_lon_lat.items()
+        },
+        coords={"time": ds.time},
+    )
+    # Write out the new dataset to a file
+    filepath = (
+            PROCESSED_DATA_DIR
+            / country_name
+            / GLOFAS_DIR
+            / f"{country_iso3}_{glofas_object.cds_name}.nc"
+    )
+    Path(filepath.parent).mkdir(parents=True, exist_ok=True)
+    logger.info(f"Writing to {filepath}")
+    ds_new.to_netcdf(filepath)
+
+
+def process_glofas_reforecast(
+    country_name: str, country_iso3: str, stations_lon_lat: dict
+):
+    """WIP"""
+    glofas_object = get_glofas_object(dataset_type="reforecast")
+    filepath_list = [
+        get_glofas_filepath(
+            country_name=country_name,
+            country_iso3=country_iso3,
+            cds_name=glofas_object.cds_name,
+            year=year,
+            month=month,
+            leadtime_hour=leadtime_hour
+        )
+        for year in range(glofas_object.year_min, 2003)#glofas_object.year_max + 1)
+        for month in range(1, 13)
+        for leadtime_hour in glofas_object.leadtime_hours
+    ]
+    ds = xr.open_mfdataset(filepath_list, engine="cfgrib")
+    print(ds)
     # Create a new dataset with just the station pixels
     logger.info("Looping through stations, this takes some time")
     ds_new = xr.Dataset(
