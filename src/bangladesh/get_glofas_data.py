@@ -28,7 +28,7 @@ FFWC_STATIONS = {
     "Serajganj": [89.7479, 24.4676],
     "Aricha": [89.6550, 23.9032],
 }
-LEADTIME_HOURS = [120, 240, 480, 360, 600, 720]
+LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
 
 logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
@@ -36,9 +36,15 @@ logger = logging.getLogger(__name__)
 
 def main():
 
-    glofas_reanalysis = glofas.GlofasReanalysis(stations_lon_lat=FFWC_STATIONS)
-    glofas_reanalysis.download(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
-    glofas_reanalysis.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+    #glofas_reanalysis = glofas.GlofasReanalysis(stations_lon_lat=FFWC_STATIONS)
+    #glofas_reanalysis.download(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+    #glofas_reanalysis.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+
+    glofas_forecast = glofas.GlofasForecast(
+        stations_lon_lat = FFWC_STATIONS, leadtime_hours = LEADTIME_HOURS
+    )
+    glofas_forecast.download(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+    glofas_forecast.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
 
     glofas_reforecast = glofas.GlofasReforecast(
         stations_lon_lat=FFWC_STATIONS, leadtime_hours=LEADTIME_HOURS

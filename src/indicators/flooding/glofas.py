@@ -28,16 +28,19 @@ class Glofas:
         year_max: int,
         cds_name: str,
         dataset: list,
-        system_version_minor: int,
+        dataset_variable_name: str,
+        system_version_minor: int = None,
+        leadtime_hours: list = None,
     ):
         self.stations_lon_lat = stations_lon_lat
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
         self.dataset = dataset
+        self.dataset_variable_name = dataset_variable_name
         self.system_version_minor = system_version_minor
+        self.leadtime_hours = leadtime_hours
         self.area = get_area(self.stations_lon_lat)
-
 
     def _download(
         self,
@@ -102,9 +105,9 @@ class Glofas:
         leadtime_hour: int = None,
     ) -> dict:
         query = {
-            "system_version": f"version_2_{self.system_version_minor}",
             "variable": "river_discharge_in_the_last_24_hours",
             "format": "grib",
+            self.dataset_variable_name: self.dataset,
             "hyear": str(year),
             "hmonth": [str(x).zfill(2) for x in range(1, 13)]
             if month is None
@@ -112,14 +115,43 @@ class Glofas:
             "hday": [str(x).zfill(2) for x in range(1, 32)],
             "area": self.area,
         }
-        if self.system_version_minor == 1:
-            query["dataset"] = self.dataset
-        elif self.system_version_minor == 2:
-            query["product_type"] = self.dataset
         if leadtime_hour is not None:
             query["leadtime_hour"] = str(leadtime_hour)
+        if self.system_version_minor is not None:
+            query["system_version"] = f"version_2_{self.system_version_minor}"
         logger.debug(f"Query: {query}")
         return query
+
+    @staticmethod
+    def _read_in_data_with_two_datasets(filepath_list):
+        """
+        Read in dataset that has both control and ensemble perturbed forecast
+        and combine them
+        """
+        ds_list = []
+        for data_type in ["cf", "pf"]:
+            ds = xr.open_mfdataset(
+                filepath_list,
+                engine="cfgrib",
+                backend_kwargs={
+                    "indexpath": "",
+                    "filter_by_keys": {"dataType": data_type},
+                },
+            )
+            # Delete history attribute in order to merge
+            del ds.attrs["history"]
+            # Extra processing require for control forecast
+            if data_type == "cf":
+                ds = expand_dims(
+                    ds=ds,
+                    dataset_name="dis24",
+                    coord_names=["number", "time", "latitude", "longitude"],
+                    expansion_dim=0,
+                )
+            ds_list.append(ds)
+        ds = xr.combine_by_coords(ds_list)
+        return ds
+
 
     def _get_station_dataset(self, ds: xr.Dataset, coord_names: list) -> xr.Dataset:
         return xr.Dataset(
@@ -163,6 +195,7 @@ class GlofasReanalysis(Glofas):
             year_max=2020,
             cds_name="cems-glofas-historical",
             dataset=["consolidated_reanalysis"],
+            dataset_variable_name="dataset",
             system_version_minor=1,
         )
 
@@ -205,16 +238,73 @@ class GlofasReanalysis(Glofas):
         )
 
 
+class GlofasForecast(Glofas):
+    def __init__(self, stations_lon_lat: dict, leadtime_hours: list):
+        super().__init__(
+            stations_lon_lat=stations_lon_lat,
+            year_min=2019,
+            year_max=2021,
+            cds_name="cems-glofas-forecast",
+            dataset=["control_forecast", "ensemble_perturbed_forecasts"],
+            dataset_variable_name="product_type",
+            leadtime_hours=leadtime_hours
+        )
+
+    def download(
+        self,
+        country_name: str,
+        country_iso3: str,
+    ):
+        logger.info(
+            f"Downloading GloFAS forecast for years {self.year_min} - {self.year_max} and leadtime hours {self.leadtime_hours}"
+        )
+        for year in range(self.year_min, self.year_max + 1):
+            logger.info(f"...{year}")
+            for leadtime_hour in self.leadtime_hours:
+                super()._download(
+                    country_name=country_name,
+                    country_iso3=country_iso3,
+                    year=year,
+                    leadtime_hour=leadtime_hour,
+                )
+
+    def process(self, country_name: str, country_iso3: str):
+        logger.info("Processing GloFAS Forecast")
+        for leadtime_hour in self.leadtime_hours:
+            logger.info(f"For lead time {leadtime_hour}")
+            # Get list of files to open
+            filepath_list = [
+                self._get_raw_filepath(
+                    country_name=country_name,
+                    country_iso3=country_iso3,
+                    year=year,
+                    leadtime_hour=leadtime_hour,
+                )
+                for year in range(self.year_min, self.year_max + 1)
+            ]
+            # Read in both the control and ensemble perturbed forecast and combine
+            logger.info(f"Reading in {len(filepath_list)} files")
+            ds = self._read_in_data_with_two_datasets(filepath_list)
+            # Create a new dataset with just the station pixels
+            logger.info("Looping through stations, this takes some time")
+            ds_new = self._get_station_dataset(ds=ds, coord_names=["number", "time"])
+            # Write out the new dataset to a file
+            self._write_to_processed_file(
+                country_name=country_name, country_iso3=country_iso3, ds=ds_new
+            )
+
+
 class GlofasReforecast(Glofas):
     def __init__(self, stations_lon_lat: dict, leadtime_hours: list):
-        self.leadtime_hours = leadtime_hours
         super().__init__(
             stations_lon_lat=stations_lon_lat,
             year_min=1999,
             year_max=2018,
             cds_name="cems-glofas-reforecast",
             dataset=["control_reforecast", "ensemble_perturbed_reforecasts"],
+            dataset_variable_name="product_type",
             system_version_minor=2,
+            leadtime_hours=leadtime_hours
         )
 
     def download(
@@ -255,7 +345,7 @@ class GlofasReforecast(Glofas):
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
-            ds = self._read_in_data(filepath_list)
+            ds = self._read_in_data_with_two_datasets(filepath_list)
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = self._get_station_dataset(ds=ds, coord_names=["number", "time"])
