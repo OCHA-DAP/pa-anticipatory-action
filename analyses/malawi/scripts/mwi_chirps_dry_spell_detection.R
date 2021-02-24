@@ -85,10 +85,11 @@ for (i in seq_along(1:nbr_layers)) {
       }
 #saveRDS(data_max_values,"../Data/transformed/data_max_values_20210219_r5.rds")
 
-# transpose data; create Year, Month columns; label rainy season year (approximated: Oct-May)
+# transpose data; create Year, Month,Day columns; label rainy season year (approximated: Oct-May)
 data_max_values_long <- convertToLongFormat(data_max_values)
 data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
 data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
+data_max_values_long$day <- lubridate::day(data_max_values_long$date) 
 data_max_values_long$season_approx <- ifelse(data_max_values_long$month >= 10, data_max_values_long$year, ifelse(data_max_values_long$month <= 5, data_max_values_long$year - 1, 'outside rainy season'))
 
 #####
@@ -99,12 +100,9 @@ data_max_values_long$season_approx <- ifelse(data_max_values_long$month >= 10, d
 
 rainy_onsets <- findRainyOnset()
 
-
-
-
 # Rainy season cessation: 25mm or less of rain in 15 days after 15 March (DCCMS 2008).
 
-
+rainy_cessation <- findRainyCessation()
 
 
 # find rainy days (total_prec > 0) per rainy season (= Nov through April incl) ## TO DO: use WFP's definition of onset and create separate function to compute it
