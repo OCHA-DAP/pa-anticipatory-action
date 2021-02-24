@@ -216,7 +216,7 @@ class GlofasReanalysis(Glofas):
         logger.info("Looping through stations, this takes some time")
         ds_new = self._get_station_dataset(ds=ds, coord_names=["time"])
         # Write out the new dataset to a file
-        processed_filepath = self._write_to_processed_file(
+        self._write_to_processed_file(
             country_name=country_name, country_iso3=country_iso3, ds=ds_new
         )
 

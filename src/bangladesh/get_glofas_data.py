@@ -28,9 +28,9 @@ FFWC_STATIONS = {
     "Serajganj": [89.7479, 24.4676],
     "Aricha": [89.6550, 23.9032],
 }
-LEADTIME_HOURS = [120, 240, 480, 600, 720]
+LEADTIME_HOURS = [120, 240, 480, 360, 600, 720]
 
-logging.basicConfig(level=logging.INFO, force=True)
+logging.basicConfig(level=logging.DEBUG, force=True)
 logger = logging.getLogger(__name__)
 
 
