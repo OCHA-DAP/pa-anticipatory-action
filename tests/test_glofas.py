@@ -4,6 +4,16 @@ import xarray as xr
 from src.indicators.flooding import glofas
 
 
+def test_get_area():
+    stations_lon_lat = {
+        'station_east': [1, 0],
+        'station_west': [-2, 0],
+        'station_north': [0, 3],
+        'station_south': [0, -4]
+    }
+    assert glofas.get_area(stations_lon_lat=stations_lon_lat, buffer=0.1) == [3.1, -2.1, -4.1, 1.1]
+
+
 def test_expand_dims():
     rs = np.random.RandomState(12345)
     size_x, size_y = (10, 20)

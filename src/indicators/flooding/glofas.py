@@ -36,24 +36,8 @@ class Glofas:
         self.cds_name = cds_name
         self.dataset = dataset
         self.system_version_minor = system_version_minor
-        self.area = self._get_area()
+        self.area = get_area(self.stations_lon_lat)
 
-    def _get_area(self, buffer=0.5) -> list:
-        """
-        Args:
-            buffer: degrees above / below maximum lat / lon from stations to include in GloFAS query
-
-        Returns:
-            list with format [N, W, S, E]
-        """
-        lon_list = [lon for (lon, lat) in self.stations_lon_lat.values()]
-        lat_list = [lat for (lon, lat) in self.stations_lon_lat.values()]
-        return [
-            max(lat_list) + buffer,
-            min(lon_list) - buffer,
-            min(lat_list) - buffer,
-            max(lon_list) + buffer,
-        ]
 
     def _download(
         self,
@@ -309,6 +293,25 @@ class GlofasReforecast(Glofas):
             ds_list.append(ds)
         ds = xr.combine_by_coords(ds_list)
         return ds
+
+
+def get_area(stations_lon_lat: dict, buffer: float = 0.5) -> list:
+    """
+    Args:
+        stations_lon_lat: dictionary of form {station_name: [lon (float), lat (float)]
+        buffer: degrees above / below maximum lat / lon from stations to include in GloFAS query
+
+    Returns:
+        list with format [N, W, S, E]
+    """
+    lon_list = [lon for (lon, lat) in stations_lon_lat.values()]
+    lat_list = [lat for (lon, lat) in stations_lon_lat.values()]
+    return [
+        max(lat_list) + buffer,
+        min(lon_list) - buffer,
+        min(lat_list) - buffer,
+        max(lon_list) + buffer,
+    ]
 
 
 def expand_dims(
