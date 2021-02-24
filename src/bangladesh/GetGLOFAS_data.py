@@ -1,21 +1,22 @@
 """
-# TODO: refactor & move to utils_general
 Download raster data from GLOFAS and extracts time series of water discharge in selected locations,
 matching the FFWC stations data
 """
-import os
-import zipfile
-from datetime import date, timedelta
 import logging
 
-import numpy as np
-import pandas as pd
-from netCDF4 import Dataset
+# TODO: remove this after making top-level
+from pathlib import Path
+import os
+import sys
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+sys.path.append(path_mod)
 
-import glofas
+from src.indicators.flooding import glofas
+
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
+# TODO: Change to using GloFAS station locations?
 COUNTRY_NAME = "bangladesh"
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
