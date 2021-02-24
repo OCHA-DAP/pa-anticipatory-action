@@ -74,8 +74,6 @@ data_projection <- projection(data) # assign CRS to variable
 # create list of regions
 region_list <- mwi_adm2[,c('ADM2_PCODE', 'ADM2_EN', 'geometry')]
 
-## compute precipitation totals per adm2
-
 # loop through layers/days to compile MAX values across layers/days
 nbr_layers <- nlayers(data)
 data_max_values <- data.frame(ID = 1:nrow(mwi_adm2))
@@ -87,14 +85,27 @@ for (i in seq_along(1:nbr_layers)) {
       }
 #saveRDS(data_max_values,"../Data/transformed/data_max_values_20210219_r5.rds")
 
-## identify rainy season start date per region, year/rainy season
-
-# transpose data, create Year column
+# transpose data; create Year, Month columns; label rainy season year (approximated: Oct-May)
 data_max_values_long <- convertToLongFormat(data_max_values)
 data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
 data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
+data_max_values_long$season_approx <- ifelse(data_max_values_long$month >= 10, data_max_values_long$year, ifelse(data_max_values_long$month <= 5, data_max_values_long$year - 1, 'outside rainy season'))
 
-## TO DO: Remove/adjust below once rainy season definition confirmed 
+#####
+## identify rainy season onset/cessation/duration per year, adm2
+#####
+
+# Rainy season onset: First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
+
+rainy_onsets <- findRainyOnset()
+
+
+
+
+# Rainy season cessation: 25mm or less of rain in 15 days after 15 March (DCCMS 2008).
+
+
+
 
 # find rainy days (total_prec > 0) per rainy season (= Nov through April incl) ## TO DO: use WFP's definition of onset and create separate function to compute it
 rainy_streaks <- data_max_values_long %>%
@@ -179,14 +190,14 @@ rainy_season_ends <- rainy_streaks %>%
                         mutate(end_date = last_rain_streak_start_date + streak_length) 
 
 # compile start and end date of each season for every adm2
-rainy_season_dates <- rainy_season_starts %>%
-                        dplyr::select(rainy_season, pcode, earliest_rain_streak_start_date) %>%
-                        inner_join(rainy_season_ends[,c('rainy_season', 'pcode', 'end_date')], by = c('rainy_season' = 'rainy_season', 'pcode' = 'pcode'))
+# rainy_season_dates <- rainy_season_starts %>%
+#                         dplyr::select(rainy_season, pcode, earliest_rain_streak_start_date) %>%
+#                         inner_join(rainy_season_ends[,c('rainy_season', 'pcode', 'end_date')], by = c('rainy_season' = 'rainy_season', 'pcode' = 'pcode'))
 
 ## identify dry spells per adm2
-
 # compute per-region 14-d rolling sums
 data_max_sums <- compute14dSum(data_max_values)
+
 
 # list days on which 14-day rolling sum is 2mm or less of rain
 data_max_sums$rollsum_ds_bin <- ifelse(data_max_sums$rollsum_14d <= 2, 1, 0)

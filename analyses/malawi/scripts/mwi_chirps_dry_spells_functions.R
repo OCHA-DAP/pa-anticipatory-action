@@ -30,26 +30,14 @@ convertToLongFormat <- function(data.wideformat){
   return(data.longformat)
 }
 
-## TO DO: refactor to use convertToLongFormat()
-compute14dSum <- function(data_compiled.stat){
+## compute rolling sum
+computeRollingSum <- function(dataframe_long, window){
   
-  # add pcodes to identify each polygon
-  data_compiled.stat$pcode <- mwi_adm2$ADM2_PCODE
-  
-  # convert wide to long to get dates as rows
-  data_compiled.stat_long <- gather(data_compiled.stat, date, total_prec, 2:(nbr_layers+1))
-  
-  # assign "zero" values to NA in total_prec
-  data_compiled.stat_long$total_prec[is.na(data_compiled.stat_long$total_prec)] <- 0
-  
-  # reformat 'date' to a date format
-  data_compiled.stat_long$date <- as.Date(data_compiled.stat_long$date, format = "X%Y.%m.%d")
-  
-  # convert to wide
-  rolling_sum <-  data_compiled.stat_long %>%
-    arrange(pcode, date) %>%
-    group_by(pcode) %>%
-    mutate(rollsum_14d = zoo::rollsum(total_prec, k = 14, fill = NA, align = 'right')
+    # convert to wide
+    rolling_sum <-  dataframe_long %>%
+          arrange(pcode, date) %>%
+          group_by(pcode) %>%
+          mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'right')
     ) 
   return(rolling_sum)
 }
@@ -59,3 +47,51 @@ runlengthEncoding <- function(x) {
      x <- rle(x)$lengths
      rep(seq_along(x), times=x)
 }
+
+## compute onset date for every rainy season per adm2
+findRainyOnset <- function() {
+  
+  # get periods with at least 40mm of rain over 10 days
+  data_max_values_long <- data_max_values_long %>%
+                        group_by(pcode) %>%
+                        computeRollingSum(., window = 10) %>%
+                        rename(rollsum_10d = rollsum)
+  
+  data_max_values_long$min_cum_40mm_bin <- ifelse(data_max_values_long$rollsum_10d >= 40, 1, 0) # is this day in a 40+mm period?
+  
+  # identify 10-day dry spells (10 consecutive days with less than 2mm of total rain)
+  data_max_values_long$less_than_cum_2mm_bin <- ifelse(data_max_values_long$rollsum_10d < 2, 1, 0) # is this day in a dry period (<2mm)?
+  
+  # verify no 10-day dry spells following in 30 days of first day with >=40mm cum sum
+  data_max_values_long <- data_max_values_long %>% 
+                            group_by(pcode) %>%
+                            mutate(nbr_dry_spell_days_win_30d = zoo::rollsum(less_than_cum_2mm_bin, k = 30, fill = NA, align = 'left'),
+                                   followed_by_ds_win_30d_bin = ifelse(nbr_dry_spell_days_win_30d > 0, 1, 0))  
+                          
+  # select earliest data per season_approx after Nov 1 that meets both criteria
+  rainy_onsets <- data_max_values_long %>%
+                    mutate(meets_criteria = ifelse(min_cum_40mm_bin == 1 & followed_by_ds_win_30d_bin == 0, 1, 0)) %>% 
+                    group_by(pcode, season_approx) %>%
+                    filter(meets_criteria == 1 & month != 10) %>% # period post Nov 1. Excludes Oct but includes Jan for each season_approx)
+                    slice(which.min(date)) %>%
+                    ungroup() %>%
+                    dplyr::select(ID, pcode, season_approx, date) %>%
+                    filter(season_approx != '2009') # excluding rainy season 2009 for incomplete data
+  
+  return(rainy_onsets)
+  
+          }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
