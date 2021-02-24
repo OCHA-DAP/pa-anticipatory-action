@@ -51,18 +51,13 @@ runlengthEncoding <- function(x) {
 ## compute onset date for every rainy season per adm2
 findRainyOnset <- function() {
   
-  # get periods with at least 40mm of rain over 10 days
-  data_max_values_long <- data_max_values_long %>%
-                        group_by(pcode) %>%
-                        computeRollingSum(., window = 10) %>%
-                        rename(rollsum_10d = rollsum)
-  
+  # identify 10-day periods with at least 40mm cumulative yearound
   data_max_values_long$min_cum_40mm_bin <- ifelse(data_max_values_long$rollsum_10d >= 40, 1, 0) # is this day in a 40+mm period?
   
-  # identify 10-day dry spells (10 consecutive days with less than 2mm of total rain)
+  # identify 10-day dry spells (10 consecutive days with less than 2mm of total rain) yearound
   data_max_values_long$less_than_cum_2mm_bin <- ifelse(data_max_values_long$rollsum_10d < 2, 1, 0) # is this day in a dry period (<2mm)?
   
-  # verify no 10-day dry spells following in 30 days of first day with >=40mm cum sum
+  # verify no 10-day dry spells following in 30 days of first day with >=40mm cum sum yearound
   data_max_values_long <- data_max_values_long %>% 
                             group_by(pcode) %>%
                             mutate(nbr_dry_spell_days_win_30d = zoo::rollsum(less_than_cum_2mm_bin, k = 30, fill = NA, align = 'left'),
@@ -73,7 +68,7 @@ findRainyOnset <- function() {
                     filter(season_approx != 'outside rainy season') %>% 
                     mutate(meets_onset_criteria = ifelse(min_cum_40mm_bin == 1 & followed_by_ds_win_30d_bin == 0, 1, 0)) %>% 
                     group_by(pcode, season_approx) %>%
-                    filter(meets_onset_criteria == 1 & month != 10) %>% # period post 1 Nov. Excludes Oct but includes Jan for each season_approx)
+                    filter(meets_onset_criteria == 1 & month != 10) %>% # period post 1 Nov. Excludes Oct but includes Jan-June for late onsets)
                     slice(which.min(date)) %>%
                     ungroup() %>%
                     dplyr::select(ID, pcode, season_approx, date) %>%
@@ -87,23 +82,21 @@ findRainyOnset <- function() {
 ## compute cessation date for every rainy season per adm2
 findRainyCessation <- function() {
   
-  # get periods with at least 40mm of rain over 10 days
-  data_max_values_long <- data_max_values_long %>%
-    group_by(pcode) %>%
-    computeRollingSum(., window = 15) %>%
-    rename(rollsum_15d = rollsum)
+   # identify 15-day periods of up to 25mm cum
+    data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less 15d period?
   
-  data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less period?
-  
-  # select earliest date per season_approx after 15 March that meets criterion
-  rainy_cessation <- data_max_values_long %>%
-                        filter(season_approx != 'outside rainy season' & month >= 3 & day >= 15) %>% # rainy season but period post 15 March
-                        group_by(pcode, season_approx) %>%
+   # select earliest date per season_approx after 15 March that meets criterion
+    rainy_cessation <- data_max_values_long %>%
+                        filter(season_approx != 'outside rainy season' & season_approx != '2020') %>% # exclude rainy season 2020 for incomplete data
+                        filter((month >= 4) | (month == 3 & day >= 15)) %>% # after 15 Mar or after during the season_approx
+                        filter(max_cum_25mm_bin == 1) %>%
+                        mutate(season_approx_cessation_year = ifelse(month <= 6, year, NA)) %>% # label the season_approx that might cease on these months
+                        filter(!is.na(season_approx_cessation_year)) %>% # remove NAs not to get cessation dates after June
+                        group_by(pcode, season_approx_cessation_year) %>%
                         slice(which.min(date)) %>%
                         ungroup() %>%
                         dplyr::select(ID, pcode, season_approx, date) %>%
-                        rename(cessation_date = date) %>%
-                        filter(season_approx != '2020') # excluding rainy season 2020 for incomplete data
+                        rename(cessation_date = date) 
                       
             return(rainy_cessation)
             

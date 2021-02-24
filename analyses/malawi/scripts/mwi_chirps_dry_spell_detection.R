@@ -13,12 +13,13 @@ source("scripts/mwi_chirps_dry_spells_functions.R")
 ## setup
 rasterOptions(maxmemory = 1e+09)
 year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
-
-## load data 
-# set file paths
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
 chirps_path <- paste0(data_dir, "/raw/drought/chirps")
+
+#####
+## process shapefiles
+#####
 
 # read in country shapefiles
 mwi_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp"))
@@ -36,6 +37,10 @@ plot(mwi_adm2$geometry) # visual inspection
 
 mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
+
+#####
+## process observational rainfall data (CHIRPS)
+#####
 
 # read in CHIRPS data (multiple multi-layer raster files) into a single stack
 s2010 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2010_p05.nc")) # each file has to be read in separately or layer names get lost
@@ -85,24 +90,53 @@ for (i in seq_along(1:nbr_layers)) {
       }
 #saveRDS(data_max_values,"../Data/transformed/data_max_values_20210219_r5.rds")
 
-# transpose data; create Year, Month,Day columns; label rainy season year (approximated: Oct-May)
+#####
+## transform rainfall data and compute rolling sums
+#####
+
+# transpose data; create Year, Month,Day columns; label rainy season year (approximated: Oct-June to give room for early starts and late cessations)
 data_max_values_long <- convertToLongFormat(data_max_values)
 data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
 data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
 data_max_values_long$day <- lubridate::day(data_max_values_long$date) 
-data_max_values_long$season_approx <- ifelse(data_max_values_long$month >= 10, data_max_values_long$year, ifelse(data_max_values_long$month <= 5, data_max_values_long$year - 1, 'outside rainy season'))
+data_max_values_long$season_approx <- ifelse(data_max_values_long$month >= 10, data_max_values_long$year, ifelse(data_max_values_long$month <= 6, data_max_values_long$year - 1, 'outside rainy season')) # labels the rainy season which overlaps between two calendar years. uses first year as label.
+
+# get periods with at least 40mm of rain over 10 days
+data_max_values_long <- data_max_values_long %>%
+                          group_by(pcode) %>%
+                          computeRollingSum(., window = 10) %>%
+                          rename(rollsum_10d = rollsum)
+
+# get periods with at least 40mm of rain over 10 days
+data_max_values_long <- data_max_values_long %>%
+  group_by(pcode) %>%
+  computeRollingSum(., window = 15) %>%
+  rename(rollsum_15d = rollsum)
 
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
 #####
 
 # Rainy season onset: First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
-
 rainy_onsets <- findRainyOnset()
 
 # Rainy season cessation: 25mm or less of rain in 15 days after 15 March (DCCMS 2008).
+rainy_cessations <- findRainyCessation()
 
-rainy_cessation <- findRainyCessation()
+# combine onset and cessation dates
+rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c('ID', 'pcode', 'season_approx'), all.x = TRUE, all.y = TRUE) # keep partial years 2009 and 2020
+
+# checks
+sum(ifelse(rainy_seasons$cessation_date < rainy_seasons$onset_date, 1, 0), na.rm = T) # assigns 1 to records whose cessation date precedes the onset of the season. sum indicates nbr of records for which it is the case
+
+# compute duration
+rainy_seasons$duration <- as.numeric(difftime(rainy_seasons$cessation_date, rainy_seasons$onset_date, units = "days"))
+
+#####
+## explore rainy season patterns
+#####
+
+
 
 
 # find rainy days (total_prec > 0) per rainy season (= Nov through April incl) ## TO DO: use WFP's definition of onset and create separate function to compute it
