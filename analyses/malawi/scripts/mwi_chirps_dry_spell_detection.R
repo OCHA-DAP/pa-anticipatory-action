@@ -1,8 +1,12 @@
 ########
-## Identify dry spells (less than 2 mm of rain in 14 or more consecutive days) in observational rainfall data from CHIRPS
+## Project: Identify dry spells (less than 2 mm of rain in 14 or more consecutive days) in observational rainfall data from CHIRPS
 ########
 
-## load libraries
+#####
+## setup
+#####
+
+# load libraries
 library(tidyverse)
 library(sf)
 library(raster)
@@ -10,12 +14,19 @@ library(raster)
 # load functions
 source("scripts/mwi_chirps_dry_spells_functions.R")
 
-## setup
+# set options
 rasterOptions(maxmemory = 1e+09)
-year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
+
+# set directory paths
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
 chirps_path <- paste0(data_dir, "/raw/drought/chirps")
+
+# list years and adm2 regions to be analysed
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
+year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
+names(year_by_adm2)[2] <- 'pcode'
+year_by_adm2$year <- as.character(year_by_adm2$year)
 
 #####
 ## process shapefiles
@@ -109,9 +120,9 @@ data_max_values_long <- data_max_values_long %>%
 
 # get periods with at least 40mm of rain over 10 days
 data_max_values_long <- data_max_values_long %>%
-  group_by(pcode) %>%
-  computeRollingSum(., window = 15) %>%
-  rename(rollsum_15d = rollsum)
+                          group_by(pcode) %>%
+                          computeRollingSum(., window = 15) %>%
+                          rename(rollsum_15d = rollsum)
 
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
@@ -125,12 +136,41 @@ rainy_cessations <- findRainyCessation()
 
 # combine onset and cessation dates
 rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c('ID', 'pcode', 'season_approx'), all.x = TRUE, all.y = TRUE) # keep partial years 2009 and 2020
+rainy_seasons <- merge(rainy_seasons, year_by_adm2, by.x = c('pcode', 'season_approx'), by.y = c('pcode', 'year'), all.y = T) # ensure a record is created for each adm2 for every year
 
 # checks
-sum(ifelse(rainy_seasons$cessation_date < rainy_seasons$onset_date, 1, 0), na.rm = T) # assigns 1 to records whose cessation date precedes the onset of the season. sum indicates nbr of records for which it is the case
+sum(ifelse(rainy_seasons$cessation_date < rainy_seasons$onset_date, 1, 0), na.rm = T) # sum indicates nbr of records for which cessation date precedes onset date
+nlevels(as.factor(rainy_seasons$pcode)) # number of districts in dataset
+nlevels(as.factor(rainy_seasons$season_approx)) # number of seasons in dataset
+nrow(rainy_seasons) == nlevels(as.factor(rainy_seasons$pcode)) * nlevels(as.factor(rainy_seasons$season_approx)) # is the number of records in rainy_seasons the multiple of number of regions and number of years?
 
-# compute duration
+table(rainy_seasons$pcode, rainy_seasons$season_approx) # table of available data per adm2 and year. ## TO DO: Check MW106 in 2020
+
+# compute duration (cessation minus onset dates in days)
 rainy_seasons$duration <- as.numeric(difftime(rainy_seasons$cessation_date, rainy_seasons$onset_date, units = "days"))
+
+# create variables for exploration
+rainy_seasons$onset_month <- lubridate::month(rainy_seasons$onset_date)
+rainy_seasons$cessation_month <- lubridate::month(rainy_seasons$cessation_date)
+  
+#####
+## identify dry spells that occurred during a rainy season 
+#####
+
+# label rainy days
+data_max_values_long$rainy_day_bin <-  ifelse(data_max_values_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
+
+# 
+rainy_streaks <- data_max_values_long %>%
+           rainy_season = ifelse(month >= 11, year, ifelse(month <= 4, year - 1, 'outside rainy season'))) %>% # identify year the rainy season started & across calendar years
+  group_by(rainy_season, pcode) %>%        
+  arrange(pcode, date) %>%
+  mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # number each group of consecutive days with/without rain per adm2 and year
+  filter(rainy_day_bin == 1) %>% # keep the rainy streaks
+  ungroup() 
+
+
+
 
 #####
 ## explore rainy season patterns
@@ -139,15 +179,7 @@ rainy_seasons$duration <- as.numeric(difftime(rainy_seasons$cessation_date, rain
 
 
 
-# find rainy days (total_prec > 0) per rainy season (= Nov through April incl) ## TO DO: use WFP's definition of onset and create separate function to compute it
-rainy_streaks <- data_max_values_long %>%
-                  mutate(rainy_day_bin = ifelse(total_prec > 0, 1, 0),
-                         rainy_season = ifelse(month >= 11, year, ifelse(month <= 4, year - 1, 'outside rainy season'))) %>% # identify year the rainy season started & across calendar years
-                  group_by(rainy_season, pcode) %>%        
-                  arrange(pcode, date) %>%
-                  mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # number each group of consecutive days with/without rain per adm2 and year
-                  filter(rainy_day_bin == 1) %>% # keep the rainy streaks
-                  ungroup() 
+
 
 
 # find earliest streak with 7+ days per adm2 and rainy season (no data for 2020 rainy season after 31 Dec 2020)
