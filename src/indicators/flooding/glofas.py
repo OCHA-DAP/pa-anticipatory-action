@@ -125,12 +125,11 @@ class Glofas:
         return query
 
     @staticmethod
-    def _read_in_data_with_two_datasets(filepath_list):
+    def _read_in_ensemble_and_perturbed_datasets(filepath_list):
         """
         Read in dataset that has both control and ensemble perturbed forecast
         and combine them
         """
-        coord_names = ["number", "time", "latitude", "longitude"]
         ds_list = []
         for data_type in ["cf", "pf"]:
             ds = xr.open_mfdataset(
@@ -140,7 +139,6 @@ class Glofas:
                     "indexpath": "",
                     "filter_by_keys": {"dataType": data_type},
                 },
-                concat_dim=coord_names # TODO: delete??
             )
             # Delete history attribute in order to merge
             del ds.attrs["history"]
@@ -149,7 +147,7 @@ class Glofas:
                 ds = expand_dims(
                     ds=ds,
                     dataset_name="dis24",
-                    coord_names=coord_names,
+                    coord_names=["number", "time", "latitude", "longitude"],
                     expansion_dim=0,
                 )
             ds_list.append(ds)
@@ -172,21 +170,26 @@ class Glofas:
         )
 
     def _write_to_processed_file(
-        self, country_name: str, country_iso3: str, ds: xr.Dataset
+        self, country_name: str, country_iso3: str, ds: xr.Dataset, leadtime_hour: int = None
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_name=country_name, country_iso3=country_iso3
+            country_name=country_name, country_iso3=country_iso3, leadtime_hour=leadtime_hour
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing to {filepath}")
         ds.to_netcdf(filepath)
+        return filepath
 
-    def _get_processed_filepath(self, country_name: str, country_iso3: str) -> Path:
+    def _get_processed_filepath(self, country_name: str, country_iso3: str, leadtime_hour: int = None) -> Path:
+        filename = f"{country_iso3}_{self.cds_name}"
+        if leadtime_hour is not None:
+           filename += f"_{str(leadtime_hour).zfill(4)}"
+        filename += ".nc"
         return (
             PROCESSED_DATA_DIR
             / country_name
             / GLOFAS_DIR
-            / f"{country_iso3}_{self.cds_name}.nc"
+            / filename
         )
 
 
@@ -288,13 +291,13 @@ class GlofasForecast(Glofas):
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
-            ds = self._read_in_data_with_two_datasets(filepath_list)
+            ds = self._read_in_ensemble_and_perturbed_datasets(filepath_list)
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = self._get_station_dataset(ds=ds, coord_names=["number", "time"])
             # Write out the new dataset to a file
             self._write_to_processed_file(
-                country_name=country_name, country_iso3=country_iso3, ds=ds_new
+                country_name=country_name, country_iso3=country_iso3, ds=ds_new, leadtime_hour=leadtime_hour
             )
 
 
@@ -350,13 +353,13 @@ class GlofasReforecast(Glofas):
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
-            ds = self._read_in_data_with_two_datasets(filepath_list)
+            ds = self._read_in_ensemble_and_perturbed_datasets(filepath_list)
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = self._get_station_dataset(ds=ds, coord_names=["number", "time"])
             # Write out the new dataset to a file
             self._write_to_processed_file(
-                country_name=country_name, country_iso3=country_iso3, ds=ds_new
+                country_name=country_name, country_iso3=country_iso3, ds=ds_new, leadtime_hour=leadtime_hour
             )
 
 
