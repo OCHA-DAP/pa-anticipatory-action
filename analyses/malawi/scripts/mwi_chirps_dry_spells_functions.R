@@ -42,12 +42,6 @@ computeRollingSum <- function(dataframe_long, window){
   return(rolling_sum)
 }
 
-## user-defined run-length encoding function in base R
-runlengthEncoding <- function(x) {
-     x <- rle(x)$lengths
-     rep(seq_along(x), times=x)
-}
-
 ## compute onset date for every rainy season per adm2
 findRainyOnset <- function() {
   
@@ -103,6 +97,11 @@ findRainyCessation <- function() {
           }
 
 
+## user-defined run-length encoding function in base R
+runlengthEncoding <- function(x) {
+  x <- rle(x)$lengths
+  rep(seq_along(x), times=x)
+}
 
 
 
