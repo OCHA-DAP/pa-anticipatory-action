@@ -192,6 +192,10 @@ class Glofas:
             / filename
         )
 
+    def read_processed_dataset(self, country_name: str, country_iso3: str, leadtime_hour: int = None):
+        filepath = self._get_processed_filepath(country_name=country_name, country_iso3=country_iso3, leadtime_hour=leadtime_hour)
+        return xr.open_dataset(filepath)
+
 
 class GlofasReanalysis(Glofas):
     def __init__(self, stations_lon_lat: dict):
@@ -321,7 +325,7 @@ class GlofasReforecast(Glofas):
         country_iso3: str,
     ):
         logger.info(
-            f"Downloading GloFAS reanalysis for years {self.year_min} - {self.year_max} and leadtime hours {self.leadtime_hours}"
+            f"Downloading GloFAS reforecast for years {self.year_min} - {self.year_max} and leadtime hours {self.leadtime_hours}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
