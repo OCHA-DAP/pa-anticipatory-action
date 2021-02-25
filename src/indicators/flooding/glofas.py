@@ -30,6 +30,7 @@ class Glofas:
         dataset: list,
         dataset_variable_name: str,
         system_version_minor: int = None,
+        date_variable_prefix: str = "",
         leadtime_hours: list = None,
     ):
         self.stations_lon_lat = stations_lon_lat
@@ -39,6 +40,7 @@ class Glofas:
         self.dataset = dataset
         self.dataset_variable_name = dataset_variable_name
         self.system_version_minor = system_version_minor
+        self.date_variable_prefix = date_variable_prefix
         self.leadtime_hours = leadtime_hours
         self.area = get_area(self.stations_lon_lat)
 
@@ -108,11 +110,11 @@ class Glofas:
             "variable": "river_discharge_in_the_last_24_hours",
             "format": "grib",
             self.dataset_variable_name: self.dataset,
-            "hyear": str(year),
-            "hmonth": [str(x).zfill(2) for x in range(1, 13)]
+            f"{self.date_variable_prefix}year": str(year),
+            f"{self.date_variable_prefix}month": [str(x).zfill(2) for x in range(1, 13)]
             if month is None
             else str(month).zfill(2),
-            "hday": [str(x).zfill(2) for x in range(1, 32)],
+            f"{self.date_variable_prefix}day": [str(x).zfill(2) for x in range(1, 32)],
             "area": self.area,
         }
         if leadtime_hour is not None:
@@ -128,6 +130,7 @@ class Glofas:
         Read in dataset that has both control and ensemble perturbed forecast
         and combine them
         """
+        coord_names = ["number", "time", "latitude", "longitude"]
         ds_list = []
         for data_type in ["cf", "pf"]:
             ds = xr.open_mfdataset(
@@ -137,6 +140,7 @@ class Glofas:
                     "indexpath": "",
                     "filter_by_keys": {"dataType": data_type},
                 },
+                concat_dim=coord_names # TODO: delete??
             )
             # Delete history attribute in order to merge
             del ds.attrs["history"]
@@ -145,13 +149,12 @@ class Glofas:
                 ds = expand_dims(
                     ds=ds,
                     dataset_name="dis24",
-                    coord_names=["number", "time", "latitude", "longitude"],
+                    coord_names=coord_names,
                     expansion_dim=0,
                 )
             ds_list.append(ds)
         ds = xr.combine_by_coords(ds_list)
         return ds
-
 
     def _get_station_dataset(self, ds: xr.Dataset, coord_names: list) -> xr.Dataset:
         return xr.Dataset(
@@ -192,10 +195,11 @@ class GlofasReanalysis(Glofas):
         super().__init__(
             stations_lon_lat=stations_lon_lat,
             year_min=1979,
-            year_max=2020,
+            year_max=2021,
             cds_name="cems-glofas-historical",
             dataset=["consolidated_reanalysis"],
             dataset_variable_name="dataset",
+            date_variable_prefix="h",
             system_version_minor=1,
         )
 
@@ -304,6 +308,7 @@ class GlofasReforecast(Glofas):
             dataset=["control_reforecast", "ensemble_perturbed_reforecasts"],
             dataset_variable_name="product_type",
             system_version_minor=2,
+            date_variable_prefix="h",
             leadtime_hours=leadtime_hours
         )
 
@@ -353,36 +358,6 @@ class GlofasReforecast(Glofas):
             self._write_to_processed_file(
                 country_name=country_name, country_iso3=country_iso3, ds=ds_new
             )
-
-    @staticmethod
-    def _read_in_data(filepath_list):
-        """
-        Read in dataset that has both control and ensemble perturbed forecast
-        and combine them
-        """
-        ds_list = []
-        for data_type in ["cf", "pf"]:
-            ds = xr.open_mfdataset(
-                filepath_list,
-                engine="cfgrib",
-                backend_kwargs={
-                    "indexpath": "",
-                    "filter_by_keys": {"dataType": data_type},
-                },
-            )
-            # Delete history attribute in order to merge
-            del ds.attrs["history"]
-            # Extra processing require for control forecast
-            if data_type == "cf":
-                ds = expand_dims(
-                    ds=ds,
-                    dataset_name="dis24",
-                    coord_names=["number", "time", "latitude", "longitude"],
-                    expansion_dim=0,
-                )
-            ds_list.append(ds)
-        ds = xr.combine_by_coords(ds_list)
-        return ds
 
 
 def get_area(stations_lon_lat: dict, buffer: float = 0.5) -> list:
