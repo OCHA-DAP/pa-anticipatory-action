@@ -10,7 +10,7 @@ import utils
 
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 GLOFAS_DS_ENSEMBLE_FILENAME='10daysleadtime_19972018_allensemble.xls'
-GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'raw/bangladesh/GLOFAS_Data'
+GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'exploration/bangladesh/GLOFAS_Data'
 
 
 def get_glofas_ensemble_df():
