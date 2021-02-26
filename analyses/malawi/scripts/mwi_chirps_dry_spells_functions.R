@@ -84,7 +84,7 @@ findRainyCessation <- function() {
     
     # select earliest date per season_approx after 15 March that meets criterion
     rainy_cessation <- data_max_values_long %>%
-                          filter((month >= 4 & month < 9) | (month == 3 & day >= 15)) %>% # in Mar on or after the 15th, or between April and Sep exclusively
+                          filter((month >= 4 & month < 8) | (month == 3 & day >= 15)) %>% # in Mar on or after the 15th, or between April and Aug exclusively
                           filter(max_cum_25mm_bin == 1) %>% # meet criterion for cessation (= 25mm or less cumulative rainfall over 15 days)
                           group_by(pcode, season_approx) %>%
                           slice(which.min(date)) %>%
