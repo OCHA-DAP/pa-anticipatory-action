@@ -315,8 +315,8 @@ def retrieve_globalipc(country, admin_level, suffix="", download=False, config=N
         config = Config()
     parameters = config.parameters(country)
 
-    country_data_raw_dir = os.path.join(os.environ['AA_DATA_DIR'], 'raw', country)
-    country_data_processed_dir = os.path.join(os.environ['AA_DATA_DIR'], 'processed', country)
+    country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
+    country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
     globalipc_dir = os.path.join(country_data_raw_dir, config.GLOBALIPC_RAW_DIR)
     output_dir = os.path.join(country_data_processed_dir,  config.GLOBALIPC_PROCESSED_DIR)
     bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR,
