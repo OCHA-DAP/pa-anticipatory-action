@@ -26,17 +26,19 @@ fn_process="admpop" #worldpop
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
+country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
+country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
+
 if fn_process=="worldpop":
-    fewsnet_dir = os.path.join(country_folder, config.FEWSWORLDPOP_PROCESSED_DIR)
+    fewsnet_dir = os.path.join(country_data_processed_dir, config.FEWSWORLDPOP_PROCESSED_DIR)
     fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
 elif fn_process=="admpop":
-    fewsnet_dir = os.path.join(country_folder, config.FEWSADMPOP_PROCESSED_DIR)
+    fewsnet_dir = os.path.join(country_data_processed_dir, config.FEWSADMPOP_PROCESSED_DIR)
     fewsnet_filename = config.FEWSADMPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
-globalipc_dir=os.path.join(country_folder, config.GLOBALIPC_PROCESSED_DIR)
+globalipc_dir=os.path.join(country_data_processed_dir, config.GLOBALIPC_PROCESSED_DIR)
 globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv")
 
-adm_bound_path= os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
+adm_bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f'path_admin{admin_level}_shp'])
 
 #TODO: remove index in process_fewsnet_admpop script
 df_fn=pd.read_csv(os.path.join(fewsnet_dir,fewsnet_filename),index_col=False)
