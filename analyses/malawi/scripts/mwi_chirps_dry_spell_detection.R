@@ -18,6 +18,7 @@ source("scripts/mwi_chirps_dry_spells_functions.R")
 rasterOptions(maxmemory = 1e+09)
 
 # set directory paths
+# AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
 chirps_path <- paste0(data_dir, "/raw/drought/chirps")
@@ -28,7 +29,7 @@ chirps_path <- paste0(data_dir, "/raw/drought/chirps")
 
 # read in country shapefiles
 mwi_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp"))
-mwi_adm3 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
+# mwi_adm3 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
 
 # explore shapefiles
 summary(st_geometry_type(mwi_adm2)) # summary of geometry types
@@ -54,17 +55,17 @@ year_by_adm2$year <- as.character(year_by_adm2$year)
 #####
 
 # read in CHIRPS data (multiple multi-layer raster files) into a single stack
-s2010 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2010_p05.nc")) # each file has to be read in separately or layer names get lost
-s2011 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2011_p05.nc"))
-s2012 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2012_p05.nc"))
-s2013 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2013_p05.nc"))
-s2014 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2014_p05.nc"))
-s2015 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2015_p05.nc"))
-s2016 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2016_p05.nc"))
-s2017 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2017_p05.nc"))
-s2018 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2018_p05.nc"))
-s2019 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2019_p05.nc"))
-s2020 <- raster::stack(paste0(data_dir, "/drought/chirps/chirps_global_daily_2020_p05.nc"))
+s2010 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2010_p05.nc")) # each file has to be read in separately or layer names get lost
+s2011 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2011_p05.nc"))
+s2012 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2012_p05.nc"))
+s2013 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2013_p05.nc"))
+s2014 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2014_p05.nc"))
+s2015 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2015_p05.nc"))
+s2016 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2016_p05.nc"))
+s2017 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2017_p05.nc"))
+s2018 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2018_p05.nc"))
+s2019 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2019_p05.nc"))
+s2020 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2020_p05.nc"))
 
 s2010_s2020 <- stack(s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020) # all files combined into a stack
 
