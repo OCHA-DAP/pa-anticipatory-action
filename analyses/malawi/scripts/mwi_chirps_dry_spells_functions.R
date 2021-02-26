@@ -80,22 +80,20 @@ findRainyCessation <- function() {
     data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less 15d period?
   
    # select earliest date per season_approx after 15 March that meets criterion
+    
+    # select earliest date per season_approx after 15 March that meets criterion
     rainy_cessation <- data_max_values_long %>%
-                        filter(season_approx != 'outside rainy season' & season_approx != '2020') %>% # exclude rainy season 2020 for incomplete data
-                        filter((month >= 4) | (month == 3 & day >= 15)) %>% # after 15 Mar or after during the season_approx
-                        filter(max_cum_25mm_bin == 1) %>%
-                        mutate(season_approx_cessation_year = ifelse(month <= 6, year, NA)) %>% # label the season_approx that might cease on these months
-                        filter(!is.na(season_approx_cessation_year)) %>% # remove NAs not to get cessation dates after June
-                        group_by(pcode, season_approx_cessation_year) %>%
-                        slice(which.min(date)) %>%
-                        ungroup() %>%
-                        dplyr::select(ID, pcode, season_approx, date) %>%
-                        rename(cessation_date = date) 
-                      
-            return(rainy_cessation)
-            
-          }
+                          filter((month >= 4 & month < 9) | (month == 3 & day >= 15)) %>% # in Mar on or after the 15th, or between April and Sep exclusively
+                          filter(max_cum_25mm_bin == 1) %>% # meet criterion for cessation (= 25mm or less cumulative rainfall over 15 days)
+                          group_by(pcode, season_approx) %>%
+                          slice(which.min(date)) %>%
+                          ungroup() %>%
+                          dplyr::select(ID, pcode, season_approx, date) %>%
+                          rename(cessation_date = date) 
+    
+    return(rainy_cessation)
 
+}
 
 ## user-defined run-length encoding function in base R
 runlengthEncoding <- function(x) {
