@@ -26,7 +26,6 @@ fn_process="admpop" #worldpop
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
 country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
 country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
 
