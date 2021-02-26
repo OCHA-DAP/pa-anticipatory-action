@@ -1,23 +1,17 @@
 from pathlib import Path
 import os
-import sys
 import xarray as xr
 import geopandas as gpd
 import rioxarray
 from shapely.geometry import mapping
-import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import logging
 import urllib
 import rasterio
 
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-from utils_general.utils import download_ftp
-from indicators.drought.config import Config
-from utils_general.plotting import plot_raster_boundaries_clip, plot_histogram
+from src.utils_general.utils import download_ftp
+from src.utils_general.plotting import plot_raster_boundaries_clip, plot_histogram
 
 
 def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
