@@ -59,15 +59,16 @@ findRainyOnset <- function() {
                           
   # select earliest date per season_approx after 1 Nov that meets both criteria
   rainy_onsets <- data_max_values_long %>%
-                    filter(season_approx != 'outside rainy season') %>% 
-                    mutate(meets_onset_criteria = ifelse(min_cum_40mm_bin == 1 & followed_by_ds_win_30d_bin == 0, 1, 0)) %>% 
+                    filter(season_approx != 'outside rainy season') %>% # exclude Aug-Sept
+                    mutate(meets_onset_criteria = ifelse(min_cum_40mm_bin == 1 & followed_by_ds_win_30d_bin == 0, 1, 0)) %>% # min 40mm in 15 days and not followed by 10d dry spells within 30 days
+                    filter(meets_onset_criteria == 1 & month %in% c(11, 12, 1, 2)) %>% # period post 1 Nov. Allows Nov-Feb for onsets)
                     group_by(pcode, season_approx) %>%
-                    filter(meets_onset_criteria == 1 & month != 10) %>% # period post 1 Nov. Excludes Oct but includes Jan-June for late onsets)
                     slice(which.min(date)) %>%
                     ungroup() %>%
                     dplyr::select(ID, pcode, season_approx, date) %>%
-                    rename(onset_date = date) %>% 
-                    filter(season_approx != '2009') # excluding rainy season 2009 for incomplete data
+                    rename(onset_date = date) 
+                    
+  rainy_onsets$onset_date[rainy_onsets$season_approx == '2009'] <- NA # set values for 2009 season as NA since no data Oct-Dec 2009 available
   
   return(rainy_onsets)
   
