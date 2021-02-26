@@ -32,6 +32,7 @@ __MACOSX/
 .Rhistory
 .RData
 .Ruserdata
+.Renviron
 
 # pycharm
 .idea
