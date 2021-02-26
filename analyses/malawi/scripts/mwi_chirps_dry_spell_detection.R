@@ -22,12 +22,6 @@ data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
 chirps_path <- paste0(data_dir, "/raw/drought/chirps")
 
-# list years and adm2 regions to be analysed
-year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
-year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
-names(year_by_adm2)[2] <- 'pcode'
-year_by_adm2$year <- as.character(year_by_adm2$year)
-
 #####
 ## process shapefiles
 #####
@@ -48,6 +42,12 @@ plot(mwi_adm2$geometry) # visual inspection
 
 mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
+
+# list years and adm2 regions to be analysed
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
+year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
+names(year_by_adm2)[2] <- 'pcode'
+year_by_adm2$year <- as.character(year_by_adm2$year)
 
 #####
 ## process observational rainfall data (CHIRPS)
