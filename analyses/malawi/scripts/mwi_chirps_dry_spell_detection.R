@@ -72,7 +72,8 @@ s2010_s2020 <- stack(s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s20
 # crop and masked area outside of MWI
 s2010_s2020_cropped <- crop(x = s2010_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
 data <- mask(s2010_s2020_cropped, mask = mwi_adm2)
-#saveRDS(data,"../Data/transformed/data_20210219_r5.rds")
+#saveRDS(data,paste0(data_dir, "/processed/malawi/dry_spells/data_20210219_r5.RDS")
+#data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_20210219_r5.RDS")) # 5-deg resolution
 plot(data) # visual inspection
 
 # explore compiled raster file ("brick")
@@ -86,8 +87,6 @@ dim(data) # (nrow, ncol, nlayers)
 yres(data) # y-resolution
 xres(data) # x-resolution
 
-data_projection <- projection(data) # assign CRS to variable
-
 # create list of regions
 region_list <- mwi_adm2[,c('ADM2_PCODE', 'ADM2_EN', 'geometry')]
 
@@ -100,7 +99,8 @@ for (i in seq_along(1:nbr_layers)) {
         data_max_values <- computeLayerStat(i, max, data_max_values)
         
       }
-#saveRDS(data_max_values,"../Data/transformed/data_max_values_20210219_r5.rds")
+#saveRDS(data_max_values,paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_20210219_r5.rds")
+# data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_20210219_r5.RDS"))
 
 #####
 ## transform rainfall data and compute rolling sums
