@@ -58,8 +58,6 @@ def main(download=False, process=False):
     if process:
         glofas_reanalysis.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
         glofas_forecast.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
-        # TODO: bgd_cems-glofas-reforecast_2004-11_lt0720.grib only contains one dataset.
-        # It was not used to make the processed file. Should contact Copernicus to ask what the problem is
         glofas_reforecast.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
 
     # Start of an analysis
