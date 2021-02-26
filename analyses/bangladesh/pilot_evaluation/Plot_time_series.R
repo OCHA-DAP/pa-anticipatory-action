@@ -9,7 +9,7 @@ library(dplyr)
 
 setwd("C:/Users/Hannah/Desktop/pa-anticipatory-action/analyses/bangladesh")
 
-df_flooding <- read.csv('data/FE_Results/June_Aug/MAUZ_flood_summary_QA.csv') 
+df_flooding <- read.csv('data/FE_Results/June_Aug/MAUZ_flood_summary_QA_survey.csv') 
 df_flooding <- df_flooding %>%
   mutate(PEAK_SAT = as.Date(df_flooding$PEAK_SAT, format = '%Y-%m-%d')) %>%
   mutate(PEAK_G = as.Date(df_flooding$PEAK_G, format = '%Y-%m-%d')) %>%
@@ -32,13 +32,13 @@ df_ts_sent <- read.csv('data/FE_Results/June_Aug/MAUZ_flood_extent_sentinel.csv'
 
 gaussian_qa <- function(cnd,fname){
   
-  #sel <- df_flooding %>%
-  #  filter(cnd)%>%
-  #  select(PCODE)
+  sel <- df_flooding %>%
+    filter(cnd)%>%
+    select(PCODE)
   
   # For randomly selecting mauzas
-  sel <- df_flooding[sample(nrow(df_flooding), 56),] %>%
-    select(PCODE)
+  #sel <- df_flooding[sample(nrow(df_flooding), 56),] %>%
+  #  select(PCODE)
   
   ts_intp <- df_ts_intp %>%
     filter(PCODE %in% sel$PCODE) %>%
@@ -72,10 +72,10 @@ gaussian_qa <- function(cnd,fname){
   tmap_save(m, paste0('results/map', fname, '.png'))
 }
 
-gaussian_qa(df_flooding$COV > 20, 'random')
-gaussian_qa(df_flooding$FWHM > 200, 'fwhm_over_200')
-gaussian_qa(df_flooding$DIFF_SAT > 20, 'diff_peak_over_20')
-gaussian_qa(df_flooding$MAX_DIFF > 0.5, 'max_diff_over_05')
+#gaussian_qa(df_flooding$COV > 5, 'survey_cov_over_5')
+gaussian_qa(df_flooding$FWHM > 200, 'survey_fwhm_over_100')
+#gaussian_qa(df_flooding$DIFF_SAT > 20, 'diff_peak_over_20')
+#gaussian_qa(df_flooding$MAX_DIFF > 0.5, 'max_diff_over_05')
 
 # 3. Explore trends in the uncertainty of fit -----------------------------
 
