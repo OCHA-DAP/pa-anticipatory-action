@@ -7,9 +7,9 @@ import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args
-from utils_general.utils import config_logger
+from src.indicators.food_insecurity.config import Config
+from src.indicators.food_insecurity.utils import parse_args
+from src.utils_general.utils import config_logger
 
 logger = logging.getLogger(__name__)
 

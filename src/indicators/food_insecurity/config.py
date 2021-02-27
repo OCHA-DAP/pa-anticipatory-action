@@ -25,6 +25,7 @@ class Config:
     ### general directories
     RAW_DIR = 'raw'
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
+    ANALYSES_DIR = "analyses"
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
         DIR_PATH = getattr(
@@ -66,8 +67,6 @@ class Config:
     FEWSADMPOP_PROCESSED_FILENAME = "{country}_fewsnet_admin{admin_level}{suffix}.csv"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
 
-
-
     #### Worldpop
     WORLDPOP_RAW_DIR = "WorldPop"
     # can make this more variable with a dict, e.g. if we want 1km and 100m or if we also want not UNadj
@@ -78,7 +77,8 @@ class Config:
     WORLDPOP_BASEURL=f"ftp://ftp.worldpop.org.uk/{WORLDPOP_FTP_DIRNAME}/"
     WORLDPOP_URL=WORLDPOP_BASEURL+"{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
 
-    # WORLDPOP_URL="ftp://ftp.worldpop.org.uk/GIS/Population/Global_2000_2020_1km_UNadj/{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
+    #### Subnational population
+    POPSUBN_RAW_DIR = "Population_subnational"
 
     #### Worldbank historical national population
     WB_POP_FILENAME = "Worldbank_TotalPopulation.csv"

@@ -10,10 +10,9 @@ import numpy as np
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
-from src.utils_general.plotting import plot_raster_boundaries, plot_timeseries
 from src.indicators.drought.utils import parse_args
 from src.utils_general.utils import config_logger
-from src.indicators.drought.chirps_rainfallobservations import get_chirps_data,chirps_plot_alldates, download_chirps
+from src.indicators.drought.chirps_rainfallobservations import get_chirps_data
 
 
 def main(download, config=None):
@@ -30,7 +29,8 @@ def main(download, config=None):
     # get data for each year
     # ADD ME warning message if data unavailable
 
-    adm1_path=os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country,config.DATA_DIR,config.SHAPEFILE_DIR,parameters['path_admin1_shp'])
+    country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
+    adm1_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR,parameters[f'path_admin1_shp'])
     for i in years:
         #if only want to download uncomment everythin except the next line
         # download_chirps(config, i, resolution)

@@ -6,15 +6,15 @@ from datetime import datetime
 from pathlib import Path
 import os
 import sys
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
-from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args, compute_percentage_columns
-from utils_general.utils import config_logger, download_url
+from src.indicators.food_insecurity.config import Config
+from src.indicators.food_insecurity.utils import parse_args, compute_percentage_columns
+from src.utils_general.utils import config_logger, download_url
 
 logger = logging.getLogger(__name__)
 
-def compare_adm_names(df,country,config,parameters,admin_level):
+def compare_adm_names(df,country,config,parameters,admin_level,bound_path):
     """
     check if names in df and boundaries file of country on admin_level match
     This is purely meant as a check and not required to produce a full match
@@ -25,8 +25,6 @@ def compare_adm_names(df,country,config,parameters,admin_level):
         parameters (dict): dict with parameters parsed from config
         admin_level (int): integer indicating which admin level to aggregate to
     """
-    bound_file = parameters[f"path_admin{admin_level}_shp"]
-    bound_path = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country, config.DATA_DIR, config.SHAPEFILE_DIR, bound_file)
 
     boundaries = gpd.read_file(bound_path)
     bound_admc = parameters[f"shp_adm{admin_level}c"]
@@ -219,7 +217,7 @@ def download_globalipc(country,config,parameters,output_dir):
     except Exception:
         logger.warning(f"Cannot download GlobalIPC data for {parameters['iso3_code']}")
 
-def process_globalipc(country, admin_level, config, parameters,ipc_dir):
+def process_globalipc(country, admin_level, config, parameters,ipc_dir,bound_path):
     """
     Process the global ipc data and aggregate to admin_level
     Args:
@@ -272,7 +270,7 @@ def process_globalipc(country, admin_level, config, parameters,ipc_dir):
         #give warning on not matching adm names global ipc and boundaries file
         #assume admin0 name is correct, cause quickly causes disrepancies due to added strings in Global IPC adm0 name
         if admin_level!=0:
-            compare_adm_names(df_ipc_agg,country,config,parameters,admin_level)
+            compare_adm_names(df_ipc_agg,country,config,parameters,admin_level,bound_path)
 
         #aggregation from adm2 to adm0/1 doesn't always equal the numbers reported directly on adm0/1
         #raise a warning if this occurs
@@ -317,9 +315,12 @@ def retrieve_globalipc(country, admin_level, suffix="", download=False, config=N
         config = Config()
     parameters = config.parameters(country)
 
-    country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-    globalipc_dir = os.path.join(country_folder, config.DATA_DIR, config.GLOBALIPC_RAW_DIR)
-    output_dir = os.path.join(country_folder, config.DATA_DIR, config.GLOBALIPC_PROCESSED_DIR)
+    country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
+    country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
+    globalipc_dir = os.path.join(country_data_raw_dir, config.GLOBALIPC_RAW_DIR)
+    output_dir = os.path.join(country_data_processed_dir,  config.GLOBALIPC_PROCESSED_DIR)
+    bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR,
+                              parameters[f'path_admin{admin_level}_shp'])
     # create output dir if it doesn't exist yet
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
@@ -327,7 +328,7 @@ def retrieve_globalipc(country, admin_level, suffix="", download=False, config=N
         download_globalipc(country,config,parameters,globalipc_dir)
 
     if os.path.exists(os.path.join(globalipc_dir,config.GLOBALIPC_FILENAME_RAW.format(country=country))):
-        df_ipc = process_globalipc(country, int(admin_level), config, parameters, globalipc_dir)
+        df_ipc = process_globalipc(country, int(admin_level), config, parameters, globalipc_dir,bound_path)
         if df_ipc is not None:
             df_ipc.to_csv(os.path.join(output_dir,config.GLOBALIPC_FILENAME_PROCESSED.format(country=country, admin_level=admin_level,suffix=suffix)),index=False)
     else:
