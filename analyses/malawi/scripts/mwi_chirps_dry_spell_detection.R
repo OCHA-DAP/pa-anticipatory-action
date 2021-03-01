@@ -163,6 +163,8 @@ rainy_seasons$cessation_month <- lubridate::month(rainy_seasons$cessation_date)
   
 rainy_seasons
 
+write.csv(dry_spells_list, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons.csv"), row.names = FALSE)
+
 #####
 ## identify dry spells that occurred during a rainy season 
 #####
@@ -204,6 +206,8 @@ dry_spells_list <- dry_spells_confirmation_dates %>%
                         ungroup() %>%
                         as.data.frame() %>%
                         dplyr::select(-streak_number)
+
+write.csv(dry_spells_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_list.csv"), row.names = FALSE)
 
 # add region names for ease of communication
 dry_spells_list <- dry_spells_list %>% 
