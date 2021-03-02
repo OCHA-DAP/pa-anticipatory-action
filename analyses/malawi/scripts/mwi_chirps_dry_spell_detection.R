@@ -155,18 +155,41 @@ nlevels(as.factor(rainy_seasons$pcode)) # number of districts in dataset
 nlevels(as.factor(rainy_seasons$season_approx)) # number of seasons in dataset (including partial seasons)
 nrow(rainy_seasons) == nlevels(as.factor(rainy_seasons$pcode)) * nlevels(as.factor(rainy_seasons$season_approx)) # is the number of records in rainy_seasons the multiple of number of regions and number of years?
 
-table(rainy_seasons$pcode, rainy_seasons$season_approx) # table of available data per adm2 and year. ## TO DO: Check MW106 in 2020
+table(rainy_seasons$pcode, rainy_seasons$season_approx) # table of available data per adm2 and year. 
 
 # compute duration (cessation minus onset dates in days)
-rainy_seasons$duration <- as.numeric(difftime(rainy_seasons$cessation_date, rainy_seasons$onset_date, units = "days"))
+rainy_seasons$rainy_season_duration <- as.numeric(difftime(rainy_seasons$cessation_date, rainy_seasons$onset_date, units = "days") + 1) # + 1 to include the last day of the season
 
 # create variables for exploration
 rainy_seasons$onset_month <- lubridate::month(rainy_seasons$onset_date)
 rainy_seasons$cessation_month <- lubridate::month(rainy_seasons$cessation_date)
-  
-rainy_seasons
 
-write.csv(rainy_seasons, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons.csv"), row.names = FALSE)
+# compute total rainfall during rainy season
+rainfall_during_rainy_seasons_list <- sqldf::sqldf("select m.*,
+                                                r.onset_date,
+                                                r.cessation_date,
+                                                r.rainy_season_duration,
+                                                r.onset_month,
+                                                r.cessation_month
+                                               from data_max_values_long m
+                                               inner join rainy_seasons r 
+                                               on m.pcode = r.pcode 
+                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 2009 and 2020 rainy seasons because don't have onset/cessation dates for them
+
+rainfall_during_rainy_seasons_stats <- rainfall_during_rainy_seasons_list %>%
+                                        group_by(pcode, season_approx) %>%
+                                        summarise(n_days = n(),
+                                                  rainy_season_rainfall = round(sum(total_prec), 1))
+
+rainy_seasons_detail <- rainy_seasons %>%
+                                  left_join(rainfall_during_rainy_seasons_stats, by = c('pcode' = 'pcode', 'season_approx' = 'season_approx', 'rainy_season_duration' = 'n_days')) %>%
+                                  dplyr::select(ID, pcode, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
+
+nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
+nrow(rainy_seasons_detail) / 32 == 12 # confirms there is a record for every year and every adm2
+
+# save results
+write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail.csv"), row.names = FALSE)
 
 #####
 ## identify dry spells that occurred during a rainy season 
@@ -214,7 +237,7 @@ rainfall_during_dry_spells <- sqldf::sqldf("select m.*,
                                            from data_max_values_long m
                                            inner join dry_spells_list l 
                                            on m.pcode = l.pcode 
-                                            and m.date between l.dry_spell_first_date and l.dry_spell_last_date")
+                                            and m.date between l.dry_spell_first_date and l.dry_spell_last_date") # keep all records during a dry spell
 
 rainfall_during_dry_spells_stats <- rainfall_during_dry_spells %>%
                                       group_by(pcode, dry_spell_confirmation) %>%
@@ -224,7 +247,7 @@ rainfall_during_dry_spells_stats <- rainfall_during_dry_spells %>%
 dry_spells_details <- dry_spells_list %>%
                         left_join(rainfall_during_dry_spells_stats, by = c('pcode' = 'pcode', 'dry_spell_confirmation' = 'dry_spell_confirmation', 'dry_spell_duration' = 'n_days'))
 
-nrow(dry_spells_list) == nrow(dry_spells_details) # check all records were kept
+nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were kept
 
 # identify dry spells during rainy seasons
 dry_spells_during_rainy_season_list <- dry_spells_details %>%
