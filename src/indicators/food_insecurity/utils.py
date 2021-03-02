@@ -8,7 +8,7 @@ import pandas as pd
 import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from utils_general.utils import download_ftp, download_url, unzip
+from src.utils_general.utils import download_ftp, download_url, unzip
 
 logger = logging.getLogger(__name__)
 
