@@ -183,13 +183,56 @@ rainfall_during_rainy_seasons_stats <- rainfall_during_rainy_seasons_list %>%
 
 rainy_seasons_detail <- rainy_seasons %>%
                                   left_join(rainfall_during_rainy_seasons_stats, by = c('pcode' = 'pcode', 'season_approx' = 'season_approx', 'rainy_season_duration' = 'n_days')) %>%
-                                  dplyr::select(ID, pcode, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
+                                  left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
+                                  dplyr::select(ID, pcode, ADM2_EN, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
 
 nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
 nrow(rainy_seasons_detail) / 32 == 12 # confirms there is a record for every year and every adm2
 
 # save results
 write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail.csv"), row.names = FALSE)
+
+
+#####
+## explore rainy season patterns
+#####
+
+rainy_seasons_detail <- rainy_seasons_detail %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+
+# onset, cessation, duration of rainy seasons by region
+prop.table(table(rainy_seasons_detail$region, rainy_seasons_detail$onset_month), 1)
+prop.table(table(rainy_seasons_detail$region, rainy_seasons_detail$cessation_month), 1)
+
+ggplot(rainy_seasons_detail, aes(rainy_season_duration, fill = region)) +
+  geom_histogram(binwidth = 10, position = "dodge") + 
+  ylab("Number of district*years") +
+  xlab("Duration in Days") +
+  ggtitle("Rainy Season Duration By Region")
+
+# onset, cessation, duration of rainy seasons per district
+prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month), 1)
+prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$cessation_month), 1)
+
+rainy_seasons_summary_per_region <- rainy_seasons_detail %>%
+  mutate(nov1 = as.Date(paste0(lubridate::year(onset_date), '-11-01'), format = "%Y-%m-%d"), # 1 nov before the onset of the season
+         rainy_season_onset_since_nov1 = as.numeric(difftime(onset_date, nov1, units = "days")) + 1, # + 1 to include the onset day
+         rainy_season_at_least_125d = ifelse(rainy_season_duration >= 125, 1, 0)) %>% # 125 days is length of maize growing season
+  group_by(ADM2_EN) %>%
+  summarise(min_rainy_season_onset_post1nov = min(rainy_season_onset_since_nov1, na.rm = T), # na.rm to remove incomplete seasons
+            max_rainy_season_onset_post1nov = max(rainy_season_onset_since_nov1, na.rm = T),
+            mean_rainy_season_onset_post1nov = mean(rainy_season_onset_since_nov1, na.rm = T),
+            min_rainy_season_duration = min(rainy_season_duration, na.rm = T), 
+            max_rainy_season_duration = max(rainy_season_duration, na.rm = T),
+            mean_rainy_season_duration = mean(rainy_season_duration, na.rm = T),
+            nbr_125d_seasons = sum(rainy_season_at_least_125d, na.rm = T),
+            min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T), 
+            max_rainy_season_rainfall = max(rainy_season_rainfall, na.rm = T),
+            mean_rainy_season_rainfall = mean(rainy_season_rainfall, na.rm = T)) %>%
+  ungroup() %>%
+  unique() %>%
+  data.frame()
+
+rainy_seasons_summary_per_region
 
 #####
 ## identify dry spells that occurred during a rainy season 
@@ -279,61 +322,44 @@ rainy_season_dry_spells_summary_per_region$nbr_dry_spells <- ifelse(is.na(rainy_
 
 rainy_season_dry_spells_summary_per_region
 
-## TO DO: update below
-
 #####
-## explore rainy season patterns
+## explore rainy-season dry spells patterns
 #####
-prop.table(table(dry_spells_during_rainy_season_list$confirmation_date_during_rainy_season))
 
-> table(lubridate::month(dry_spells_details$dry_spell_confirmation))
+# label region of the district
+rainy_season_dry_spells_summary_per_region <- rainy_season_dry_spells_summary_per_region %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
-1   3   4   5   6   7   8   9  10  11  12 
-3   4 126  71 217 109 226 173 209  73  15 
-> table(lubridate::month(dry_spells_details$dry_spell_first_date))
+# how frequently have rainy-season dry spells occurred over the years and across regions/districts?
+summary(rainy_season_dry_spells_summary_per_region$nbr_dry_spells)
+prop.table(table(rainy_season_dry_spells_summary_per_region$nbr_dry_spells))
 
-1   2   3   4   5   6   7   8   9  10  11  12 
-2   1  15 137 107 194 204 223 152 142  48   1 
-> table(lubridate::month(dry_spells_details$dry_spell_last_date))
+# how many and which districts/regions have not had a rainy-season dry spell?
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(ADM2_EN)) # districts
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% dplyr::select(ADM2_EN) %>% unique()
 
-1   3   4   5   6   7   8   9  10  11  12 
-3   4  57 113  85 268 120 279 188  88  21 
-> table(lubridate::month(rainy_seasons$onset_date))
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(region)) # regions
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% dplyr::select(region) %>% unique()
 
-1  11  12 
-2 295  54 
-> table(lubridate::month(rainy_seasons$cessation_date))
+# how many and which districts/regions have had a rainy-season dry spells?
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(ADM2_EN)) # districts
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% dplyr::select(ADM2_EN) %>% unique()
 
-# check for which years adm2's don't have a start date in Nov-Dec
-rainy_season_starts %>%
-  group_by(pcode) %>%
-  mutate(nbr_yrs_with_ND_start = sum(start_month %in% c(10:12))) %>%
-  dplyr::select(pcode, nbr_yrs_with_ND_start) %>%
-  unique() %>%
-  data.frame()
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(region)) # regions
+rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% dplyr::select(region) %>% unique()
 
-# identify years without an ND start
-rainy_season_starts %>%
-  group_by(pcode) %>%
-  filter(!start_month %in% c(10:12)) %>% # keep rainy seasons that started outside ND
-  mutate(ND_years = paste(rainy_season, collapse = ',')) %>%
-  ungroup() %>%
-  dplyr::select(pcode, ADM2_EN, ND_years) %>%
-  unique() %>%
-  data.frame()
+# when did the dry spells start in each district?
+prop.table(table(lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)))
+prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)), 1)
 
-# check frequency of start month per adm2
-rainy_season_starts %>%
-  dplyr::select(pcode, ADM2_EN, start_month) %>%
-  mutate(start_month_name = lubridate::month(start_month, label = T, abbr = T)) %>% # names months to use a column name in next step
-  dplyr::select(-start_month) %>% # remove start_month 
-  group_by(pcode, ADM2_EN, start_month_name) %>%
-  add_count(start_month_name) %>%
-  unique() %>%
-  spread(key = start_month_name, value = n) %>% # convert to wide format
-  replace(is.na(.), 0) %>%
-  print(n = 35)
+# when did the dry spells end in each district?
+prop.table(table(lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)))
+prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)), 1)
 
+
+# TO DO / NEXT STEPS
+# number of rainy days in the year
+# planting season: Effective planting season start: Two consecutive 10-day periods with at least 20mm of rain each (WFP) after 1 Nov.
+# dry spell timing in days since planting
 
 
   
