@@ -198,10 +198,10 @@ rainy_seasons_detail <- rainy_seasons %>%
                                   dplyr::select(ID, pcode, ADM2_EN, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
 
 nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
-nrow(rainy_seasons_detail) / 32 == 21 # confirms there is a record for every year and every adm2
+nrow(rainy_seasons_detail) / 32 == 22 # confirms there is a record for every year and every adm2
 
 # save results
-write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail.csv"), row.names = FALSE)
+write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020.csv"), row.names = FALSE)
 
 
 #####
@@ -225,23 +225,27 @@ prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month)
 prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$cessation_month), 1)
 
 rainy_seasons_summary_per_region <- rainy_seasons_detail %>%
-  mutate(nov1 = as.Date(paste0(lubridate::year(onset_date), '-11-01'), format = "%Y-%m-%d"), # 1 nov before the onset of the season
-         rainy_season_onset_since_nov1 = as.numeric(difftime(onset_date, nov1, units = "days")) + 1, # + 1 to include the onset day
-         rainy_season_at_least_125d = ifelse(rainy_season_duration >= 125, 1, 0)) %>% # 125 days is length of maize growing season
-  group_by(ADM2_EN) %>%
-  summarise(min_rainy_season_onset_post1nov = min(rainy_season_onset_since_nov1, na.rm = T), # na.rm to remove incomplete seasons
-            max_rainy_season_onset_post1nov = max(rainy_season_onset_since_nov1, na.rm = T),
-            mean_rainy_season_onset_post1nov = mean(rainy_season_onset_since_nov1, na.rm = T),
-            min_rainy_season_duration = min(rainy_season_duration, na.rm = T), 
-            max_rainy_season_duration = max(rainy_season_duration, na.rm = T),
-            mean_rainy_season_duration = mean(rainy_season_duration, na.rm = T),
-            nbr_125d_seasons = sum(rainy_season_at_least_125d, na.rm = T),
-            min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T), 
-            max_rainy_season_rainfall = max(rainy_season_rainfall, na.rm = T),
-            mean_rainy_season_rainfall = mean(rainy_season_rainfall, na.rm = T)) %>%
-  ungroup() %>%
-  unique() %>%
-  data.frame()
+                                      mutate(nov1 = as.Date(paste0(season_approx, '-11-01'), format = "%Y-%m-%d"), # 1 nov before the onset of the season
+                                             onset_days_since_nov1 = as.numeric(difftime(onset_date, nov1, units = "days")), # count of days since 1 nov
+                                             cessation_days_since_nov1 = as.numeric(difftime(cessation_date, nov1, units = "days")), # count of days since 1 nov
+                                             rainy_season_at_least_125d = ifelse(rainy_season_duration >= 125, 1, 0)) %>% # 125 days is length of maize growing season
+                                      group_by(ADM2_EN) %>%
+                                      summarise(min_rainy_season_onset_postnov1 = min(onset_days_since_nov1, na.rm = T), # na.rm to remove incomplete seasons
+                                                max_rainy_season_onset_post1nov = max(onset_days_since_nov1, na.rm = T),
+                                                mean_rainy_season_onset_post1nov = mean(onset_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
+                                                min_rainy_season_cessation_postnov1 = min(cessation_days_since_nov1, na.rm = T), 
+                                                max_rainy_season_cessation_postnov1 = max(cessation_days_since_nov1, na.rm = T),
+                                                mean_rainy_season_cessation_post1nov = mean(cessation_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
+                                                min_rainy_season_duration = min(rainy_season_duration, na.rm = T), 
+                                                max_rainy_season_duration = max(rainy_season_duration, na.rm = T),
+                                                mean_rainy_season_duration = mean(rainy_season_duration, na.rm = T),
+                                                nbr_125d_seasons = sum(rainy_season_at_least_125d, na.rm = T),
+                                                min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T), 
+                                                max_rainy_season_rainfall = max(rainy_season_rainfall, na.rm = T),
+                                                mean_rainy_season_rainfall = mean(rainy_season_rainfall, na.rm = T)) %>%
+                                      ungroup() %>%
+                                      unique() %>%
+                                      data.frame()
 
 rainy_seasons_summary_per_region
 
@@ -296,7 +300,7 @@ rainfall_during_dry_spells <- sqldf::sqldf("select m.*,
 rainfall_during_dry_spells_stats <- rainfall_during_dry_spells %>%
                                       group_by(pcode, dry_spell_confirmation) %>%
                                       summarise(n_days = n(),
-                                                dry_spell_rainfall = sum(total_prec))
+                                                dry_spell_rainfall = round(sum(total_prec), 1))
 
 dry_spells_details <- dry_spells_list %>%
                         left_join(rainfall_during_dry_spells_stats, by = c('pcode' = 'pcode', 'dry_spell_confirmation' = 'dry_spell_confirmation', 'dry_spell_duration' = 'n_days'))
@@ -313,9 +317,9 @@ dry_spells_during_rainy_season_list <- dry_spells_details %>%
 # add region names for ease of communication
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% 
                                           left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
-                                          dplyr::select(pcode, ADM2_EN, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+                                          dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
-write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list.csv"), row.names = FALSE)
+write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020.csv"), row.names = FALSE)
 
 # summary stats per region 
 rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>% 
