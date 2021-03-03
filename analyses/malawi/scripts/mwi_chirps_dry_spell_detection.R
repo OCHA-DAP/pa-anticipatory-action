@@ -45,7 +45,7 @@ mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
 
 # list years and adm2 regions to be analysed
-year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2010-01-01"), to = as.Date("2020-12-31"), by = 'year')))
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'year')))
 year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
 names(year_by_adm2)[2] <- 'pcode'
 year_by_adm2$year <- as.character(year_by_adm2$year)
@@ -82,9 +82,9 @@ s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s20
 # crop and masked area outside of MWI
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
 data <- mask(s2000_s2020_cropped, mask = mwi_adm2)
-#saveRDS(data,paste0(data_dir, "/processed/malawi/dry_spells/data_20210219_r5.RDS")
-#data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_20210219_r5.RDS")) # 5-deg resolution
-plot(data) # visual inspection
+# saveRDS(data, paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
+# data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
+# plot(data) # visual inspection
 
 # explore compiled raster file ("brick")
 st_crs(data) # coordinate reference system
@@ -109,8 +109,9 @@ for (i in seq_along(1:nbr_layers)) {
         data_max_values <- computeLayerStat(i, max, data_max_values)
         
       }
-#saveRDS(data_max_values,paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_20210219_r5.rds")
-# data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_20210219_r5.RDS"))
+
+# saveRDS(data_max_values,paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
+# data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
 
 #####
 ## transform rainfall data and compute rolling sums
@@ -156,7 +157,7 @@ rainy_onsets <- findRainyOnset()
 rainy_cessations <- findRainyCessation()
 
 # combine onset and cessation dates
-rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c('ID', 'pcode', 'season_approx'), all.x = TRUE, all.y = TRUE) # keep partial years 2009 and 2020
+rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c('ID', 'pcode', 'season_approx'), all.x = TRUE, all.y = TRUE) # keep partial years 2000 and 2020
 rainy_seasons <- merge(rainy_seasons, year_by_adm2, by.x = c('pcode', 'season_approx'), by.y = c('pcode', 'year'), all.x = T, all.y = T) # ensure a record is created for each adm2 for every year
 
 # checks
@@ -184,7 +185,7 @@ rainfall_during_rainy_seasons_list <- sqldf::sqldf("select m.*,
                                                from data_max_values_long m
                                                inner join rainy_seasons r 
                                                on m.pcode = r.pcode 
-                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 2009 and 2020 rainy seasons because don't have onset/cessation dates for them
+                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 1999 and 2020 rainy seasons because don't have onset/cessation dates for them
 
 rainfall_during_rainy_seasons_stats <- rainfall_during_rainy_seasons_list %>%
                                         group_by(pcode, season_approx) %>%
@@ -197,7 +198,7 @@ rainy_seasons_detail <- rainy_seasons %>%
                                   dplyr::select(ID, pcode, ADM2_EN, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
 
 nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
-nrow(rainy_seasons_detail) / 32 == 12 # confirms there is a record for every year and every adm2
+nrow(rainy_seasons_detail) / 32 == 21 # confirms there is a record for every year and every adm2
 
 # save results
 write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail.csv"), row.names = FALSE)

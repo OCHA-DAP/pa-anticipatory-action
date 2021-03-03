@@ -68,7 +68,7 @@ findRainyOnset <- function() {
                     dplyr::select(ID, pcode, season_approx, date) %>%
                     rename(onset_date = date) 
                     
-  rainy_onsets$onset_date[rainy_onsets$season_approx == '2009'] <- NA # set values for 2009 season as NA since no data Oct-Dec 2009 available
+  rainy_onsets$onset_date[rainy_onsets$season_approx == '1999'] <- NA # set values for 1999 season as NA since no data Oct-Dec 1999 available
   
   return(rainy_onsets)
   
