@@ -154,8 +154,14 @@ ds_season=ds_clip.rolling(time=seas_len,min_periods=seas_len).sum().dropna(dim="
 ds_season
 
 
+#check dense spot for other dates
+
+
 #plot the three month sum for NDJ 2019/2020
 fig=plot_raster_boundaries_clip([ds_season.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").sel(time=test_date)],adm1_bound_path,colp_num=1,forec_val="precip",cmap="YlOrRd",predef_bins=np.linspace(0,1000,10))
+
+
+#adjust climatological period - experiment
 
 
 #define the years that are used to define the climatology. We use 1981-2010 since this is also the period used by IRI's seasonal forecasts
@@ -173,6 +179,9 @@ ds_season_climate_quantile=ds_season_climate.groupby(ds_season_climate.time.dt.m
 ds_season_climate_quantile
 
 
+#hotspot check
+
+
 #plot the below average boundaries for the NDJ season
 fig=plot_raster_boundaries_clip([ds_season_climate_quantile.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").sel(month=1)],adm1_bound_path,colp_num=1,forec_val="precip",predef_bins=np.linspace(0,1000,10),cmap="YlOrRd")
 
@@ -181,6 +190,9 @@ sns.distplot(ds_season_climate.sel(time=ds_season_climate.time.dt.month==1).prec
 
 
 sns.distplot(ds_season_climate_quantile.sel(month=1).precip.values.flatten())
+
+
+# possibly change -999
 
 
 #determine the raster cells that have below-average precipitation, other cells are set to -999
@@ -206,8 +218,22 @@ ds_season_below_notnan=ds_season_below.precip.values[~np.isnan(ds_season_below.p
 np.count_nonzero(ds_season_below_notnan!=-999)/np.count_nonzero(ds_season_below_notnan)
 
 
+#check occurence below average per raster cell
+#compute #times each category
+#geographical autocorrelation
+
+
 #plot the cells that had below-average rainfall in NDJ of 2019/2020
 fig=plot_raster_boundaries_clip([ds_season_below.where(ds_season_below.precip!=-999).rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").sel(time=test_date)],adm1_bound_path,colp_num=1,forec_val="precip",cmap="YlOrRd",predef_bins=np.linspace(0,1000,10))
+
+
+#usual center point
+
+
+#resolution forecasts--> interpolate (or vectorize)
+#Do lots of CRS checks! 
+#test different thresholds percentage area
+#forecast: weighted average or >%area above threshold
 
 
 def alldates_statistics_seasonal(ds,raster_transform,adm_path):
@@ -250,6 +276,18 @@ def alldates_statistics_seasonal(ds,raster_transform,adm_path):
     df_hist['date_month']=df_hist.date.dt.to_period("M")
         
     return df_hist
+
+
+ds_season_below.rio.crs
+
+
+
+
+
+ds_season_below.rio.transform()
+
+
+ds_season_below.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform()
 
 
 #compute whether the maximum cell that touches an admin2 region has below average rainfall for each month since 2010
@@ -314,28 +352,35 @@ df_bavg_adm2[["fract_below","Shape_Area"]]
 # 
 # As first analysis we are focussing on the sole occurence of a dry spell per admin2. This can be extended to e.g. duration, number of dry spells, and geographical spread
 
-df_ds=pd.read_csv(os.path.join(country_data_exploration_dir,"dryspells","mwi_dry_spells_list.csv")) #"../Data/transformed/mwi_dry_spells_list.csv")
+country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country)
+
+
+# df_ds=pd.read_csv(os.path.join(country_data_exploration_dir,"dryspells","mwi_dry_spells_list.csv")) #"../Data/transformed/mwi_dry_spells_list.csv")
+df_ds=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","dry_spells_during_rainy_season_list.csv")) 
+
+
+df_ds
 
 
 df_ds["dry_spell_first_date"]=pd.to_datetime(df_ds["dry_spell_first_date"])
-df_ds["dry_spell_confirmation"]=pd.to_datetime(df_ds["dry_spell_confirmation"])
-df_ds["ds_conf_m"]=df_ds.dry_spell_confirmation.dt.to_period("M")
+df_ds["dry_spell_last_date"]=pd.to_datetime(df_ds["dry_spell_last_date"])
+df_ds["ds_fd_m"]=df_ds.dry_spell_first_date.dt.to_period("M")
 
 
 #for now only want to know if a dry spell occured in a given month, so drop those that have several dry spells confirmed within a month
-df_ds_drymonth=df_ds.drop_duplicates(["ADM2_EN","ds_conf_m"]).groupby(["ds_conf_m","ADM2_EN"],as_index=False).agg("count")[["ds_conf_m","ADM2_EN","dry_spell_confirmation"]] #["ADM2_EN"]
+df_ds_drymonth=df_ds.drop_duplicates(["ADM2_EN","ds_fd_m"]).groupby(["ds_fd_m","ADM2_EN"],as_index=False).agg("count")[["ds_fd_m","ADM2_EN","dry_spell_first_date"]] #["ADM2_EN"]
 
 
 #include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed
-df_ds_drymonth_alldates=df_ds_drymonth.merge(df_belowavg_seas[["ADM2_EN","date_month"]],how="outer",left_on=['ADM2_EN','ds_conf_m'],right_on=["ADM2_EN","date_month"])
+df_ds_drymonth_alldates=df_ds_drymonth.merge(df_belowavg_seas[["ADM2_EN","date_month"]],how="outer",left_on=['ADM2_EN','ds_fd_m'],right_on=["ADM2_EN","date_month"])
 
 
 #dates that are not present in the dry spell list, but are in the observed rainfall df, thus have no dry spells
-df_ds_drymonth_alldates.dry_spell_confirmation=df_ds_drymonth_alldates.dry_spell_confirmation.replace(np.nan,0)
+df_ds_drymonth_alldates.dry_spell_first_date=df_ds_drymonth_alldates.dry_spell_first_date.replace(np.nan,0)
 
 
 #compute the rolling sum of months having a dry spell per admin2
-s_ds_dryseas=df_ds_drymonth_alldates.sort_values("date_month").set_index("date_month").groupby('ADM2_EN')['dry_spell_confirmation'].rolling(3).sum()
+s_ds_dryseas=df_ds_drymonth_alldates.sort_values("date_month").set_index("date_month").groupby('ADM2_EN')['dry_spell_first_date'].rolling(3).sum()
 #convert series to dataframe
 df_ds_dryseas=pd.DataFrame(s_ds_dryseas).reset_index()
 
@@ -344,7 +389,8 @@ df_ds_dryseas
 
 
 #supposed length of df_ds_dryseas
-11*12
+#TODO: check discrepancy
+11*12*len(df_ds.ADM2_EN.unique())
 
 
 #merge the dry spells with the info if a month had below average rainfall
@@ -353,11 +399,11 @@ df_comb_seas=df_ds_dryseas.merge(df_belowavg_seas,how="outer",on=["date_month","
 
 
 #remove dates where dry_spell_confirmation is nan, i.e. where rolling sum could not be computed for (first dates)
-df_comb_seas=df_comb_seas[df_comb_seas.dry_spell_confirmation.notna()]
+df_comb_seas=df_comb_seas[df_comb_seas.dry_spell_first_date.notna()]
 
 
 #set the occurence of a dry spell to true if in at least one of the months of the season (=3 months) a dry spell occured
-df_comb_seas["dry_spell"]=np.where(df_comb_seas.dry_spell_confirmation>=1,1,0)
+df_comb_seas["dry_spell"]=np.where(df_comb_seas.dry_spell_first_date>=1,1,0)
 
 
 df_comb_seas.head()
@@ -379,7 +425,7 @@ ax.set_xlabel("Lower tercile precipitation in ADMIN2 during season")
 plt.show()
 
 
-#next step this will be defined by output from R script
+#TODO: define this based on rainy_seasons output R script
 df_comb_seas_rainyseas=df_comb_seas[df_comb_seas.date_month.dt.month.isin([11,12,1,2,3,4])]
 
 
@@ -542,10 +588,21 @@ df_bavg_adm2[["fract_below"]]
 # ### Quality checks
 
 # #### Compare computed 3 month sum to that reported directly by CHIRPS
-# There is some difference and I don't understand why... However, the range per season is simlair
+# AAAAHHH There are large differences and I don't understand why... 
+# - The 3monthly data for Global and Africa don't correspond at all, also not when inspecting it in QGIS
+# - The 3monthly Global data clipped to MWI is not in the same range as the 3 month rolling sum
+# - The 3monthly Africa data clipped to MWI is in the same range, but doesn't equal the 3 month rolling sum
+# 
+# 
 # Leaving it as it is for now and summing the monthly data to 3 months ourselves since this is an easier to use format. However should at some point understand the differences.. 
 
+
+
+
 ds_chirps_3month=rioxarray.open_rasterio("../Data/chirps.3monthly.africa2019.111201.tiff",masked=True)
+# ds_chirps_3month=rioxarray.open_rasterio("../Data/chirps.3monthly.africa2019.091011.tiff",masked=True)
+# ds_chirps_3month=rioxarray.open_rasterio("../Data/chirps.3monthly.global2019.111201.tiff",masked=True)
+# ds_chirps_3month=rioxarray.open_rasterio("../Data/chirps.3monthly.global2019.091011.tiff",masked=True)
 
 
 ds_chirps_3month=ds_chirps_3month.where(ds_chirps_3month.values!=-9999)
@@ -560,6 +617,7 @@ ds_chirps_3month_mwi.mean()
 
 #computed mean from our framework
 ds_season.sel(time=cftime.DatetimeGregorian(2020, 1, 1, 0, 0, 0, 0)).precip.mean()
+# ds_season.sel(time=cftime.DatetimeGregorian(2019, 11, 1, 0, 0, 0, 0)).precip.mean()
 
 
 # ### IRI CAMS-OPI observed monthly terciles
