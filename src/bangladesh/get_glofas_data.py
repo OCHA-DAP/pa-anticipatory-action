@@ -21,7 +21,7 @@ from src.indicators.flooding import glofas
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-# TODO: Change to using GloFAS station locations?
+# Bahadurabad_glofas corresponds to the control point identified here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view 
 COUNTRY_NAME = "bangladesh"
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
@@ -32,6 +32,8 @@ FFWC_STATIONS = {
     "Kazipur": [89.7498, 24.6637],
     "Serajganj": [89.7479, 24.4676],
     "Aricha": [89.6550, 23.9032],
+    "Bahadurabad_glofas": [89.65, 25.15],
+
 }
 LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
 
@@ -91,4 +93,4 @@ def main(download=False, process=False):
 
 
 if __name__ == "__main__":
-    main()
+    main(download=False, process=True)

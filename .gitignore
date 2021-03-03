@@ -12,7 +12,7 @@ analyses/bangladesh/results/*/archive/*
 
 #Local experiments
 Experiments
-analyses/bangladesh/notebooks/scratch/*
+analyses/bangladesh/*/scratch/*
 
 # IDEs
 .idea/*
