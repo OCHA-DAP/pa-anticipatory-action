@@ -200,6 +200,8 @@ rainy_seasons_detail <- rainy_seasons %>%
 nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
 nrow(rainy_seasons_detail) / 32 == 22 # confirms there is a record for every year and every adm2
 
+rainy_seasons_detail <- rainy_seasons_detail %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+
 # save results
 write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020.csv"), row.names = FALSE)
 
@@ -207,8 +209,6 @@ write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_s
 #####
 ## explore rainy season patterns
 #####
-
-rainy_seasons_detail <- rainy_seasons_detail %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
 # onset, cessation, duration of rainy seasons by region
 prop.table(table(rainy_seasons_detail$region, rainy_seasons_detail$onset_month), 1)
@@ -319,13 +319,14 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
                                           left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
                                           dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
+dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020.csv"), row.names = FALSE)
 
 # summary stats per region 
 rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>% 
                                                 group_by(pcode, ADM2_EN) %>%
                                                 summarise(nbr_dry_spells = n(),
-                                                          median_ds_duration = round(mean(dry_spell_duration),1),
+                                                          mean_ds_duration = round(mean(dry_spell_duration),1),
                                                           min_ds_duration = min(dry_spell_duration),
                                                           max_ds_duration = max(dry_spell_duration)
                                                           ) %>%
