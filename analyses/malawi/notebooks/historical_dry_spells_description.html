@@ -280,40 +280,492 @@ div.tocify {
 <div id="onsets" class="section level4">
 <h4>Onsets</h4>
 <p>Rainy seasons start in Nov, Dec or Jan. Every district except for Likoma see their rainy season most often begin in November.</p>
-<pre><code>##                
-##                     1    11    12
-##   Balaka          5.0  85.0  10.0
-##   Blantyre        5.0  90.0   5.0
-##   Blantyre City   5.0  70.0  25.0
-##   Chikwawa        0.0  85.0  15.0
-##   Chiradzulu      5.0  85.0  10.0
-##   Chitipa         0.0 100.0   0.0
-##   Dedza           0.0  85.0  15.0
-##   Dowa            0.0  90.0  10.0
-##   Karonga         0.0 100.0   0.0
-##   Kasungu         0.0 100.0   0.0
-##   Likoma         10.0  35.0  55.0
-##   Lilongwe        0.0  95.0   5.0
-##   Lilongwe City   5.0  75.0  20.0
-##   Machinga        0.0  95.0   5.0
-##   Mangochi        0.0  95.0   5.0
-##   Mchinji         0.0 100.0   0.0
-##   Mulanje         0.0  90.0  10.0
-##   Mwanza          0.0  85.0  15.0
-##   Mzimba          0.0 100.0   0.0
-##   Mzuzu City      4.8  52.4  42.9
-##   Neno            0.0  85.0  15.0
-##   Nkhata Bay      0.0 100.0   0.0
-##   Nkhotakota      0.0  95.2   4.8
-##   Nsanje          0.0  80.0  20.0
-##   Ntcheu          0.0  90.0  10.0
-##   Ntchisi         0.0  80.0  20.0
-##   Phalombe        0.0  90.0  10.0
-##   Rumphi          0.0 100.0   0.0
-##   Salima          0.0  70.0  30.0
-##   Thyolo          0.0  80.0  20.0
-##   Zomba           0.0  95.0   5.0
-##   Zomba City      5.0  70.0  25.0</code></pre>
+<div style="border: 1px solid #ddd; padding: 0px; overflow-y: scroll; height:500px; overflow-x: scroll; width:100%; ">
+<table class="table table-striped table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
+<caption>
+Rainy Season Onset Months (% of seasons)
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;position: sticky; top:0; background-color: #FFFFFF;">
+Region
+</th>
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;position: sticky; top:0; background-color: #FFFFFF;">
+District
+</th>
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;position: sticky; top:0; background-color: #FFFFFF;">
+Nov
+</th>
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;position: sticky; top:0; background-color: #FFFFFF;">
+Dec
+</th>
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;position: sticky; top:0; background-color: #FFFFFF;">
+Jan
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;vertical-align: top !important;" rowspan="10">
+Central
+</td>
+<td style="text-align:left;">
+Dedza
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+19.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Dowa
+</td>
+<td style="text-align:left;">
+85.7
+</td>
+<td style="text-align:left;">
+14.3
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Kasungu
+</td>
+<td style="text-align:left;">
+100.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Lilongwe
+</td>
+<td style="text-align:left;">
+90.5
+</td>
+<td style="text-align:left;">
+9.5
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Lilongwe City
+</td>
+<td style="text-align:left;">
+71.4
+</td>
+<td style="text-align:left;">
+23.8
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mchinji
+</td>
+<td style="text-align:left;">
+95.2
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Nkhotakota
+</td>
+<td style="text-align:left;">
+95.2
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Ntcheu
+</td>
+<td style="text-align:left;">
+85.7
+</td>
+<td style="text-align:left;">
+14.3
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Ntchisi
+</td>
+<td style="text-align:left;">
+76.2
+</td>
+<td style="text-align:left;">
+23.8
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Salima
+</td>
+<td style="text-align:left;">
+66.7
+</td>
+<td style="text-align:left;">
+33.3
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: top !important;" rowspan="7">
+Northern
+</td>
+<td style="text-align:left;">
+Chitipa
+</td>
+<td style="text-align:left;">
+100.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Karonga
+</td>
+<td style="text-align:left;">
+100.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Likoma
+</td>
+<td style="text-align:left;">
+35.0
+</td>
+<td style="text-align:left;">
+55.0
+</td>
+<td style="text-align:left;">
+10.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mzimba
+</td>
+<td style="text-align:left;">
+100.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mzuzu City
+</td>
+<td style="text-align:left;">
+52.4
+</td>
+<td style="text-align:left;">
+42.9
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Nkhata Bay
+</td>
+<td style="text-align:left;">
+100.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Rumphi
+</td>
+<td style="text-align:left;">
+100.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: top !important;" rowspan="15">
+Southern
+</td>
+<td style="text-align:left;">
+Balaka
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+14.3
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Blantyre
+</td>
+<td style="text-align:left;">
+90.5
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Blantyre City
+</td>
+<td style="text-align:left;">
+66.7
+</td>
+<td style="text-align:left;">
+28.6
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Chikwawa
+</td>
+<td style="text-align:left;">
+85.7
+</td>
+<td style="text-align:left;">
+14.3
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Chiradzulu
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+14.3
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Machinga
+</td>
+<td style="text-align:left;">
+90.5
+</td>
+<td style="text-align:left;">
+9.5
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mangochi
+</td>
+<td style="text-align:left;">
+90.5
+</td>
+<td style="text-align:left;">
+9.5
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mulanje
+</td>
+<td style="text-align:left;">
+90.5
+</td>
+<td style="text-align:left;">
+9.5
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mwanza
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+19.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Neno
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+19.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Nsanje
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+19.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Phalombe
+</td>
+<td style="text-align:left;">
+90.5
+</td>
+<td style="text-align:left;">
+9.5
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Thyolo
+</td>
+<td style="text-align:left;">
+81.0
+</td>
+<td style="text-align:left;">
+19.0
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Zomba
+</td>
+<td style="text-align:left;">
+95.2
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+<td style="text-align:left;">
+0.0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Zomba City
+</td>
+<td style="text-align:left;">
+66.7
+</td>
+<td style="text-align:left;">
+28.6
+</td>
+<td style="text-align:left;">
+4.8
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>   </p>
 <div style="border: 1px solid #ddd; padding: 0px; overflow-y: scroll; height:500px; overflow-x: scroll; width:100%; ">
 <table class="table table-striped table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
 <caption>
@@ -353,7 +805,7 @@ Dedza
 40.20833
 </td>
 <td style="text-align:left;">
-12.0
+12.8
 </td>
 </tr>
 <tr>
@@ -367,7 +819,7 @@ Dowa
 44.20833
 </td>
 <td style="text-align:left;">
-18.6
+19.1
 </td>
 </tr>
 <tr>
@@ -378,10 +830,10 @@ Kasungu
 0.1666667
 </td>
 <td style="text-align:left;">
-21.20833
+28.20833
 </td>
 <td style="text-align:left;">
-10.5
+11.3
 </td>
 </tr>
 <tr>
@@ -395,7 +847,7 @@ Lilongwe
 32.20833
 </td>
 <td style="text-align:left;">
-7.6
+8.7
 </td>
 </tr>
 <tr>
@@ -409,7 +861,7 @@ Lilongwe City
 63.20833
 </td>
 <td style="text-align:left;">
-24.2
+24.5
 </td>
 </tr>
 <tr>
@@ -420,10 +872,10 @@ Mchinji
 0.1666667
 </td>
 <td style="text-align:left;">
-23.20833
+30.20833
 </td>
 <td style="text-align:left;">
-9.7
+10.6
 </td>
 </tr>
 <tr>
@@ -451,7 +903,7 @@ Ntcheu
 47.20833
 </td>
 <td style="text-align:left;">
-12.8
+13.6
 </td>
 </tr>
 <tr>
@@ -465,7 +917,7 @@ Ntchisi
 51.20833
 </td>
 <td style="text-align:left;">
-23.8
+24.1
 </td>
 </tr>
 <tr>
@@ -479,7 +931,7 @@ Salima
 51.20833
 </td>
 <td style="text-align:left;">
-22.9
+23.2
 </td>
 </tr>
 <tr>
@@ -597,7 +1049,7 @@ Balaka
 61.20833
 </td>
 <td style="text-align:left;">
-15.9
+16.6
 </td>
 </tr>
 <tr>
@@ -611,7 +1063,7 @@ Blantyre
 61.20833
 </td>
 <td style="text-align:left;">
-12.9
+13.7
 </td>
 </tr>
 <tr>
@@ -625,7 +1077,7 @@ Blantyre City
 62.20833
 </td>
 <td style="text-align:left;">
-23.6
+23.9
 </td>
 </tr>
 <tr>
@@ -639,7 +1091,7 @@ Chikwawa
 45.20833
 </td>
 <td style="text-align:left;">
-13.2
+13.8
 </td>
 </tr>
 <tr>
@@ -653,7 +1105,7 @@ Chiradzulu
 61.20833
 </td>
 <td style="text-align:left;">
-15.2
+15.9
 </td>
 </tr>
 <tr>
@@ -667,7 +1119,7 @@ Machinga
 39.20833
 </td>
 <td style="text-align:left;">
-9.8
+10.8
 </td>
 </tr>
 <tr>
@@ -681,7 +1133,7 @@ Mangochi
 39.20833
 </td>
 <td style="text-align:left;">
-9.8
+10.8
 </td>
 </tr>
 <tr>
@@ -695,7 +1147,7 @@ Mulanje
 42.20833
 </td>
 <td style="text-align:left;">
-9.6
+10.4
 </td>
 </tr>
 <tr>
@@ -709,7 +1161,7 @@ Mwanza
 48.20833
 </td>
 <td style="text-align:left;">
-16.7
+17.3
 </td>
 </tr>
 <tr>
@@ -723,7 +1175,7 @@ Neno
 53.20833
 </td>
 <td style="text-align:left;">
-13.0
+13.9
 </td>
 </tr>
 <tr>
@@ -737,7 +1189,7 @@ Nsanje
 45.20833
 </td>
 <td style="text-align:left;">
-16.0
+16.4
 </td>
 </tr>
 <tr>
@@ -751,7 +1203,7 @@ Phalombe
 42.20833
 </td>
 <td style="text-align:left;">
-8.8
+9.8
 </td>
 </tr>
 <tr>
@@ -765,7 +1217,7 @@ Thyolo
 48.20833
 </td>
 <td style="text-align:left;">
-14.7
+15.3
 </td>
 </tr>
 <tr>
@@ -779,7 +1231,7 @@ Zomba
 39.20833
 </td>
 <td style="text-align:left;">
-9.0
+10.0
 </td>
 </tr>
 <tr>
@@ -793,7 +1245,7 @@ Zomba City
 62.20833
 </td>
 <td style="text-align:left;">
-23.2
+23.6
 </td>
 </tr>
 </tbody>
@@ -1882,8 +2334,8 @@ Zomba City
 </div>
 <div id="addendum" class="section level3">
 <h3>Addendum</h3>
-<div id="rainy-seasons-summary" class="section level4">
-<h4>Rainy Seasons Summary</h4>
+<div id="rainy-seasons-1" class="section level4">
+<h4>Rainy Seasons</h4>
 <p>Duration is reported in days and rainfall in mm.</p>
 <div style="border: 1px solid #ddd; padding: 0px; overflow-y: scroll; height:500px; overflow-x: scroll; width:100%; border-bottom: 0;">
 <table class="table table-striped table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -2344,7 +2796,7 @@ Balaka
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -2784,7 +3236,7 @@ Blantyre
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-29
 </td>
 <td style="text-align:left;">
 NA
@@ -3224,7 +3676,7 @@ Blantyre City
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -3664,7 +4116,7 @@ Chikwawa
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-27
 </td>
 <td style="text-align:left;">
 NA
@@ -4104,7 +4556,7 @@ Chiradzulu
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -4990,7 +5442,7 @@ Dedza
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -5430,7 +5882,7 @@ Dowa
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -6316,7 +6768,7 @@ Kasungu
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-29
 </td>
 <td style="text-align:left;">
 NA
@@ -7202,7 +7654,7 @@ Lilongwe
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -7642,7 +8094,7 @@ Lilongwe City
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-02
 </td>
 <td style="text-align:left;">
 NA
@@ -8085,7 +8537,7 @@ Machinga
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -8525,7 +8977,7 @@ Mangochi
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -8968,7 +9420,7 @@ Mchinji
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -9411,7 +9863,7 @@ Mulanje
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-27
 </td>
 <td style="text-align:left;">
 NA
@@ -9851,7 +10303,7 @@ Mwanza
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -11177,7 +11629,7 @@ Neno
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -12506,7 +12958,7 @@ Nsanje
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-27
 </td>
 <td style="text-align:left;">
 NA
@@ -12949,7 +13401,7 @@ Ntcheu
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -13389,7 +13841,7 @@ Ntchisi
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -13832,7 +14284,7 @@ Phalombe
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-30
 </td>
 <td style="text-align:left;">
 NA
@@ -14718,7 +15170,7 @@ Salima
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-01
 </td>
 <td style="text-align:left;">
 NA
@@ -15161,7 +15613,7 @@ Thyolo
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-28
 </td>
 <td style="text-align:left;">
 NA
@@ -15601,7 +16053,7 @@ Zomba
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-11-30
 </td>
 <td style="text-align:left;">
 NA
@@ -16041,7 +16493,7 @@ Zomba City
 2020
 </td>
 <td style="text-align:left;">
-NA
+2020-12-02
 </td>
 <td style="text-align:left;">
 NA
@@ -16069,8 +16521,8 @@ NA
 </tfoot>
 </div>
 </div>
-<div id="dry-spells-summary" class="section level4">
-<h4>Dry Spells Summary</h4>
+<div id="dry-spells-1" class="section level4">
+<h4>Dry Spells</h4>
 <p>The complete list of dry spells is displayed below. Only dry spells that overlapped with the rainy season are included. Duration is reported in days and rainfall in mm.</p>
 <div style="border: 1px solid #ddd; padding: 0px; overflow-y: scroll; height:500px; overflow-x: scroll; width:100%; border-bottom: 0;">
 <table class="table table-striped table-hover table-condensed table-responsive" style="margin-left: auto; margin-right: auto;">
@@ -19099,7 +19551,7 @@ $(document).ready(function ()  {
 
     // establish options
     var options = {
-      selectors: "h1,h2,h3",
+      selectors: "h1,h2,h3,h4",
       theme: "bootstrap3",
       context: '.toc-content',
       hashGenerator: function (text) {

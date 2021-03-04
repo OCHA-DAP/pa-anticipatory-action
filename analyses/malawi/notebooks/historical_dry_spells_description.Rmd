@@ -7,6 +7,7 @@ output:
     df_print: paged
     toc: true
     toc_float: true
+    toc_depth: 4
 editor_options:
   chunk_output_type: inline
 ---
@@ -95,9 +96,25 @@ rainy_seasons_summary_per_region <- rainy_seasons_detail %>%
 Rainy seasons start in Nov, Dec or Jan. Every district except for Likoma see their rainy season most often begin in November.
 
 ```{r, include = T}
-round(prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month), 1)*100, 1)
+
+regions <- rainy_seasons_detail[,c('ADM2_EN', 'region')] %>% unique()
+                     
+as.data.frame(round(prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month), 1)*100, 1)) %>%
+  pivot_wider(names_from = Var2, values_from = Freq) %>%
+  left_join(regions, by = c('Var1' = 'ADM2_EN')) %>%
+  rename(Region = region, District = Var1, Jan = `1`, Nov = `11`, Dec = `12`) %>%
+  dplyr::select(Region, District, Nov, Dec, Jan) %>%
+  arrange(Region, District) %>%
+  knitr::kable(caption = "Rainy Season Onset Months (% of seasons)",
+               align = c('l')) %>%
+        collapse_rows(columns = 1, valign = "top") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T) %>%
+        scroll_box(width = "100%", height = "500px")
 ```
 
+&nbsp;
+&nbsp;
 
 ```{r rainy-onset-table, include = T} 
 #rainy_seasons_summary_per_region %>%
@@ -150,8 +167,6 @@ We identified for each district all dry spells that occurred during the rainy se
 
 ```{r dry-spells, eval=F}
 
-
-
  # label region of the district
 rainy_season_dry_spells_summary_per_region <- rainy_season_dry_spells_summary_per_region %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
@@ -185,7 +200,7 @@ prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(d
 
 ### Addendum
 
-#### Rainy Seasons Summary
+#### Rainy Seasons 
 Duration is reported in days and rainfall in mm.
 
 ```{r addendum-rainy-seasons-detail, include = TRUE}
@@ -201,7 +216,7 @@ rainy_seasons_detail %>%
     footnote(general = "Duration reported in days and Total Rainfall in mm. ")
 ```
 
-#### Dry Spells Summary
+#### Dry Spells 
 The complete list of dry spells is displayed below. Only dry spells that overlapped with the rainy season are included. Duration is reported in days and rainfall in mm.
 
 ```{r addendum-dry-spells-during-rainy-season-list, include = TRUE}
