@@ -108,7 +108,15 @@ for (i in seq_along(1:nbr_layers)) {
   
         data_max_values <- computeLayerStat(i, max, data_max_values)
         
-      }
+}
+
+data_mean_values <- data.frame(ID = 1:nrow(mwi_adm2))
+
+for (i in seq_along(1:nbr_layers)) {
+  
+  data_mean_values <- computeLayerStat(i, mean, data_mean_values)
+  
+}
 
 # saveRDS(data_max_values,paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
 # data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
