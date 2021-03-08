@@ -177,7 +177,7 @@ rainy_seasons_summary_per_region %>%
 
 ### Dry Spells
 
-A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. A summary per district is presented below.
+A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. The graph presents frequency over the years by region. A summary per district follows in table format.
 
 &nbsp;
 
@@ -214,7 +214,34 @@ table(z$rainy_season_at_least_125d, z$n)
 
 ```
 
+```{r ds-freq-plot, include = T, warning = F, error = F, message = F}
+
+# country-wide trends
+
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'year')))
+list_adm2_EN_region <- rainy_seasons_detail[,c('region', 'pcode', 'ADM2_EN')] %>% unique()
+year_by_adm2_EN_region <- crossing(list_adm2_EN_region, year_list) # full list of adm2 * year along with region and ADM2_EN
+
+trends <- dry_spells_during_rainy_season_list %>%
+          mutate(season_approx = as.numeric(season_approx)) %>%
+          right_join(year_by_adm2_EN_region,  by = c('region' = 'region', 'pcode' = 'pcode', 'ADM2_EN' = 'ADM2_EN', 'season_approx' = 'year')) %>%
+          #left_join(dry_spells_during_rainy_season_list, by = c('region' = 'region', 'pcode' = 'pcode', 'ADM2_EN' = 'ADM2_EN', 'year' = 'season_approx')) %>% 
+          dplyr::select(season_approx, region, ADM2_EN, dry_spell_first_date) %>%
+          rename('Year' = 'season_approx', 'Region' = 'region') %>%
+          group_by(Region, Year) %>%
+          summarise(Count = sum(!is.na(dry_spell_first_date)))
+
+ggplot(trends, aes(x=Year, y=Count, fill=Region)) + 
+        geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8)) +
+        scale_x_continuous(breaks= seq(min(trends$Year), max(trends$Year), by=1)) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+        ggtitle("Dry Spells Over the Past 20 Years")
+
+# p + ggthemes::theme_economist()
+```
+
 ```{r ds-stats-summary, include = T}
+
 rainy_season_dry_spells_summary_per_region %>%
   dplyr::select(region, ADM2_EN, nbr_dry_spells, min_ds_duration, max_ds_duration, mean_ds_duration) %>%
   arrange(region, ADM2_EN) %>%
@@ -258,7 +285,7 @@ We also note that the 5 instances of 2 dry spells in a single rainy season occur
 
 #### Timing
 
-We next looked at when dry spells were more likely to occur, as the timing affects the shock's impact on crops. The  majority started in April (73.1%) and March (20.7%). We note that no or few dry spells were observed in Dec and Jan, respectively. This may partly be due to our definition of rainy season onset, which requires that a rainy streak not be followed by a 10-day period with less than 2mm rainfall in the next 30 days for the streak to be considered the onset of the rainy season. Therefore by definition the first month of the rainy season cannot have dry spells.
+We next looked at when dry spells were more likely to occur, as the timing affects the shock's impact on crops. The  majority started in April (73.1%) and March (20.7%). We note that no or few dry spells were observed in Dec (0%), Jan (1.8%), Feb (3.0%) and June (1.2%). This may partly be due to our definition of rainy seasons. For onset, we require that a rainy streak not be followed by a 10-day period with less than 2mm rainfall in the next 30 days for the streak. Therefore by definition the first month of the rainy season cannot have dry spells. For cessation, once rainy days become rarer the criterion for cessation is likely to be met, ending the rainy season and the window during which dry spells are included in this analysis.
 
 The breakdown by district is shown below.
 
