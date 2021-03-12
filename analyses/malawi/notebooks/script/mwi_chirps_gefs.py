@@ -22,6 +22,13 @@
 # - Understand why observed and forecasted dry spells don't match
 # - Get a bit better understanding of the CHIRPS-GEFS methodology
 # - Make sure the date of the filename is the first date of the forecast --> yes it is
+# - Adjust rainy season definnitions based on definition of dry spell (max or mean)
+# 
+# 
+# Limitations:
+# - Part of 2020 data missing
+# - Not all data 2000-2010 has been downloaded
+# - 
 
 # ### set general variables and functions
 
@@ -91,7 +98,7 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 # Compute a datetimeindex with all dates across all rainy seasons
 
 #path to data start and end rainy season
-df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020.csv"))
+df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean.csv"))
 df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
 df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
 
@@ -129,37 +136,47 @@ all_dates
 
 #ftp url, where year and the start_date are variable
 #start_date is the day of the year for which the forecast starts
-chirpsgefs_ftp_url_africa="https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/15day/Africa/precip_mean/data.{year}.{start_day}.tif"
+chirpsgefs_ftp_url_africa_15day="https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/15day/Africa/precip_mean/data.{year}.{start_day}.tif"
 
 
 #part of 2020 data is missing. Might be available with this URL, but uncertain what the difference is. Mailed Pete Peterson on 02-03
 #https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip/15day/Africa/precip_mean/
 
 
-def download_chirpsgefs(date,output_dir):
+def download_chirpsgefs(date,output_dir,chirpsgefs_ftp_url,days=""):
     """
     Download the chirps-gefs africa 15 day forecast for the given year and day of the year
     Currently in expiremntation style code
+    days: number of days forecast predicts ahead. When using 15 day, set to empty string
     """
     
     year=date.year
     day_year=str(date.timetuple().tm_yday).zfill(3)
     date_str=date.strftime("%Y%m%d")
-    chirpsgefs_filepath = os.path.join(chirpsgefs_dir, f"chirpsgefs_africa_{date_str}.tif")
+    chirpsgefs_filepath = os.path.join(chirpsgefs_dir, f"chirpsgefs{days}_africa_{date_str}.tif")
     if not os.path.exists(chirpsgefs_filepath):
         print(date_str)
-        print(chirpsgefs_ftp_url_africa.format(year=year,start_day=day_year))
+        print(chirpsgefs_ftp_url.format(year=year,start_day=day_year))
         try:
-            download_ftp(chirpsgefs_ftp_url_africa.format(year=year,start_day=day_year), chirpsgefs_filepath)
+            download_ftp(chirpsgefs_ftp_url.format(year=year,start_day=day_year), chirpsgefs_filepath)
         except Exception as e: 
             print(f'CHIRPS-GEFS data not available for {date}')
             print(e)
 
 
+all_dates_2010=pd.to_datetime(all_dates)[pd.to_datetime(all_dates).year>=2010]
+
+
 # only needed if not downloaded yet
 #download all the data
-for d in all_dates:
-    download_chirpsgefs(d,chirpsgefs_dir)
+for d in all_dates_2010:
+    download_chirpsgefs(d,chirpsgefs_dir,chirpsgefs_ftp_url_africa_15day)
+
+
+#redownload broken files
+for d in ["2010-05-07","2011-05-17","2012-02-29","2012-05-17","2013-05-17","2015-05-17","2016-02-29","2016-05-17","2017-05-17","2018-05-17","2019-05-17","2000-10-23","2002-09-09","2007-04-30"]:
+    date=pd.to_datetime(d)
+    download_chirpsgefs(date,chirpsgefs_dir)
 
 
 def ds_maxcell(ds,raster_transform,date,adm_path):
@@ -173,11 +190,12 @@ def ds_maxcell(ds,raster_transform,date,adm_path):
     zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["max"]
     df["min_cell"] = pd.DataFrame(
     zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["min"]
+    df["mean_cell"] = pd.DataFrame(
+    zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["mean"]
     df["date"]=pd.to_datetime(date)
     #define dryspell occuring if the cell touching the region with the maximum values is expected to receive less than 2mm of rain
 #     df["dryspell"]=np.where(df["max_cell_touched"]<=2,1,0)
-    #TODO: check if this is +14 or +15...
-    df["date_forec_end"]=df["date"]+timedelta(days=15)
+    df["date_forec_end"]=df["date"]+timedelta(days=14)
        
     return df
 
@@ -188,7 +206,7 @@ df_list=[]
 for filename in os.listdir(chirpsgefs_dir):
     if filename.endswith(".tif"):
         date=pd.to_datetime(re.split("[.\_]+", filename)[-2],format="%Y%m%d")
-        if date in all_dates:
+        if date in all_dates_2010:
             try:
                 rds = rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
                 df_date=ds_maxcell(rds.sel(band=1),rds.rio.transform(),date,adm2_bound_path)
@@ -203,6 +221,9 @@ df_hist_all=pd.concat(df_list)
 #TODO: decide if wanna use same start and end of rainy season for all adm2's or do according to original data
 #probs wanna do according to the adm2 data since there might be large differences
 #which means we have to remove the dates currently in df_hist that are outside the rainy season for adm2s
+
+
+len(df_hist_all)
 
 
 len(df_hist_all)
@@ -270,4 +291,70 @@ print("number of dates with at least one adm2 with max cell touched <=2mm",len(d
 
 
 # print("number of dates with at least one adm2 with max cell touched <=2mm",len(df_hist[df_hist.max_cell<=2].date.unique()))
+
+
+# ### Load ds with dates within rainy seas
+
+ds_list=[]
+for d in [rainy_date for rainy_date in all_dates if rainy_date.year>=2010]:
+    d_str=pd.to_datetime(d).strftime("%Y%m%d")
+    filename=f"chirpsgefs_africa_{d_str}.tif"
+    try:
+        rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
+        rds=rds.assign_coords({"time":pd.to_datetime(d)})
+        rds=rds.sel(band=1)
+        ds_list.append(rds)
+    except Exception as e:
+            print(e)
+            print(filename)
+            print(d_str)
+
+
+ds_drys=xr.concat(ds_list,dim="time")
+
+
+ds_drys=ds_drys.sortby("time")
+
+
+ds_drys.to_netcdf(country_data_processed_dir,"chirps_gefs","mwi_chirpsgefs_15day.nc")
+
+
+ds_drys
+
+
+# ### CHIRPS GEFS 5 day
+
+
+
+
+df_ds=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","dry_spells_during_rainy_season_list_2000_2020_mean.csv"))
+df_ds["dry_spell_first_date"]=pd.to_datetime(df_ds["dry_spell_first_date"])
+df_ds["dry_spell_last_date"]=pd.to_datetime(df_ds["dry_spell_last_date"])
+
+
+#ftp url, where year and the start_date are variable
+#start_date is the day of the year for which the forecast starts
+chirpsgefs_ftp_url_africa_5day="https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/05day/Africa/precip_mean/data.{year}.{start_day}.tif"
+
+
+# only needed if not downloaded yet
+#download all the data
+for d in df_ds.dry_spell_first_date.unique():
+    download_chirpsgefs(pd.to_datetime(d),chirpsgefs_dir,chirpsgefs_ftp_url_africa_5day,days="_5day")
+
+
+ds_list=[]
+for d in df_ds.dry_spell_first_date.unique():
+    d_str=pd.to_datetime(d).strftime("%Y%m%d")
+    filename=f"chirpsgefs_5day_africa_{d_str}.tif"
+    rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
+    rds=rds.assign_coords({"time":pd.to_datetime(d)})
+    rds=rds.sel(band=1)
+    ds_list.append(rds)
+
+
+ds_drys=xr.concat(ds_list,dim="time")
+
+
+ds_drys=ds_drys.sortby("time")
 
