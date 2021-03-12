@@ -87,7 +87,7 @@ import os
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 print(path_mod)
 sys.path.append(path_mod)
-from indicators.drought.config import Config
+from src.indicators.drought.config import Config
 
 
 # #### Set config values
@@ -95,14 +95,33 @@ from indicators.drought.config import Config
 country="ethiopia"
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
+
+adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
+adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 
 
-adm1_bound_path=os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
-adm2_bound_path=os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
+country="malawi"
+config=Config()
+parameters = config.parameters(country)
+country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
+country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
+country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country)
+country_data_exploration_dir = os.path.join(config.DATA_DIR,"exploration",country)
+drought_data_exploration_dir= os.path.join(config.DATA_DIR, "exploration",  'drought')
+cams_data_dir=os.path.join(drought_data_exploration_dir,"CAMS_OPI")
+cams_tercile_path=os.path.join(cams_data_dir,"CAMS_tercile.nc")
+chirps_monthly_dir=os.path.join(drought_data_exploration_dir,"CHIRPS")
+chirps_monthly_path=os.path.join(chirps_monthly_dir,"chirps_global_monthly.nc")
+
+chirpsgefs_dir = os.path.join(config.DROUGHTDATA_DIR,"chirps_gefs")
 
 
 # #### Define functions
+
+adm1_bound_path
+
 
 def load_iri(config):    
     IRI_filepath = os.path.join(config.DROUGHTDATA_DIR, config.IRI_DIR, config.IRI_NC_FILENAME_CRS)
@@ -635,6 +654,31 @@ df_hist_adm2[(df_hist_adm2.max_cell>=47.5) & ~pd.MultiIndex.from_frame(df_hist_a
 # None of the two methods would trigger now, while the consensus that the coming MAM season is expected to have below average rainfall that might cause drought.. 
 
 df_hist[df_hist.forec_valid=="Mar - May 2021"][["date","forec_valid","ADM1_EN","perc_threshold","perc_threshold_touched"]+stats_cols]
+
+
+# ### Generate mockup data dashboard
+
+#threshold of probability of below average, used to compute percentage of area above that probability
+probability_threshold=40
+percentage_threshold=10
+leadtime=3
+
+
+#compute aggregated values on adm1 for all dates since Jan 2017
+df_hist=alldates_statistics(ds_interp,transform_interp,probability_threshold,percentage_threshold,leadtime,adm1_bound_path)
+
+
+df_hist.columns
+
+
+df_hist=df_hist.rename(columns={"perc_threshold_ge10":"threshold_reached"})
+df_hist[["ADM1_EN","date","pred_date","pred_date_end","perc_threshold","threshold_reached"]]
+
+
+df_hist.to_csv(os.path.join(path_mod,"dashboard","data","seasrainforecast","mockup_rainfall_indicator.csv"))
+
+
+
 
 
 # ### Analyze CHIRPS data and correlation forecasts
