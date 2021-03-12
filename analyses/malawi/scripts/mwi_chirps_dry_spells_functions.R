@@ -91,7 +91,7 @@ findRainyOnset <- function() {
 findRainyCessation <- function() {
   
    # identify 15-day periods of up to 25mm cum
-    data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less 15d period?
+    data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d_back <= 25, 1, 0) # is this day in a 25mm or less 15d period?
   
    # select earliest date per season_approx after 15 March that meets criterion
     
