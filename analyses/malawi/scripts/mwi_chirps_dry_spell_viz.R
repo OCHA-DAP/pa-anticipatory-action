@@ -12,8 +12,8 @@ theme_set(theme_bw())
 data_dir <- Sys.getenv("AA_DATA_DIR")
 dry_spell_dir <- paste0(data_dir, '/processed/malawi/dry_spells/')
 df_dry_spells_max <- read.csv(paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020.csv'))
-df_dry_spells_mean <- read.csv(paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean.csv'))
-df_rainy_season_mean <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020_mean.csv'))   
+df_dry_spells_mean <- read.csv(paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
+df_rainy_season_mean <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020_mean_back.csv'))   
 df_rainy_season_max <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020.csv'))   
 data_mean_long <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_long.RDS"))# Fill in rainy or dry spell dates 
 
@@ -52,8 +52,8 @@ fill_dates <- function(df_dates, start_col, end_col, fill_num){
 }
 
 
-df_ds <- fill_dates(df_dry_spells_max, 'dry_spell_first_date', 'dry_spell_last_date', 1)
-df_rs <- fill_dates(df_rainy_season_max, 'onset_date', 'cessation_date', 10)
+df_ds <- fill_dates(df_dry_spells_mean, 'dry_spell_first_date', 'dry_spell_last_date', 1)
+df_rs <- fill_dates(df_rainy_season_mean, 'onset_date', 'cessation_date', 10)
 
 
 # Make the line plot and heatmap ------------------------------------------
@@ -73,7 +73,7 @@ df_ds %>%
         axis.ticks.y=element_blank(),
         legend.position = 'bottom')+
   scale_x_date(date_labels = "%b")
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/max_dry_spell_hm.png'))
+ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'))
 
 # Line plot
 df_ds %>%
@@ -92,7 +92,7 @@ df_ds %>%
   labs(title='Number of dry spells by region in Malawi, 2000-2020', 
        x='Date', 
        y='Count')
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/max_dry_spell_line.png'))
+ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line.png'))
 
 
 

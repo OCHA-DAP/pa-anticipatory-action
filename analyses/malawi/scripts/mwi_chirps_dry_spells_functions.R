@@ -42,6 +42,19 @@ computeRollingSum <- function(dataframe_long, window){
   return(rolling_sum)
 }
 
+# compute backwards rolling sum
+computeBackRollingSum <- function(dataframe_long, window){
+  
+  # convert to wide
+  rolling_sum <-  dataframe_long %>%
+    arrange(pcode, date) %>%
+    group_by(pcode) %>%
+    mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'left')
+    ) 
+  return(rolling_sum)
+}
+
+
 ## compute onset date for every rainy season per adm2
 findRainyOnset <- function() {
   
