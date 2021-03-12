@@ -40,6 +40,7 @@ import matplotlib as mpl
 import seaborn as sns
 from mlxtend.evaluate import confusion_matrix
 from mlxtend.plotting import plot_confusion_matrix
+import calendar
 
 
 from pathlib import Path
@@ -172,9 +173,6 @@ df_ds_dryseas
 df_comb_seas=df_ds_dryseas.merge(df_belowavg_seas_rain,how="right",on=["date_month","ADM2_EN"])
 
 
-df_comb_seas
-
-
 #remove dates where dry_spell_confirmation is nan, i.e. where rolling sum could not be computed for (first dates)
 df_comb_seas=df_comb_seas[df_comb_seas.num_dry_spell_seas.notna()]
 
@@ -185,6 +183,15 @@ df_comb_seas["dry_spell"]=np.where(df_comb_seas.num_dry_spell_seas>=1,1,0)
 
 #seasons-adm2s where during at least one of the months a dry spell occured
 len(df_comb_seas[df_comb_seas.dry_spell==1])
+
+
+len(df_comb_seas[df_comb_seas.below_average==1])/len(df_comb_seas)
+
+
+len(df_comb_seas[df_comb_seas.dry_spell==1])/len(df_comb_seas)
+
+
+print(f"{len(df_comb_seas[df_comb_seas.below_average==1])/len(df_comb_seas[df_comb_seas.dry_spell==1]):.2f} times as many occurences of below average than dry spells")
 
 
 df_comb_seas
@@ -331,27 +338,16 @@ ax.set_title("Number of admin2's with a dry spell during the FMA season")
 ax.legend(title="Below average rainfall",loc="upper left")
 
 
-#number of dry spells that did and did not have below avg rainfall per year
-df_fma_bavgy['below_average_label'] = df_fma_bavgy['below_average'].map({0: 'No', 1: 'Yes'})
-g=sns.barplot(x="year", y="dry_spell", hue="below_average_label", data=df_fma_bavgy)#,legend_out=True)
-ax=g.axes
-plt.xticks(rotation=90)
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.set_title("Number of admin2's with a dry spell during the FMA season")
-ax.legend(title="Below average rainfall",loc="upper left")
-
-
 #difference distribution number of dry spells per year, with below and not below avg rainfall
 #--> barely difference in distribution
 g=sns.histplot(
-df_fma_bavgy,x="dry_spell", bins=np.arange(0,df_fma_bavgy.dry_spell.max()),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
+df_fma_bavgy,x="dry_spell", bins=np.arange(0,df_fma_bavgy.dry_spell.max()+2),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
 ax=g.axes
 # plt.title(v)
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 # ax.set_xlabel(v)
-ax.set_xticks(np.arange(0,df_fma_bavgy.dry_spell.max()))
+ax.set_xticks(np.arange(0,df_fma_bavgy.dry_spell.max()+1))
 plt.show()
 
 
@@ -392,10 +388,10 @@ fig=plt.figure(figsize=(20,5))
 for i,a in enumerate(df_fma_bavgadm.ADM1_EN.unique()):
     ax = fig.add_subplot(rows,colp_num,i+1)
     g=sns.histplot(
-    df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a],x="dry_spell",ax=ax,bins=np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
+    df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a],x="dry_spell",ax=ax,bins=np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()+2),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    ax.set_xticks(np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()))
+    ax.set_xticks(np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()+1))
     ax.set_title(a)
 
 
@@ -417,27 +413,40 @@ for i,a in enumerate(df_fma_bavgadm.ADM1_EN.unique()):
 # ax.set_title("Number of admin2's with below average rainfall that also had a dry spell")
 
 
-# ### THIS IS OLD, DONT LOOK AT IT, WILL BE APPROX SAME AS FOR SEASONAL
 # ### Observed dryspells and correlation with below average monthly rainfall
-# **note: the list of dry spells used here is preliminary, thus the correlations will likely change but the processing should be the same**
-# Process the observed dryspell list as outputed by `malawi/scripts/mwi_chirps_dry_spell_detection.R` and correlate the occurence of a dry spell with below-average monthly and seasonal rainfall
-# 
-# As first analysis we are focussing on the sole occurence of a dry spell per admin2. This can be extended to e.g. duration, number of dry spells, and geographical spread
-# 
-# Questions
-# - Does it make sense to use the datae of dry spell confirmation, or more logical to use the start date?
-
-df_ds_drymonth
-
+# Repeat the analysis but now with below average monthly rainfall
 
 df_belowavg_month=pd.read_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_monthly_below_average_precipitation.csv"))
+#remove day part of date (day doesnt indicate anything with this data and easier for merge)
 df_belowavg_month.date_month=pd.to_datetime(df_belowavg_month.date_month).dt.to_period("M")
 
 
-#df_belowavg_seas only includes data from 2000, so the 1999 entries are not included
+len(df_belowavg_month[df_belowavg_month.below_average==1])/len(df_belowavg_month)
+
+
+df_belowavg_month
+
+
+#path to data start and end rainy season
+df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean.csv"))
+df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
+df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
+
+
+#set the onset and cessation date for the seasons where these are missing 
+#(meaning there was no dry spell data from start/till end of the season)
+df_rain_filled=df_rain.copy()
+df_rain_filled=df_rain_filled[(df_rain_filled.onset_date.notnull())|(df_rain_filled.cessation_date.notnull())]
+df_rain_filled[df_rain_filled.onset_date.isnull()]=df_rain_filled[df_rain_filled.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
+df_rain_filled[df_rain_filled.cessation_date.isnull()]=df_rain_filled[df_rain_filled.cessation_date.isnull()].assign(cessation_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]+1}-07-01"))
+
+
+df_rain_filled["onset_month"]=df_rain_filled["onset_date"].dt.to_period("M")
+df_rain_filled["cessation_month"]=df_rain_filled["cessation_date"].dt.to_period("M")
+
+
 #remove the adm2-date entries outside the rainy season for that specific adm2
-#before we included all forecasts within the min start of the rainy season and max end across the whole country
-# total_days=0
+#df_belowavg_month only includes data from 2000, so the 1999 entries are not included
 list_hist_rain_adm2=[]
 for a in df_rain_filled.ADM2_EN.unique():
     dates_adm2=pd.Index([])
@@ -445,35 +454,222 @@ for a in df_rain_filled.ADM2_EN.unique():
         df_rain_adm2_seas=df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)]
         seas_range=pd.period_range(df_rain_adm2_seas.onset_date.values[0],df_rain_adm2_seas.cessation_date.values[0],freq="M")
         dates_adm2=dates_adm2.union(seas_range)
-    list_hist_rain_adm2.append(df_belowavg_month[(df_belowavg_month.ADM2_EN==a)&(df_belowavg_seas.date_month.isin(dates_adm2))])
+    list_hist_rain_adm2.append(df_belowavg_month[(df_belowavg_month.ADM2_EN==a)&(df_belowavg_month.date_month.isin(dates_adm2))])
 df_belowavg_month_rain=pd.concat(list_hist_rain_adm2)
 
 
-#merge the dry spells with the info if a month had below average rainfall
-#merge on outer such that all dates present in one of the two are included
-df_comb=df_ds_drymonth.merge(df_belowavg_month_rain,how="outer",left_on=["ds_fd_m","ADM2_EN"],right_on=["date_month","ADM2_EN"])
+# ### Merge dry spells with Monthly below average rainfall
+
+#dataframe that includes all month-adm2 combinations that experienced a dry spell 
+#(if several dry spells started within a month in an adm2, these "duplicates" are dropped)
+df_ds_drymonth
 
 
-df_comb.head()
+#include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
+df_comb_month=df_ds_drymonth.merge(df_belowavg_month_rain,how="outer",left_on=['ADM2_EN','ds_fd_m'],right_on=["ADM2_EN","date_month"])
 
 
 #dates that are not present in the dry spell list, but are in the observed rainfall df, thus have no dry spells
-df_comb.dry_spell_first_date=df_comb.dry_spell_first_date.replace(np.nan,0)
+df_comb_month.dry_spell_first_date=df_comb_month.dry_spell_first_date.replace(np.nan,0)
+#date becomes binary
+df_comb_month.rename(columns={"dry_spell_first_date":"dry_spell"},inplace=True)
 
 
-#contigency matrix rainfall and dry spells for all months
-from mlxtend.evaluate import confusion_matrix
-from mlxtend.plotting import plot_confusion_matrix
+df_comb_month["month"]=df_comb_month.date_month.dt.month
 
-y_target =    df_comb["dry_spell_first_date"]
-y_predicted = df_comb["below_average"]
+
+df_comb_month
+
+
+#seasons-adm2s where during at least one of the months a dry spell occured
+len(df_comb_month[df_comb_month.dry_spell==1])
+
+
+len(df_comb_month[df_comb_month.below_average==1])/len(df_comb_month)
+
+
+len(df_comb_month[df_comb_month.dry_spell==1])/len(df_comb_month)
+
+
+print(f"{len(df_comb_month[df_comb_month.below_average==1])/len(df_comb_month[df_comb_month.dry_spell==1]):.2f} times as many occurences of below average than dry spells")
+
+
+# #### Analyse distributions below average rainfall and dry spells
+# There is barely a difference in the distribution of the percentage with below average rainfall when a dry spell occurs or not --> really not possible to separate the two..
+
+#perc_threshold indicates the percentage of area with below average rainfall per admin2-date combination
+g=sns.histplot(df_comb_month,x="perc_threshold",stat="density",common_norm=False,kde=True,hue="dry_spell")
+g.axes.spines['right'].set_visible(False)
+g.axes.spines['top'].set_visible(False)
+g.axes.set_xlabel("Percentage of area of ADM2 with below average monthly precipitation")
+
+
+#max_cell indicates the cell per adm2-date combination with the maximum value
+#however, all cells with above average rainfall are set to -999 
+#--> if max cell is positive, all cells in the adm2 have below average rainfall
+g=sns.histplot(df_comb_month,x="max_cell",stat="density",common_norm=False,kde=True,hue="dry_spell")
+g.axes.spines['right'].set_visible(False)
+g.axes.spines['top'].set_visible(False)
+
+
+# #### Correlations
+# Not really any correlation, but is to be expected from the distributions
+
+y_target =    df_comb_month["dry_spell"]
+#below_average is defined as perc_threshold>=50 where perc_threshold indicates the percentage of area with below average rainfall
+y_predicted = df_comb_month["below_average"]
 
 cm = confusion_matrix(y_target=y_target, 
                       y_predicted=y_predicted)
-print(cm)
+# print(cm)
 
 fig, ax = plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True) #,class_names=["No","Yes"])
 ax.set_ylabel("Dry spell in ADMIN2 during month")
 ax.set_xlabel("Lower tercile precipitation in ADMIN2 during month")
 plt.show()
+
+
+#check if difference per admin1
+colp_num=3
+num_plots=len(df_comb_month.ADM1_EN.unique())
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(25,20))
+for i,m in enumerate(df_comb_month.ADM1_EN.unique()):
+    y_target =    df_comb_month.loc[df_comb_month.ADM1_EN==m,"dry_spell"]
+    y_predicted = df_comb_month.loc[df_comb_month.ADM1_EN==m,"below_average"]
+    
+    cm = confusion_matrix(y_target=y_target, 
+                          y_predicted=y_predicted)
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax)
+    ax.set_ylabel("Dry spell in ADMIN2 during month")
+    ax.set_xlabel("Lower tercile precipitation in ADMIN2 during month")
+    ax.set_title(m)
+
+
+#check if difference per season
+colp_num=3
+num_plots=len(df_comb_month.date_month.dt.month.unique())
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(25,20))
+for i,m in enumerate(df_comb_month.sort_values(by="date_month").date_month.dt.month.unique()):
+    y_target =    df_comb_month.loc[df_comb_month.date_month.dt.month==m,"dry_spell"]
+    y_predicted = df_comb_month.loc[df_comb_month.date_month.dt.month==m,"below_average"]
+
+    cm = confusion_matrix(y_target=y_target, 
+                          y_predicted=y_predicted)
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax)
+    ax.set_ylabel("Dry spell in ADMIN2 during month")
+    ax.set_xlabel("Lower tercile precipitation in ADMIN2 during month")
+    ax.set_title(calendar.month_name[m])
+
+
+# ### Correlation number of adm2's with dry spells and below avg precip
+# The data might be too noisy to detect specific adm2's but there might be a correlation when looking at the total of adm2s having a dry spell/below avg precip during season
+# 
+# Conclusion: there is not😥
+
+#number of adm2s experiencing a dry spell/below average
+#these don't have to be the same with the current method of computation
+df_numadm=df_comb_month.groupby("date_month")["dry_spell","below_average"].sum()
+
+
+df_numadm
+
+
+sns.regplot(data = df_numadm, x = 'dry_spell', y = 'below_average', fit_reg = False,
+            scatter_kws = {'alpha' : 1/3})#,x_jitter = 0.2, y_jitter = 0.2)
+
+
+#do the same but per adm1 instead of national
+df_nummonthadm=df_comb_month.groupby(["date_month","ADM1_EN"],as_index=False)[["dry_spell","below_average"]].sum()
+
+
+colp_num=3
+num_plots=len(df_comb_month.ADM1_EN.unique())
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(20,5))
+for i,a in enumerate(df_nummonthadm.ADM1_EN.unique()):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    sns.regplot(data = df_nummonthadm[df_nummonthadm.ADM1_EN==a], x = 'dry_spell', y = 'below_average', fit_reg = False,
+            scatter_kws = {'alpha' : 1/3},ax=ax)
+    ax.axes.set_title(a)
+
+
+# ### Distributions below average and dry spells
+# Understand a little better why no correlation number of adm2's with below average and dry spell
+
+df_comb_month["year"]=df_comb_month.date_month.dt.year
+
+
+#for now focus on April since this is the month having most dry spels
+df_apr=df_comb_month.copy()#df_comb_month[df_comb_month.date_month.dt.month==3]
+
+
+df_apr_bavgy=df_apr[["ADM1_EN","year","dry_spell","below_average"]].groupby(["year","below_average"],as_index=False).sum()
+
+
+#number of dry spells that did and did not have below avg rainfall per year
+df_apr_bavgy['below_average_label'] = df_apr_bavgy['below_average'].map({0: 'No', 1: 'Yes'})
+g=sns.barplot(x="year", y="dry_spell", hue="below_average_label", data=df_apr_bavgy)#,legend_out=True)
+ax=g.axes
+plt.xticks(rotation=90)
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_title("Number of admin2's with a dry spell during April")
+ax.legend(title="Below average rainfall",loc="upper left")
+
+
+#difference distribution number of dry spells per year, with below and not below avg rainfall
+#--> barely difference in distribution
+g=sns.histplot(
+df_apr_bavgy,x="dry_spell", bins=np.arange(0,df_apr_bavgy.dry_spell.max()+2),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
+ax=g.axes
+# plt.title(v)
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+# ax.set_xlabel(v)
+ax.set_xticks(np.arange(0,df_apr_bavgy.dry_spell.max()+1))
+ax.set_xlabel("Number of ADM2's with a dry spell")
+plt.show()
+
+
+#stats summary
+df_apr_bavgy["Below average rainfall"]=df_apr_bavgy["below_average_label"]
+df_apr_bavgy["Number of dry spells"]=df_apr_bavgy["dry_spell"]
+df_apr_bavgy[["Below average rainfall","Number of dry spells"]].groupby("Below average rainfall").agg(['sum','mean','min','max'])
+
+
+df_apr_bavgadm=df_apr[["ADM1_EN","year","dry_spell","below_average"]].groupby(["ADM1_EN","year","below_average"],as_index=False).sum()
+
+
+colp_num=3
+num_plots=len(df_apr_bavgadm.ADM1_EN.unique())
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(20,5))
+for i,a in enumerate(df_apr_bavgadm.ADM1_EN.unique()):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    g=sns.histplot(
+    df_apr_bavgadm[df_apr_bavgadm.ADM1_EN==a],x="dry_spell",ax=ax,bins=np.arange(0,df_apr_bavgadm[df_apr_bavgadm.ADM1_EN==a].dry_spell.max()+2),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.set_xticks(np.arange(0,df_apr_bavgadm[df_apr_bavgadm.ADM1_EN==a].dry_spell.max()+1))
+    ax.set_title(a)
+    ax.set_xlabel("Number of ADM2's with a dry spell")
+
+
+
 
