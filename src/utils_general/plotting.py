@@ -277,23 +277,26 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
         ax.axis("off")
         plt.axis("off")
 
-        patch_col = ax.collections[0]
-        cb = fig.colorbar(patch_col, ax=ax, shrink=0.5)
-        #
-        # #prettify legend if using individual color for each value
-        # if predef_bins is None and not df[col].isnull().values.all():
-        #     leg = ax.get_legend()
-        #
-        #     for lbl in leg.get_texts():
-        #         label_text = lbl.get_text()
-        #         upper = label_text.split(",")[-1].rstrip(']')
-        #
-        #         try:
-        #             new_text = f'{float(upper):,.2f}'
-        #         except:
-        #             new_text = upper
-        #         lbl.set_text(new_text)
 
+        #prettify legend if using individual color for each value
+        if predef_bins is None and not df[col].isnull().values.all():
+            leg = ax.get_legend()
+
+            for lbl in leg.get_texts():
+                label_text = lbl.get_text()
+                upper = label_text.split(",")[-1].rstrip(']')
+
+                try:
+                    new_text = f'{float(upper):,.2f}'
+                except:
+                    new_text = upper
+                lbl.set_text(new_text)
+    #TODO: might want to make a distinction with using colorbar and legend depending on categorized or continous bins..
+    leg = ax.get_legend()
+    # patch_col = ax.collections[0]
+    # cb = fig.colorbar(patch_col, ax=ax, shrink=0.5)
+
+    # leg.set_bbox_to_anchor((0., 0.2, 0.2, 0.2))
     #TODO: fix legend and prettify plot
     if title:
         fig.suptitle(title, fontsize=14, y=0.92)
