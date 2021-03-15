@@ -83,7 +83,7 @@ s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s20
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
 data <- mask(s2000_s2020_cropped, mask = mwi_adm2)
 # saveRDS(data, paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
-# data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
+data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5_mean.RDS")) # 5-deg resolution
 # plot(data) # visual inspection
 
 # explore compiled raster file ("brick")
@@ -119,7 +119,7 @@ for (i in seq_along(1:nbr_layers)) {
 }
 
 # saveRDS(data_max_values,paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
-# data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
+data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5.RDS"))
 
 #####
 ## transform rainfall data and compute rolling sums
@@ -149,6 +149,12 @@ data_max_values_long <- data_max_values_long %>%
                           group_by(pcode) %>%
                           computeRollingSum(., window = 15) %>%
                           rename(rollsum_15d = rollsum)
+
+# compute 15-day backwards rolling sums 
+data_max_values_long <- data_max_values_long %>%
+                          group_by(pcode) %>%
+                          computeBackRollingSum(., window = 15) %>%
+                          rename(rollsum_15d_back = rollsum)
 
 # label rainy days
 data_max_values_long$rainy_day_bin <-  ifelse(data_max_values_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
@@ -211,7 +217,7 @@ nrow(rainy_seasons_detail) / 32 == 22 # confirms there is a record for every yea
 rainy_seasons_detail <- rainy_seasons_detail %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
 # save results
-write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020.csv"), row.names = FALSE)
+write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_mean_back.csv"), row.names = FALSE)
 
 
 #####
@@ -328,7 +334,7 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
                                           dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
-write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020.csv"), row.names = FALSE)
+write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"), row.names = FALSE)
 
 # summary stats per region 
 rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>% 

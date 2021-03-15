@@ -42,6 +42,19 @@ computeRollingSum <- function(dataframe_long, window){
   return(rolling_sum)
 }
 
+# compute backwards rolling sum
+computeBackRollingSum <- function(dataframe_long, window){
+  
+  # convert to wide
+  rolling_sum <-  dataframe_long %>%
+    arrange(pcode, date) %>%
+    group_by(pcode) %>%
+    mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'left')
+    ) 
+  return(rolling_sum)
+}
+
+
 ## compute onset date for every rainy season per adm2
 findRainyOnset <- function() {
   
@@ -78,7 +91,7 @@ findRainyOnset <- function() {
 findRainyCessation <- function() {
   
    # identify 15-day periods of up to 25mm cum
-    data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less 15d period?
+    data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d_back <= 25, 1, 0) # is this day in a 25mm or less 15d period?
   
    # select earliest date per season_approx after 15 March that meets criterion
     
