@@ -119,48 +119,52 @@ for (i in seq_along(1:nbr_layers)) {
 }
 
 # saveRDS(data_max_values,paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
+# saveRDS(data_mean_values,paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5.RDS"))
 #data_max_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_max_values_2000_2020_r5.RDS"))
-data_mean_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5.RDS")) ## TO DO: remove stat from object name so mean and max both work
-data_max_values <- data_mean_values
+#data_mean_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5.RDS")) 
+
+# select which values (mean or max) to use
+#data <- data_max_values
+data <- data_mean_values
 
 #####
 ## transform rainfall data and compute rolling sums
 #####
 
 # transpose data; create Year, Month, Day columns; label rainy season year (approximated: Oct-June to give room for early starts and late cessations)
-data_max_values_long <- convertToLongFormat(data_max_values)
-data_max_values_long$year <- lubridate::year(data_max_values_long$date) 
-data_max_values_long$month <- lubridate::month(data_max_values_long$date) 
-data_max_values_long$day <- lubridate::day(data_max_values_long$date) 
-data_max_values_long$season_approx <- ifelse(data_max_values_long$month >= 10, data_max_values_long$year, ifelse(data_max_values_long$month <= 7, data_max_values_long$year - 1, 'outside rainy season')) # labels the rainy season which overlaps between two calendar years. uses first year as label.
+data_long <- convertToLongFormat(data)
+data_long$year <- lubridate::year(data_long$date) 
+data_long$month <- lubridate::month(data_long$date) 
+data_long$day <- lubridate::day(data_long$date) 
+data_long$season_approx <- ifelse(data_long$month >= 10, data_long$year, ifelse(data_long$month <= 7, data_long$year - 1, 'outside rainy season')) # labels the rainy season which overlaps between two calendar years. uses first year as label.
 
 # compute 10-day rolling sums
-data_max_values_long <- data_max_values_long %>%
+data_long <- data_long %>%
                           group_by(pcode) %>%
                           computeRollingSum(., window = 10) %>%
                           rename(rollsum_10d = rollsum)
 
 # compute 14-day rolling sums
-data_max_values_long <- data_max_values_long %>%
+data_long <- data_long %>%
                           group_by(pcode) %>%
                           computeRollingSum(., window = 14) %>%
                           rename(rollsum_14d = rollsum)
 
 # compute 15-day rolling sums
-data_max_values_long <- data_max_values_long %>%
+data_long <- data_long %>%
                           group_by(pcode) %>%
                           computeRollingSum(., window = 15) %>%
                           rename(rollsum_15d = rollsum)
 
 # compute 15-day backwards rolling sums 
-data_max_values_long <- data_max_values_long %>%
+data_long <- data_long %>%
                           group_by(pcode) %>%
                           computeBackRollingSum(., window = 15) %>%
                           rename(rollsum_15d_back = rollsum)
 
 # label rainy days
-data_max_values_long$rainy_day_bin <-  ifelse(data_max_values_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
-data_max_values_long$rainy_day_bin_2mm <-  ifelse(data_max_values_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
+data_long$rainy_day_bin <-  ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
+data_long$rainy_day_bin_2mm <-  ifelse(data_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
 
 
 #####
@@ -199,7 +203,7 @@ rainfall_during_rainy_seasons_list <- sqldf::sqldf("select m.*,
                                                 r.rainy_season_duration,
                                                 r.onset_month,
                                                 r.cessation_month
-                                               from data_max_values_long m
+                                               from data_long m
                                                inner join rainy_seasons r 
                                                on m.pcode = r.pcode 
                                                  and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 1999 and 2020 rainy seasons because don't have onset/cessation dates for them
@@ -271,12 +275,12 @@ rainy_seasons_summary_per_region
 #####
 
 # determine if each record is within that year's rainy season and if so, how many days into the season it is
-data_max_values_long <- merge(data_max_values_long, rainy_seasons, by = c('ID', 'pcode', 'season_approx'), all.x = T)
-data_max_values_long$during_rainy_season_bin <-  ifelse(data_max_values_long$date >= data_max_values_long$onset_date & data_max_values_long$date <= data_max_values_long$cessation_date, 1, 0)
-data_max_values_long$nth_day_of_rainy_season <- ifelse(data_max_values_long$during_rainy_season_bin == 1, as.numeric(difftime(data_max_values_long$date, data_max_values_long$onset_date, units = "days") + 1), NA) # +1 so first day of rainy season is labelled "one"
+data_long <- merge(data_long, rainy_seasons, by = c('ID', 'pcode', 'season_approx'), all.x = T)
+data_long$during_rainy_season_bin <-  ifelse(data_long$date >= data_long$onset_date & data_long$date <= data_long$cessation_date, 1, 0)
+data_long$nth_day_of_rainy_season <- ifelse(data_long$during_rainy_season_bin == 1, as.numeric(difftime(data_long$date, data_long$onset_date, units = "days") + 1), NA) # +1 so first day of rainy season is labelled "one"
 
 # find rainy streaks within each rainy season, adm2
-#rainy_streaks <- data_max_values_long %>%
+#rainy_streaks <- data_long %>%
 #                  filter(during_rainy_season_bin == 1) %>% # keep days during the rainy season
 #                  group_by(pcode, season_approx) %>%        
 #                  arrange(pcode, date) %>% # sort in ascending order
@@ -285,10 +289,10 @@ data_max_values_long$nth_day_of_rainy_season <- ifelse(data_max_values_long$duri
 #                  ungroup() 
 
 # label days on which 14-day rolling sum is 2mm or less of rain as "dry_spell_day"
-data_max_values_long$rollsum_14d_less_than_2_bin <- ifelse(data_max_values_long$rollsum_14d <= 2, 1, 0) # NOTE: this does not label all days that have less than 2mm because those in the first 13 days don't get flagged
+data_long$rollsum_14d_less_than_2_bin <- ifelse(data_long$rollsum_14d <= 2, 1, 0) # NOTE: this does not label all days that have less than 2mm because those in the first 13 days don't get flagged
 
 # identify beginning, end and duration of dry spells per adm2 region (total <= 2mm)
-dry_spells_confirmation_dates <- data_max_values_long %>%
+dry_spells_confirmation_dates <- data_long %>%
                                   group_by(pcode) %>%        
                                   arrange(date) %>% # sort date in ascending order
                                   mutate(streak_number = runlengthEncoding(rollsum_14d_less_than_2_bin)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14d rolling sum <= 2mm)
@@ -309,7 +313,7 @@ rainfall_during_dry_spells <- sqldf::sqldf("select m.*,
                                              l.dry_spell_confirmation,
                                              l.dry_spell_first_date,
                                              l.dry_spell_last_date
-                                           from data_max_values_long m
+                                           from data_long m
                                            inner join dry_spells_list l 
                                            on m.pcode = l.pcode 
                                             and m.date between l.dry_spell_first_date and l.dry_spell_last_date") # keep all records during a dry spell
@@ -360,7 +364,7 @@ rainy_season_dry_spells_summary_per_region
 ## identify dry spells using definition of 14 consecutive days with <= 4mm each
 ####
 
-streaks <- data_max_values_long %>%
+streaks <- data_long %>%
               group_by(pcode) %>%        
               arrange(date) %>% # sort date in ascending order
               mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14 consecutive days with <= 4mm)
@@ -388,7 +392,7 @@ rainfall_during_daily_max_ds <- sqldf::sqldf("select m.*,
                                                 dm.streak_number,
                                                 dm.dry_spell_first_date,
                                                 dm.dry_spell_last_date
-                                           from data_max_values_long m
+                                           from data_long m
                                            inner join dry_spells_daily_max dm 
                                                 on m.pcode = dm.pcode 
                                                 and m.date between dm.dry_spell_first_date and dm.dry_spell_last_date") # keep all records during a dry spell
@@ -434,7 +438,7 @@ daily_max_dry_spells_summary_per_region
 ## identify dry spells using definition of 14 consecutive days with <= 2mm each
 ####
 
-streaks_2mm <- data_max_values_long %>%
+streaks_2mm <- data_long %>%
   group_by(pcode) %>%        
   arrange(date) %>% # sort date in ascending order
   mutate(streak_number = runlengthEncoding(rainy_day_bin_2mm)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14 consecutive days with <= 4mm)
@@ -462,7 +466,7 @@ rainfall_during_daily_max_ds_2mm <- sqldf::sqldf("select m.*,
                                                 dm.streak_number,
                                                 dm.dry_spell_first_date,
                                                 dm.dry_spell_last_date
-                                           from data_max_values_long m
+                                           from data_long m
                                            inner join dry_spells_daily_max_2mm dm 
                                                 on m.pcode = dm.pcode 
                                                 and m.date between dm.dry_spell_first_date and dm.dry_spell_last_date") # keep all records during a dry spell
