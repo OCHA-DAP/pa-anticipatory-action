@@ -64,18 +64,18 @@ server <- function(input, output) {
     })
     
     # Display rainfall maps as temp projections. Note single quotes must be outer set because string must include double quotes to be processed as HTML
-    output$iri_text <- renderText("Below: IRI")
-    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/feb2021/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
-    output$icpac_text <- renderText("Below: ICPAC")
+    output$iri_text <- renderText("Below: IRI for AMJ season")
+    output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/mar2021/images/AMJ21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
+    output$nmme_text <- renderText("Below: NMME for AMJ season")
+    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/international/nmme/probabilistic_seasonal/africa_nmme_prec_3catprb_MarIC_Apr2021-Jun2021.png"','width = "600px" height = "500px"', '>')})
+    output$copernicus_text <- renderText("Below: Copernicus for AMJ season")
+    output$copernicus <- renderText({c('<img src="','https://apps.ecmwf.int/webapps/opencharts/streaming/20210316-0730/31/pdf2svg-worker-commands-88596cfc-pk72d-6fe5cac1a363ec1525f54343b6cc9fd8-qIoeO3.svg"','width = "500px" height = "500px"', '>')})    
+    output$icpac_text <- renderText("Below: ICPAC for MAM season")
     output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/MAM_GHA_Rainfall.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
-    output$chc_text <- renderText("Below: Climate Hazards Center")
+    output$chc_text <- renderText("Below: Climate Hazards Center for MAM season")
     output$chc <- renderText({c('<img src="','https://blog.chc.ucsb.edu/wp-content/uploads/2021/01/Screen-Shot-2021-01-20-at-5.21.51-PM.png"','width = "500px" height = "500px"', '>')})
-    output$nmme_text <- renderText("Below: NMME")
-    output$nmme <- renderText({c('<img src="','https://www.cpc.ncep.noaa.gov/products/international/nmme/probabilistic_seasonal/africa_nmme_prec_3catprb_FebIC_Mar2021-May2021.png"','width = "600px" height = "500px"', '>')})
-    output$copernicus_text <- renderText("Below: Copernicus")
-    output$copernicus <- renderText({c('<img src="','https://apps.ecmwf.int/webapps/opencharts/streaming/20210216-0810/87/pdf2svg-worker-commands-69c6db9bf8-d9qk2-6fe5cac1a363ec1525f54343b6cc9fd8-6Xzy4c.svg"','width = "500px" height = "500px"', '>')})    
     
-    output$nma_text <- renderText("Below: NMA Ethiopia")
+    output$nma_text <- renderText("Below: NMA Ethiopia for FMAM season")
     
     # create list of food security triggered regions
     output$triggered_regions_list <- renderText({
