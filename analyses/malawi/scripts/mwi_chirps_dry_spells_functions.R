@@ -59,19 +59,19 @@ computeBackRollingSum <- function(dataframe_long, window){
 findRainyOnset <- function() {
   
   # identify 10-day periods with at least 40mm cumulative yearound
-  data_max_values_long$min_cum_40mm_bin <- ifelse(data_max_values_long$rollsum_10d >= 40, 1, 0) # is this day in a 40+mm period?
+  data_values_long$min_cum_40mm_bin <- ifelse(data_values_long$rollsum_10d >= 40, 1, 0) # is this day in a 40+mm period?
   
   # identify 10-day dry spells (10 consecutive days with less than 2mm of total rain) yearound
-  data_max_values_long$less_than_cum_2mm_bin <- ifelse(data_max_values_long$rollsum_10d < 2, 1, 0) # is this day in a dry period (<2mm)?
+  data_values_long$less_than_cum_2mm_bin <- ifelse(data_values_long$rollsum_10d < 2, 1, 0) # is this day in a dry period (<2mm)?
   
   # verify no 10-day dry spells following in 30 days of first day with >=40mm cum sum yearound
-  data_max_values_long <- data_max_values_long %>% 
+  data_values_long <- data_values_long %>% 
                             group_by(pcode) %>%
                             mutate(nbr_dry_spell_days_win_30d = zoo::rollsum(less_than_cum_2mm_bin, k = 30, fill = NA, align = 'left'),
                                    followed_by_ds_win_30d_bin = ifelse(nbr_dry_spell_days_win_30d > 0, 1, 0))  
                           
   # select earliest date per season_approx after 1 Nov that meets both criteria
-  rainy_onsets <- data_max_values_long %>%
+  rainy_onsets <- data_values_long %>%
                     filter(season_approx != 'outside rainy season') %>% # exclude Aug-Sept
                     mutate(meets_onset_criteria = ifelse(min_cum_40mm_bin == 1 & followed_by_ds_win_30d_bin == 0, 1, 0)) %>% # min 40mm in 15 days and not followed by 10d dry spells within 30 days
                     filter(meets_onset_criteria == 1 & month %in% c(11, 12, 1, 2)) %>% # period post 1 Nov. Allows Nov-Feb for onsets)
@@ -91,12 +91,12 @@ findRainyOnset <- function() {
 findRainyCessation <- function() {
   
    # identify 15-day periods of up to 25mm cum
-    data_max_values_long$max_cum_25mm_bin <- ifelse(data_max_values_long$rollsum_15d_back <= 25, 1, 0) # is this day in a 25mm or less 15d period?
+    data_values_long$max_cum_25mm_bin <- ifelse(data_values_long$rollsum_15d_back <= 25, 1, 0) # is this day in a 25mm or less 15d period?
   
    # select earliest date per season_approx after 15 March that meets criterion
     
     # select earliest date per season_approx after 15 March that meets criterion
-    rainy_cessation <- data_max_values_long %>%
+    rainy_cessation <- data_values_long %>%
                           filter((month >= 4 & month < 8) | (month == 3 & day >= 15)) %>% # in Mar on or after the 15th, or between April and Aug exclusively
                           filter(max_cum_25mm_bin == 1) %>% # meet criterion for cessation (= 25mm or less cumulative rainfall over 15 days)
                           group_by(pcode, season_approx) %>%
