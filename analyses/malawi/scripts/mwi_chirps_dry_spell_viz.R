@@ -17,6 +17,11 @@ df_rainy_season_mean <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_200
 df_rainy_season_max <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020.csv'))   
 data_mean_long <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_long.RDS"))# Fill in rainy or dry spell dates 
 
+# Testing alternative definitions of dry spells ---------------------------
+
+#df_dry_spells_mean <- read.csv(paste0(dry_spell_dir, 'daily_mean_dry_spells_details_2000_2020.csv')) # 14+ consecutive days with <= 4mm rain
+df_dry_spells_mean <- read.csv(paste0(dry_spell_dir, 'daily_mean_dry_spells_details_2mm_2000_2020.csv')) # 14+ consecutive days with <= 2mm rain
+
 
 # Transform the data for plotting -----------------------------------------
 
@@ -73,7 +78,15 @@ df_ds %>%
         axis.ticks.y=element_blank(),
         legend.position = 'bottom')+
   scale_x_date(date_labels = "%b")
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'))
+
+###
+# Beware: ggsave does not save plots following size specifications correctly
+###
+
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'))
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/dry_spell_hm_consecutive_days_4mm.png'))
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/dry_spell_hm_consecutive_days_2mm.png'), width = 4.73, height = 4.43, units = "in")
+
 
 # Line plot
 df_ds %>%
@@ -92,7 +105,10 @@ df_ds %>%
   labs(title='Number of dry spells by region in Malawi, 2000-2020', 
        x='Date', 
        y='Count')
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line.png'))
+
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line.png'))
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line_consec_days_4mm.png'))
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line_consec_days_2mm.png'))
 
 
 
