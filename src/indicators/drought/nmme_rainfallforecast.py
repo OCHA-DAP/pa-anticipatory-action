@@ -10,11 +10,8 @@ import rasterio
 import rioxarray
 import xarray as xr
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-from indicators.drought.config import Config
-from utils_general.utils import download_ftp
-from utils_general.raster_manipulation import invert_latlon, change_longitude_range, fix_calendar
+from src.utils_general.utils import download_ftp
+from src.utils_general.raster_manipulation import invert_latlon, change_longitude_range, fix_calendar
 
 logger = logging.getLogger(__name__)
 
