@@ -103,8 +103,8 @@ df_ds %>%
        y='Count')
 
 #ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line.png'))
-#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line_consec_days_4mm.png'), width = 7.55, height = 7.82, units = "in", dpi = 300)
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line_consec_days_2mm.png'), width = 7.55, height = 7.82, units = "in", dpi = 300)
+#ggsave(paste0(dry_spell_dir, '/dry_spell_plots/dry_spell_line_consec_days_4mm.png'), width = 7.55, height = 7.82, units = "in", dpi = 300)
+ggsave(paste0(dry_spell_dir, '/dry_spell_plots/dry_spell_line_consec_days_2mm.png'), width = 7.55, height = 7.82, units = "in", dpi = 300)
 
 
 
