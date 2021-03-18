@@ -12,6 +12,8 @@ theme_set(theme_bw())
 data_dir <- Sys.getenv("AA_DATA_DIR")
 dry_spell_dir <- paste0(data_dir, '/processed/malawi/dry_spells/')
 df_dry_spells_max <- read.csv(paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020.csv'))
+
+#df_dry_spells_mean <- read.csv(paste0(dry_spell_dir, 'daily_mean_dry_spells_details_2mm_2000_2020.csv'))
 df_dry_spells_mean <- read.csv(paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
 df_rainy_season_mean <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020_mean_back.csv'))   
 df_rainy_season_max <- read.csv(paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020.csv'))   
@@ -73,7 +75,7 @@ df_ds %>%
         axis.ticks.y=element_blank(),
         legend.position = 'bottom')+
   scale_x_date(date_labels = "%b")
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'))
+ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'), height=7.82, width=7.55, units='in', dpi=300)
 
 # Line plot
 df_ds %>%
@@ -92,7 +94,7 @@ df_ds %>%
   labs(title='Number of dry spells by region in Malawi, 2000-2020', 
        x='Date', 
        y='Count')
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line.png'))
+ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_line.png'), height=7.82, width=7.55, units='in', dpi=300)
 
 
 
