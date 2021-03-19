@@ -540,6 +540,19 @@ prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(d
 prop.table(table(lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)))
 prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)), 1)
 
+####
+# Viz
+####
+mwi_adm2 %>% 
+  left_join(rainy_season_dry_spells_summary_per_region, by = c('ADM2_PCODE' = 'pcode', 'ADM2_EN' = 'ADM2_EN')) %>%
+  ggplot() +
+        geom_sf(aes(fill = nbr_dry_spells)) +
+        scale_fill_continuous(type = "viridis", "Number of dry spells") +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ggtitle('Dry spells during 2000-2020', subtitle = "14-day period with cumulative rainfall <= 2mm ") +
+  labs(caption="Mean values per district, CHIRPS")
+  
+
 
 # TO DO / NEXT STEPS
 # number of rainy days in the year
