@@ -2,33 +2,28 @@
 # coding: utf-8
 
 # ### Analysis of CHIRPS-GEFS forecasts and observed dry spells
-# **Note: this notebook needs some cleaning up**
 # 
-# Goal is to see if CHIRPS-GEFS provides a signal for the occurence of a dry spell in the coming 15 days   
-# We do this by looking at historical CHIRPS-GEFS data, and classifying the occurence of a dry spell according to this forecast per admin 2   
-# This information is thereafter coupled to historically observed dry spells   
+# This notebook downloads the CHIRPS-GEFS 15 day forecasts and computes statistics per ADMIN2 for Malawi. The notebook `mwi_chirpsgefs_corr_dryspells.ipynb` uses this output to understand the correlation between CHIRPS-GEFS and historically observed dry spells. 
 # 
-# From the first analysis we find that there is not much correlation between forecasted and observed dry spells. However, we need to further understand if the analysis was computed correclty, and if so, what the cause of these differences is. 
+# #### CHIRPS-GEFS
+# [CHIRPS-GEFS](https://chc.ucsb.edu/data/chirps-gefs) is the bias-corrected version of [GEFS](https://www.noaa.gov/media-release/noaa-upgrades-global-ensemble-forecast-system). GEFS is the Global Ensemble Forecast System from NOAA. CHIRPS observational data is used for the bias-correction. The forecast is published each day for the whole world with a 0.05 resolution. It is relatively new, started in 2018, and while it seems a respected source, little research articles exist around it. However, GEFS is a well-established source. Forecasts are available starting from 2000
 # 
 # 
 # Questions
-# - Defined a dry spell being forecasted if cell with the maximum value that touches the admin2 is forecasted to receive maximum 2mm of rain. Is this a good definition?
-# - Is it logical to look at the correlation of a dry spell starting at the first date of the forecast, or should we look more broadly at the occurence of a dry spell during the forecast period?
-# - Any other methodologies to combine binary geospatial timeseries?
-# - [Given deadline, lets wait but important for future] The size of the CHIRPS-GEFS data is now 23.4GB... Could we do something to make that smaller/not have to save it locally?      
-#     Climateserv might be an option, includes chirps-gefs data and can select per country and has an API. However, not clear what exactly the data is that you can download (how many days forecast) and API is hard to understand, and not sure if includes latest data. Someone using the API [here](https://github.com/Servir-Mekong/ClimateSERV_CHIRPS-GEFS/blob/master/Get_CHIRPS_GEFSv1/bin/ClimateServ_CHIPS-GEFS.py)
+# - Could you double check if everything with the dates is going correctly? Sorry this is rather vague but scared to make mistakes that are crucial
+#     - Is indeed the day of the year in the forecast file name is the first day of the forecast?
+#     - Is it correct to set +timedelta(days=14) as last date of the forecast
 # 
-# To do:
-# - Understand why observed and forecasted dry spells don't match
-# - Get a bit better understanding of the CHIRPS-GEFS methodology
-# - Make sure the date of the filename is the first date of the forecast --> yes it is
-# - Adjust rainy season definnitions based on definition of dry spell (max or mean)
+# Future: 
+# The size of the CHIRPS-GEFS data is now 40GB... Could we do something to make that smaller/not have to save it locally?      
+#     - ClimateServ includes CHIRPS-GEFS data and has an [API](https://github.com/Servir-Mekong/ClimateSERV_CHIRPS-GEFS/blob/master/Get_CHIRPS_GEFSv1/bin/ClimateServ_CHIPS-GEFS.py). Documentatio is limited but seems it is not the 15 day forecast though.. 
+# 
+# Data limitations:
+# - No CHIRPS-GEFS data is available from 01-01-2020 till 05-10-2020. This data is available from the [older version of the model](https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip/15day/Africa/precip_mean/), but our contact at CHC recommended to not use this
 # 
 # 
-# Limitations:
-# - Part of 2020 data missing
-# - Not all data 2000-2010 has been downloaded
-# - 
+# Assumptions
+# - The grid cell size is small enough to only look at cells with their centre within the region, not those touching
 
 # ### set general variables and functions
 
@@ -95,18 +90,22 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 
 
 # #### Rainy season
-# Compute a datetimeindex with all dates across all rainy seasons
+# Compute a datetimeindex with all dates across all rainy seasons. Only data for these dates will be downloaded, to prevent the data from becoming even more massive
 
 #path to data start and end rainy season
-df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean.csv"))
+df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean_back.csv"))
 df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
 df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
 
 
-df_rain
+df_rain.head()
 
 
-#set the onset and cessation date for the seasons with them missing (meaning there was no dry spell data from start/till end of the season)
+# #surprised 2020 earlies start is 01-12..
+# df_rain[df_rain.onset_date.dt.year==2020]
+
+
+#set the onset and cessation date for the seasons with those dates missing (meaning there was no dry spell data from start/till end of the season)
 df_rain_filled=df_rain.copy()
 df_rain_filled=df_rain_filled[(df_rain_filled.onset_date.notnull())|(df_rain_filled.cessation_date.notnull())]
 df_rain_filled[df_rain_filled.onset_date.isnull()]=df_rain_filled[df_rain_filled.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
@@ -117,9 +116,10 @@ df_rain_filled[df_rain_filled.cessation_date.isnull()]=df_rain_filled[df_rain_fi
 df_rain_seas=df_rain_filled.groupby("season_approx",as_index=False).agg({'onset_date': np.min,"cessation_date":np.max})
 
 
-df_rain_seas
+df_rain_seas.head()
 
 
+#create a daterange index including all dates within rainy seasons
 all_dates=pd.Index([])
 for i in df_rain_seas.season_approx.unique():
     seas_range=pd.date_range(df_rain_seas[df_rain_seas.season_approx==i].onset_date.values[0],df_rain_seas[df_rain_seas.season_approx==i].cessation_date.values[0])
@@ -130,7 +130,7 @@ all_dates
 
 
 # ### Download CHIRPS-GEFS Africa data
-# We focus on the 15 day forecast, which is released every day. We define a dry spell occuring during that period if the cell with the maximum value within an admin2 is forecasted to receive less than 2mm of rainfall
+# We focus on the 15 day forecast, which is released every day.
 # 
 # We are focussing on the Africa data, since global data gets massive. Nevertheless, even for Africa it gets massive. 
 
@@ -164,75 +164,58 @@ def download_chirpsgefs(date,output_dir,chirpsgefs_ftp_url,days=""):
             print(e)
 
 
-all_dates_2010=pd.to_datetime(all_dates)[pd.to_datetime(all_dates).year>=2010]
+# # only needed if not downloaded yet
+# #download all the data
+# for d in all_dates:
+#     download_chirpsgefs(d,chirpsgefs_dir,chirpsgefs_ftp_url_africa_15day)
 
 
-# only needed if not downloaded yet
-#download all the data
-for d in all_dates_2010:
-    download_chirpsgefs(d,chirpsgefs_dir,chirpsgefs_ftp_url_africa_15day)
-
-
-#redownload broken files
-for d in ["2010-05-07","2011-05-17","2012-02-29","2012-05-17","2013-05-17","2015-05-17","2016-02-29","2016-05-17","2017-05-17","2018-05-17","2019-05-17","2000-10-23","2002-09-09","2007-04-30"]:
-    date=pd.to_datetime(d)
-    download_chirpsgefs(date,chirpsgefs_dir)
-
-
-def ds_maxcell(ds,raster_transform,date,adm_path):
-    #compute statistics on level in adm_path for all dates in ds
-    df=gpd.read_file(adm_path)
-    df["max_cell_touched"] = pd.DataFrame(
-    zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, all_touched=True,nodata=np.nan))["max"]
-    df["min_cell_touched"] = pd.DataFrame(
-    zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, all_touched=True,nodata=np.nan))["min"]
+def ds_stats_adm(ds, raster_transform, date, adm_path,ds_thresh_list=[2,10]):
+    # compute statistics on level in adm_path for all dates in ds
+    df = gpd.read_file(adm_path)
+    # df["max_cell_touched"] = pd.DataFrame(
+    #     zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, all_touched=True, nodata=np.nan))["max"]
+    # df["min_cell_touched"] = pd.DataFrame(
+    #     zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, all_touched=True, nodata=np.nan))["min"]
     df["max_cell"] = pd.DataFrame(
-    zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["max"]
+        zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["max"]
     df["min_cell"] = pd.DataFrame(
-    zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["min"]
+        zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["min"]
     df["mean_cell"] = pd.DataFrame(
-    zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["mean"]
-    df["date"]=pd.to_datetime(date)
-    #define dryspell occuring if the cell touching the region with the maximum values is expected to receive less than 2mm of rain
-#     df["dryspell"]=np.where(df["max_cell_touched"]<=2,1,0)
-    df["date_forec_end"]=df["date"]+timedelta(days=14)
-       
+        zonal_stats(vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan))["mean"]
+
+    for thres in ds_thresh_list:
+        # compute the percentage of the admin area that has cells below the threshold
+        # set all values with below average rainfall to 1 and others to 0
+        forecast_binary = np.where(ds.values <= thres, 1, 0)
+        # compute number of cells in admin region (sum) and number of cells in admin region with below average rainfall (count)
+        bin_zonal = pd.DataFrame(
+            zonal_stats(vectors=df, raster=forecast_binary, affine=raster_transform, stats=['count', 'sum'],
+                        nodata=np.nan))
+        df[f'perc_se{thres}'] = bin_zonal['sum'] / bin_zonal['count'] * 100
+
+    df["date"] = pd.to_datetime(date)
+
+    df["date_forec_end"] = df["date"] + timedelta(days=14)
+
     return df
 
 
-#only needed if new data added, else can load df_hist from file
-#for each forecast date, compute the occurence of a dry spell and convert to a dataframe
+#this takes some time to compute, couple of hours at max
 df_list=[]
-for filename in os.listdir(chirpsgefs_dir):
-    if filename.endswith(".tif"):
-        date=pd.to_datetime(re.split("[.\_]+", filename)[-2],format="%Y%m%d")
-        if date in all_dates_2010:
-            try:
-                rds = rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
-                df_date=ds_maxcell(rds.sel(band=1),rds.rio.transform(),date,adm2_bound_path)
-                df_list.append(df_date)
-            except Exception as e:
-                print(e)
-                print(filename)
-                print(date)
+#load the tif file for each date and compute the statistics
+for d in all_dates: 
+    d_str=pd.to_datetime(d).strftime("%Y%m%d")
+    filename=f"chirpsgefs_africa_{d_str}.tif"
+    try:
+        rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
+        df_date = ds_stats_adm(rds.sel(band=1), rds.rio.transform(), d_str, adm2_bound_path)
+        df_list.append(df_date)
+    except Exception as e:
+            print(e)
+            print(filename)
+            print(d_str)
 df_hist_all=pd.concat(df_list)
-
-
-#TODO: decide if wanna use same start and end of rainy season for all adm2's or do according to original data
-#probs wanna do according to the adm2 data since there might be large differences
-#which means we have to remove the dates currently in df_hist that are outside the rainy season for adm2s
-
-
-len(df_hist_all)
-
-
-len(df_hist_all)
-
-
-# df_hist_all=df_hist.copy()
-
-
-df_rain_filled
 
 
 #remove the adm2-date entries outside the rainy season for that specific adm2
@@ -247,114 +230,28 @@ for a in df_hist_all.ADM2_EN.unique():
 df_hist_rain_adm2=pd.concat(list_hist_rain_adm2)
 
 
-df_hist_rain_adm2
+# #save file
+# hist_path=os.path.join(country_data_exploration_dir,"chirpsgefs","mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
+# df_hist_rain_adm2.drop("geometry",axis=1).to_csv(hist_path,index=False)
 
 
-df_hist_rain_adm2.date.dt.month.unique()
+# ### Archive
+
+# #redownload broken files
+# for d in ["2010-05-07","2011-05-17","2012-02-29","2012-05-17","2013-05-17","2015-05-17","2016-02-29","2016-05-17","2017-05-17","2018-05-17","2019-05-17","2000-10-23","2002-09-09","2007-04-30"]:
+#     date=pd.to_datetime(d)
+#     download_chirpsgefs(date,chirpsgefs_dir)
 
 
-# #REMOVE: only for testing
-# df_hist=df_hist_rain_adm2.copy()
-
-
-#computation of df_hist can take rather long, so also save it and load it if no new info is added
-hist_path=os.path.join(country_data_exploration_dir,"chirpsgefs","mwi_chirpsgefs_rainyseas_maxcell_test.csv")
-# df_hist_sel=df_hist_rain_adm2[["date","date_forec_end","ADM1_EN","ADM2_EN","max_cell_touched","min_cell_touched","max_cell","min_cell"]]
-# df_hist_sel.to_csv(hist_path,index=False)
-df_hist_rain_adm2.drop("geometry",axis=1).to_csv(hist_path,index=False)
-df_hist=pd.read_csv(hist_path)
-df_hist["date"]=pd.to_datetime(df_hist["date"])
-df_hist["date_forec_end"]=pd.to_datetime(df_hist["date_forec_end"])
-
-
-df_hist
-
-
-df_hist[df_hist.dryspell==1]
-
-
-#that is a huge number of dry spells... Expecting they mainly occur in the last months of the rainy season (May/June) but should check thatd
-sns.displot(df_hist,x="max_cell_touched")
-
-
-#check how distribution changes when using min cell touched instead of max --> even more sensitive
-sns.displot(df_hist,x="min_cell_touched")
-
-
-print("number of adm2-date combination with min cell touched <=2mm",len(df_hist[df_hist.min_cell_touched<=2]))
-
-
-print("number of adm2-date combination with max cell touched <=2mm",len(df_hist[df_hist.max_cell_touched<=2]))
-
-
-print("number of dates with at least one adm2 with max cell touched <=2mm",len(df_hist[df_hist.max_cell_touched<=2].date.unique()))
-
-
-# print("number of dates with at least one adm2 with max cell touched <=2mm",len(df_hist[df_hist.max_cell<=2].date.unique()))
-
-
-# ### Load ds with dates within rainy seas
-
-ds_list=[]
-for d in [rainy_date for rainy_date in all_dates if rainy_date.year>=2010]:
-    d_str=pd.to_datetime(d).strftime("%Y%m%d")
-    filename=f"chirpsgefs_africa_{d_str}.tif"
-    try:
-        rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
-        rds=rds.assign_coords({"time":pd.to_datetime(d)})
-        rds=rds.sel(band=1)
-        ds_list.append(rds)
-    except Exception as e:
-            print(e)
-            print(filename)
-            print(d_str)
-
-
-ds_drys=xr.concat(ds_list,dim="time")
-
-
-ds_drys=ds_drys.sortby("time")
-
-
-ds_drys.to_netcdf(country_data_processed_dir,"chirps_gefs","mwi_chirpsgefs_15day.nc")
-
-
-ds_drys
-
-
-# ### CHIRPS GEFS 5 day
-
-
-
-
-df_ds=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","dry_spells_during_rainy_season_list_2000_2020_mean.csv"))
-df_ds["dry_spell_first_date"]=pd.to_datetime(df_ds["dry_spell_first_date"])
-df_ds["dry_spell_last_date"]=pd.to_datetime(df_ds["dry_spell_last_date"])
-
-
-#ftp url, where year and the start_date are variable
-#start_date is the day of the year for which the forecast starts
-chirpsgefs_ftp_url_africa_5day="https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/05day/Africa/precip_mean/data.{year}.{start_day}.tif"
-
-
-# only needed if not downloaded yet
-#download all the data
-for d in df_ds.dry_spell_first_date.unique():
-    download_chirpsgefs(pd.to_datetime(d),chirpsgefs_dir,chirpsgefs_ftp_url_africa_5day,days="_5day")
-
-
-ds_list=[]
-for d in df_ds.dry_spell_first_date.unique():
-    d_str=pd.to_datetime(d).strftime("%Y%m%d")
-    filename=f"chirpsgefs_5day_africa_{d_str}.tif"
-    rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
-    rds=rds.assign_coords({"time":pd.to_datetime(d)})
-    rds=rds.sel(band=1)
-    ds_list.append(rds)
-
-
-ds_drys=xr.concat(ds_list,dim="time")
-
-
-ds_drys=ds_drys.sortby("time")
+# #chirpsgefs 5 day forecast download
+# df_ds=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","dry_spells_during_rainy_season_list_2000_2020_mean.csv"))
+# df_ds["dry_spell_first_date"]=pd.to_datetime(df_ds["dry_spell_first_date"])
+# df_ds["dry_spell_last_date"]=pd.to_datetime(df_ds["dry_spell_last_date"])
+# #ftp url, where year and the start_date are variable
+# #start_date is the day of the year for which the forecast starts
+# chirpsgefs_ftp_url_africa_5day="https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/05day/Africa/precip_mean/data.{year}.{start_day}.tif"
+# # only needed if not downloaded yet
+# #download all the data
+# for d in df_ds.dry_spell_first_date.unique():
+#     download_chirpsgefs(pd.to_datetime(d),chirpsgefs_dir,chirpsgefs_ftp_url_africa_5day,days="_5day")
 
