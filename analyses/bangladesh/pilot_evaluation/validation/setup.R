@@ -1,0 +1,5 @@
+library(tidyverse)
+library(kableExtra)
+library(tmap)
+library(sf)
+library(gifski)
