@@ -50,7 +50,9 @@ gaussian_qa <- function(cnd, df_ts_intp, df_ts_sent, df_flooding, map){
 }
 
 # Create a choropleth map of a given flooding variable
-choro_map <- function(df_flooding, shp, var, pal, hist){
+choro_map <- function(df_flooding, shp, var, pal, hist, mode){
+  
+  tmap_mode(mode)
   
   df_flooding <- df_summ %>%
     mutate(PEAK_SAT = as.Date(PEAK_SAT, format = '%Y-%m-%d')) %>%
@@ -105,8 +107,7 @@ compare_glofas <- function(df_sent, df_gaus, df_glofas){
     rename(GloFAS = discharge) %>%
     mutate(date = as.Date(date))%>%
     gather(measure, value, c(GloFAS, Sentinel, Gaussian))%>%
-    select(date, station, OBJECTID, measure, value)%>%
-    filter(station %in% c('Bahadurabad', 'Chilmari', 'Kazipur', 'Sariakandi'))
+    select(date, station, OBJECTID, measure, value)
   
   g <- ggplot(data=joined[!is.na(joined$value),], aes(x=date))+
     geom_line(aes(y=value), na.rm=TRUE)+
@@ -119,4 +120,24 @@ compare_glofas <- function(df_sent, df_gaus, df_glofas){
   
 }
 
+# Simple maps to show the study area
+study_area <- function(adm2, adm0, shp_river, mode){
+  
+  tmap_mode(mode)
+  
+  adm2 <- adm2%>%
+    filter(ADM2_EN %in% c('Bogra', 'Gaibandha', 'Jamalpur', 'Kurigram', 'Sirajganj'))
+  
+  map <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) +
+    #tm_shape(adm0)+
+    #tm_polygons(col='#d1d1d1', alpha=0.5)+
+    tm_shape(adm2)+
+    tm_polygons(col='#fc6f6f', alpha=0.3, id='ADM2_EN')+
+    tm_shape(shp_river)+
+    tm_fill(col="#010885", id='')+
+    tm_layout(frame=FALSE)+
+    tm_shape(stations)+
+    tm_dots(col='#ff6830')
+  return(map)
+}
 

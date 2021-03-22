@@ -1,5 +1,5 @@
 ---
-title: "Estimating flooding dynamics in Bangladesh using multi-temporal Sentinel-1 satellite imagery"
+title: "Estimating flooding dynamics in Bangladesh"
 author: "By MapAction and the Centre for Humanitarian Data"
 date: "`r Sys.Date()`"
 output:
@@ -17,13 +17,14 @@ editor_options:
 
 ## Introduction
 
-This report provides a summary of the results and validation of an analysis of Sentinel-1 satellite imagery to estimate flood extent over time in Bangladesh from June - August 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj.
+This report provides a summary of the results and validation of an analysis of Sentinel-1 satellite imagery to estimate flood extent over time in Bangladesh from June - August 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj. The interactive figure below provides an overview of this study area and highlights 'permanent' sections of the Jamuna River along with the locations of GloFAS/FFWC measurement stations. 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("setup.R")
 source('plots.R')
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
+knitr::opts_chunk$set(message = FALSE) # do not print output by default
 ```
 
 
@@ -36,8 +37,21 @@ shp_mauz <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/selected_d
   st_transform('EPSG:4326')
 df_glofas <- read.csv(paste0(data_dir, '/exploration/bangladesh/GLOFAS_Data/2020.csv'))
 stations <- st_read(paste0(data_dir, '/exploration/bangladesh/GLOFAS_Data/stations.shp'))%>%
-  st_transform('EPSG:4326')
+  st_transform('EPSG:4326')%>%
+  filter(Station %in% c('Bahadurabad', 'Chilmari', 'Kazipur', 'Sariakandi'))
+
+adm0 <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/bgd_admbnda_adm0_bbs_20201113.shp'))
+adm2 <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/bgd_admbnda_adm2_bbs_20201113.shp'))
+shp_river <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/river_extent.shp'))
 ```
+
+```{r study-area, include=T, fig.cap = 'Overview of study area', warning=FALSE, fig.height=4, fig.align="center", out.width='100%'}
+
+study_area(adm2, adm0, shp_river, 'view')
+
+```
+
+&nbsp;
 
 ## Processing Sentinel-1 SAR imagery to derive flood extents
 
@@ -59,11 +73,10 @@ Available Sentinel-1 imagery for the time period of interest is filtered accordi
 | Relative orbit      | This value is dependent on the location of the satellite orbit for the area of interest. Values can be derived [according to the imagery filename](https://gis.stackexchange.com/questions/237116/sentinel-1-relative-orbit#:~:text=You%20actually%20can%20find%20the,%2D%2073%2C%20175%20%2B%201). | Filtering by relative orbit ensures that one is comparing images with the same viewing geometry.                                                                                                                                                      |
 
 ***
-&nbsp;
 
 #### Change detection and thresholding (CDAT) to identify flooding
 
-This methodology identifies flood extent by comparing between before-flooding and after-flooding imagery mosaics for the area of interest.  In this case, we took the average of all images from December 2019 to January 2020 from the area of interest to generate the baseline before-flooding mosaic. We also checked the EM-DAT database to ensure that there was not any recorded flooding during this period. 
+This methodology identifies flood extent by comparing between before-flooding and after-flooding imagery mosaics for the area of interest.  In this case, we took the average of all images from December 2019 to January 2020 from the area of interest to generate the baseline before-flooding mosaic. We also checked the [EM-DAT](https://www.emdat.be/) database to ensure that there was not any recorded flooding during this period. 
 
 The after-flood mosaic is divided by the before-flooding mosaic, with pixel intensity in the resulting image indicating the degree of change between the two images. A threshold of 1.25 is applied to generate a binary layer indicating the full estimated extent of flooding. This threshold level is taken directly from the UN-SPIDER guidance, where it was selected ‘through trial and error’. The appropriateness of this threshold level was also manually checked by comparing the derived flood extents with the after-flooding satellite imagery for selected dates. These parameters influencing this component of the analysis are summarized in the table below.
 
@@ -74,7 +87,6 @@ The after-flood mosaic is divided by the before-flooding mosaic, with pixel inte
 | Non-flooded reference period | 01-12-2019 to 31-01-2020 | Following [past work in Bangladesh](https://www.sciencedirect.com/science/article/abs/pii/S0924271620301702?), we took the median values of imagery from December 2019 to January 2020 to generate two non-flooded reference image mosaics (one each for ascending and descending pass directions). Each reference mosaic was generated using 10 images for the area of interest. |
 | Flood extent threshold       | 1.25                     | From UN-SPIDER guidance, where it was selected through trial and error.                                                                                                                                                                                                                               |
 ***
-&nbsp;
 
 The flood extent output is further refined to mask the main water bodies and also remove regions where the average slope is greater than 10%. Main water bodies are identified using the [JRC Global Surface Water dataset](https://global-surface-water.appspot.com/), using a threshold of areas covered by water for at least 10 months in a year. Slope is calculated from the [WWF HydroSHEDS DEM](https://developers.google.com/earth-engine/datasets/catalog/WWF_HydroSHEDS_03VFDEM), based on SRTM data. 
 
@@ -131,7 +143,7 @@ gaussian_qa('rand', df_gaus, df_sent, df_summ, FALSE)
 
 ```{r make-plot-max, include=T, fig.cap = 'Peak flooding date by mauza, measured in number of days since June 1st', warning=FALSE, fig.align="center"}
 
-choro_map(df_summ, shp_mauz, 'PEAK_G_DAYS', 'PuBuGn', TRUE)
+choro_map(df_summ, shp_mauz, 'PEAK_G_DAYS', 'PuBuGn', TRUE, 'plot')
 
 ```
 
@@ -139,26 +151,49 @@ choro_map(df_summ, shp_mauz, 'PEAK_G_DAYS', 'PuBuGn', TRUE)
 
 ```{r make-plot-peak, include=T, fig.cap = 'Maximum flooded fraction by mauza', warning=FALSE, fig.align="center"}
 
-choro_map(df_summ, shp_mauz, 'MAX_G', 'BuPu', TRUE)
+choro_map(df_summ, shp_mauz, 'MAX_G', 'BuPu', TRUE, 'plot')
 
 ```
 
 ```{r make-plot-fwhm, include=T, fig.cap = 'Days in which flooded fraction is at least 50% of the maximum', warning=FALSE, fig.align='center'}
 
-choro_map(df_summ, shp_mauz, 'FWHM', 'YlGnBu', TRUE)
+choro_map(df_summ, shp_mauz, 'FWHM', 'YlGnBu', TRUE, 'plot')
 
 ```
 
 ## Validation
 
+#### Verifying flood extent against optical imagery
+
+In the absence of ground-truth data, it is standard practice within the literature to validate Sentinel-1 derived flood extents against alternative sources of optical satellite imagery. However, obtaining cloud-free imagery to cover a large region, particularly during the rainy season in a place such as Bangladesh, can be challenging. Nevertheless, we have obtained Sentinel-2 imagery from July 27th which provides a cloud-free look at some of the regions within our study area. We can visually compare this imagery against our output flood extent areas from Sentinel-1 imagery from a similar date to check for agreement with areas that appear to be flooded.
+
+While these images are only for a single date and for subsets of our study area, we see a clear agreement between flooded areas in the optical imagery (underlying layer and sole layer on the right) and the red overlaid flood extents from our Sentinel-1 analysis. 
+
+```{r img1, echo = FALSE, fig.show='hold', include=T, fig.cap='Comparison A: Sentinel-2 optical imagery overlaid with flood extent areas derived from Sentinel-1 imagery', out.width="45%", out.extra='style=padding:5px;"', fig.align='center'}
+images1 <- c('img/a1.png', 'img/a2.png')
+include_graphics(images1)
+```
+
+```{r img2, echo = FALSE, fig.show='hold', include=T, fig.cap='Comparison B: Sentinel-2 optical imagery overlaid with flood extent areas derived from Sentinel-1 imagery', out.width="45%", out.extra='style=padding:5px;"', fig.align='center'}
+images2 <- c('img/c1.png', 'img/c2.png')
+include_graphics(images2)
+```
+
+```{r img3, echo = FALSE, fig.show='hold', include=T, fig.cap='Comparison C: Sentinel-2 optical imagery overlaid with flood extent areas derived from Sentinel-1 imagery', out.width="45%", out.extra='style=padding:5px;"', fig.align='center'}
+images3 <- c('img/b1.png', 'img/b2.png')
+include_graphics(images3)
+```
+
+Comparison C, above, shows some cases where our Sentinel-1 flood extent may in fact be slightly underestimating the flooding, however this may also be because the images are not from exactly the same dates. 
+
+&nbsp;
+
 #### Comparison against the dynamics of GloFAS water discharge measurements 
+
+The figure below offers a comparison between [GloFAS](https://www.globalfloods.eu/) water discharge measurements at stations along the Jamuna River and the satellite-derived flooding fraction for the mauzas that contain those stations. While we should be careful directly comparing measurements of two different variables (flood extent and river water level), this visual comparison allows us to validate that the satellite-derived flooding fraction peaked at a similar time to when the nearby river water level peaked.  
 
 ```{r glofas, include=T, fig.cap = 'Comparison between flooding estimates against GloFAS water discharge measurements', warning=FALSE, fig.align='center'}
 
 compare_glofas(df_sent, df_gaus, df_glofas)
 
 ```
-
-
-#### Verifying flood extent against optical imagery
-
