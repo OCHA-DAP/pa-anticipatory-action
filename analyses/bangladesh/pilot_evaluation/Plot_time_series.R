@@ -34,20 +34,20 @@ gaussian_qa <- function(cnd,fname){
   
   sel <- df_flooding %>%
     filter(cnd)%>%
-    select(PCODE)
+    select(OBJECTID)
   
   # For randomly selecting mauzas
   #sel <- df_flooding[sample(nrow(df_flooding), 56),] %>%
   #  select(PCODE)
   
   ts_intp <- df_ts_intp %>%
-    filter(PCODE %in% sel$PCODE) %>%
+    filter(PCODE %in% sel$OBJECTID) %>%
     mutate(DATE = as.Date(DATE, format = '%Y-%m-%d'))%>%
     mutate(type = 'Gaussian') %>%
     rename(date = DATE, MAUZ_PCODE = PCODE, flooded_fraction = FLOOD_EXTENT)
   
   ts_sent <- df_ts_sent %>%
-    filter(MAUZ_PCODE %in% sel$PCODE)%>%
+    filter(MAUZ_PCODE %in% sel$OBJECTID)%>%
     mutate(date = as.Date(date, format = '%Y-%m-%d'))%>%
     mutate(type = 'Satellite')
   
