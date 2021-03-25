@@ -1,0 +1,199 @@
+---
+title: "Estimating flooding dynamics in Bangladesh"
+author: "By MapAction and the Centre for Humanitarian Data"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+## Introduction
+
+This report provides a summary of the results and validation of an analysis of Sentinel-1 satellite imagery to estimate flood extent over time in Bangladesh from June - August 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj. The interactive figure below provides an overview of this study area and highlights 'permanent' sections of the Jamuna River along with the locations of GloFAS/FFWC measurement stations. 
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+source("setup.R")
+source('plots.R')
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+knitr::opts_chunk$set(message = FALSE) # do not print output by default
+```
+
+
+```{r data-load-formatting}
+data_dir <- Sys.getenv("AA_DATA_DIR")
+df_summ <- read.csv(file = paste0(data_dir, '/exploration/bangladesh/FE_Results/June_Aug/MAUZ_flood_summary_QA.csv'))
+df_sent <- read.csv(file = paste0(data_dir, '/exploration/bangladesh/FE_Results/June_Aug/MAUZ_flood_extent_sentinel.csv'))
+df_gaus <- read.csv(file = paste0(data_dir, '/exploration/bangladesh/FE_Results/June_Aug/MAUZ_flood_extent_interpolated.csv'))
+shp_mauz <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/selected_distict_mauza.shp'))%>%
+  st_transform('EPSG:4326')
+df_glofas <- read.csv(paste0(data_dir, '/exploration/bangladesh/GLOFAS_Data/2020.csv'))
+stations <- st_read(paste0(data_dir, '/exploration/bangladesh/GLOFAS_Data/stations.shp'))%>%
+  st_transform('EPSG:4326')%>%
+  filter(Station %in% c('Bahadurabad', 'Chilmari', 'Kazipur', 'Sariakandi'))
+
+adm0 <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/bgd_admbnda_adm0_bbs_20201113.shp'))
+adm2 <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/bgd_admbnda_adm2_bbs_20201113.shp'))
+shp_river <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/river_extent.shp'))
+```
+
+```{r study-area, include=T, fig.cap = 'Overview of study area', warning=FALSE, fig.height=4, fig.align="center", out.width='100%'}
+
+study_area(adm2, adm0, shp_river, 'view')
+
+```
+
+&nbsp;
+
+## Processing Sentinel-1 SAR imagery to derive flood extents
+
+In collaboration with colleagues from MapAction we took freely available European Space Agency’s [Sentinel-1 Synthetic Aperture Radar (SAR) imagery](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar), which provides images with 10m resolution, to estimate the flood extent over time. Sentinel-1 SAR data has been frequently applied to map flooding in past literature, even specifically in Bangladesh. In addition to being freely available, SAR imagery is particularly useful for flood mapping as it can be captured even in the presence of cloud cover, unlike imagery from optical sensors such as Landsat and MODIS. This is particularly relevant in areas such as Bangladesh which have significant cloud cover during flooding seasons. Water bodies can be identified from SAR imagery due to their dark appearance. 
+
+The methodology used is adapted from the [UN-SPIDER Knowledge portal](http://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/in-detail) and applies a change detection and thresholding (CDAT) approach to identify flooded areas. A CDAT methodology for identifying flooded areas from Sentinel-1 data has been successfully applied in contexts such as Bangladesh, Namibia and the UK. We performed the analysis in Google Earth Engine, which provides easy access to Sentinel-1 data and allows for fast, cloud-based data processing. The image processing methodology described below is largely summarized from the UN-SPIDER guidance. 
+
+  
+#### Imagery filtering and preprocessing
+
+Available Sentinel-1 imagery for the time period of interest is filtered according to the instrument mode, polarization, and pass direction. This filtering is necessary to ensure that mosaicked images share the same characteristics. Table 1 below briefly outlines each of these parameters. The selected imagery has already undergone preprocessing   steps to convert pixel values to their backscatter coefficient. These steps are detailed in [this page](https://developers.google.com/earth-engine/guides/sentinel1) and include thermal noise removal, radiometric calibration, and terrain correction. In addition, this methodology applies a smoothing filter to the imagery to reduce the speckle effect of radar imagery.
+
+***
+| Filtering parameter | Possible values                                                                                                                                   | Description                                                                                                                                                                                                                                           |
+|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Instrument mode     | IW, EW, SM                                                                                                                                        | [Notes on acquisition modes](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes). We selected data from the ‘IW’ acquisition mode, as it is cited as the main acquisition mode for monitoring land changes.                                                                                                 |
+| Polarization        | HH+HV, VV+VH, VV, HH                                                                                                                              | Horizontal and vertical. We selected the ‘VH’ mode as it is indicated by the UN-SPIDER guidance as the most optimal for flood mapping. However sources have also noted that the ‘VV’ polarization may produce more accurate results in some instances |
+| Pass direction      | Ascending or descending                                                                                                                           | Direction of orbit. We performed the analysis using data from both pass directions (only comparing images from the same direction).                                                                                                                   |
+| Relative orbit      | This value is dependent on the location of the satellite orbit for the area of interest. Values can be derived [according to the imagery filename](https://gis.stackexchange.com/questions/237116/sentinel-1-relative-orbit#:~:text=You%20actually%20can%20find%20the,%2D%2073%2C%20175%20%2B%201). | Filtering by relative orbit ensures that one is comparing images with the same viewing geometry.                                                                                                                                                      |
+
+***
+
+#### Change detection and thresholding (CDAT) to identify flooding
+
+This methodology identifies flood extent by comparing between before-flooding and after-flooding imagery mosaics for the area of interest.  In this case, we took the average of all images from December 2019 to January 2020 from the area of interest to generate the baseline before-flooding mosaic. We also checked the [EM-DAT](https://www.emdat.be/) database to ensure that there was not any recorded flooding during this period. 
+
+The after-flood mosaic is divided by the before-flooding mosaic, with pixel intensity in the resulting image indicating the degree of change between the two images. A threshold of 1.25 is applied to generate a binary layer indicating the full estimated extent of flooding. This threshold level is taken directly from the UN-SPIDER guidance, where it was selected ‘through trial and error’. The appropriateness of this threshold level was also manually checked by comparing the derived flood extents with the after-flooding satellite imagery for selected dates. These parameters influencing this component of the analysis are summarized in the table below.
+
+***
+
+| Parameter                    | Value                    | Description                                                                                                                                                                                                                                                                                           |
+|------------------------------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Non-flooded reference period | 01-12-2019 to 31-01-2020 | Following [past work in Bangladesh](https://www.sciencedirect.com/science/article/abs/pii/S0924271620301702?), we took the median values of imagery from December 2019 to January 2020 to generate two non-flooded reference image mosaics (one each for ascending and descending pass directions). Each reference mosaic was generated using 10 images for the area of interest. |
+| Flood extent threshold       | 1.25                     | From UN-SPIDER guidance, where it was selected through trial and error.                                                                                                                                                                                                                               |
+***
+
+The flood extent output is further refined to mask the main water bodies and also remove regions where the average slope is greater than 10%. Main water bodies are identified using the [JRC Global Surface Water dataset](https://global-surface-water.appspot.com/), using a threshold of areas covered by water for at least 10 months in a year. Slope is calculated from the [WWF HydroSHEDS DEM](https://developers.google.com/earth-engine/datasets/catalog/WWF_HydroSHEDS_03VFDEM), based on SRTM data. 
+
+To understand the evolution of flooding over time, we repeated this change detection process separately on all available Sentinel-1 data for the area of interest between June - August 2020. In this case, 17 mosaicked images were available throughout this time period to cover our area of interest, generating a total of 17 output Shapefiles that delineate flood extent for dates between June - August 2020. 
+
+```{r sat-images, include=T, fig.cap = 'Dates of available Sentinel-1 satellite imagery against GloFAS  water discharge measurements at Bahadurabad station.', warning=FALSE, fig.height=3, fig.align="center"}
+
+dates <- as.Date(unique(df_sent[['date']]))
+
+bahadurabad <- df_glofas %>%
+  mutate(date = as.Date(date)) %>%
+  select(dis24_Bahadurabad, date) %>%
+  filter(date > '2020-06-01' & date < '2020-09-01')
+
+ggplot(bahadurabad) +
+  geom_line(aes(x=date, y=dis24_Bahadurabad))+
+  geom_vline(xintercept=c(dates), linetype='dotted', color='red', size=0.75)+
+  labs(y='Water discharge', x='Date')+
+  theme_bw()
+  
+
+```
+
+The estimates of flood extent were then aggregated to a given admin unit (mauzas, in this case) by calculating the total flooded fraction within each unit for each point in time. Note that the area of permanent water bodies (as identified by the JRC Global Surface Water dataset) was removed from the area of each admin unit. The flooded fraction values thus represent the fraction of flooded area that is not normally covered by water.
+
+***
+**_NOTE:_**  While SAR imagery has commonly been used to map flooding, it is not without its limitations. As is well-acknowledged [within the literature](https://www.sciencedirect.com/science/article/pii/S1474706515000406?via%3Dihub), classification errors may arise in cases where water surfaces are roughened by wind or rain, and where other flat land surfaces (such as roads) are misclassified as water. Flood detection from SAR imagery is also poorer in urban areas and areas with dense, protruding vegetation. 
+
+These results should also not be mistaken for any indication of flood depth, as only information about surface water coverage is captured by the satellite imagery. 
+
+***
+
+&nbsp;
+
+## Modelling flooding over time with parametric curve fitting
+
+As the temporal frequency of Sentinel-1 imagery can be up to 12 days between images, we cannot solely rely on the results of analysing this imagery to accurately identify peak flooding dates. We thus estimated flooding fraction by admin unit at daily intervals by fitting the Sentinel-1 data points to a Gaussian function. The peak of the Gaussian curve for each admin unit was then used to identify the estimated peak flooding date for that unit. This method simplifies the shape of the flooding time series and reduces the potential impacts from noise introduced by the limitations of the flooding estimates derived directly from the Sentinel-1 imagery. 
+
+```{r gaus-fit, include=T, warning=FALSE, fig.height=5, fig.cap='Comparison of fitted Gaussian curves against Sentinel-1 flooding fractions in randomly selected mauzas', fig.align="center"}
+
+gaussian_qa('rand', df_gaus, df_sent, df_summ, FALSE)
+
+
+```
+
+***
+**_NOTE:_**  A Gaussian function significantly simplifies the dynamics of flooding. By fitting to this function, we are making the assumption that flooding extent within a mauza increased and decreased at the same rate, and the flooding had a single, distinct peak. These results should be considered as a best-estimate of the flooding dynamics, based on the information available. A notable limitation of this current approach is that it does not capture multiple flooding peaks, as is known to have occurred in some regions of our study area. The output results have flagged mauzas where the fit to a Gaussian function is quite poor and should not be used. 
+
+***
+
+## Results 
+
+#### When did peak flooding occur?
+
+```{r make-plot-max, include=T, fig.cap = 'Peak flooding date by mauza, measured in number of days since June 1st', warning=FALSE, fig.align="center"}
+
+choro_map(df_summ, shp_mauz, 'PEAK_G_DAYS', 'PuBuGn', TRUE, 'plot')
+
+```
+
+#### How intense was the flooding?
+
+```{r make-plot-peak, include=T, fig.cap = 'Maximum flooded fraction by mauza', warning=FALSE, fig.align="center"}
+
+choro_map(df_summ, shp_mauz, 'MAX_G', 'BuPu', TRUE, 'plot')
+
+```
+
+```{r make-plot-fwhm, include=T, fig.cap = 'Days in which flooded fraction is at least 50% of the maximum', warning=FALSE, fig.align='center'}
+
+choro_map(df_summ, shp_mauz, 'FWHM', 'YlGnBu', TRUE, 'plot')
+
+```
+
+## Validation
+
+#### Verifying flood extent against optical imagery
+
+In the absence of ground-truth data, it is standard practice within the literature to validate Sentinel-1 derived flood extents against alternative sources of optical satellite imagery. However, obtaining cloud-free imagery to cover a large region, particularly during the rainy season in a place such as Bangladesh, can be challenging. Nevertheless, we have obtained Sentinel-2 imagery from July 27th which provides a cloud-free look at some of the regions within our study area. We can visually compare this imagery against our output flood extent areas from Sentinel-1 imagery from a similar date to check for agreement with areas that appear to be flooded.
+
+While these images are only for a single date and for subsets of our study area, we see a clear agreement between flooded areas in the optical imagery (underlying layer and sole layer on the right) and the red overlaid flood extents from our Sentinel-1 analysis. 
+
+```{r img1, echo = FALSE, fig.show='hold', include=T, fig.cap='Comparison A: Sentinel-2 optical imagery overlaid with flood extent areas derived from Sentinel-1 imagery', out.width="45%", out.extra='style=padding:5px;"', fig.align='center'}
+images1 <- c('img/a1.png', 'img/a2.png')
+include_graphics(images1)
+```
+
+```{r img2, echo = FALSE, fig.show='hold', include=T, fig.cap='Comparison B: Sentinel-2 optical imagery overlaid with flood extent areas derived from Sentinel-1 imagery', out.width="45%", out.extra='style=padding:5px;"', fig.align='center'}
+images2 <- c('img/c1.png', 'img/c2.png')
+include_graphics(images2)
+```
+
+```{r img3, echo = FALSE, fig.show='hold', include=T, fig.cap='Comparison C: Sentinel-2 optical imagery overlaid with flood extent areas derived from Sentinel-1 imagery', out.width="45%", out.extra='style=padding:5px;"', fig.align='center'}
+images3 <- c('img/b1.png', 'img/b2.png')
+include_graphics(images3)
+```
+
+Comparison C, above, shows some cases where our Sentinel-1 flood extent may in fact be slightly underestimating the flooding, however this may also be because the images are not from exactly the same dates. 
+
+&nbsp;
+
+#### Comparison against the dynamics of GloFAS water discharge measurements 
+
+The figure below offers a comparison between [GloFAS](https://www.globalfloods.eu/) water discharge measurements at stations along the Jamuna River and the satellite-derived flooding fraction for the mauzas that contain those stations. While we should be careful directly comparing measurements of two different variables (flood extent and river water level), this visual comparison allows us to validate that the satellite-derived flooding fraction peaked at a similar time to when the nearby river water level peaked.  
+
+```{r glofas, include=T, fig.cap = 'Comparison between flooding estimates against GloFAS water discharge measurements', warning=FALSE, fig.align='center'}
+
+compare_glofas(df_sent, df_gaus, df_glofas)
+
+```
