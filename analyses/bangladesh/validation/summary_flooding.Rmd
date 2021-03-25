@@ -1,6 +1,6 @@
 ---
-title: "Estimating flooding dynamics in Bangladesh"
-author: "By MapAction and the Centre for Humanitarian Data"
+title: "Estimating flooding dynamics and magnitude in Bangladesh"
+author: "By the Centre for Humanitarian Data and MapAction"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -17,33 +17,17 @@ editor_options:
 
 ## Introduction
 
-This report provides a summary of the results and validation of an analysis of Sentinel-1 satellite imagery to estimate flood extent over time in Bangladesh from June - August 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj. The interactive figure below provides an overview of this study area and highlights 'permanent' sections of the Jamuna River along with the locations of GloFAS/FFWC measurement stations. 
+This report provides a summary of the results and validation of an analysis of Sentinel-1 satellite imagery to estimate flood extent over time in Bangladesh from June - August 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj. The interactive figure below provides an overview of this study area and highlights permanent sections of the Jamuna River along with the locations of GloFAS/FFWC measurement stations. 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("setup.R")
+source('load_data.R')
 source('plots.R')
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 knitr::opts_chunk$set(message = FALSE) # do not print output by default
 ```
 
-
-```{r data-load-formatting}
-data_dir <- Sys.getenv("AA_DATA_DIR")
-df_summ <- read.csv(file = paste0(data_dir, '/exploration/bangladesh/FE_Results/June_Aug/MAUZ_flood_summary_QA.csv'))
-df_sent <- read.csv(file = paste0(data_dir, '/exploration/bangladesh/FE_Results/June_Aug/MAUZ_flood_extent_sentinel.csv'))
-df_gaus <- read.csv(file = paste0(data_dir, '/exploration/bangladesh/FE_Results/June_Aug/MAUZ_flood_extent_interpolated.csv'))
-shp_mauz <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/selected_distict_mauza.shp'))%>%
-  st_transform('EPSG:4326')
-df_glofas <- read.csv(paste0(data_dir, '/exploration/bangladesh/GLOFAS_Data/2020.csv'))
-stations <- st_read(paste0(data_dir, '/exploration/bangladesh/GLOFAS_Data/stations.shp'))%>%
-  st_transform('EPSG:4326')%>%
-  filter(Station %in% c('Bahadurabad', 'Chilmari', 'Kazipur', 'Sariakandi'))
-
-adm0 <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/bgd_admbnda_adm0_bbs_20201113.shp'))
-adm2 <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/bgd_admbnda_adm2_bbs_20201113.shp'))
-shp_river <- st_read(paste0(data_dir, '/exploration/bangladesh/ADM_Shp/river_extent.shp'))
-```
 
 ```{r study-area, include=T, fig.cap = 'Overview of study area', warning=FALSE, fig.height=4, fig.align="center", out.width='100%'}
 
@@ -55,7 +39,7 @@ study_area(adm2, adm0, shp_river, 'view')
 
 ## Processing Sentinel-1 SAR imagery to derive flood extents
 
-In collaboration with colleagues from MapAction we took freely available European Space Agency’s [Sentinel-1 Synthetic Aperture Radar (SAR) imagery](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar), which provides images with 10m resolution, to estimate the flood extent over time. Sentinel-1 SAR data has been frequently applied to map flooding in past literature, even specifically in Bangladesh. In addition to being freely available, SAR imagery is particularly useful for flood mapping as it can be captured even in the presence of cloud cover, unlike imagery from optical sensors such as Landsat and MODIS. This is particularly relevant in areas such as Bangladesh which have significant cloud cover during flooding seasons. Water bodies can be identified from SAR imagery due to their dark appearance. 
+We took freely available 10m [Sentinel-1 Synthetic Aperture Radar (SAR) imagery](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar) from the European Space Agency to estimate the flood extent over time. Sentinel-1 SAR data has been frequently applied to map flooding in past literature, even specifically in Bangladesh. In addition to being freely available, SAR imagery is particularly useful for flood mapping as it can be captured even in the presence of cloud cover, unlike imagery from optical sensors such as Landsat and MODIS. This is relevant in areas such as Bangladesh which have significant cloud cover during flooding seasons. Water bodies can be identified from SAR imagery due to their dark appearance. 
 
 The methodology used is adapted from the [UN-SPIDER Knowledge portal](http://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/in-detail) and applies a change detection and thresholding (CDAT) approach to identify flooded areas. A CDAT methodology for identifying flooded areas from Sentinel-1 data has been successfully applied in contexts such as Bangladesh, Namibia and the UK. We performed the analysis in Google Earth Engine, which provides easy access to Sentinel-1 data and allows for fast, cloud-based data processing. The image processing methodology described below is largely summarized from the UN-SPIDER guidance. 
 
@@ -110,7 +94,7 @@ ggplot(bahadurabad) +
 
 ```
 
-The estimates of flood extent were then aggregated to a given admin unit (mauzas, in this case) by calculating the total flooded fraction within each unit for each point in time. Note that the area of permanent water bodies (as identified by the JRC Global Surface Water dataset) was removed from the area of each admin unit. The flooded fraction values thus represent the fraction of flooded area that is not normally covered by water.
+The estimates of flood extent were then aggregated to a given admin unit (5831 mauzas, in this case) by calculating the total flooded fraction within each unit for each point in time. Note that the area of permanent water bodies (as identified by the JRC Global Surface Water dataset) was removed from the area of each admin unit. The flooded fraction values thus represent the fraction of flooded area that is not normally covered by water.
 
 ***
 **_NOTE:_**  While SAR imagery has commonly been used to map flooding, it is not without its limitations. As is well-acknowledged [within the literature](https://www.sciencedirect.com/science/article/pii/S1474706515000406?via%3Dihub), classification errors may arise in cases where water surfaces are roughened by wind or rain, and where other flat land surfaces (such as roads) are misclassified as water. Flood detection from SAR imagery is also poorer in urban areas and areas with dense, protruding vegetation. 
@@ -121,7 +105,7 @@ These results should also not be mistaken for any indication of flood depth, as 
 
 &nbsp;
 
-## Modelling flooding over time with parametric curve fitting
+## Interpolating and smoothing flooding estimates over time
 
 As the temporal frequency of Sentinel-1 imagery can be up to 12 days between images, we cannot solely rely on the results of analysing this imagery to accurately identify peak flooding dates. We thus estimated flooding fraction by admin unit at daily intervals by fitting the Sentinel-1 data points to a Gaussian function. The peak of the Gaussian curve for each admin unit was then used to identify the estimated peak flooding date for that unit. This method simplifies the shape of the flooding time series and reduces the potential impacts from noise introduced by the limitations of the flooding estimates derived directly from the Sentinel-1 imagery. 
 
@@ -141,13 +125,17 @@ gaussian_qa('rand', df_gaus, df_sent, df_summ, FALSE)
 
 #### When did peak flooding occur?
 
+In the majority of regions peak flooding occurred in late July. While there is variation in the central part of the region of interest, we generally see that peak flooding happened sooner in the north and later in the south. Within the central region, mauzas on either side of the Jamuna flooded at different times.
+
 ```{r make-plot-max, include=T, fig.cap = 'Peak flooding date by mauza, measured in number of days since June 1st', warning=FALSE, fig.align="center"}
 
-choro_map(df_summ, shp_mauz, 'PEAK_G_DAYS', 'PuBuGn', TRUE, 'plot')
+choro_map(df_summ, shp_mauz, 'PEAK_G_DAYS', 'Blues', TRUE, 'plot')
 
 ```
 
 #### How intense was the flooding?
+
+Flooding extent appears to have been the greatest along the right bank of the Jamuna and in the south-western mauzas in the region of interest. 
 
 ```{r make-plot-peak, include=T, fig.cap = 'Maximum flooded fraction by mauza', warning=FALSE, fig.align="center"}
 
@@ -155,9 +143,11 @@ choro_map(df_summ, shp_mauz, 'MAX_G', 'BuPu', TRUE, 'plot')
 
 ```
 
+Unsurprisingly, mauzas along the Jamuna river were flooded (relatively) for longer periods of time. The south-western region appears to be the area of most significant flooding impact, with both relatively high flooded extent and long flooding duration.
+
 ```{r make-plot-fwhm, include=T, fig.cap = 'Days in which flooded fraction is at least 50% of the maximum', warning=FALSE, fig.align='center'}
 
-choro_map(df_summ, shp_mauz, 'FWHM', 'YlGnBu', TRUE, 'plot')
+choro_map(df_summ, shp_mauz, 'FWHM', 'Greens', TRUE, 'plot')
 
 ```
 
@@ -197,3 +187,24 @@ The figure below offers a comparison between [GloFAS](https://www.globalfloods.e
 compare_glofas(df_sent, df_gaus, df_glofas)
 
 ```
+
+#### Comparison against key informant interviews from selected unions 
+
+We received survey data from key informants in 20 unions indicating their perceived flooding extent in their surrounding union. Each of these unions has data from 1-3 interview respondents. This data offers a useful comparison against our satellite-derived flooding estimates. Across these unions we see a general agreement in the flooding trend over time, and in many cases quite similar estimated magnitude. 
+
+```{r interview-frac, include=T, fig.cap = 'Comparison between satellite derived flooding estimates and those from key informants on the ground', warning=FALSE, fig.align='center'}
+
+compare_survey_frac(df_sent_adm4, df_gaus_adm4, df_int)
+
+```
+
+## Conclusions
+
+This method allows us to get a reasonable estimate of flooding dynamics and magnitude across our area of interest in Bangladesh based on the data available. This method can also be reproduced in other contexts as it uses openly available data with global coverage. 
+
+These results show notable variations both in when the peak flooding hit and in how much flooding happened within a given mauza. These variations are important to take into account when evaluating the impact of the recent anticipatory action. 
+
+However, we must keep in mind the limitations of this analysis. Notably: 
+
+- Multi-temporal comparison of Sentinel-1 imagery isn’t a perfect way to identify flooded extent. For example, flooding in urban areas is often underestimated.
+- Fitting to a Gaussian function is assuming a lot about the flooding dynamics. 

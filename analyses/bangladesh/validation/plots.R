@@ -141,3 +141,30 @@ study_area <- function(adm2, adm0, shp_river, mode){
   return(map)
 }
 
+# Compare time series of the survey against interview data
+compare_survey_frac <- function(df_sent_adm4, df_gaus_adm4, df_int){
+  
+  df_gaus_adm4_pcode <- df_gaus_adm4 %>%
+    mutate(PCODE = as.numeric(substr(PCODE, 3,12)))%>%
+    mutate(DATE=as.Date(DATE))
+  
+  df_int_frac <- df_int %>%
+    drop_na(Interview_1)%>%
+    select(ADM4_EN, ADM4_PCODE, flood_fraction, Interview_1, Interview_2, Interview_3, date)%>%
+    mutate(date = as.Date(date))%>%
+    left_join(df_gaus_adm4_pcode, by=c('ADM4_PCODE'='PCODE', 'date'='DATE'))%>%
+    mutate(FLOOD_EXTENT = FLOOD_EXTENT*100) %>%
+    mutate(flood_fraction = flood_fraction * 100)%>%
+    rename(Gaussian=FLOOD_EXTENT)%>%
+    rename(Sentinel=flood_fraction)%>%
+    gather(type, flood_fraction, -c(ADM4_EN, ADM4_PCODE, date))
+  
+  p <- ggplot(df_int_frac, aes(x=date, y=flood_fraction, group=type, color=type))+
+    geom_line()+
+    facet_wrap(~ADM4_EN)+
+    theme_bw()+
+    labs(y='Flooded fraction', x='Date')+
+    theme(legend.position="bottom")
+  return(p)
+  
+}
