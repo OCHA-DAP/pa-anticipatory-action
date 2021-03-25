@@ -14,10 +14,12 @@ import logging
 # 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir' in the config.yml
 # 2) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), located in the config.yml
 
-dirs = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
-output_dir = dirs['data_dir']
-params = utils.parse_yaml('pilot_evaluation/config.yml')['PARAMS']
-ADM = params['adm']
+DATA_DIR = os.environ['AA_DATA_DIR']
+
+dirs = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['DIRS']
+output_dir = os.path.join(DATA_DIR, dirs['data_dir'])
+params = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['PARAMS']
+ADM = os.path.join(params['adm'])
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -147,7 +149,7 @@ def qc_gaussian(df_interpolated, df_summary, no_fit):
 if __name__ == "__main__":
     try:
         sentinel = pd.read_csv(os.path.join(output_dir, f'{ADM}_flood_extent_sentinel.csv'))
-        df_flood, df_summary, no_fit = make_data(sentinel, ADM)
-        qc_gaussian(df_flood, df_summary, no_fit)
     except FileNotFoundError:
         logging.error('Input CSV file not found. Run Generate_flood_frac.py to generate the required file.')
+    df_flood, df_summary, no_fit = make_data(sentinel, ADM)
+    qc_gaussian(df_flood, df_summary, no_fit)

@@ -21,16 +21,17 @@ import utils_evaluation as utils
 # - Column names for shapefiles
 # TODO: Move tests to separate file
 
+DATA_DIR = os.environ['AA_DATA_DIR']
 
-dirs = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
-SHP_DIR = dirs['gee_dir']
-OUT_DIR = dirs['data_dir']
+dirs = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['DIRS']
+SHP_DIR = os.path.join(DATA_DIR, dirs['gee_dir'])
+OUT_DIR = os.path.join(DATA_DIR, dirs['data_dir'])
 
-files = utils.parse_yaml('pilot_evaluation/config.yml')['FILES']
-ADM_SHP = files['adm_shp']
-RIVER_SHP = files['river_shp']
+files = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['FILES']
+ADM_SHP = os.path.join(DATA_DIR, files['adm_shp'])
+RIVER_SHP = os.path.join(DATA_DIR, files['river_shp'])
 
-params = utils.parse_yaml('pilot_evaluation/config.yml')['PARAMS']
+params = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['PARAMS']
 CRS = params['crs']
 ADM = params['adm']
 
