@@ -344,6 +344,13 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% m
 #write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020.csv"), row.names = FALSE)
 #write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"), row.names = FALSE)
 
+# save full list of dry spells
+full_list_dry_spells <- dry_spells_details %>%
+                          left_join(rainy_seasons[, c('pcode', 'season_approx', 'onset_date', 'cessation_date')], by = c('pcode', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
+                          mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season 
+                          dplyr::select(pcode, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+#write.csv(full_list_dry_spells, file = paste0(data_dir, "/processed/malawi/dry_spells/full_list_dry_spells.csv"), row.names = FALSE)
+
 # summary stats per region 
 rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>% 
                                                 group_by(pcode, ADM2_EN) %>%
