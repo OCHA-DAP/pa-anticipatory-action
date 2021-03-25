@@ -17,7 +17,7 @@ editor_options:
 
 ## Introduction
 
-This report provides a summary of the results and validation of an analysis of Sentinel-1 satellite imagery to estimate flood extent over time in Bangladesh from June - August 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj. The interactive figure below provides an overview of this study area and highlights permanent sections of the Jamuna River along with the locations of GloFAS/FFWC measurement stations. 
+The goal of this analysis is to estimate the timing and severity of the July floods in Bangladesh to support the independent evaluation of the [anticipatory action pilot](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/) in July 2020. This analysis is focused on flooding within five selected districts: Bogra, Gaibandha, Jamalpur, Kurigram and Sirajganj. The interactive figure below provides an overview of this study area and highlights permanent sections of the Jamuna River along with the locations of GloFAS/FFWC measurement stations. 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("setup.R")
@@ -37,11 +37,13 @@ study_area(adm2, adm0, shp_river, 'view')
 
 &nbsp;
 
-## Processing Sentinel-1 SAR imagery to derive flood extents
+## Methods
 
-We took freely available 10m [Sentinel-1 Synthetic Aperture Radar (SAR) imagery](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar) from the European Space Agency to estimate the flood extent over time. Sentinel-1 SAR data has been frequently applied to map flooding in past literature, even specifically in Bangladesh. In addition to being freely available, SAR imagery is particularly useful for flood mapping as it can be captured even in the presence of cloud cover, unlike imagery from optical sensors such as Landsat and MODIS. This is relevant in areas such as Bangladesh which have significant cloud cover during flooding seasons. Water bodies can be identified from SAR imagery due to their dark appearance. 
+#### Background to flood mapping with Sentinel-1 SAR
 
-The methodology used is adapted from the [UN-SPIDER Knowledge portal](http://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/in-detail) and applies a change detection and thresholding (CDAT) approach to identify flooded areas. A CDAT methodology for identifying flooded areas from Sentinel-1 data has been successfully applied in contexts such as Bangladesh, Namibia and the UK. We performed the analysis in Google Earth Engine, which provides easy access to Sentinel-1 data and allows for fast, cloud-based data processing. The image processing methodology described below is largely summarized from the UN-SPIDER guidance. 
+We took freely available 10m [Sentinel-1 Synthetic Aperture Radar (SAR) imagery](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar) from the European Space Agency to estimate the flood extent over time. Sentinel-1 SAR data has been frequently applied to map flooding in past literature, even specifically [in Bangladesh](https://www.mdpi.com/2072-4292/11/13/1581). In addition to being freely available, SAR imagery is particularly useful for flood mapping as it can be captured even in the presence of cloud cover, unlike imagery from optical sensors such as Landsat and MODIS. This is relevant in areas such as Bangladesh which have significant cloud cover during flooding seasons. Water bodies can be identified from SAR imagery due to their dark appearance. 
+
+The methodology used is adapted from the [UN-SPIDER Knowledge portal](http://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/in-detail) and applies a change detection and thresholding (CDAT) approach to identify flooded areas. A CDAT methodology for identifying flooded areas from Sentinel-1 data has been applied in contexts such as [Bangladesh](https://www.sciencedirect.com/science/article/abs/pii/S0924271620301702), [Namibia](https://iopscience.iop.org/article/10.1088/1748-9326/9/3/035002/meta) and the [UK](https://onlinelibrary.wiley.com/doi/full/10.1111/jfr3.12303). We performed the analysis in Google Earth Engine, which provides easy access to Sentinel-1 data and allows for fast, cloud-based data processing. The image processing methodology described below is largely summarized from the UN-SPIDER guidance. 
 
   
 #### Imagery filtering and preprocessing
@@ -51,8 +53,8 @@ Available Sentinel-1 imagery for the time period of interest is filtered accordi
 ***
 | Filtering parameter | Possible values                                                                                                                                   | Description                                                                                                                                                                                                                                           |
 |---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Instrument mode     | IW, EW, SM                                                                                                                                        | [Notes on acquisition modes](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes). We selected data from the ‘IW’ acquisition mode, as it is cited as the main acquisition mode for monitoring land changes.                                                                                                 |
-| Polarization        | HH+HV, VV+VH, VV, HH                                                                                                                              | Horizontal and vertical. We selected the ‘VH’ mode as it is indicated by the UN-SPIDER guidance as the most optimal for flood mapping. However sources have also noted that the ‘VV’ polarization may produce more accurate results in some instances |
+| Instrument mode     | IW, EW, SM                                                                                                                                        | [Notes on acquisition modes](https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes). We selected data from the ‘IW’ acquisition mode, as it is [cited](https://www.mdpi.com/2072-4292/10/11/1673/htm) as the main acquisition mode for monitoring land changes.                                                                                                 |
+| Polarization        | HH+HV, VV+VH, VV, HH                                                                                                                              | Horizontal and vertical. We selected the ‘VH’ mode as it is indicated by the UN-SPIDER guidance as the most optimal for flood mapping. However [sources](https://onlinelibrary.wiley.com/doi/full/10.1111/jfr3.12303) have also noted that the ‘VV’ polarization may produce more accurate results in some instances |
 | Pass direction      | Ascending or descending                                                                                                                           | Direction of orbit. We performed the analysis using data from both pass directions (only comparing images from the same direction).                                                                                                                   |
 | Relative orbit      | This value is dependent on the location of the satellite orbit for the area of interest. Values can be derived [according to the imagery filename](https://gis.stackexchange.com/questions/237116/sentinel-1-relative-orbit#:~:text=You%20actually%20can%20find%20the,%2D%2073%2C%20175%20%2B%201). | Filtering by relative orbit ensures that one is comparing images with the same viewing geometry.                                                                                                                                                      |
 
@@ -105,7 +107,7 @@ These results should also not be mistaken for any indication of flood depth, as 
 
 &nbsp;
 
-## Interpolating and smoothing flooding estimates over time
+#### Interpolating and smoothing flooding estimates over time
 
 As the temporal frequency of Sentinel-1 imagery can be up to 12 days between images, we cannot solely rely on the results of analysing this imagery to accurately identify peak flooding dates. We thus estimated flooding fraction by admin unit at daily intervals by fitting the Sentinel-1 data points to a Gaussian function. The peak of the Gaussian curve for each admin unit was then used to identify the estimated peak flooding date for that unit. This method simplifies the shape of the flooding time series and reduces the potential impacts from noise introduced by the limitations of the flooding estimates derived directly from the Sentinel-1 imagery. 
 
@@ -188,6 +190,8 @@ compare_glofas(df_sent, df_gaus, df_glofas)
 
 ```
 
+&nbsp;
+
 #### Comparison against key informant interviews from selected unions 
 
 We received survey data from key informants in 20 unions indicating their perceived flooding extent in their surrounding union. Each of these unions has data from 1-3 interview respondents. This data offers a useful comparison against our satellite-derived flooding estimates. Across these unions we see a general agreement in the flooding trend over time, and in many cases quite similar estimated magnitude. 
@@ -197,6 +201,8 @@ We received survey data from key informants in 20 unions indicating their percei
 compare_survey_frac(df_sent_adm4, df_gaus_adm4, df_int)
 
 ```
+
+&nbsp;
 
 ## Conclusions
 
