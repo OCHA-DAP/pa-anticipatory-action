@@ -9,7 +9,7 @@
 # 
 # We prefer to use as many readily available products as we can. However, we could only find historical monthly terciles (using CAMS-OPI data) and not historical seasonal terciles. We have therefore computed these seasonal terciles ourselves. As source we use CHIRPS data as this is also the source used to compute the dry spells, we have experience working with this source, has a high resolution, and generally speaking good performance. 
 # 
-# Since the code to compute monthly terciles is almost the same as seasonal, we also propose to use the CHIRPS methodology to compute the monthly terciles instead of using the readily available CAMS-OPI terciles. 
+# Since the code to compute monthly terciles is almost the same as seasonal, we also propose to use the CHIRPS methodology to compute the monthly terciles instead of using the readily available CAMS-OPI terciles for consistency. 
 
 # ### set general variables and functions
 
@@ -53,6 +53,7 @@ from src.utils_general.plotting import plot_raster_boundaries_clip
 country="malawi"
 config=Config()
 parameters = config.parameters(country)
+
 country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
 country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
 country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country)
@@ -69,24 +70,23 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 
 
 # ### CHIRPS seasonal
-# Optimally we would use data that is already processed to indicate the percentile per season and year. However, we couldn't find this data so we processed it ourselves using CHIRPS data.     
+#     
 # The CHIRPS data is provided as monthly sum per 0.05x0.05 degree raster cell. This is global data, and we clip it to Malawi.     
 # From this data we first compute the total precipitation per 3 month period. We then compute the climatological lower tercile where we use the period 1981-2010 to define the climatology. Thereafter, we combine the two to get a yes/no if whether any cell within an admin2 region had below average rainfall. 
 # 
 # We use below-average and lower tercile interchangily in the comments but they refer to the same
 # 
 # Questions:
-# - Is there a source I am missing that has readily processed seasonal percentile data?
-# - Does this methodology make sense?
-# - Is it valid to say there was below average rainfall in an admin2 if more than 50% of the cells within that region had below average rainfall?
+# - Is the methodology to get the tercile per raster cell correct?
+# - Is the 1981-2010 period as climatological period the best to use?
 # - Is it essential to include a dry mask?
 # - How should we define an admin2 as having below average rainfall?
-#     - My suggestion: look at the percentage of the area that has less than 2mm rainfall. But then how to set the threshold of percentage area? Should this be the majority (i.e. threshold=50%) or e.g. such that 1/3 of the occurences has below average rainfall
-#     - We could also implement several approaches and test the correlation with the dry spell
+#     - My suggestion: look at the percentage of the area that has less than 2mm rainfall. 
+#         - But then how to set the threshold of percentage area? Should this be the majority (i.e. threshold=50%) or e.g. such that 1/3 of the occurences have below average rainfall
+#     - Currently, we implemented several approaches and test the correlation with dry spells
 # 
 # 
 # To do:
-# - Experiment with adjusting the climatological period (e.g. 1999-2016 instead of 1981-2010)
 # - Change value used for indicating normal/above average cells (now set to -999 but tricky cause software can interpret that as "no data")
 # - Compute the occurence per raster cell of below average rainfall as a sanity check, this should be 1/3 of the time (already doing this over the whole country)
 # - Try to set the CRS already when loading instead of later on
@@ -165,6 +165,17 @@ ds_season
 #plot the three month sum for NDJ 2019/2020
 #dense spot seems to be a nature reserve that also looks more green on satellite imagery (Google Maps)
 fig=plot_raster_boundaries_clip([ds_season.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").sel(time=test_date)],adm1_bound_path,colp_num=1,forec_val="precip",cmap="YlOrRd",predef_bins=np.linspace(0,1000,10))
+
+
+#plot all values and tercile boundaries to get a feeling for the general distribution and if the tercile boundaries make sense
+g=sns.displot(ds_season.sel(time=ds_season.time.dt.month==1).precip.values.flatten(),kde=True,aspect=2,color="#CCCCCC")
+plt.axvline(2,color="#18998F",label="dry spell")
+perc=np.percentile(ds_season.sel(time=ds_season.time.dt.month==1).precip.values.flatten()[~np.isnan(ds_season.sel(time=ds_season.time.dt.month==1).precip.values.flatten())], 33)
+plt.axvline(perc,color="#C25048",label="below average")
+plt.legend()
+g.set(xlabel="Seasonal precipitation (mm)")
+plt.title("Distribution of seasonal precipitation in DJF from 2000-2020")
+# g.set_title("Distribution of seasonal precipitation in January from 2000-2020")
 
 
 #define the years that are used to define the climatology. We use 1981-2010 since this is also the period used by IRI's seasonal forecasts
@@ -328,47 +339,14 @@ df_bavg_adm2["fract_below"]=df_bavg_adm2["below_average"]/df_belowavg_seas.group
 df_bavg_adm2[["fract_below","Shape_Area"]]
 
 
-#save to file
-#geometry takes long time to save, so remove that
-df_belowavg_seas.drop("geometry",axis=1).to_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_seasonal_below_average_precipitation.csv"),index=False)
+# #save to file
+# #geometry takes long time to save, so remove that
+# df_belowavg_seas.drop("geometry",axis=1).to_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_seasonal_below_average_precipitation.csv"),index=False)
 
 
 # ### CHIRPS monthly
 
-#TODO: make sure is aligned with newest seasonal version
-
-
-# #quality check
-# #check that all max touched values in df_belowavg_seas are also present in ds_season_below
-# #this is to make sure all goes correctly with zonal_stats regarding crs's since it has happened that things go wrong there without insight why
-# display(df_belowavg_seas[df_belowavg_seas.date==test_date_dtime])
-# with np.printoptions(threshold=np.inf):
-#     print(np.unique(ds_season_below.sel(time=test_date)["precip"].values.flatten()[~np.isnan(ds_season_below.sel(time=test_date)["precip"].values.flatten())]))
-
-
-#percentage of area with below average rain
-#TODO: decide which threshold to use
-#could argue for 50%, i.e. majority
-#could also argue for the threshold which results in around 1/3 of the occurences being below average, which is the definition of terciles. 
-#in this case about the same but second method would change according to the data
-#Don't know if large difference between adm regions
-#Note: only including cells that have their centre within the region, do think this makes sense especially with the high resolution we got
-for i in np.linspace(0,100,11):
-    print(f"Fraction of adm2-date combinations where >={i}% of area received bel. avg. rain:","{:.2f}".format(len(df_belowavg_seas[df_belowavg_seas["perc_threshold"]>=i])/len(df_belowavg_seas)))
-
-
-#THIS is super interesting, that the area recieving below average rain clearly changed for 2010-2020 compared to 2000-2020
-#Though would expect it to be the other way around, that more often areas recieve below average rain since 2010.. 
-#percentage of area with below average rain
-#TODO: decide which threshold to use
-#could argue for 50%, i.e. majority
-#could also argue for 30% as this results in around 1/3 of the occurences the area being below average, which is the definition of terciles. 
-#Don't know if large difference between adm regions
-#Note: only including cells that have their centre within the region, do think this makes sense especially with the high resolution we got
-for i in np.linspace(0,100,11):
-    print(f"Fraction of adm2-date combinations where >={i}% of area received bel. avg. rain 2010-2020:","{:.2f}".format(len(df_belowavg_seas[(df_belowavg_seas.date.dt.year>=2010)&(df_belowavg_seas["perc_threshold"]>=i)])/len(df_belowavg_seas[(df_belowavg_seas.date.dt.year>=2010)])))
-
-
+#ds_clip already contains the monthly data, so don't need further preprocessing for that
 #define the years that are used to define the climatology. We use 1981-2010 since this is also the period used by IRI's seasonal forecasts
 ds_month_climate=ds_clip.sel(time=ds_clip.time.dt.year.isin(range(1981,2011)))
 
@@ -468,9 +446,60 @@ df_bavg_adm2["fract_below"]=df_bavg_adm2["below_average"]/df_belowavg_month.grou
 df_bavg_adm2[["fract_below"]]
 
 
-#save to file
-#geometry takes long time to save, so remove that
-df_belowavg_month.drop("geometry",axis=1).to_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_monthly_below_average_precipitation.csv"),index=False)
+# #save to file
+# #geometry takes long time to save, so remove that
+# df_belowavg_month.drop("geometry",axis=1).to_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_monthly_below_average_precipitation.csv"),index=False)
+
+
+# ### Monthly compute total rainfall 
+# so not just below average
+
+def alldates_statistics_total(ds,raster_transform,adm_path):
+    #compute statistics on level in adm_path for all dates in ds
+    df_list=[]
+    for date in ds.time.values:
+        df=gpd.read_file(adm_path)
+        ds_date=ds.sel(time=date)
+        
+        # compute the percentage of the admin area that has below average rainfall
+        #set all values with below average rainfall to 1 and others to 0
+        forecast_binary = np.where(ds_date.precip.values<=50, 1, 0)
+        #compute number of cells in admin region (sum) and number of cells in admin region with below average rainfall (count)
+        bin_zonal = pd.DataFrame(
+            zonal_stats(vectors=df, raster=forecast_binary, affine=raster_transform, stats=['count', 'sum'],nodata=np.nan))
+        df['perc_threshold'] = bin_zonal['sum'] / bin_zonal['count'] * 100
+        
+        df["max_cell"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=ds_date["precip"].values, affine=raster_transform, nodata=np.nan))["max"]
+        df["mean_cell"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=ds_date["precip"].values, affine=raster_transform, nodata=np.nan))["mean"]
+        df["min_cell"] = pd.DataFrame(
+        zonal_stats(vectors=df, raster=ds_date["precip"].values, affine=raster_transform, nodata=np.nan))["min"]
+        
+        df["date"]=pd.to_datetime(date.strftime("%Y-%m-%d"))
+  
+        df_list.append(df)
+    df_hist=pd.concat(df_list)
+    df_hist=df_hist.sort_values(by="date")
+    
+    df_hist["date_str"]=df_hist["date"].dt.strftime("%Y-%m")
+    df_hist['date_month']=df_hist.date.dt.to_period("M")
+        
+    return df_hist
+
+
+#compute whether the maximum cell that touches an admin2 region has below average rainfall for each month since 2010
+df_month_total=alldates_statistics_total(ds_clip.sel(time=ds_clip.time.dt.year.isin(range(2000,2021))),ds_clip.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform(),adm2_bound_path)
+
+
+df_month_total.drop("geometry",axis=1).to_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_monthly_total_precipitation.csv"),index=False)
+
+
+#compute whether the maximum cell that touches an admin2 region has below average rainfall for each month since 2010
+df_season_total=alldates_statistics_total(ds_season.sel(time=ds_season.time.dt.year.isin(range(2000,2021))),ds_season.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform(),adm2_bound_path)
+
+
+df_season_total.drop("geometry",axis=1).to_csv(os.path.join(country_data_processed_dir,"observed_belowavg_precip","chirps_seasonal_total_precipitation.csv"),index=False)
 
 
 # ### Quality checks CHIRPS data
