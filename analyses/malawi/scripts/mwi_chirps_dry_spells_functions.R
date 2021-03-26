@@ -13,6 +13,51 @@ computeLayerStat <- function(layer, stat, data_stat_values){
   return(data_stat_values)
 }
 
+# can create mwi_adm variable in computeLayerStat but would need to go back and fix all adm2 scripts so creating new function for adm3 for now
+computeLayerStat_adm3 <- function(layer, stat, data_stat_values){
+  
+  # select 1 layer
+  data_layer <- subset(data, layer)
+  
+  # extract values from raster cells and compute stat
+  data_layer.stat <- raster::extract(data_layer, mwi_adm3, fun = stat, df = T)
+  
+  # add daily stat to dataframe
+  data_stat_values <- merge(data_stat_values, data_layer.stat, by = "ID", all.x = T)
+  
+  return(data_stat_values)
+}
+
+# count number of pixels below threshold per adm2
+computePixelsBelowThreshold <- function(layer, data_frame, threshold){
+  
+  # select 1 layer
+  data_layer <- subset(data_all, layer)
+  
+  # extract values from raster cells and compute stat
+  data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = function(x,...)sum(x <= threshold), df = T)
+  
+  # add daily stat to dataframe
+  data_frame <- merge(data_frame, data_layer.stat, by = "ID", all.x = T)
+  
+  return(data_frame)
+}
+
+# count number of pixels in total and below threshold per adm2
+computePixelsPerADM2 <- function(layer, data_frame){
+  
+  # select 1 layer
+  data_layer <- subset(data_all, layer)
+  
+  # extract values from raster cells and compute stat
+  data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = function(x,...)length(x), df = T)
+  
+  # add daily stat to dataframe
+  data_frame <- merge(data_frame, data_layer.stat, by = "ID", all.x = T)
+  
+  return(data_frame)
+}
+
 convertToLongFormat <- function(data.wideformat){
   
   # add pcodes to identify each polygon
@@ -29,6 +74,25 @@ convertToLongFormat <- function(data.wideformat){
   
   return(data.longformat)
 }
+
+# can create mwi_adm variable in computeLayerStat but would need to go back and fix all adm2 scripts so creating new function for adm3 for now
+convertToLongFormatADM3 <- function(data.wideformat){
+  
+  # add pcodes to identify each polygon
+  data.wideformat$pcode <- mwi_adm3$ADM3_PCODE
+  
+  # convert wide to long to get dates as rows
+  data.longformat <- gather(data.wideformat, date, total_prec, 2:(nbr_layers+1))
+  
+  # assign "zero" values to NA in total_prec
+  data.longformat$total_prec[is.na(data.longformat$total_prec)] <- 0
+  
+  # reformat 'date' to a date format
+  data.longformat$date <- as.Date(data.longformat$date, format = "X%Y.%m.%d")
+  
+  return(data.longformat)
+}
+
 
 ## compute rolling sum
 computeRollingSum <- function(dataframe_long, window){
