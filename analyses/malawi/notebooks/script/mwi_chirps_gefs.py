@@ -107,7 +107,9 @@ df_rain.head()
 
 #set the onset and cessation date for the seasons with those dates missing (meaning there was no dry spell data from start/till end of the season)
 df_rain_filled=df_rain.copy()
+#remove entries where there is no onset and no cessation date. this happens for some adm2's in 2020
 df_rain_filled=df_rain_filled[(df_rain_filled.onset_date.notnull())|(df_rain_filled.cessation_date.notnull())]
+#if onset date or cessation date is missing, set it to Nov 1/Jul1 to make sure all data of that year is downloaded
 df_rain_filled[df_rain_filled.onset_date.isnull()]=df_rain_filled[df_rain_filled.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
 df_rain_filled[df_rain_filled.cessation_date.isnull()]=df_rain_filled[df_rain_filled.cessation_date.isnull()].assign(cessation_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]+1}-07-01"))
 
