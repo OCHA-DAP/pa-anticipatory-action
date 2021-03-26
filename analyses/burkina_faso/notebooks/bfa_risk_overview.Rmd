@@ -1,7 +1,7 @@
 ---
 title: 'Baseline Risk Analysis for Burkina Faso'
-author: "By Centre for Humanitarian Data"
-date: "`r Sys.Date()`"
+author: 'Centre for Humanitarian Data' 
+date: "Analysis last updated: `r Sys.Date()`"
 output:
   html_document:
     df_print: paged
@@ -22,6 +22,12 @@ library(knitr)
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
+
+<img src="centre_logo.png" style="position:absolute;top:20px;right:0px;height:50px" />
+<img src="ocha_logo.png" style="position:absolute;top:90px;right:0px;height:40px" />
+
+&nbsp;
+&nbsp;
 
 This is an initial exploration into humanitarian risks and vulnerabilities in Burkina Faso. Data is compiled and presented on the following elements: 
 
@@ -60,7 +66,7 @@ combine_map(shp_sum)
 
 df_sum_display %>%
   knitr::kable(caption = "Risk, vulnerability, and capacity factors by region",
-               col.names = c('Region', 'Humanitarian activities', 'IDPs (millions)', 'Multidimensional\npoverty index', 'Drought risk', 'Flood risk', 'Total population\n(millions)', 'IPC Phase 3+\n(millions)'),
+               col.names = c('Region', 'Humanitarian activities', 'IDPs', 'Multidimensional\npoverty index', 'Drought risk', 'Flood risk', 'Total population\n', 'IPC Phase 3+'),
                align = c('l', 'l', 'l', 'l', 'l', 'l', 'l', 'l')) %>%
         collapse_rows(columns = 1, valign = "top") %>%
         kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
@@ -73,7 +79,7 @@ df_sum_display %>%
 
 ***
 
-## Vulnerable populations facing high hazard risk
+## Populations facing high hazard risk
 
 We see a greater total population in regions facing high flooding risk. By this factor alone, we could perhaps estimate that flooding would have a larger humanitarian impact.
 
@@ -81,7 +87,7 @@ We see a greater total population in regions facing high flooding risk. By this 
 ```{r, include=T}
 
 high_hazard %>%
-  knitr::kable(caption = "Populations vulnerable to high hazard risk (millions)",
+  knitr::kable(caption = "Populations vulnerable to high hazard risk",
                col.names = c('Total population','Men over 60', 'Women over 60', 'IDPs'),
                align = c('l', 'l', 'l', 'l')) %>%
         collapse_rows(columns = 1, valign = "top") %>%

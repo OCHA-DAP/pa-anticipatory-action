@@ -168,3 +168,5 @@ compare_survey_frac <- function(df_sent_adm4, df_gaus_adm4, df_int){
   return(p)
   
 }
+
+compare_survey_frac(df_sent_adm4, df_gaus_adm4, df_int)

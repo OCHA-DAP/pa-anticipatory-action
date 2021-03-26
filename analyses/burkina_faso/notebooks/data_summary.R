@@ -30,8 +30,8 @@ shp_pop <- st_read(paste0(bfa_dir, 'bfa_ica_population_geonode_20180712/bfa_ica_
 df_pop <- read_excel(paste0(bfa_dir, 'bfa_population_statistic_2019_ign.xlsx')) %>% # Sheets for adm levels - first is for adm1
   slice(2:n()) %>%
   mutate(across(c('Fem': 'T_60plus'), as.numeric)) %>%
-  mutate(adm1_name = tolower(ADM1_FR))%>%
-  mutate(Total = Total/1000000)
+  mutate(adm1_name = tolower(ADM1_FR))#%>%
+  #mutate(Total = Total/1000000)
 
 # Poverty 
 df_pov <- read_excel(paste0(bfa_dir, 'bfa-subnational-results-mpi-2020.xlsx')) %>% # Mult sheets - first is MPI by region
@@ -56,7 +56,7 @@ df_idp <- df_idp %>%
 df_idp_sum <- df_idp %>%
   group_by(adm1_name) %>%
   summarise(num_idp = sum(`Nombre total de PDI`)) %>%
-  mutate(num_idp = num_idp/1000000) %>%
+  #mutate(num_idp = num_idp/1000000) %>%
   mutate(adm1_name = ifelse(adm1_name=='hauts bassins', 'hauts-bassins', ifelse(adm1_name=='plateaucentral', 'plateau central', adm1_name)))
 
 
@@ -69,8 +69,9 @@ df_fsec <- read_excel(paste0(bfa_dir, 'cadre_harmonise_caf_ipc.xlsx')) %>% # 1 s
   group_by(reference_label, adm1_name)%>%
   summarise(tot = sum(phase35)) %>%
   group_by(adm1_name) %>%
-  summarise(ipc_plus_3_avg = mean(tot)) %>%
-  mutate(ipc_plus_3_avg = ipc_plus_3_avg/1000000)
+  summarise(ipc_plus_3_avg = mean(tot))%>%
+  mutate(ipc_plus_3_avg = round(ipc_plus_3_avg, 0))
+  #mutate(ipc_plus_3_avg = ipc_plus_3_avg/1000000)
 
 
 # --- Operational presence 
@@ -126,7 +127,7 @@ combine_map <- function(shp_sum){
   m_idp <- make_map(shp_sum, 
                     'num_idp', 
                     'Reds', 
-                    'Number of IDPs\n(millions)',
+                    'Number of IDPs',
                     'Source: OCHA, 2020')
   
   m_mpi <- make_map(shp_sum, 
@@ -150,13 +151,13 @@ combine_map <- function(shp_sum){
   m_pop <- make_map(shp_sum, 
                     'Total', 
                     'Purples',
-                    'Population\n(millions)',
+                    'Population',
                     'Source: OCHA, 2019')
   
   m_fsec <- make_map(shp_sum, 
                      'ipc_plus_3_avg',
                      'PuBuGn',
-                     'Population\nIPC 3+\n(millions)',
+                     'Population\nIPC 3+',
                      'Source: FSNWG, 2020\nAveraged across year')
   
   w_title <- shp_sum %>%
@@ -179,7 +180,7 @@ st_geometry(df_sum) <- NULL
 
 # Clean up for display
 df_sum_display <- df_sum %>%
-  mutate_if(is.numeric, round, 2)%>%
+  #mutate_if(is.numeric, round, 2)%>%
   mutate(adm1_name = str_to_title(adm1_name))%>%
   drop_na()
 
@@ -206,10 +207,10 @@ Flood <- colSums(Flood)
 high_hazard <- as.data.frame(rbind(Flood, Drought))
 
 # Convert value to same units (single person)
-high_hazard <- high_hazard %>%
-  mutate(M_60plus = M_60plus/1000000) %>%
-  mutate(F_60plus = F_60plus/1000000) %>%
-  mutate_if(is.numeric, round, 2)
+#high_hazard <- high_hazard %>%
+  #mutate(M_60plus = M_60plus/1000000) %>%
+  #mutate(F_60plus = F_60plus/1000000) #%>%
+  #mutate_if(is.numeric, round, 2)
 
 
 # 6. Activities by sector -------------------------------------------------
