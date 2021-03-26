@@ -78,7 +78,7 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 
 # #### Load dry spell data
 
-df_ds=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","dry_spells_during_rainy_season_list_2000_2020_mean.csv")) 
+df_ds=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","dry_spells_during_rainy_season_list_2000_2020_mean_back.csv")) 
 df_ds["dry_spell_first_date"]=pd.to_datetime(df_ds["dry_spell_first_date"])
 df_ds["dry_spell_last_date"]=pd.to_datetime(df_ds["dry_spell_last_date"])
 df_ds["ds_fd_m"]=df_ds.dry_spell_first_date.dt.to_period("M")
@@ -101,7 +101,7 @@ df_belowavg_seas.date_month=pd.to_datetime(df_belowavg_seas.date_month).dt.to_pe
 
 
 #path to data start and end rainy season
-df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean.csv"))
+df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean_back.csv"))
 df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
 df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
 
@@ -134,6 +134,15 @@ df_belowavg_seas_rain=pd.concat(list_hist_rain_adm2)
 # ### Merge dry spells with Seasonal below average rainfall
 # **NOTE: we currently only include the season (3-month period) if all months are within the rainy season. E.g. if the rainy season ends in April for an admin2, MAM will not be included for that admin2**
 
+df_ds_drymonth["month"]=df_ds_drymonth.ds_fd_m.dt.month
+
+
+df_ds_drymonth.month.unique()
+
+
+df_belowavg_seas_rain
+
+
 #include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
 df_ds_drymonth_rain=df_ds_drymonth.merge(df_belowavg_seas_rain[["ADM2_EN","date_month"]],how="outer",left_on=['ADM2_EN','ds_fd_m'],right_on=["ADM2_EN","date_month"])
 
@@ -150,7 +159,11 @@ df_ds_drymonth_alldates=df_ds_drymonth_rain.sort_values("date_month").set_index(
 df_ds_drymonth_alldates[df_ds_drymonth_alldates.ADM2_EN=="Balaka"].date_month.unique()
 
 
+len(df_ds)
+
+
 #number of entries with dry spell
+#aggregated to month, so can be that in one month two dry spells started in same adm2
 len(df_ds_drymonth_alldates[df_ds_drymonth_alldates.dry_spell_first_date==1])
 
 
@@ -179,6 +192,11 @@ df_comb_seas=df_comb_seas[df_comb_seas.num_dry_spell_seas.notna()]
 
 #set the occurence of a dry spell to true if in at least one of the months of the season (=3 months) a dry spell occured
 df_comb_seas["dry_spell"]=np.where(df_comb_seas.num_dry_spell_seas>=1,1,0)
+
+
+#mapping of month to season. Computed by rolling sum, i.e. month indicates last month of season
+seasons_rolling={3:"JFM",4:"FMA",5:"MAM",6:"AMJ",7:"MJJ",8:"JJA",9:"JAS",10:"ASO",11:"SON",12:"OND",1:"NDJ",2:"DJF"}
+df_comb_seas["season"]=df_comb_seas.date_month.dt.month.map(seasons_rolling)
 
 
 #seasons-adm2s where during at least one of the months a dry spell occured
@@ -218,6 +236,13 @@ g.axes.spines['top'].set_visible(False)
 # #### Correlations
 # Not really any correlation, but is to be expected from the distributions
 
+df_comb_seas.season.unique()
+
+
+#all seasons-adm2s where a dry spell occured, May was already outside the rainy season --> MAM not included
+df_comb_seas[df_comb_seas.dry_spell==1].season.unique()
+
+
 y_target =    df_comb_seas["dry_spell"]
 #below_average is defined as perc_threshold>=50 where perc_threshold indicates the percentage of area with below average rainfall
 y_predicted = df_comb_seas["below_average"]
@@ -225,7 +250,9 @@ y_predicted = df_comb_seas["below_average"]
 cm = confusion_matrix(y_target=y_target, 
                       y_predicted=y_predicted)
 # print(cm)
-
+tn,fp,fn,tp=cm.flatten()
+print(f"hit rate: {round(tp/(tp+fn)*100,1)}% ({tp}/{tp+fn})")
+print(f"miss rate: {round(fp/(tp+fp)*100,1)}% ({fp}/{tp+fp})")
 fig, ax = plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True) #,class_names=["No","Yes"])
 ax.set_ylabel("Dry spell in ADMIN2 during season")
 ax.set_xlabel("Lower tercile precipitation in ADMIN2 during season")
@@ -246,15 +273,14 @@ for i,m in enumerate(df_comb_seas.ADM1_EN.unique()):
     
     cm = confusion_matrix(y_target=y_target, 
                           y_predicted=y_predicted)
+    tn,fp,fn,tp=cm.flatten()
+    print(f"hit rate {m}: {round(tp/(tp+fn)*100,1)}% ({tp}/{tp+fn})")
+    print(f"miss rate {m}: {round(fp/(tp+fp)*100,1)}% ({fp}/{tp+fp})")
     ax = fig.add_subplot(rows,colp_num,i+1)
     plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax)
     ax.set_ylabel("Dry spell in ADMIN2 during season")
     ax.set_xlabel("Lower tercile precipitation in ADMIN2 during season")
     ax.set_title(m)
-
-
-#mapping of month to season. Computed by rolling sum, i.e. month indicates last month of season
-seasons_rolling={3:"JFM",4:"FMA",5:"MAM",6:"AMJ",7:"MJJ",8:"JJA",9:"JAS",10:"ASO",11:"SON",12:"OND",1:"NDJ",2:"DJF"}
 
 
 #check if difference per season
@@ -271,6 +297,9 @@ for i,m in enumerate(df_comb_seas.sort_values(by="date_month").date_month.dt.mon
 
     cm = confusion_matrix(y_target=y_target, 
                           y_predicted=y_predicted)
+    tn,fp,fn,tp=cm.flatten()
+    print(f"hit rate {seasons_rolling[m]}: {round(tp/(tp+fn)*100,1)}% ({tp}/{tp+fn})")
+    print(f"miss rate {seasons_rolling[m]}: {round(fp/(tp+fp)*100,1)}% ({fp}/{tn+fp})")
     ax = fig.add_subplot(rows,colp_num,i+1)
     plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax)
     ax.set_ylabel("Dry spell in ADMIN2 during season")
@@ -387,12 +416,13 @@ position = range(1, num_plots + 1)
 fig=plt.figure(figsize=(20,5))
 for i,a in enumerate(df_fma_bavgadm.ADM1_EN.unique()):
     ax = fig.add_subplot(rows,colp_num,i+1)
-    g=sns.histplot(
-    df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a],x="dry_spell",ax=ax,bins=np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()+2),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.set_xticks(np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()+1))
-    ax.set_title(a)
+    if len(df_fma_bavgadm[(df_fma_bavgadm.ADM1_EN==a)&(df_fma_bavgadm.dry_spell==1)])>0:
+        g=sns.histplot(
+        df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a],x="dry_spell",ax=ax,bins=np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()+2),stat="count",hue="below_average",common_norm=False,kde=True) #,hue="below_average"
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax.set_xticks(np.arange(0,df_fma_bavgadm[df_fma_bavgadm.ADM1_EN==a].dry_spell.max()+1))
+        ax.set_title(a)
 
 
 ##Attempt to check for differences per adm2
@@ -669,7 +699,4 @@ for i,a in enumerate(df_apr_bavgadm.ADM1_EN.unique()):
     ax.set_xticks(np.arange(0,df_apr_bavgadm[df_apr_bavgadm.ADM1_EN==a].dry_spell.max()+1))
     ax.set_title(a)
     ax.set_xlabel("Number of ADM2's with a dry spell")
-
-
-
 
