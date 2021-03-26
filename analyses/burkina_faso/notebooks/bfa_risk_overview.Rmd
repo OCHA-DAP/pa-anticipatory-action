@@ -1,5 +1,6 @@
 ---
 title: '<img src="ocha_logo.png" style="height:40px;float:left; margin:10px" /><img src="centre_logo.png" style="height:50px;float:left; margin:10px" />'
+pagetitle: 'BFA Risk Analysis'
 output:
   html_document:
     df_print: paged
@@ -19,6 +20,8 @@ editor_options:
 
 # Baseline Risk Analysis for Burkina Faso
 Analysis last updated `r Sys.Date()`
+
+<br>
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("data_summary.R")
