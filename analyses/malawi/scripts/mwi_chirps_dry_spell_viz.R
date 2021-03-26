@@ -71,9 +71,15 @@ df_ds %>%
   labs(title='20 years of dry spells in Malawi\'s Admin 2 regions, 2000-2020', x='Date', y='Admin 2 region', fill='')+
   theme(axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
-        legend.position = 'bottom')+
+        legend.position = 'bottom',
+        strip.text = element_text(size=16,angle=0),
+        axis.text.x = element_text(size=16),
+        legend.text = element_text(size=16),
+        axis.title.x = element_text(size=16),
+        axis.title.y = element_text(size=16),
+        plot.title = element_text(size=32))+
   scale_x_date(date_labels = "%b")
-ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'))
+ggsave(paste0(dry_spell_dir, '/dry_spell_plots/mean_back_dry_spell_hm.png'),width=20,height=15)
 
 # Line plot
 df_ds %>%
