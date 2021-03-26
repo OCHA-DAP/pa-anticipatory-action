@@ -5,6 +5,7 @@ library(sf)
 library(readxl)
 library(stringr)
 library(tidyverse)
+library(ztable)
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
 bfa_dir <- paste0(data_dir, '/raw/burkina_faso/')
@@ -81,7 +82,8 @@ df_op <- read_excel(paste0(bfa_dir, '3w-bfa-presence-operationnelle-310120211.xl
 # Get the number of activities per adm1
 df_op_sum <- df_op %>% 
   group_by(adm1_name) %>%
-  summarise(num_op = n())
+  summarise(num_op = n())%>%
+  mutate(num_op = as.numeric(num_op))
 
 
 # 2. Combine the variables ------------------------------------------------

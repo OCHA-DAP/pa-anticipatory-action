@@ -1,7 +1,5 @@
 ---
-title: 'Baseline Risk Analysis for Burkina Faso'
-author: 'Centre for Humanitarian Data' 
-date: "Analysis last updated: `r Sys.Date()`"
+title: '<img src="ocha_logo.png" style="height:40px;float:left; margin:10px" /><img src="centre_logo.png" style="height:50px;float:left; margin:10px" />'
 output:
   html_document:
     df_print: paged
@@ -15,6 +13,13 @@ editor_options:
   chunk_output_type: inline
 ---
 
+<br>
+<br>
+<br>
+
+# Baseline Risk Analysis for Burkina Faso
+Analysis last updated `r Sys.Date()`
+
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("data_summary.R")
 library(kableExtra)
@@ -23,11 +28,6 @@ knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
 
-<img src="centre_logo.png" style="position:absolute;top:20px;right:0px;height:50px" />
-<img src="ocha_logo.png" style="position:absolute;top:90px;right:0px;height:40px" />
-
-&nbsp;
-&nbsp;
 
 This is an initial exploration into humanitarian risks and vulnerabilities in Burkina Faso. Data is compiled and presented on the following elements: 
 
@@ -46,7 +46,8 @@ These factors vary across regions as shown by the figure below.
 
 ## Geographic overview of key factors
 
-The North-Eastern regions of Burkina Faso (eg. Sahel, Centre-Nord) are more vulnerable, with high flood and drought risk. These regions also have a population more vulnerable to food insecurity and larger number of IDPs relative to the rest of the country. The country's humanitarian presence is also most focused on these regions. 
+The North-Eastern regions of Burkina Faso (eg. Sahel, Centre-Nord) are more vulnerable, with high flood and drought risk. These regions also have a population more vulnerable to food insecurity and larger number of IDPs relative to the rest of the country. The country's humanitarian presence is also most focused on these regions.
+
 
 ```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
 
@@ -70,7 +71,7 @@ df_sum_display %>%
                align = c('l', 'l', 'l', 'l', 'l', 'l', 'l', 'l')) %>%
         collapse_rows(columns = 1, valign = "top") %>%
         kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
-                      fixed_thead = T)
+                      fixed_thead = T) 
 
 ```
 
