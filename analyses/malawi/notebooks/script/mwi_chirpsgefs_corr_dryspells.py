@@ -81,16 +81,15 @@ chirpsgefs_processed_dir = os.path.join(dry_spells_processed_dir,"chirpsgefs")
 #we have different methodologies of computing dryspells and rainy season
 #this notebook chooses one, which is indicated by the files being used
 chirpsgefs_stats_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
-dry_spells_list_path=os.path.join(dry_spells_processed_dir,f"dry_spells_during_rainy_season_list_2000_2020_mean_back.csv")
 chirps_rolling_sum_path=os.path.join(dry_spells_processed_dir,"data_mean_values_long.csv")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 
 
-# ds_meth="mean_2mm"
+ds_meth="mean_2mm"
 # ds_meth="consecutive_days_2mm"
-ds_meth="consecutive_days_4mm"
+# ds_meth="consecutive_days_4mm"
 
 
 chirpsgefs_stats_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
@@ -121,16 +120,17 @@ df_chirpsgefs.head()
 cg_stats=["max_cell","mean_cell","min_cell","perc_se2","perc_se10"]
 
 
+#less than num unique dates*adm2s cause most adm2s end their rainy season earlier (or start later) and thus those date-adm2 combinations are not included
 len(df_chirpsgefs)
 
 
 len(df_chirpsgefs.date.unique())
 
 
-df_chirpsgefs.date.dt.month.unique()
-
-
 len(df_chirpsgefs.ADM2_EN.unique())
+
+
+df_chirpsgefs.date.dt.month.unique()
 
 
 #plot the distributions of the different statistics
@@ -243,29 +243,6 @@ len(df_histformerg[df_histformerg.rollsum_15d<=2])
 len(df_histformerg[df_histformerg.mean_cell<=2])
 
 
-#plot timeseries for one adm2
-#can see that trends are similair, but there are large differences, especially for the points of our interested, i.e. when observed <=2mm
-from matplotlib.ticker import StrMethodFormatter
-fig,ax=plt.subplots()
-df_histformergbal=df_histformerg[df_histformerg.ADM2_EN=="Balaka"]
-df_histformergbal.sort_values(by="dateforec").plot(x="date_forec_end",y="mean_cell" ,figsize=(16, 8), color='red',legend=True,ax=ax,label="forecasted")
-df_histformergbal.sort_values(by="dateforec").plot(x="date_forec_end",y="rollsum_15d" ,figsize=(16, 8), color='#86bf91',legend=True,ax=ax,label="observed")
-
-# Set x-axis label
-ax.set_xlabel("Start date", labelpad=20, weight='bold', size=12)
-
-# Set y-axis label
-ax.set_ylabel("Dry spell", labelpad=20, weight='bold', size=12)
-
-# Despine
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.spines['left'].set_visible(False)
-ax.spines['bottom'].set_visible(False)
-
-plt.title(f"Observed and forecasted rainfall in Balaka")
-
-
 #TODO
 # #hehh would expect to not have any with during_rainy_season_bin=0?
 # #using old definition of rainy season in current rolling sum file --> update and check again (cause rainy season should only become stricter so still strange). 
@@ -287,6 +264,9 @@ df_ds.head()
 
 #number of historically observed dry spells
 len(df_ds)
+
+
+len(df_ds.dry_spell_first_date.unique())
 
 
 #chirpsgefs 2020 data is not complete, so these might be removed
@@ -382,6 +362,9 @@ for i, s in enumerate(cg_stats):
     ax.set_title(s)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
+
+
+
 
 
 num_plots = len(cg_stats)
@@ -609,8 +592,9 @@ for threshold in threshold_list:
     recall,precision,num_obs,num_obsfor,num_for,num_forobs=stats_threshold(df_dates,df_chirpsgefs,threshold)
     df_pr.loc[threshold,["recall","precision","num_obs","num_obsfor","num_for","num_forobs"]]=recall,precision,num_obs,num_obsfor,num_for,num_forobs
     print(f"The recall (TP/(TP+FN)) with {threshold}mm threshold is: {round(recall,4)} ({num_obsfor}/{num_obs})")
-    print(f"The precision (TP/(TP+FP))  with {threshold}mm threshold is: {round(precision,4)} ({num_forobs}/{num_for})\n")
-# df_pr.to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
+    print(f"The precision (TP/(TP+FP))  with {threshold}mm threshold is: {round(precision,4)} ({num_forobs}/{num_for})")
+    print(f"The miss rate (FP/(TP+FP))  with {threshold}mm threshold is: {round((num_for-num_forobs)/(num_for),4)} ({num_for-num_forobs}/{num_for})\n")
+df_pr.to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
 
 
 # ### Transform data for heatmap
