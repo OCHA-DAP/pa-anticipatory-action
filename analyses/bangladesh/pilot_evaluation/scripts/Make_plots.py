@@ -23,11 +23,11 @@ input_dir = os.path.join(DATA_DIR, dirs['data_dir'])
 output_dir = os.path.join(DATA_DIR, dirs['plot_dir'], f'{adm}_Plots')
 shp_dir = os.path.join(DATA_DIR, dirs['adm_dir'])
 
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+
 # TODO: Implement functionality to remove outliers from map - (needed for FWHM)
 # TODO: Reclass admin units with no flooding as zero rather than na?
 # TODO: Fix hard coding with aoi selection, shapefile naming, plot numbers
-
-logger = logging.getLogger()
 
 def make_time_series(df_shp, df_data, id_col):
     # Time series of flooding - satellite
@@ -98,4 +98,4 @@ if __name__ == "__main__":
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     make_graphs(adm)
-    logger.info(f'Output files saved to {output_dir}')
+    logging.info(f'Output files saved to {output_dir}')
