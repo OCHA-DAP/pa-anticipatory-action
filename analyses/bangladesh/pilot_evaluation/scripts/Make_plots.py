@@ -15,6 +15,14 @@ import logging
 
 # Directory locations for the input and output files should be specified in the 'config.yml' file.
 
+DATA_DIR = os.environ['AA_DATA_DIR']
+params = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['PARAMS']
+adm = params['adm']
+dirs = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['DIRS']
+input_dir = os.path.join(DATA_DIR, dirs['data_dir'])
+output_dir = os.path.join(DATA_DIR, dirs['plot_dir'], f'{adm}_Plots')
+shp_dir = os.path.join(DATA_DIR, dirs['adm_dir'])
+
 # TODO: Implement functionality to remove outliers from map - (needed for FWHM)
 # TODO: Reclass admin units with no flooding as zero rather than na?
 # TODO: Fix hard coding with aoi selection, shapefile naming, plot numbers
@@ -87,14 +95,6 @@ def make_graphs(adm):
 
 
 if __name__ == "__main__":
-    params = utils.parse_yaml('pilot_evaluation/config.yml')['PARAMS']
-    adm = params['adm']
-    dirs = utils.parse_yaml('pilot_evaluation/config.yml')['DIRS']
-    input_dir = dirs['data_dir']
-    output_dir = dirs['plot_dir']
-    shp_dir = dirs['adm_dir']
-
-    output_dir = os.path.join(output_dir, f'{adm}_Plots')
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     make_graphs(adm)
