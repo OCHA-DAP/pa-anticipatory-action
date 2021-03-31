@@ -9,10 +9,11 @@ copernicus/
 chirps/
 analyses/bangladesh/data/*
 analyses/bangladesh/results/*/archive/*
+analyses/bangladesh/trigger_development/processed_data/*
 
 #Local experiments
 Experiments
-analyses/bangladesh/notebooks/scratch/*
+analyses/bangladesh/*/scratch/*
 
 # IDEs
 .idea/*
