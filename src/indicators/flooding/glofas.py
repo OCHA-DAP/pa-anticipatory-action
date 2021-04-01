@@ -202,7 +202,7 @@ class GlofasReanalysis(Glofas):
         super().__init__(
             stations_lon_lat=stations_lon_lat,
             year_min=1979,
-            year_max=2021,
+            year_max=2020,
             cds_name="cems-glofas-historical",
             dataset=["consolidated_reanalysis"],
             dataset_variable_name="dataset",
