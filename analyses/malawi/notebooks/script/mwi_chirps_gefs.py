@@ -53,6 +53,9 @@ import re
 import seaborn as sns
 
 
+xr.show_versions()
+
+
 from pathlib import Path
 import sys
 import os
@@ -67,6 +70,15 @@ from src.utils_general.plotting import plot_raster_boundaries_clip
 
 
 # #### Set config values
+
+#adm level to aggregate the raster cells to 
+adm_level="adm1"#"adm2" #adm1
+
+if adm_level=="adm1":
+    adm_col="ADM1_EN"
+if adm_level=="adm2":
+    adm_col="ADM2_EN"
+
 
 country="malawi"
 config=Config()
@@ -87,6 +99,12 @@ chirpsgefs_dir = os.path.join(config.DROUGHTDATA_DIR,"chirps_gefs")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
+
+#define which to use based on adm_level
+if adm_level=="adm1":
+    adm_bound_path=adm1_bound_path
+elif adm_level=="adm2":
+    adm_bound_path=adm2_bound_path
 
 
 # #### Rainy season
@@ -172,7 +190,7 @@ def download_chirpsgefs(date,output_dir,chirpsgefs_ftp_url,days=""):
 #     download_chirpsgefs(d,chirpsgefs_dir,chirpsgefs_ftp_url_africa_15day)
 
 
-def ds_stats_adm(ds, raster_transform, date, adm_path,ds_thresh_list=[2,10]):
+def ds_stats_adm(ds, raster_transform, date, adm_path,ds_thresh_list=[2,4,5,10,15,20,25,30,35,40,45,50]):
     # compute statistics on level in adm_path for all dates in ds
     df = gpd.read_file(adm_path)
     # df["max_cell_touched"] = pd.DataFrame(
@@ -203,6 +221,9 @@ def ds_stats_adm(ds, raster_transform, date, adm_path,ds_thresh_list=[2,10]):
     return df
 
 
+adm_bound_path
+
+
 #this takes some time to compute, couple of hours at max
 df_list=[]
 #load the tif file for each date and compute the statistics
@@ -211,7 +232,7 @@ for d in all_dates:
     filename=f"chirpsgefs_africa_{d_str}.tif"
     try:
         rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
-        df_date = ds_stats_adm(rds.sel(band=1), rds.rio.transform(), d_str, adm2_bound_path)
+        df_date = ds_stats_adm(rds.sel(band=1), rds.rio.transform(), d_str, adm_bound_path)
         df_list.append(df_date)
     except Exception as e:
             print(e)
@@ -220,21 +241,40 @@ for d in all_dates:
 df_hist_all=pd.concat(df_list)
 
 
-#remove the adm2-date entries outside the rainy season for that specific adm2
+#remove the adm-date entries outside the rainy season for that specific adm
 #before we included all forecasts within the min start of the rainy season and max end across the whole country
-list_hist_rain_adm2=[]
-for a in df_hist_all.ADM2_EN.unique():
-    dates_adm2=pd.Index([])
-    for i in df_rain_filled[df_rain_filled.ADM2_EN==a].season_approx.unique():
-        seas_range=pd.date_range(df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)].onset_date.values[0],df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)].cessation_date.values[0])
-        dates_adm2=dates_adm2.union(seas_range)
-    list_hist_rain_adm2.append(df_hist_all[(df_hist_all.ADM2_EN==a)&(df_hist_all.date.isin(dates_adm2))])
-df_hist_rain_adm2=pd.concat(list_hist_rain_adm2)
+list_hist_rain_adm=[]
+if adm_level=="adm1":
+    gdf_adm2=gpd.read_file(adm2_bound_path)
+    df_rain_filled_merged=df_rain_filled.merge(gdf_adm2[["ADM2_EN","ADM1_EN"]],on="ADM2_EN")
+    df_rain_filled_adm=df_rain_filled_merged.groupby(["ADM1_EN","season_approx"],as_index=False).agg({'onset_date': np.min,"cessation_date":np.max})
+elif adm_level=="adm2":
+    df_rain_filled_adm=df_rain_filled.copy()
+    
+for a in df_hist_all[adm_col].unique():
+    dates_adm=pd.Index([])
+    for i in df_rain_filled_adm[df_rain_filled_adm[adm_col]==a].season_approx.unique():
+        seas_range=pd.date_range(df_rain_filled_adm[(df_rain_filled_adm[adm_col]==a)&(df_rain_filled_adm.season_approx==i)].onset_date.values[0],df_rain_filled_adm[(df_rain_filled_adm[adm_col]==a)&(df_rain_filled_adm.season_approx==i)].cessation_date.values[0])
+        dates_adm=dates_adm.union(seas_range)
+    list_hist_rain_adm.append(df_hist_all[(df_hist_all[adm_col]==a)&(df_hist_all.date.isin(dates_adm))])
+df_hist_rain_adm=pd.concat(list_hist_rain_adm)
+
+
+# #remove the adm2-date entries outside the rainy season for that specific adm2
+# #before we included all forecasts within the min start of the rainy season and max end across the whole country
+# list_hist_rain_adm2=[]
+# for a in df_hist_all.ADM2_EN.unique():
+#     dates_adm2=pd.Index([])
+#     for i in df_rain_filled[df_rain_filled.ADM2_EN==a].season_approx.unique():
+#         seas_range=pd.date_range(df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)].onset_date.values[0],df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)].cessation_date.values[0])
+#         dates_adm2=dates_adm2.union(seas_range)
+#     list_hist_rain_adm2.append(df_hist_all[(df_hist_all.ADM2_EN==a)&(df_hist_all.date.isin(dates_adm2))])
+# df_hist_rain_adm2=pd.concat(list_hist_rain_adm2)
 
 
 # #save file
-# hist_path=os.path.join(country_data_exploration_dir,"chirpsgefs","mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
-# df_hist_rain_adm2.drop("geometry",axis=1).to_csv(hist_path,index=False)
+# hist_path=os.path.join(country_data_exploration_dir,"chirpsgefs",f"mwi_chirpsgefs_rainyseas_stats_mean_back_{adm_level}.csv")
+# df_hist_rain_adm.drop("geometry",axis=1).to_csv(hist_path,index=False)
 
 
 # ### Archive
