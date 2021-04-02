@@ -21,7 +21,6 @@ FFWC_RL_FOLDER=Path(os.environ['AA_DATA_DIR']) / 'exploration/bangladesh/FFWC_Da
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 Discharge_threshold=100000
 ndays_threshold_glofas=2
-GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'raw/bangladesh/GLOFAS_Data'
 
 # def get_ffwc_log_df():
 #     ffwc_rl_name='{}/{}/{}'.format(DIR_PATH,FFWC_RL_FOLDER,FFWC_RL_LOG_FILENAME)
