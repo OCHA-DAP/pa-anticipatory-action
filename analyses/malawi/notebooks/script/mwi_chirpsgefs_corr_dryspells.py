@@ -576,25 +576,92 @@ def stats_threshold(df_dates,df_chirpsgefs,threshold):
     df_dsforgr["ID_obs"]=df_dates_comb.groupby("ID_forec").ID_obs.apply(lambda x: x.min(skipna=True))
     df_forid=df_dsforgr.reset_index().merge(df_obs_dates[["ID_obs","start_date"]],how="left",on="ID_obs").rename(columns={"start_date":"start_date_obs"})
     df_forid=df_forid.merge(df_forec_dates[["ID_forec","start_date"]],how="left",on="ID_forec").rename(columns={"start_date":"start_date_forec"})
-    
+    df_dates_tn=df_dates_comb[(df_dates_comb.dryspell_obs==0)&(df_dates_comb.dryspell_forec==0)]
+    pd.options.mode.chained_assignment = None  # default='warn'
+    df_dates_tn.loc[:,"ID_tn"]=df_dates_tn.sort_values(["ADM2_EN","date"]).groupby("ADM2_EN").date.diff().dt.days.ne(1).cumsum()
+    tn=len(df_dates_tn.ID_tn.unique())
+
     recall=len(df_obsid[df_obsid.dryspell_forec>0])/len(df_obsid)
     num_obs=len(df_obsid)
     num_obsfor=len(df_obsid[~df_obsid.ID_forec.isnull()])
     precision=len(df_forid[df_forid.dryspell_obs>0])/len(df_forid)
     num_for=len(df_forid)
     num_forobs=len(df_forid[~df_forid.ID_obs.isnull()])
-    return recall,precision,num_obs,num_obsfor,num_for,num_forobs
+    return recall,precision,num_obs,num_obsfor,num_for,num_forobs,tn
 
 
 threshold_list=[2,5,10,15,20,25]
 df_pr=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
 for threshold in threshold_list:
-    recall,precision,num_obs,num_obsfor,num_for,num_forobs=stats_threshold(df_dates,df_chirpsgefs,threshold)
-    df_pr.loc[threshold,["recall","precision","num_obs","num_obsfor","num_for","num_forobs"]]=recall,precision,num_obs,num_obsfor,num_for,num_forobs
+    recall,precision,num_obs,num_obsfor,num_for,num_forobs,tn=stats_threshold(df_dates,df_chirpsgefs,threshold)
+#     df_pr.loc[threshold,["recall","precision","num_obs","num_obsfor","num_for","num_forobs","tn"]]=recall,precision,num_obs,num_obsfor,num_for,num_forobs,tn
     print(f"The recall (TP/(TP+FN)) with {threshold}mm threshold is: {round(recall,4)} ({num_obsfor}/{num_obs})")
     print(f"The precision (TP/(TP+FP))  with {threshold}mm threshold is: {round(precision,4)} ({num_forobs}/{num_for})")
     print(f"The miss rate (FP/(TP+FP))  with {threshold}mm threshold is: {round((num_for-num_forobs)/(num_for),4)} ({num_for-num_forobs}/{num_for})\n")
-df_pr.to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
+    cm=np.array([[tn, num_for-num_obsfor],[num_obs-num_obsfor, num_obsfor]])
+    plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,class_names=["No","Yes"])#,axis=ax)
+    plt.xlabel("Forecasted dry spell")
+    plt.ylabel("Observed dry spell")
+    plt.title(f"{threshold}mm threshold")
+    plt.show()
+    # df_pr.to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
+
+
+# ### Experiment extent
+
+def stats_threshold_extent(df_dates,df_chirpsgefs,threshold):
+    df_cg_ds=df_chirpsgefs[df_chirpsgefs.mean_cell<=threshold]
+    df_cg_ds=df_cg_ds.sort_values(["ADM2_EN","date"]).reset_index(drop=True)
+    a = [pd.date_range(*r, freq='D') for r in df_cg_ds[['date', 'date_forec_end']].values]
+    df_cg_daterange=df_cg_ds[["ADM2_EN"]].join(pd.DataFrame(a)).set_index(["ADM2_EN"]).stack().droplevel(-1).reset_index()
+    df_cg_daterange.rename(columns={0:"date"},inplace=True)
+    df_cg_daterange["dryspell_forec"]=1
+    df_cg_daterange=df_cg_daterange.drop_duplicates()
+    df_cg_daterange["ID_forec"]=df_cg_daterange.sort_values(["ADM2_EN","date"]).groupby("ADM2_EN").date.diff().dt.days.ne(1).cumsum()
+    df_dates_comb=df_dates.merge(df_cg_daterange,how="left",on=["date","ADM2_EN"])
+    df_dates_comb["dryspell_forec"]=df_dates_comb["dryspell_forec"].replace(np.nan,0)
+    df_forec_dates=df_dates_comb.groupby("ID_forec",as_index=False).agg(start_date=("date","min"),end_date=("date","max"))
+    df_obs_dates=df_dates_comb.groupby("ID_obs",as_index=False).agg(start_date=("date","min"),end_date=("date","max"))
+    df_dsobsgr=df_dates_comb.groupby("ID_obs").sum()
+    df_dsobsgr=df_dsobsgr.drop("ID_forec",axis=1)
+    df_dsobsgr["ID_forec"]=df_dates_comb.groupby("ID_obs").ID_forec.apply(lambda x: x.min(skipna=True))
+    df_obsid=df_dsobsgr.reset_index().merge(df_forec_dates[["ID_forec","start_date"]],how="left",on="ID_forec").rename(columns={"start_date":"start_date_forec"})
+    df_obsid=df_obsid.merge(df_obs_dates[["ID_obs","start_date"]],how="left",on="ID_obs").rename(columns={"start_date":"start_date_obs"})
+    df_obsid["days_late"]=(df_obsid.start_date_forec-df_obsid.start_date_obs).dt.days
+    df_dsforgr=df_dates_comb.groupby("ID_forec").sum()
+    df_dsforgr=df_dsforgr.drop("ID_obs",axis=1)
+    df_dsforgr["ID_obs"]=df_dates_comb.groupby("ID_forec").ID_obs.apply(lambda x: x.min(skipna=True))
+    df_forid=df_dsforgr.reset_index().merge(df_obs_dates[["ID_obs","start_date"]],how="left",on="ID_obs").rename(columns={"start_date":"start_date_obs"})
+    df_forid=df_forid.merge(df_forec_dates[["ID_forec","start_date"]],how="left",on="ID_forec").rename(columns={"start_date":"start_date_forec"})
+    df_dates_tn=df_dates_comb[(df_dates_comb.dryspell_obs==0)&(df_dates_comb.dryspell_forec==0)]
+    return df_dates_comb,df_obsid,df_forid
+
+
+df_dates_comb,df_obsid,df_forid=stats_threshold_extent(df_dates,df_chirpsgefs,25)
+
+
+df_obsid["date_month"]=df_obsid.start_date_obs.dt.to_period("M")
+
+
+df_obsid["forecasted"]=np.where(df_obsid.ID_forec.isnull(),0,1)
+
+
+df_obsid.groupby("date_month").agg({"forecasted":["sum","count"]})#,"forecasted":"count"})
+
+
+df_forid["observed"]=np.where(df_forid.ID_obs.isnull(),0,1)
+
+
+df_forid["date_month"]=df_forid.start_date_forec.dt.to_period("M")
+
+
+df_forid
+
+
+df_fordm=df_forid.groupby("date_month").agg(count=('ID_forec', 'count'),obs_ds=("observed","sum"))
+
+
+
 
 
 # ### Transform data for heatmap
