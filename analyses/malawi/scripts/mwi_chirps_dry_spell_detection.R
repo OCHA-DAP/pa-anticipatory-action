@@ -585,11 +585,143 @@ map_consec4mm_def <- mwi_adm2 %>%
 
 #gridExtra::grid.arrange(map_original_def, map_consec2mm_def, map_consec4mm_def, nrow = 1) # for viewing in console only
 grob <- gridExtra::arrangeGrob(map_original_def, map_consec2mm_def, map_consec4mm_def, nrow = 1) # creates object that can be saved programmatically
-ggsave(file=paste0(data_dir, "/processed/malawi/dry_spells/dry_spell_plots/definition_comparison.png"), grob)
+#ggsave(file=paste0(data_dir, "/processed/malawi/dry_spells/dry_spell_plots/definition_comparison.png"), grob)
+
+####
+# Explore dry spell durations based on 2mm cumulative definition
+####
+
+durations <- rainfall_during_dry_spells_stats %>%
+                                      mutate(region = substr(pcode, 3, 3)) %>% 
+                                      mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
+                                      left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE'))
+# roll up at adm1
+durations %>% 
+  ggplot(aes(x = n_days, color = region, fill = region)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  xlab("Number of days in spell") +
+  ylab("Number of dry spells * adm2") +
+  ggtitle("Duration of Dry Spells per Region 2000-2020") +
+  facet_wrap(~region)
+
+durations %>% # same as above but bars shown side-by-side
+  ggplot(aes(x = n_days, color = region, fill = region)) +
+  geom_histogram(alpha = 0.6, binwidth = 5, position = "dodge" ) +
+  xlab("Number of days in spell") +
+  ylab("Number of dry spells * adm2") +
+  ggtitle("Duration of Dry Spells per Region 2000-2020")
+
+# at adm2
+
+durations %>% 
+  ggplot(aes(x = n_days, color = ADM2_EN, fill = ADM2_EN)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  xlab("Number of days in spell") +
+  ylab("Number of dry spells") +
+  ggtitle("Duration of Dry Spells per District 2000-2020") +
+  facet_wrap(~ADM2_EN)
+
+# compare with nbr of days with <= 2mm during rainy_season
+data_long %>%
+  mutate(region = substr(pcode, 3, 3)) %>% 
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin_2mm == 0) %>%
+  group_by(region, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x=n_dry_days, color = region, fill = region)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  facet_wrap(~ region) +
+  ylab("Nbr of adm2 * years")
+
+data_long %>%
+  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin_2mm == 0) %>%
+  group_by(ADM2_EN, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x=n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  facet_wrap(~ ADM2_EN) +
+  ylab("Nbr of years")
+
+data_long %>%
+  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin_2mm == 0) %>%
+  group_by(ADM2_EN, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  summary(n_dry_days)
+
+# compare with nbr of days with <= 4mm
+data_long %>%
+  mutate(region = substr(pcode, 3, 3)) %>% 
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin == 0) %>%
+  group_by(region, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x=n_dry_days, color = region, fill = region)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  facet_wrap(~ region) +
+  ylab("Nbr of adm2 * years")
+
+data_long %>%
+  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin == 0) %>%
+  group_by(ADM2_EN, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x=n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  facet_wrap(~ ADM2_EN) +
+  ylab("Nbr of years")
+
+data_long %>%
+  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin == 0) %>%
+  group_by(ADM2_EN, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  summary(n_dry_days)
+
+# compare with nbr of days with <= 8mm (DCCMS' current definition)
+data_long %>%
+  mutate(region = substr(pcode, 3, 3)) %>% 
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
+  mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>% # rainy day defined as having received at least 8mm
+  filter(during_rainy_season_bin == 1 & rainy_day_bin_8mm == 0) %>%
+  group_by(region, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x=n_dry_days, color = region, fill = region)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  facet_wrap(~ region) +
+  ylab("Nbr of adm2 * years")
+
+data_long %>%
+  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin_8mm == 0) %>%
+  group_by(ADM2_EN, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  ggplot(aes(x=n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
+  geom_histogram(alpha = 0.6, binwidth = 5) +
+  facet_wrap(~ ADM2_EN) +
+  ylab("Nbr of years")
+
+data_long %>%
+  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>%
+  filter(during_rainy_season_bin == 1 & rainy_day_bin_8mm == 0) %>%
+  group_by(ADM2_EN, season_approx) %>%
+  summarise(n_dry_days = n()) %>%
+  ungroup() %>%
+  summary(n_dry_days)
 
 
-# TO DO / NEXT STEPS
-# number of rainy days in the year
+#### TO DO / NEXT STEPS
 # planting season: Effective planting season start: Two consecutive 10-day periods with at least 20mm of rain each (WFP) after 1 Nov.
 # dry spell timing in days since planting
 
