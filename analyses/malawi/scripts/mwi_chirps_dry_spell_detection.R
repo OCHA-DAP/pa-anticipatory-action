@@ -81,22 +81,22 @@ s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s20
 
 # crop and masked area outside of MWI
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
-data <- mask(s2000_s2020_cropped, mask = mwi_adm2)
-# saveRDS(data, paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
-#data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
-# plot(data) # visual inspection
+data_masked <- mask(s2000_s2020_cropped, mask = mwi_adm2)
+# saveRDS(data_masked, paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
+#data_masked <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5.RDS")) # 5-deg resolution
+# plot(data_masked) # visual inspection
 
 # explore compiled raster file ("brick")
-st_crs(data) # coordinate reference system
-st_bbox(data) # spatial extent
-ncell(data) # number of cells per layer (nrow * ncol)
-nrow(data) # number of rows in a layer
-ncol(data) # number of columns in a layer
-nlayers(data) # number of layers (days)
-nbr_layers <- nlayers(data)
-dim(data) # (nrow, ncol, nlayers)
-yres(data) # y-resolution
-xres(data) # x-resolution
+st_crs(data_masked) # coordinate reference system
+st_bbox(data_masked) # spatial extent
+ncell(data_masked) # number of cells per layer (nrow * ncol)
+nrow(data_masked) # number of rows in a layer
+ncol(data_masked) # number of columns in a layer
+nlayers(data_masked) # number of layers (days)
+nbr_layers <- nlayers(data_masked)
+dim(data_masked) # (nrow, ncol, nlayers)
+yres(data_masked) # y-resolution
+xres(data_masked) # x-resolution
 
 # create list of regions
 region_list <- mwi_adm2[,c('ADM2_PCODE', 'ADM2_EN', 'geometry')]
