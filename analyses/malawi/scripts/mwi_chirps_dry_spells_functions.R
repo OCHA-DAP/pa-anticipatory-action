@@ -75,6 +75,7 @@ convertToLongFormat <- function(data.wideformat){
   return(data.longformat)
 }
 
+
 # can create mwi_adm variable in computeLayerStat but would need to go back and fix all adm2 scripts so creating new function for adm3 for now
 convertToLongFormatADM3 <- function(data.wideformat){
   
@@ -102,6 +103,17 @@ computeRollingSum <- function(dataframe_long, window){
           arrange(pcode, date) %>%
           group_by(pcode) %>%
           mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'right')
+    ) 
+  return(rolling_sum)
+}
+
+## compute rolling sum
+computeRollingSumPerPixel <- function(dataframe_long, window){
+  
+  rolling_sum <-  dataframe_long %>%
+    arrange(cell, date) %>%
+    group_by(cell) %>%
+    mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'right')
     ) 
   return(rolling_sum)
 }
@@ -151,14 +163,45 @@ findRainyOnset <- function() {
   
           }
 
-## compute cessation date for every rainy season per adm2
+## compute onset date for every rainy season per pixel
+findRainyOnsetPerPixel <- function() {
+  
+  # identify 10-day periods with at least 40mm cumulative yearound
+  data_long$min_cum_40mm_bin <- ifelse(data_long$rollsum_10d >= 40, 1, 0) # is this day in a 40+mm period?
+ 
+  # identify 10-day dry spells (10 consecutive days with less than 2mm of total rain) yearound
+  data_long$less_than_cum_2mm_bin <- ifelse(data_long$rollsum_10d < 2, 1, 0) # is this day in a dry period (<2mm)?
+  
+  # verify no 10-day dry spells following in 30 days of first day with >=40mm cum sum yearound
+  data_long <- data_long %>% 
+    group_by(cell) %>%
+    mutate(nbr_dry_spell_days_win_30d = zoo::rollsum(less_than_cum_2mm_bin, k = 30, fill = NA, align = 'left'),
+           followed_by_ds_win_30d_bin = ifelse(nbr_dry_spell_days_win_30d > 0, 1, 0))  
+  
+  # select earliest date per season_approx after 1 Nov that meets both criteria
+  rainy_onsets <- data_long %>%
+    filter(season_approx != 'outside rainy season') %>% # exclude Aug-Sept
+    mutate(meets_onset_criteria = ifelse(min_cum_40mm_bin == 1 & followed_by_ds_win_30d_bin == 0, 1, 0)) %>% # min 40mm in 15 days and not followed by 10d dry spells within 30 days
+    filter(meets_onset_criteria == 1 & month %in% c(11, 12, 1, 2)) %>% # period post 1 Nov. Allows Nov-Feb for onsets)
+    group_by(cell, season_approx) %>%
+    slice(which.min(date)) %>%
+    ungroup() %>%
+    dplyr::select(cell, season_approx, date) %>%
+    rename(onset_date = date) 
+  
+  rainy_onsets$onset_date[rainy_onsets$season_approx == '1999'] <- NA # set values for 1999 season as NA since no data Oct-Dec 1999 available
+  
+  return(rainy_onsets)
+  
+}
+
+
+## compute cessation date for every rainy season per adm2 ### TO DO variable "back" was introduced without option to run with original rollsum_15d variable
 findRainyCessation <- function() {
   
    # identify 15-day periods of up to 25mm cum
     data_long$max_cum_25mm_bin <- ifelse(data_long$rollsum_15d_back <= 25, 1, 0) # is this day in a 25mm or less 15d period?
   
-   # select earliest date per season_approx after 15 March that meets criterion
-    
     # select earliest date per season_approx after 15 March that meets criterion
     rainy_cessation <- data_long %>%
                           filter((month >= 4 & month < 8) | (month == 3 & day >= 15)) %>% # in Mar on or after the 15th, or between April and Aug exclusively
@@ -171,6 +214,27 @@ findRainyCessation <- function() {
     
     return(rainy_cessation)
 
+}
+
+
+## compute cessation date for every rainy season per pixel
+findRainyCessationPerPixel <- function() {
+  
+  # identify 15-day periods of up to 25mm cum
+  data_long$max_cum_25mm_bin <- ifelse(data_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less 15d period?
+  
+    # select earliest date per season_approx after 15 March that meets criterion
+  rainy_cessation <- data_long %>%
+                        filter((month >= 4 & month < 8) | (month == 3 & day >= 15)) %>% # in Mar on or after the 15th, or between April and Aug exclusively
+                        filter(max_cum_25mm_bin == 1) %>% # meet criterion for cessation (= 25mm or less cumulative rainfall over 15 days)
+                        group_by(cell, season_approx) %>%
+                        slice(which.min(date)) %>%
+                        ungroup() %>%
+                        dplyr::select(cell, season_approx, date) %>%
+                        rename(cessation_date = date) 
+  
+  return(rainy_cessation)
+  
 }
 
 ## user-defined run-length encoding function in base R
