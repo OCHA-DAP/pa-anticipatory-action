@@ -217,7 +217,7 @@ nrow(rainy_seasons_detail) / 22 == n_distinct(data$cell) # confirm there is a re
 #write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_per_pixel.csv"), row.names = FALSE)
 
 #####
-## identify dry spells that occurred during a rainy season 
+## identify dry days that occurred during a rainy season per cell
 #####
 
 # determine if each record is within that year's rainy season and if so, how many days into the season it is
@@ -267,7 +267,7 @@ nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were 
 
 #write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel.csv"), row.names = FALSE)
 
-# identify dry spells during rainy seasons
+# identify dry spells during rainy seasons per cell
 dry_spells_details$cell <- as.character(dry_spells_details$cell)
 dry_spells_during_rainy_season_list <- dry_spells_details %>%
                                           left_join(rainy_seasons[, c('cell', 'season_approx', 'onset_date', 'cessation_date')], by = c('cell', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
@@ -284,41 +284,72 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
 #write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel.csv"), row.names = FALSE)
 
 ##############
+# build list of dry spell dates per cell
+##############
+
+# build dataframe of dates per cell
+df <- data.frame()
+
+# extract lists of dates per cell
+for (i in seq_along(1:nrow(dry_spells_during_rainy_season_list))) {
+  
+    row_list <- listDSDaysPerPixel(i)
+    
+    # add individual row to dataframe
+    df <- rbind(df, row_list)
+}
+
+# identify dates as beling during a cell's rainy season & a dry spell 
+df$rainy_season_dry_spell <- 1
+
+# save
+#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel.csv"), row.names = FALSE)
+
+##############
+# build list of dates, across all cells, with binary dry spell/no
+##############
+
+day_list <- data.frame(date = seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'day'))
+cell_by_day <- crossing(day_list, cell_ids) # create list with all day * cell_id combinations
+cell_by_day$cell <- as.character(cell_by_day$cell)
+
+complete_list <- cell_by_day %>%
+                  left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
+                  left_join(cell_adms[,c('cell', 'ADM2_EN', 'region')], by = c('cell')) # add back adm names
+
+nrow(subset(complete_list, rainy_season_dry_spell == 1)) == nrow(df) # check 
+
+# assign 0 to records without a dry spell
+complete_list$rainy_season_dry_spell <- complete_list$rainy_season_dry_spell %>% replace_na(0)
+
+table(complete_list$rainy_season_dry_spell)
+
+#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel.csv"), row.names = FALSE)
+
+##############
 # compute dry spell coverage per adm 
 ##############
 
-# get cell counts per adm1 and adm2
+# compute nbr of cells in rainy_season_dry_spell status per date, per adm
+adm1_ds_counts <- complete_list %>% 
+                    group_by(region, date) %>%
+                    summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm region
+                              nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
+                              perc_ds_cells = round(nbr_ds_cells / nbr_cells, 1))
+adm2_ds_counts <- complete_list %>% 
+                    group_by(ADM2_EN, date) %>%
+                    summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm region
+                              nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
+                              perc_ds_cells = round(nbr_ds_cells / nbr_cells, 1))
 
-adm2_cell_counts <- data_long %>%
-                      dplyr::select(cell, ADM2_PCODE, ADM2_EN) %>%
-                      group_by(ADM2_PCODE, ADM2_EN) %>%
-                      summarise(n_cells = n_distinct(cell)) 
-  
-summary(adm2_cell_counts) # Note: 2 districts only include 1 cell
+sum(adm1_ds_counts$nbr_cells) == sum(adm2_ds_counts$nbr_cells) # check
 
-adm1_cell_counts <- data_long %>%
-                      dplyr::select(cell) %>%
-                      mutate(cell = as.character(cell)) %>%
-                      left_join(cell_adms, by = c('cell'= 'cell')) %>%
-                      group_by(region) %>%
-                      summarise(n_cells = n_distinct(cell)) 
-
-summary(adm1_cell_counts)
-
-sum(adm1_cell_counts$n_cells) == sum(adm2_cell_counts$n_cells) # check for the same number of cells at adm2 and adm1
-
-# roll up "dry spell cells" to adm1 and adm2 (all dry spells, regardless of whether they occured during rainy season)
-all_dry_spells <- dry_spells_details %>%
-                    left_join(cell_adms, by = c('cell'= 'cell')) %>%
-                    dplyr::select(cell, ADM2_EN, region, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
-
-all_dry_spells_adm2 <- all_dry_spells %>%
-                        group_by(ADM2_EN) %>%
-                        
+summary(adm1_ds_counts)
+summary(adm2_ds_counts)
 
 ############################
 
-####### SCRATCHPAD BELOW
+####### SCRATCHPAD BELOW ###
 
 ############################
 
@@ -515,4 +546,33 @@ rainy_season_dry_spells_summary_per_region <- merge(rainy_season_dry_spells_summ
 rainy_season_dry_spells_summary_per_region$nbr_dry_spells <- ifelse(is.na(rainy_season_dry_spells_summary_per_region$nbr_dry_spells), 0, rainy_season_dry_spells_summary_per_region$nbr_dry_spells) # replace NAs with 0 under nbr of dry spells
 
 rainy_season_dry_spells_summary_per_region
+  
+# roll up "dry spell cells" to adm1 and adm2 (all dry spells, regardless of whether they occured during rainy season)
+all_dry_spells <- dry_spells_details %>%
+  left_join(cell_adms, by = c('cell'= 'cell')) %>%
+  dplyr::select(cell, ADM2_EN, region, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+
+
+# get cell counts per adm1 and adm2
+
+adm2_cell_counts <- data_long %>%
+  dplyr::select(cell, ADM2_PCODE, ADM2_EN) %>%
+  group_by(ADM2_PCODE, ADM2_EN) %>%
+  summarise(n_cells = n_distinct(cell)) 
+
+summary(adm2_cell_counts) # Note: 2 districts only include 1 cell
+
+adm1_cell_counts <- data_long %>%
+  dplyr::select(cell) %>%
+  mutate(cell = as.character(cell)) %>%
+  left_join(cell_adms, by = c('cell'= 'cell')) %>%
+  group_by(region) %>%
+  summarise(n_cells = n_distinct(cell)) 
+
+summary(adm1_cell_counts)
+
+sum(adm1_cell_counts$n_cells) == sum(adm2_cell_counts$n_cells) # check for the same number of cells at adm2 and adm1
+
+#all_dry_spells_adm2 <- all_dry_spells %>%
+#  group_by(ADM2_EN) %>%
   

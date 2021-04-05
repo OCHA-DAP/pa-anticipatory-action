@@ -237,6 +237,39 @@ findRainyCessationPerPixel <- function() {
   
 }
 
+# create binary for days in a dry spell (14-d <=2mm cum) per pixel
+listDSDaysPerPixel <- function(i) {
+               
+    # take cell number
+    cell_number <- dry_spells_during_rainy_season_list$cell[i]
+    
+    # take season_approx
+    season_approx_value <- dry_spells_during_rainy_season_list$season_approx[i]
+    
+    # take adm2 
+    adm2_name <- dry_spells_during_rainy_season_list$ADM2_EN[i]
+    
+    # take region
+    adm1_name <- dry_spells_during_rainy_season_list$region[i]
+    
+    # generate list of dates of the dry spell
+    dates_list <- data.frame(date = seq(from = dry_spells_during_rainy_season_list$dry_spell_first_date[i], 
+                      to = dry_spells_during_rainy_season_list$dry_spell_last_date[i], 
+                      by = 1))
+    # add cell number
+    dates_list$cell <- cell_number
+    
+    # add adm names
+    dates_list$region <- adm1_name
+    dates_list$ADM2_EN <- adm2_name
+    
+    # add season_approx
+    dates_list$season_approx <- season_approx_value
+    
+    return(dates_list)
+  }
+
+
 ## user-defined run-length encoding function in base R
 runlengthEncoding <- function(x) {
   x <- rle(x)$lengths
