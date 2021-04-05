@@ -1,60 +1,91 @@
+
 # This is the front-end of the dashboard
+library(DT)
 
 fluidPage(
     
-    # styling
-  #  theme = "bootstrap.css",
-    
-    # App title ----
-    titlePanel(title="Anticipatory Action Pilots"), 
-    
-    # logo (must be in a subfolder named www that is sister to ui.r and not be listed with its path)
+   # logo (must be in a subfolder named www that is sister to ui.r and not be listed with its path)
     img(src="double_logo_header.jpg", align = "center", width=1275, height=100),
-        
+  
+    # App title ----
+    titlePanel(title="Anticipatory Action in Ethiopia"), 
+    
     br(),
-    span(strong("Please note that this dashboard is under development and intended for forecast exploration only. It should not be used as the main source of information for decision-making. Feedback and suggestions for functionalities can be directed to Josée Poirier (josee.poirier@un.org)."), style = "color:red"),
+    span(strong("Please note that this dashboard is under development and intended for forecast exploration only. Feedback and suggestions can be directed to Josée Poirier (josee.poirier@un.org)."), style = "color:red"),
     br(),
     br(),
     
-    # Sidebar layout with input and output definitions
+    # define layout
     sidebarLayout(
+      
+       # position sidebar to the right of main panel
+        position = "right",
         
-        # Sidebar panel for inputs
+        # Sidebar panel for definition of trigger
         sidebarPanel(
-            
-            # Input: select country
-            radioButtons("country", "Select a country:",
-                         c("Ethiopia" = "eth",
-                           "Bangladesh" = "bgd",
-                           "Somalia" = "som",
-                           "Malawi" = "mwi")),
-            #             selected = character(0)), no default
-            
-            radioButtons("source", "Select a source:",
-                         c("FewsNet" = "fn",
-                           "Global IPC" = "gbl")),
-            
-       uiOutput('projectionPeriods')
-       
-        ),
+          h4(strong(div("Trigger Definition", style = "color:#007CE0")), align = "center"),
+          h5(strong(div("Food Insecurity", style = "color:#1EBFB3"))),
+          h6(p("At least 20% population of one or more ADMIN1 regions be projected at IPC4+"),
+             p(strong("OR")),
+             p("At least 30% of ADMIN1 population be projected at IPC3+ AND with an increase by 5 percentage points compared to current state")),
+          tags$hr(),
+          h5(strong("Drought", style = "color:#1EBFB3")),
+          h6(p("At least 50% probability of below average rainfall from at least two seasonal rainfall forecasts"),
+             p(strong("OR")),
+             p("Drought named as a driver of the deterioration of the situation in food security by FewsNet or Global IPC")
+          )),
         
         # Main panel for displaying outputs
         mainPanel(
-            
-            # Tabset w/ plot, summary, and table
+          
+          
+          tabsetPanel(
+  
+            # Tabs definitions
             tabsetPanel(type = "tabs",
-                        tabPanel("Triggered Regions", textOutput("triggered_regions_list")),
-                        tabPanel("Trigger Map", plotOutput("trigger_map")),
-                        tabPanel("Projections", DT::dataTableOutput("projections_table")),
+                        tabPanel("Trigger Status", 
+                                br(),            
+                                h4(strong("Key Messages")),
+                                h5(strong(div(tags$li("The trigger thresholds have been met, allowing for the disbursement of the second tranche of projects under the activation of the Ethiopia AA framework."), style = "color:#007CE0")),
+                                    tags$li("Food security has deteriorated since October 2020 and is projected to further worsen in the coming months."),
+                                    tags$li("The following regions meet the food insecurity trigger over the next 3-4 months: Afar, Oromia, Somali, SNNP, Tigray."),
+                                    tags$li("Below average rainfall is projected in parts of the country including sections of Afar, Oromia, Somali, SNNP, Tigray although with a probability less than 50%."),
+                                    tags$li("Below average rains is mentioned as a driver of projected food insecurity.")),
+                                 br(),
+                                 uiOutput("summary_link"),
+                                 br(),
+                                 em(textOutput("last_update"))
+                                 ),
+                        
+                        tabPanel("Food Insecurity",
+                                 fluidRow(plotOutput('trigger_map')),
+                                 fluidRow(DT::dataTableOutput("projections_table"))
+                                ),
                         tabPanel("Rainfall Forecasts", 
                                  tags$br(), 
+                                 htmlOutput("iri_text"),
                                  htmlOutput("iri"),
+                                 tags$hr(),
+                                 tags$br(),
+                                 htmlOutput("icpac_text"),
                                  htmlOutput("icpac"),
-                                 #img(src="icpac_rainfall_20201222_JFM2021.png", align = "center", width=600, height=600),
+                                 tags$hr(),
+                                 tags$br(),
+                                 htmlOutput("nma_text"),
                                  img(src="eth_nma_precipitation_202101_Belg2021.png", align = "center", width=600, height=400),
+                                 tags$hr(),
+                                 tags$br(),
+                                 htmlOutput("nmme_text"),
                                  htmlOutput("nmme"),
+                                 tags$hr(),
+                                 tags$br(),
+                                 htmlOutput("chc_text"),
                                  htmlOutput("chc"),
-                                 htmlOutput("copernicus")),
+                                 tags$hr(),
+                                 tags$br(),
+                                 htmlOutput("copernicus_text"),
+                                 htmlOutput("copernicus")
+                                 ),
                                  #textOutput("eth_nma")),
                         tabPanel("Reports", 
                               #   uiOutput("reports"),
@@ -82,12 +113,13 @@ fluidPage(
                                      "Rainfall: NMME"),
                                  tags$br(),
                                  tags$a(href="http://www.ethiomet.gov.et/other_forecasts/seasonal_forecast", 
-                                     "Rainfall: Ethiopian NMA"),
+                                     "Rainfall: Ethiopian NMA")
                               
                               
                               
                               )
                         )
             )
+)
 )
 )
