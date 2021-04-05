@@ -335,17 +335,50 @@ adm1_ds_counts <- complete_list %>%
                     group_by(region, date) %>%
                     summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm region
                               nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
-                              perc_ds_cells = round(nbr_ds_cells / nbr_cells, 1))
+                              perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
 adm2_ds_counts <- complete_list %>% 
                     group_by(ADM2_EN, date) %>%
                     summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm region
                               nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
-                              perc_ds_cells = round(nbr_ds_cells / nbr_cells, 1))
+                              perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
 
 sum(adm1_ds_counts$nbr_cells) == sum(adm2_ds_counts$nbr_cells) # check
 
 summary(adm1_ds_counts)
 summary(adm2_ds_counts)
+
+# save
+#write.csv(adm1_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/adm1_ds_counts_per_pixel.csv"), row.names = FALSE)
+#write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/adm2_ds_counts_per_pixel.csv"), row.names = FALSE)
+
+# viz
+ggplot(data = adm1_ds_counts, aes(x = date, y = perc_ds_cells)) +
+  geom_point(aes(color=region)) +
+  facet_wrap(~ region) +
+  ggtitle("Dry Spell Coverage per Region") +
+  xlab("Date") +
+  ylab("Area in a dry spell (% of cells)")
+
+ggplot(data = adm1_ds_counts, aes(x = date, y = perc_ds_cells)) +
+   geom_line(color = "steelblue", size = 1) +
+   facet_wrap(~ region) +
+   ggtitle("Dry Spell Coverage per Region") +
+   xlab("Date") +
+   ylab("Area in a dry spell (% of cells)")
+
+ggplot(data = adm2_ds_counts, aes(x = date, y = perc_ds_cells)) +
+  geom_point(aes(color=ADM2_EN)) +
+  facet_wrap(~ ADM2_EN) +
+  ggtitle("Dry Spell Coverage per District") +
+  xlab("Date") +
+  ylab("Area in a dry spell (% of cells)")
+
+ggplot(data = adm2_ds_counts, aes(x = date, y = perc_ds_cells)) +
+  geom_line(color = "steelblue", size = 1) +
+  facet_wrap(~ region) +
+  ggtitle("Dry Spell Coverage per District") +
+  xlab("Date") +
+  ylab("Area in a dry spell (% of cells)")
 
 ############################
 
