@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -94,21 +95,52 @@ da_glofas_reforecast_dict = interp_dates(
     shift_dates(da_glofas_reforecast_dict))
 ```
 
+### For forecast and reforecast, create summary data array
+Contains median and 1,2,3 sigma centiles
+
+```python
+nsig_max = 3
+percentile_dict = {
+    **{'median': 50.},
+    **{f'{n}sig+': norm.cdf(n) * 100 for n in range(1,nsig_max+1)},
+    **{f'{n}sig-': (1-norm.cdf(n)) * 100 for n in range(1,nsig_max+1)},
+}
+coord_names = ["leadtime_hour", "time"]
+
+def get_da_glofas_summary(da_glofas_dict):
+
+    data_vars_dict = {var_name:
+        (coord_names,
+        np.array([
+            np.percentile(da_glofas, percentile_value, axis=0)
+            for da_glofas in da_glofas_dict.values()
+        ]))
+        for var_name, percentile_value in percentile_dict.items()}
+
+    return xr.Dataset(
+        data_vars=data_vars_dict,
+        coords=dict(
+            time=da_glofas_dict[120].time,
+            leadtime_hour=ggd.LEADTIME_HOURS
+        )
+    )
+
+da_glofas_forecast = get_da_glofas_summary(da_glofas_forecast_dict)
+da_glofas_reforecast = get_da_glofas_summary(da_glofas_reforecast_dict)
+```
+
  ### Read in FFWC data
 
 ```python
 ffwc_dir = DATA_DIR / 'exploration/bangladesh/FFWC_Data'
-ffwc_discharge_filename = 'Bahadurabad_bsereved_discharge.xlsx'
-ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
-df_ffwc_discharge = pd.read_excel(ffwc_dir / ffwc_discharge_filename, 
-                                 index_col='Date')
-
 ```
 
 ```python
+# Read in data from Sazzad that has forecasts
+ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
 ffwc_leadtime_hours = [24, 48, 72, 96, 120]
 
-# For water level, need to combine the three sheets
+# Need to combine the three sheets
 df_ffwc_wl_dict = pd.read_excel(
         ffwc_dir / ffwc_wl_filename,
                                 sheet_name=None,
@@ -116,16 +148,47 @@ df_ffwc_wl_dict = pd.read_excel(
 df_ffwc_wl = (df_ffwc_wl_dict['2017']
               .append(df_ffwc_wl_dict['2018'])
                         .append(df_ffwc_wl_dict['2019'])
-                        .rename(columns={**{
-                            f'{leadtime_hour} hrs': leadtime_hour
+                        .rename(columns={
+                            f'{leadtime_hour} hrs': f'ffwc_{int(leadtime_hour/24)}day'
                             for leadtime_hour in ffwc_leadtime_hours
-                        }, **{'Observed WL': 'observed'}}
-                        ))
+                        })).drop(columns=['Observed WL']) # drop observed because we will use the mean later
 # Convert date time to just date
 df_ffwc_wl.index = df_ffwc_wl.index.floor('d')
 ```
 
-### Find the events -- three days in a row above threshold
+```python
+# Then read in the older data (goes back much futher)
+FFWC_RL_HIS_FILENAME='2020-06-07 Water level data Bahadurabad Upper danger level.xlsx'
+ffwc_rl_name='{}/{}'.format(ffwc_dir,FFWC_RL_HIS_FILENAME)
+df_ffwc_wl_old=pd.read_excel(ffwc_rl_name,index_col=0,header=0)
+df_ffwc_wl_old.index=pd.to_datetime(df_ffwc_wl_old.index,format='%d/%m/%y')
+df_ffwc_wl_old
+df_ffwc_wl_old=df_ffwc_wl_old[['WL']].rename(columns={'WL': 
+                                                    'observed'})[df_ffwc_wl_old.index < df_ffwc_wl.index[0]]
+df_ffwc_wl = pd.concat([df_ffwc_wl_old, df_ffwc_wl])
+```
+
+```python
+# Read in the more recent file from Hassan
+ffwc_full_data_filename = 'SW46.9L_19-11-2020.xls'
+df_ffwc_wl_full = (pd.read_excel(ffwc_dir / ffwc_full_data_filename, 
+                                 index_col='DateTime')
+                   .rename(columns={'WL(m)': 'observed'}))[['observed']]
+
+# Mutliple observations per day. Find mean and std
+df_ffwc_wl_full['date'] = df_ffwc_wl_full.index.date
+df_ffwc_wl_full = (df_ffwc_wl_full.groupby('date').agg(['mean', 'std'])
+)['observed'].rename(columns={'mean': 'observed', 'std': 'obs_std'})
+df_ffwc_wl_full.index = pd.to_datetime(df_ffwc_wl_full.index)
+
+
+# Combine with first DF
+
+df_ffwc_wl = pd.merge(df_ffwc_wl_full[['obs_std']], df_ffwc_wl, left_index=True, right_index=True, how='outer')
+df_ffwc_wl.update(df_ffwc_wl_full, overwrite=False)
+```
+
+### Find the true positive events -- three days in a row above threshold
 
 ```python
 WATER_THRESH = 19.5 + 0.85
@@ -136,22 +199,73 @@ def get_groups_above_threshold(observations, threshold):
                                        [False]))))[0].reshape(-1, 2)
     
 groups = get_groups_above_threshold(df_ffwc_wl['observed'], WATER_THRESH)
-group_len = [group[1] - group[0] for group in groups]
-groups = [group for i, group in enumerate(groups) if group_len[i] >= NDAYS_THRESH]
+# Only take those that are 3 consecutive days
+groups = [group for group in groups if group[1] - group[0] >= NDAYS_THRESH]
+
+# Mark all the above dates as TP events
+detections = np.concatenate([np.arange(group[0]+NDAYS_THRESH, group[1]) for group in groups], axis=0)
+df_ffwc_wl['detection'] = False
+df_ffwc_wl['detection'][detections] = True
+
 ```
 
 ```python
-groups
+df_ffwc_wl.index[df_ffwc_wl['detection']].year.unique()
+```
+
+### Add GloFAS to FFWC
+
+```python
+glofas_columns = ['median', 
+'1sig-', '2sig-', '3sig-', 
+'1sig+', '2sig+', '3sig+']
+df_final = df_ffwc_wl.copy()
+for leadtime_hour in ggd.LEADTIME_HOURS:
+    df_glofas_reforecast = da_glofas_reforecast.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
+    df_glofas_forecast = da_glofas_forecast.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
+    df_glofas = (pd.concat([df_glofas_reforecast, df_glofas_forecast])
+                 .rename(columns={cname: f'glofas_{int(leadtime_hour/24)}day_{cname}' for cname in glofas_columns}))
+    df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 ```
 
 ```python
-fig, ax = plt.subplots()
-ax.plot(df_ffwc_wl.index, df_ffwc_wl['observed'], '.')
-for group in groups:
-    a, b = group[0], group[1]
-    ax.plot(df_ffwc_wl.index[a:b], df_ffwc_wl['observed'][a:b], '.', c='r')
+d = df_final[df_final['detection']]
+```
+
+### Figure out important params
+
+```python
+fig, ax = plt.subplots(figsize=(20,10))
+ax.plot(df_final.index, df_final['observed'], '.')
+ax.plot(df_final.index, df_final['ffwc_5day'], 's', alpha=0.5)
+idx_detection = df_final['detection'] == True
+ax.plot(df_final.index[idx_detection], df_final['observed'][idx_detection], '.', c='r')
+ax.axhline(WATER_THRESH, c='k', lw=0.5)
 fig.autofmt_xdate()
+ax.set_ylim(19.5, None)
+ax.set_xlim(df_final.index[50], None)
+ax2 = ax.twinx()
+ax2.plot(df_final['glofas_5day_1sig-'], 'x', alpha=0.5, c='g')
+```
 
+```python
+thresh=18
+x = df_final['observed'].shift(-10)
+idx = x > thresh
+plt.errorbar(x[idx], df_final[idx]['glofas_15day_median'],
+             yerr=(df_final[idx]['glofas_15day_median'] - df_final[idx]['glofas_15day_1sig-'], 
+                            df_final[idx]['glofas_15day_1sig+'] - df_final[idx]['glofas_15day_median']),
+                  xerr=df_final[idx]['obs_std'],
+             ls='none', marker='.', c='y', alpha=0.5)
+idx = (x > thresh) & (df_final['detection'])
+plt.plot(x[idx], df_final[idx]['glofas_15day_median'], 'or', ms=5, mfc='r')
+```
+
+```python
+df = df_final.copy()
+x = df_final['observed'].values[1:] - df_final['observed'].values[:-1]
+y= df_final['ffwc_5day'].values[1:] - df_final['ffwc_5day'].values[:-1]
+plt.plot(x,y, '.')
 ```
 
 # Appendix
@@ -243,6 +357,8 @@ df_ffwc_wl = (df_ffwc_wl_dict['2017']
                             for leadtime_hour in ffwc_leadtime_hours
                         }, **{'Observed WL': 'observed'}}
                         ))
+# Convert date time to just date
+df_ffwc_wl.index = df_ffwc_wl.index.floor('d')
 
 # Reindex the date column and shift the predictions
 # new_index = pd.date_range(df_ffwc_wl.index.min(), 
