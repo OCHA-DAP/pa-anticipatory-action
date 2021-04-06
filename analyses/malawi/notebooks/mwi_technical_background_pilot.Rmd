@@ -18,6 +18,10 @@ This document summaries all the data work that has been done to inform the trigg
 ### Geographical scale
 Analysis done on ADM2 
 
+### Historical analysis
+Dry spells
+Seasonal indicators
+
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 #copied this from the dry spell description document, sets some general settings
 source("historical_dry_spells_description_setup.R")
@@ -392,12 +396,45 @@ Processing script
 ### Seasonal precipitation forecasts
 Another commonly used forecast source with a long lead time are the so-called seasonal forecasts. Here a season is defined as a 3 month period. Seasonal precipitaiton forecasts ara an often used product for informing predictions related to seasonal drought, and depending on the source include forecasts for 1 to 7 months ahead. 
 
-Seasonal precipitation forecasts exist in different formats. The most common format is that of a tercile-based forecasts,where the three terciles are referred to as below-average, normal, and above-average precipitation. These tercile-based forecast report the probability for the precipitation to be in each tercile, per raster cel. See [here] for a clear resource on the definition of a tercile-based forecast. The Malawi Met services (DCCMS) provide their forecast in this format, as well as global organizations such as IRI and NMME. While we do investigate the relationship of dry spells with seasonal below-average precipitation, by definition the occurence of below-average precipitation is not expected to have a strong relation with dry spells. This is the case for two reasons, namely 1) below-average precipitation occurs on average once every three years, while dry spells are a more extreme event (as we saw in our analysis) and 2) the amount of rainfall that is classified as "below-average" depens on the average rainfall for a location, the tercile is thus location dependent. Whereas the definition of a dry spell is based on an aboslute, set number of mm's and thus doesn't depend on the location. 
+Seasonal precipitation forecasts exist in different formats. The most common format is that of a tercile-based forecasts,where the three terciles are referred to as below-average, normal, and above-average precipitation. These tercile-based forecast report the probability for the precipitation to be in each tercile, per raster cell. See [here] for a clear resource on the definition of a tercile-based forecast. The Malawi Met services (DCCMS) provide their forecast in this format, as well as global organizations such as IRI and NMME. While we do investigate the relationship of dry spells with seasonal below-average precipitation, by definition the occurence of below-average precipitation is not expected to have a strong relation with dry spells. This is the case for two reasons, namely 1) below-average precipitation occurs on average once every three years, while dry spells are a more extreme event (as we saw in our analysis) and 2) the amount of rainfall that is classified as "below-average" depends on the average rainfall for the given location, the tercile is thus location dependent. Whereas the definition of a dry spell is based on an absolute number of milimeters and thus doesn't depend on the location. 
 
 Some organizations also provide absolute forecasted amounts, either as an expected amount per day or per month. The main organizations providing this data are ECMWF and the UK Met office.We therefore also investigate the relationship of dry spells with total monthly and total seasonal precipitation. The reason we want to know this relation, and do not link the forecasts directly to dry spells, is because these forecast have high uncertainty, which might be partially diminished by looking at the numbers over a longer period of time. 
 
 
+#### The data
+We use CHIRPS as datasource to compute the 3-monthly total precipitation, and the occurrences of below-average precipitation. CHIRPS was chosen as data source, since this is the same source as was used to detect observed dry spells and thus thereby we eliminate any weakening of relationship due to biases in different sources. 
+We work with the monthly sum of precipitations as directly provided by CHC on their FTP server. We compute the 3-monthly sum from this per raster cell and aggregate this to admin2. Whether a cell had below-average precipitation, is information that is not readily available, and thus we had to compute this ourselves. This notebook shows and explains all the steps taken to do so. Once we had the information whether a raster cell had below-average precipitation or not in a given season, we also aggregated this information to admin2 level. 
 
+#### Analysis
+Only gonna write this, once we have a final decision on definition of dry spell and aggregation methodology
+
+#### Results
+Only gonna write this, once we have a final decision on definition of dry spell and aggregation methodology
+
+#### Scripts
+Computing the below average and aggregating
+Correlations below average
+Correlations total rainfall
+
+#### Data sources used
+CHIRPS
+Shapefiles
 
 #### TODO
 Check format UK Met office (paper, email, ECMWF)
+Add flexible forecast IRI once understood better
+
+### Monthly precipitation forecasts
+Besides forecasted quantities over a 3-month period, one can also look at these quantities over a monthly period. This quantity is reported by a few seasonal forecasts, and might be a better indicator for the occurence of a dry spell than the precipitation over a 3-month period 
+<!-- We are not aware of any suitable, openly available subseasonal forecasts, but we could possibly use the seasonal forecasts that also provide values per month.  -->
+
+
+List of available forecasts
+Seaonal timescale
+Seasonal tercile - IRI, NMME, ECMWF, NMA
+Daily seasonal - ECMWF
+Monthly seasonal - ECMWF
+
+Monthly timescale
+SubX - too experimental 
+S2S - Ask IRI -- dont see precipitation on ECMWF website?
