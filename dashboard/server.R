@@ -9,7 +9,7 @@ source("generate_subnational_map.R")
 server <- function(input, output) {
     
     # Display  last update date
-    output$last_update <- renderText({paste0("Analysis last updated: ", "16 Feb 2021")})
+    output$last_update <- renderText({paste0("Dashboard last updated: ", "6 April 2021")})
     
     url <-  a("Detailed Summary. ", href="https://docs.google.com/document/d/1xa8AmYVpw1z7moYwFrZoQ4S2o5g-QbC8U-G-3Zlpgjw/edit?usp=sharing")
     output$summary_link <- renderUI({
@@ -67,7 +67,7 @@ server <- function(input, output) {
     output$iri_text <- renderText("Below: IRI")
     output$iri <- renderText({c('<img src="','https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/feb2021/images/MAM21_Afr_pcp.gif"','width = "500px" height = "500px"', '>')})
     output$icpac_text <- renderText("Below: ICPAC")
-    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/MAM_GHA_Rainfall.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
+    output$icpac <- renderText({c('<img src="','https://www.icpac.net/media/images/MAM_GHA_Rainfall_5JCnO9g.height-600.width-600.png"','width = "500px" height = "500px"', '>')})
     output$chc_text <- renderText("Below: Climate Hazards Center")
     output$chc <- renderText({c('<img src="','https://blog.chc.ucsb.edu/wp-content/uploads/2021/01/Screen-Shot-2021-01-20-at-5.21.51-PM.png"','width = "500px" height = "500px"', '>')})
     output$nmme_text <- renderText("Below: NMME")
