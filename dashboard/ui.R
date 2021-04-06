@@ -11,7 +11,7 @@ fluidPage(
     titlePanel(title="Anticipatory Action in Ethiopia"), 
     
     br(),
-    span(strong("Please note that this dashboard is under development and intended for forecast exploration only. Feedback and suggestions can be directed to Josée Poirier (josee.poirier@un.org)."), style = "color:red"),
+    span(strong("Please note that this dashboard is under development and intended for forecast exploration only. Feedback and suggestions can be directed to Josée Poirier (josee.poirier@un.org)."), style = "color:orange"),
     br(),
     br(),
     
@@ -58,6 +58,7 @@ fluidPage(
                                  ),
                         
                         tabPanel("Food Insecurity",
+                                 h5(span(strong("FewsNet published a Food Security Outlook on 26 Mar 2021. The dashboard uses their previous projections, the ones available when the second tranche was approved."), style = "color:red")),
                                  fluidRow(plotOutput('trigger_map')),
                                  fluidRow(DT::dataTableOutput("projections_table"))
                                 ),
