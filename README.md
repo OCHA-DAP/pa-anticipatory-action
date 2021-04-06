@@ -11,11 +11,14 @@ The trigger is based on data and enables the automated activation of the framewo
 This repository contains the triggers that are part of the several AAF pilots. 
 While the triggers are adjusted to the local context, most of the data processing is transferable to other countries.
 
-The AAF pilots implemented as of January 2021 are:
+The AA frameworks implemented as of March 2021 are:
 - [Bangladesh, flood](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/)
 - Somalia, food insecurity
 - Ethiopia, drought-related food insecurity
-- Malawi and Chad, exploratory phase
+
+The AA frameworks under development as of March 2021 are:
+- Malawi, prolonged dry spells
+- Chad, Niger, Nepal, Burkina Faso, South Sudan, Madagascar, Philippines: early phase
 
 Some data sources are privately shared by partners, but most of the data is openly available. 
 

@@ -32,3 +32,4 @@ geemap==0.8.9
 dask[dataframe]==2021.2.0
 pytest==6.2.2
 openpyxl==3.0.6
+xskillscore==0.0.19

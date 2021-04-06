@@ -122,7 +122,9 @@ as.data.frame(round(prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons
 &nbsp;
 
 
-[TODO: Description of results on onset of rainy season. What is the variability across adm regions?]
+```{r}
+# [TODO: Description of results on onset of rainy season. What is the variability across adm regions?]
+```
 
 ```{r rainy-onset-table, include = T} 
 
@@ -142,7 +144,10 @@ rainy_seasons_summary_per_region %>%
 
 #### Cessations
 
-[TODO: Summary of cessation results.]
+
+```{r}
+#[TODO: Summary of cessation results.]
+```
 
 ```{r rainy-cessation-table, include = T} 
 rainy_seasons_summary_per_region %>%
@@ -161,7 +166,9 @@ rainy_seasons_summary_per_region %>%
 
 #### Durations
 
-[TODO: Summary of rainy season duration results.]
+```{r}
+#[TODO: Summary of rainy season duration results.]
+```
 
 ```{r rainy-duration-table, include = T} 
 rainy_seasons_summary_per_region %>%
@@ -265,9 +272,11 @@ rainy_season_dry_spells_summary_per_region %>%
 
 #### Frequency
 
-[TODO: Summary on frequency of dry spells]
+```{r}
+#[TODO: Summary on frequency of dry spells]
 
-[TODO: Adjust below comparison]
+#[TODO: Adjust below comparison]
+```
 
 We note a convergence between these results and the Analysis of Predictable Food Crises in Malawi carried out in January 2020 by WFP. The analysis reported on the location, frequency and impact of dry spells at the Traditional Authority (TA; adm3) level in 2011-2019. Similar findings include:
 
@@ -282,12 +291,15 @@ We note a convergence between these results and the Analysis of Predictable Food
 
 #### Duration
 
-[TODO: Summary of duration of dry spells]
-
+```{r}
+#[TODO: Summary of duration of dry spells]
+```
 
 #### Timing
 
-[TODO: Summary of timing results]
+```{r}
+#[TODO: Summary of timing results]
+```
 
 This may partly be due to our definition of rainy seasons. For onset, we require that a rainy streak not be followed by a 10-day period with less than 2mm rainfall in the next 30 days for the streak. Therefore by definition the first month of the rainy season cannot have dry spells. For cessation, once rainy days become rarer the criterion for cessation is likely to be met, ending the rainy season and the window during which dry spells are included in this analysis.
 
