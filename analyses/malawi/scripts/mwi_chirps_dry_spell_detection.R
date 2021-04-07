@@ -138,6 +138,12 @@ data_long$month <- lubridate::month(data_long$date)
 data_long$day <- lubridate::day(data_long$date) 
 data_long$season_approx <- ifelse(data_long$month >= 10, data_long$year, ifelse(data_long$month <= 7, data_long$year - 1, 'outside rainy season')) # labels the rainy season which overlaps between two calendar years. uses first year as label.
 
+# compute 5-day rolling sums
+data_long <- data_long %>%
+                      group_by(pcode) %>%
+                      computeRollingSum(., window = 5) %>%
+                      rename(rollsum_5d = rollsum)
+
 # compute 10-day rolling sums
 data_long <- data_long %>%
                           group_by(pcode) %>%
@@ -166,6 +172,7 @@ data_long <- data_long %>%
 data_long$rainy_day_bin <-  ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
 data_long$rainy_day_bin_2mm <-  ifelse(data_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
 
+#saveRDS(data_long, paste0(data_dir, "/processed/malawi/dry_spells/data_long_mean_values.RDS"))
 
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
