@@ -17,9 +17,12 @@ jupyter:
 import sys
 import os
 from pathlib import Path
+from datetime import datetime
+
 
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+import matplotlib as mpl
+from scipy.stats import norm, pearsonr
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -33,6 +36,7 @@ from src.bangladesh import get_glofas_data as ggd
 DATA_DIR = Path(os.environ['AA_DATA_DIR'])
 GLOFAS_DIR = DATA_DIR / 'processed/bangladesh/GLOFAS_Data' 
 STATION = 'Bahadurabad_glofas'
+mpl.rcParams['figure.dpi'] = 300
 ```
 
 ### Create GloFAS objects
@@ -195,77 +199,286 @@ WATER_THRESH = 19.5 + 0.85
 NDAYS_THRESH = 3
 
 def get_groups_above_threshold(observations, threshold):
-    return np.where(np.diff(np.hstack(([False], observations > threshold, 
+    return np.where(np.diff(np.hstack(([False], 
+                                         observations > threshold, 
                                        [False]))))[0].reshape(-1, 2)
     
-groups = get_groups_above_threshold(df_ffwc_wl['observed'], WATER_THRESH)
+groups = get_groups_above_threshold(df_ffwc_wl['observed'], 
+                                WATER_THRESH)
+
 # Only take those that are 3 consecutive days
-groups = [group for group in groups if group[1] - group[0] >= NDAYS_THRESH]
+groups = [group for group in groups 
+              if group[1] - group[0] >= NDAYS_THRESH]
 
-# Mark all the above dates as TP events
-detections = np.concatenate([np.arange(group[0]+NDAYS_THRESH, group[1]) for group in groups], axis=0)
-df_ffwc_wl['detection'] = False
-df_ffwc_wl['detection'][detections] = True
+# Mark the first date in each series as TP
+events = [group[0] + NDAYS_THRESH - 1 for group in groups]
+#eventss = np.concatenate([np.arange(group[0]+NDAYS_THRESH-1, 
+#                                   group[1]) 
+#                         for group in groups], axis=0)
 
-```
 
-```python
-df_ffwc_wl.index[df_ffwc_wl['detection']].year.unique()
+
+df_ffwc_wl['event'] = False
+df_ffwc_wl['event'][events] = True
 ```
 
 ### Add GloFAS to FFWC
 
 ```python
+# Create final df
+df_final = df_ffwc_wl.copy()
+
+# Add glofas obs
+df_glofas = da_glofas_reanalysis.to_dataframe()[[STATION]].rename(columns={STATION: 'glofas_observed'})
+df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
+
+# Add glofas forecasts
 glofas_columns = ['median', 
 '1sig-', '2sig-', '3sig-', 
 '1sig+', '2sig+', '3sig+']
-df_final = df_ffwc_wl.copy()
 for leadtime_hour in ggd.LEADTIME_HOURS:
     df_glofas_reforecast = da_glofas_reforecast.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
     df_glofas_forecast = da_glofas_forecast.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
     df_glofas = (pd.concat([df_glofas_reforecast, df_glofas_forecast])
                  .rename(columns={cname: f'glofas_{int(leadtime_hour/24)}day_{cname}' for cname in glofas_columns}))
     df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
+    
+# Any event elements that are NA should be False    
+df_final['event'] = df_final['event'].fillna(False)
+
+# Don't bother starting before FFWC observations do
+df_final = df_final[df_final.index >= df_ffwc_wl.index[0]]
+
+```
+
+## Plots & info for slides
+
+
+### Events
+
+```python
+# Print out events
+df_final[['observed', 'glofas_observed']][df_final['event'] == True]
+```
+
+### GloFAS vs FFWC
+
+```python
+def plot_glofas_vs_ffwc(glofas_var_name):
+    xvar = 'observed'
+    df = df_final[[xvar, glofas_var_name]].dropna()
+    x = df[xvar]
+    y = df[glofas_var_name]
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y, '.', alpha=0.5)
+    idx = df_final['event'] == True
+    ax.plot(x[idx], y[idx], 'xr', ms=5, mfc='r', zorder=5)
+    ax.set_xlabel('FFWC water level [m]')
+    ax.set_ylabel('GloFAS ERA5 river discharge [m$^3$ s$^{-1}$]')
+    print(min(y[idx]))
+
+    split_val = 19.5
+    idx = x < split_val
+    print("Pearson's for above and below 19.5", pearsonr(x[idx], y[idx]),
+    pearsonr(x[~idx], y[~idx]))
+plot_glofas_vs_ffwc('glofas_observed')
+```
+
+### Glofas Event detection
+
+```python
+# Glofas event detection
+GLOFAS_DETECTION_WINDOW = 7
+def get_glofas_detections(glofas_var, thresh):
+    groups = get_groups_above_threshold(glofas_var, thresh)
+    return [group[0] for group in groups]
+
+def get_detection_stats(glofas_var_name, thresh_array):
+    nthresh = len(thresh_array)
+    TP = np.empty(nthresh)
+    FN = np.empty(nthresh)
+    FP = np.zeros(nthresh)
+    # Drop any NAs in the glofas columns
+    df = df_final[['observed', 'event', glofas_var_name]]
+    df = df[df[glofas_var_name].notna()]
+    for ithresh, thresh in enumerate(thresh_array):
+        detections = get_glofas_detections(df[glofas_var_name], thresh)
+        detection_window_min = 0
+        detection_window_max = 7
+        detected_event_dates = []
+        for detection in detections:
+            detected_events = df['event'][detection:
+                                    detection+GLOFAS_DETECTION_WINDOW]
+            detected_event_dates += (
+                list(detected_events[detected_events==True].index))
+            if sum(detected_events) == 0:
+                FP[ithresh] += 1
+        # Get the unique event dates
+        detected_event_dates = list(set(detected_event_dates))
+        event_dates = df.index[df['event']]
+        events_are_detected = [event_date in detected_event_dates for event_date in event_dates]
+        TP[ithresh] = sum(events_are_detected)
+        FN[ithresh] = sum([not event_detected for event_detected in events_are_detected])
+    return TP, FP, FN
+
+def get_more_stats(TP, FP, FN):
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+    f1 = 2 / ((1/recall) + (1/precision))
+    return precision, recall, f1
 ```
 
 ```python
-d = df_final[df_final['detection']]
+def plot_stats(glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
+    TP, FP, FN = get_detection_stats(glofas_var_name,
+                                thresh_array)
+    precision, recall, f1 = get_more_stats(TP, FP, FN)
+
+    # Plot results
+    x = thresh_array
+    fig, ax = plt.subplots()
+    ax.plot(x, TP, label='TP')
+    ax.plot(x, FP, label='FP')
+    ax.plot(x, FN, label='FN')
+    df = df_final[['observed', 'event', glofas_var_name]]
+    df = df[df[glofas_var_name].notna()]
+    ax.axhline(len(df[df['event']]), c='C0', ls='--')
+    ax.axhline(0, c='C2', ls='--')
+    ax2 = ax.twinx()
+    ax2.plot(x, precision, label='precision', c='r')
+    ax2.plot(x, recall, label='recall', c='y')
+    ax2.plot(x, f1, label='F1', c='k')
+    ax2.set_ylim(-0.05, 1.05)
+    ax.legend(loc=2)
+    ax2.legend(loc=0)
+    ax2.axhline(0.2, c='r', ls='--')
+
+    ax.set_xlabel(f'GloFAS trigger threshold {x_axis_units}')
+    ax.set_ylabel('Number')
+    
+def get_thresh_and_max_precision_with_no_fn( glofas_var_name, thresh_array):
+    TP, FP, FN = get_detection_stats(glofas_var_name,
+                                thresh_array)
+    precision, recall, f1 = get_more_stats(TP, FP, FN)
+    print('threshold', thresh_array[FN==0][-5:])
+    print('precision', precision[FN==0][-5:])
+    print('FP', FP[FN==0][-5:])
 ```
 
-### Figure out important params
+```python
+thresh_array = np.arange(70000, 110000, 500)
+glofas_var_name = 'glofas_observed'
+plot_stats(glofas_var_name, thresh_array)
+get_thresh_and_max_precision_with_no_fn(glofas_var_name, thresh_array)
+```
+
+From this plot, it looks like the highest possible threshold with no FN is around 83,000. 
+thresh_array==83000
+
+
+### Plot each year
 
 ```python
-fig, ax = plt.subplots(figsize=(20,10))
-ax.plot(df_final.index, df_final['observed'], '.')
-ax.plot(df_final.index, df_final['ffwc_5day'], 's', alpha=0.5)
-idx_detection = df_final['detection'] == True
-ax.plot(df_final.index[idx_detection], df_final['observed'][idx_detection], '.', c='r')
-ax.axhline(WATER_THRESH, c='k', lw=0.5)
-fig.autofmt_xdate()
-ax.set_ylim(19.5, None)
-ax.set_xlim(df_final.index[50], None)
-ax2 = ax.twinx()
-ax2.plot(df_final['glofas_5day_1sig-'], 'x', alpha=0.5, c='g')
+def plot_years(df_final, glofas_var, thresh, glofas_xlims):
+    fig, axs = plt.subplots(17, 2, figsize=(10, 30))
+    fig.autofmt_xdate()
+    axs = axs.flat
+    df_final['year'] = df_final.index.year
+    iax = 0
+    for year, df in df_final.groupby('year'):
+        ax1 = axs[iax]
+        x = df.index
+        y1 = df['observed']
+        ax1.plot(x, y1, '.')
+        idx_event = df['event'] == True
+        ax1.plot(x[idx_event], y1[idx_event], 'or', ms=5)
+        ax1.set_xlim(datetime(year, 3, 1), datetime(year, 10, 31))
+        ax1.set_ylim(19.0, 21.5)
+        ax1.set_title(year, pad=0)
+
+        ax2 = ax1.twinx()
+        y2 = df[glofas_var]
+        ax2.plot(x, y2, '-g')
+        ax2.set_ylim(glofas_xlims)
+        # Glofas detections
+        for detection in get_glofas_detections(y2, thresh):
+            a = detection
+            b = a + GLOFAS_DETECTION_WINDOW
+            ax2.plot(x[a:b], y2[a:b], '-y', lw=3)
+        iax += 1
+
+
+plot_years(df_final, 'glofas_observed', 83000, (40000, 140000))
+
+
+```
+
+### Check advantage of using sum
+
+```python
+
+for n in range(2, 5):
+    print(n)
+    thresh_array = np.arange(n*70000, n*110000, n*500)
+    df_final['glofas_observed_sum'] = df_final['glofas_observed'].rolling(n).sum()
+    get_thresh_and_max_precision_with_no_fn('glofas_observed_sum', thresh_array)
+    
+    
+df_final['glofas_observed_sum'] = df_final['glofas_observed'].rolling(3).sum()
+plot_glofas_vs_ffwc('glofas_observed_sum')
+plot_years(df_final, 'glofas_observed_sum', 250000, (40000*3, 140000*3))
+
+    
+```
+
+## Forecast eval
+
+```python
+# calculate the sums for the variables in question
+for nday in [5, 10, 15, 20]:
+    for var_suffix in ['1sig-', 'median', '1sig+']:
+        var_name = f'glofas_{nday}day_{var_suffix}'
+        df_final[f'{var_name}_sum'] = df_final[var_name].rolling(3).sum()
 ```
 
 ```python
-thresh=18
-x = df_final['observed'].shift(-10)
-idx = x > thresh
-plt.errorbar(x[idx], df_final[idx]['glofas_15day_median'],
-             yerr=(df_final[idx]['glofas_15day_median'] - df_final[idx]['glofas_15day_1sig-'], 
-                            df_final[idx]['glofas_15day_1sig+'] - df_final[idx]['glofas_15day_median']),
-                  xerr=df_final[idx]['obs_std'],
-             ls='none', marker='.', c='y', alpha=0.5)
-idx = (x > thresh) & (df_final['detection'])
-plt.plot(x[idx], df_final[idx]['glofas_15day_median'], 'or', ms=5, mfc='r')
+from matplotlib.ticker import MaxNLocator
+
+for var_type in ['', '_sum']:
+    fig, ax1 = plt.subplots()
+    ax1.set_ylim(0, 20)
+    #ax2 = ax1.twiny()
+    i = 0
+    for nday in [10, 15]:
+        for var_suffix in ['1sig-', 'median', '1sig+']:
+            thresh_array = np.arange(70000, 110000, 500)
+            ax = ax1
+            if var_type == '_sum':
+                thresh_array *= 3
+                ax = ax1
+            var_name = f'glofas_{nday}day_{var_suffix}{var_type}'
+            df = df_final[['observed', var_name]].dropna()
+            x, y = df['observed'], df[var_name]
+            idx = x > 19.5
+            print(var_name, pearsonr(x[idx], y[idx]))
+            TP, FP, FN = get_detection_stats(
+                var_name, thresh_array)
+            ax.plot(thresh_array, TP, label=var_name[7:], c=f'C{i}')
+            ax.plot(thresh_array, FP, '--', c=f'C{i}')
+            i += 1
+    ax.legend()
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.grid(True)
 ```
 
 ```python
-df = df_final.copy()
-x = df_final['observed'].values[1:] - df_final['observed'].values[:-1]
-y= df_final['ffwc_5day'].values[1:] - df_final['ffwc_5day'].values[:-1]
-plt.plot(x,y, '.')
+
+
+
+thresh_array = np.arange(70000*2.5, 110000*3, 500*3)
+plot_stats(glofas_var_name, thresh_array)
+get_thresh_and_max_precision_with_no_fn(glofas_var_name, thresh_array)
 ```
 
 # Appendix
@@ -421,4 +634,58 @@ fig.autofmt_xdate()
 
 ax.set_xlim(df_ffwc_wl.index[0], df_ffwc_wl.index[10])
 
+```
+
+## To organize
+
+```python
+fig, ax = plt.subplots(figsize=(20,10))
+ax.plot(df_final.index, df_final['observed'], 'o', 
+        label='FFWC observations')
+ax.plot(df_final.index, df_final['ffwc_5day'], 's', 
+        alpha=0.5, label='FFWC 5 day forecast')
+idx_event = df_final['event'] == True
+ax.plot(df_final.index[idx_event], 
+        df_final['observed'][idx_event], 
+        'o', ms=10, c='r', label='Event')
+ax.axhline(WATER_THRESH, c='k', lw=0.5)
+fig.autofmt_xdate()
+ax.set_ylim(19.5, None)
+ax.set_xlim(df_final.index[50], None)
+ax2 = ax.twinx()
+ax2.plot(df_final['glofas_observed'], '-', alpha=0.5, c='g', 
+         label='GloFAS observations')
+ax.legend()
+ax2.legend(loc=2)
+```
+
+```python
+from scipy import interpolate, integrate
+y = df_final['glofas_observed']
+n = len(y)
+x = np.arange(n)
+y = interpolate.interp1d(x, y)
+integration_period = 3
+#for i in range(n-integration_period):
+#    #v = integrate.quad(y, i, i+integration_period)
+    
+    
+y =  df_final['glofas_observed']
+y.rolling(3).sum()
+```
+
+```python
+#ax.set_xlim(18, None)
+from scipy.stats import pearsonr
+test = df_final[['observed', 'glofas_observed', 'glofas_observed_sum']].dropna()
+idx = test['observed'] > 19.5
+print(pearsonr(test['observed'][idx], test['glofas_observed'][idx]),
+      pearsonr(test['observed'][idx], test['glofas_observed_sum'][idx]))
+```
+
+```python
+df = df_final.copy()
+x = df_final['observed'].values[1:] - df_final['observed'].values[:-1]
+y= df_final['ffwc_5day'].values[1:] - df_final['ffwc_5day'].values[:-1]
+plt.plot(x,y, '.')
 ```
