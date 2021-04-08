@@ -452,7 +452,7 @@ for var_type in ['', '_sum']:
     i = 0
     for nday in [10, 15]:
         for var_suffix in ['1sig-', 'median', '1sig+']:
-            thresh_array = np.arange(70000, 110000, 500)
+            thresh_array = np.arange(60000, 110000, 500)
             ax = ax1
             if var_type == '_sum':
                 thresh_array *= 3
@@ -464,7 +464,7 @@ for var_type in ['', '_sum']:
             print(var_name, pearsonr(x[idx], y[idx]))
             TP, FP, FN = get_detection_stats(
                 var_name, thresh_array)
-            ax.plot(thresh_array, TP, label=var_name[7:], c=f'C{i}')
+            ax.plot(thresh_array, TP + i*0.05, label=var_name[7:], c=f'C{i}')
             ax.plot(thresh_array, FP, '--', c=f'C{i}')
             i += 1
     ax.legend()
@@ -473,12 +473,57 @@ for var_type in ['', '_sum']:
 ```
 
 ```python
+plot_years(df_final, 'glofas_10day_1sig-', 90000, (40000, 140000))
+```
 
+```python
+year = 2016
+gvar = 'glofas_observed'
+#gvar = 'glofas_15day_median'
+df = df_final[['observed', gvar, 'event']].dropna()
+y1 = df['observed'].diff(1).rolling(15).sum()
+y2 = df[gvar].diff(1).rolling(15).sum()
+x = df.index
+fig, ax = plt.subplots()
+ax.plot(x, y1)
+ax.plot(x[idx], y1[idx], 'or')
+#ax2 = ax.twinx()
+#ax2.plot(x, y2,  c='C1')
+ax.plot(x, y2/10000)
+ax.set_xlim(datetime(year,1,1), datetime(year+1,1,1))
+```
 
+```python
+plt.plot(y2, y1, '.', alpha=0.5)
+plt.plot(y2[idx2], y1[idx2], '.r', alpha=0.5)
+l = np.polyfit(y2.dropna(), y1.dropna(), 1)
+idx2 = df['observed'] > 19.5
+print(pearsonr(y2.dropna(), y1.dropna()))
+x = np.arange(-20000, 20000)
+plt.plot(x, l[1] + l[0]* x)
+print(pearsonr(y2[idx2].dropna(), y1[idx2].dropna()))
+```
 
-thresh_array = np.arange(70000*2.5, 110000*3, 500*3)
-plot_stats(glofas_var_name, thresh_array)
-get_thresh_and_max_precision_with_no_fn(glofas_var_name, thresh_array)
+```python
+x = df['glofas_observed'].diff(1).values[1:]
+y = df['observed'].diff(1).values[1:]
+plt.plot(x,y,'.', alpha=0.2)
+l = np.polyfit(x, y, 1)
+pearsonr(y,x)
+
+x = np.arange(-20000, 20000)
+plt.plot(x, l[1] + l[0]* np.arange(-20000, 20000))
+plt.xlim(-25500, 25000)
+plt.ylim(-1,1)
+
+```
+
+```python
+x = df['glofas_observed']
+y = df['observed']
+idx = df['event'] == True
+plt.plot(x,y, '.')
+plt.plot(x[idx], y[idx], 'ro')
 ```
 
 # Appendix
