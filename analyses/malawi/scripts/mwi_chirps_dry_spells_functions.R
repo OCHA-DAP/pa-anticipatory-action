@@ -118,6 +118,16 @@ computeRollingSumPerPixel <- function(dataframe_long, window){
   return(rolling_sum)
 }
 
+computeBackRollingSumPerPixel <- function(dataframe_long, window){
+  
+  rolling_sum <-  dataframe_long %>%
+    arrange(cell, date) %>%
+    group_by(cell) %>%
+    mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'left')
+    ) 
+  return(rolling_sum)
+}
+
 # compute backwards rolling sum
 computeBackRollingSum <- function(dataframe_long, window){
   
@@ -196,7 +206,7 @@ findRainyOnsetPerPixel <- function() {
 }
 
 
-## compute cessation date for every rainy season per adm2 NOTE: uses the left alignment / "back" method to compute the 15d rolling sum
+## compute cessation date for every rainy season per region NOTE: uses the left alignment / "back" method to compute the 15d rolling sum. Original function used right alignment
 findRainyCessation <- function() {
   
    # identify 15-day periods of up to 25mm cum
@@ -238,7 +248,7 @@ findRainyCessation_original <- function() {
 }
 
 # create binary for days in a dry spell (14-d <=2mm cum) per pixel
-listDSDaysPerPixel <- function(i) {
+listDSDaysPerPixel <- function(i, adm_name) {
                
     # take cell number
     cell_number <- dry_spells_during_rainy_season_list$cell[i]
@@ -247,11 +257,8 @@ listDSDaysPerPixel <- function(i) {
     season_approx_value <- dry_spells_during_rainy_season_list$season_approx[i]
     
     # take adm2 
-    adm2_name <- dry_spells_during_rainy_season_list$ADM2_EN[i]
-    
-    # take region
-    adm1_name <- dry_spells_during_rainy_season_list$region[i]
-    
+    adm_name <- dry_spells_during_rainy_season_list$adm_name[i]
+  
     # generate list of dates of the dry spell
     dates_list <- data.frame(date = seq(from = dry_spells_during_rainy_season_list$dry_spell_first_date[i], 
                       to = dry_spells_during_rainy_season_list$dry_spell_last_date[i], 
@@ -260,8 +267,7 @@ listDSDaysPerPixel <- function(i) {
     dates_list$cell <- cell_number
     
     # add adm names
-    dates_list$region <- adm1_name
-    dates_list$ADM2_EN <- adm2_name
+    dates_list$adm_name <- adm_name
     
     # add season_approx
     dates_list$season_approx <- season_approx_value

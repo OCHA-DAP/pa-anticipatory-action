@@ -44,13 +44,20 @@ mwi_adm2
 plot(mwi_adm2$geometry) # visual inspection
 
 mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
-mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
 
-# list years and adm2 regions to be analysed
+# list years and adm2/adm1 regions to be analysed
+mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
+mwi_adm1_ids <- as.data.frame(mwi_adm1) %>% dplyr::select('ADM1_PCODE', 'ADM1_EN') 
+
 year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'year')))
-year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
+
+year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * adm2 combinations
 names(year_by_adm2)[2] <- 'pcode'
 year_by_adm2$year <- as.character(year_by_adm2$year)
+
+year_by_adm1 <- crossing(year_list, mwi_adm1_ids$ADM1_PCODE) # create list with all year * adm1 combinations
+names(year_by_adm1)[2] <- 'pcode'
+year_by_adm1$year <- as.character(year_by_adm1$year)
 
 #####
 ## process observational rainfall data (CHIRPS)
@@ -83,41 +90,56 @@ s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s20
 
 # crop area outside of MWI
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm2_spatial_extent)) # crop automatically converts to a brick - a single raster file
-nbr_layers <- nlayers(s2000_s2020_cropped)
 
 # save as a raster file not RDS
 #writeRaster(s2000_s2020_cropped, filename = paste0(data_dir, '/processed/malawi/dry_spells/s2000_s2020_cropped.tif'), format="GTiff", overwrite=TRUE, options=c("INTERLEAVE=BAND","COMPRESS=LZW"))
 #s2000_s2020_cropped <- brick(paste0(data_dir, "/processed/malawi/dry_spells/s2000_s2020_cropped.tif")) # read in saved raster file
 
-# extract every cell value over 20 years (Note: not exploding multipart polygons)
-all_years_cell_values <- raster::extract(s2000_s2020_cropped, mwi_adm2, cellnumbers = T, df = T, nl = nbr_layers) # return a df with polygon id, cell id, and values per cell for every day of 2000-2020 (1 day/layer at a time)
+nbr_layers <- nlayers(s2000_s2020_cropped)
+
+# extract every cell value over 20 years per adm region (Note: not exploding multipart polygons)
+all_years_cell_values_adm2 <- raster::extract(s2000_s2020_cropped, mwi_adm2, cellnumbers = T, df = T, nl = nbr_layers) # return a df with polygon id, cell id, and values per cell for every day of 2000-2020 (1 day/layer at a time)
+all_years_cell_values_adm1 <- raster::extract(s2000_s2020_cropped, mwi_adm1, cellnumbers = T, df = T, nl = nbr_layers) # return a df with polygon id, cell id, and values per cell for every day of 2000-2020 (1 day/layer at a time)
 
 # add pcode for each region
-mwi_adm2_ids$ID <- seq_along(1:n_distinct(mwi_adm2_ids$ADM2_PCODE)) # creates IDs based on order, which is used by extract to assign its IDs
-all_years_cell_values <- all_years_cell_values %>%
-                          left_join(mwi_adm2_ids, by = 'ID') %>%
-                          relocate(ADM2_PCODE, .after = ID) %>% # move the identification columns to the front of the dated values
-                          relocate(ADM2_EN, .after = ADM2_PCODE)
+mwi_adm2_ids$ID <- seq_along(1:n_distinct(mwi_adm2_ids$ADM2_PCODE)) # creates IDs based on layer order, which is used by extract to assign its IDs
+all_years_cell_values_adm2 <- all_years_cell_values_adm2 %>%
+                                left_join(mwi_adm2_ids, by = 'ID') %>%
+                                relocate(ADM2_PCODE, .after = ID) %>% # move the identification columns to the front of the dated values
+                                relocate(ADM2_EN, .after = ADM2_PCODE)
 
-# save the dataframe
-#saveRDS(all_years_cell_values, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
-#all_years_cell_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
+mwi_adm1_ids$ID <- seq_along(1:n_distinct(mwi_adm1_ids$ADM1_PCODE)) # creates IDs based on kayer order, which is used by extract to assign its IDs
+all_years_cell_values_adm1 <- all_years_cell_values_adm1 %>%
+                                left_join(mwi_adm1_ids, by = 'ID') %>%
+                                relocate(ADM1_PCODE, .after = ID) %>% # move the identification columns to the front of the dated values
+                                relocate(ADM1_EN, .after = ADM1_PCODE)
+
+# save/read the extracted values
+
+#saveRDS(all_years_cell_values_adm2, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
+#all_years_cell_values_adm2 <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
+#saveRDS(all_years_cell_values_adm1, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm1.RDS"))
+#all_years_cell_values_adm1 <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm1.RDS"))
 
 #####
 ## reformat
 #####
-#data <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
-data <- all_years_cell_values
+
+# select dataset
+data <- all_years_cell_values_adm2
+#data <- all_years_cell_values_adm1
+
 length(data$cell) == n_distinct(data$cell) # check that IDs are unique
 cell_ids <- data.frame(unique(data$cell))
 names(cell_ids)[1] <- 'cell'
 
-cell_adms <- all_years_cell_values %>%
-              dplyr::select(cell, ADM2_EN, ADM2_PCODE) %>%
-              mutate(cell = as.character(cell)) %>%
-              mutate(region_code = substr(ADM2_PCODE, 3, 3)) %>% 
-              mutate(region = ifelse(region_code == 3, "Southern", ifelse(region_code == 2, "Central", "Northern"))) %>%
-              dplyr::select(-region_code)
+cell_adms <- data %>%
+                dplyr::select(cell, ADM2_EN, ADM2_PCODE) %>%
+                mutate(cell = as.character(cell))
+
+#cell_adms <- data %>%
+#                dplyr::select(cell, ADM1_EN, ADM1_PCODE) %>%
+#                mutate(cell = as.character(cell)) 
 
 year_by_cell <- crossing(year_list, cell_ids$cell) # create list with all year * cell combinations
 names(year_by_cell)[2] <- 'cell'
@@ -149,9 +171,9 @@ data_long <- data_long %>%
                           computeRollingSumPerPixel(., window = 14) %>%
                           rename(rollsum_14d = rollsum)
 
-# compute 15-day rolling sums
+# compute 15-day rolling sums using left alignment
 data_long <- data_long %>%
-                          computeRollingSumPerPixel(., window = 15) %>%
+                          computeBackRollingSumPerPixel(., window = 15) %>%
                           rename(rollsum_15d = rollsum)
 
 # label rainy days
@@ -214,7 +236,8 @@ nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were 
 nrow(rainy_seasons_detail) / 22 == n_distinct(data$cell) # confirm there is a record for every year and every cell
 
 # save results
-#write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_per_pixel.csv"), row.names = FALSE)
+#write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_per_pixel_adm1.csv"), row.names = FALSE)
 
 #####
 ## identify dry days that occurred during a rainy season per cell
@@ -265,7 +288,8 @@ dry_spells_details <- dry_spells_list %>%
 
 nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were kept
 
-#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel.csv"), row.names = FALSE)
+#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel_adm1.csv"), row.names = FALSE)
 
 # identify dry spells during rainy seasons per cell
 dry_spells_details$cell <- as.character(dry_spells_details$cell)
@@ -280,8 +304,13 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
                                           left_join(cell_adms, by = c('cell'= 'cell')) %>%
                                           dplyr::select(cell, ADM2_EN, region, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
+#dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% 
+#                                        left_join(cell_adms, by = c('cell'= 'cell')) %>%
+#                                        dplyr::select(cell, ADM1_EN, region, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel.csv"), row.names = FALSE)
+
+#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
 # build list of dry spell dates per cell
@@ -293,7 +322,8 @@ df <- data.frame()
 # extract lists of dates per cell
 for (i in seq_along(1:nrow(dry_spells_during_rainy_season_list))) {
   
-    row_list <- listDSDaysPerPixel(i)
+    row_list <- listDSDaysPerPixel(i, ADM2_EN)
+    #row_list <- listDSDaysPerPixel(i, ADM1_EN)
     
     # add individual row to dataframe
     df <- rbind(df, row_list)
@@ -303,7 +333,8 @@ for (i in seq_along(1:nrow(dry_spells_during_rainy_season_list))) {
 df$rainy_season_dry_spell <- 1
 
 # save
-#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel.csv"), row.names = FALSE)
+#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
 # build list of dates, across all cells, with binary dry spell/no
@@ -330,42 +361,19 @@ table(complete_list$rainy_season_dry_spell)
 # compute dry spell coverage per adm 
 ##############
 
-# compute nbr of cells in rainy_season_dry_spell status per date, per adm
-adm1_ds_counts <- complete_list %>% 
-                    group_by(region, date) %>%
-                    summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm region
-                              nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
-                              perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
+# compute nbr of cells in rainy_season_dry_spell status per date, per adm2
 adm2_ds_counts <- complete_list %>% 
                     group_by(ADM2_EN, date) %>%
                     summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm region
                               nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
                               perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
-
-sum(adm1_ds_counts$nbr_cells) == sum(adm2_ds_counts$nbr_cells) # check
-
-summary(adm1_ds_counts)
 summary(adm2_ds_counts)
 
 # save
+#write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm2.csv"), row.names = FALSE)
 #write.csv(adm1_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/adm1_ds_counts_per_pixel.csv"), row.names = FALSE)
-#write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/adm2_ds_counts_per_pixel.csv"), row.names = FALSE)
 
 # viz
-ggplot(data = adm1_ds_counts, aes(x = date, y = perc_ds_cells)) +
-  geom_point(aes(color=region)) +
-  facet_wrap(~ region) +
-  ggtitle("Dry Spell Coverage per Region") +
-  xlab("Date") +
-  ylab("Area in a dry spell (% of cells)")
-
-ggplot(data = adm1_ds_counts, aes(x = date, y = perc_ds_cells)) +
-   geom_line(color = "steelblue", size = 1) +
-   facet_wrap(~ region) +
-   ggtitle("Dry Spell Coverage per Region") +
-   xlab("Date") +
-   ylab("Area in a dry spell (% of cells)")
-
 ggplot(data = adm2_ds_counts, aes(x = date, y = perc_ds_cells)) +
   geom_point(aes(color=ADM2_EN)) +
   facet_wrap(~ ADM2_EN) +
@@ -377,5 +385,19 @@ ggplot(data = adm2_ds_counts, aes(x = date, y = perc_ds_cells)) +
   geom_line(color = "steelblue", size = 1) +
   facet_wrap(~ region) +
   ggtitle("Dry Spell Coverage per District") +
+  xlab("Date") +
+  ylab("Area in a dry spell (% of cells)")
+
+ggplot(data = adm1_ds_counts, aes(x = date, y = perc_ds_cells)) +
+  geom_point(aes(color=region)) +
+  facet_wrap(~ region) +
+  ggtitle("Dry Spell Coverage per Region") +
+  xlab("Date") +
+  ylab("Area in a dry spell (% of cells)")
+
+ggplot(data = adm1_ds_counts, aes(x = date, y = perc_ds_cells)) +
+  geom_line(color = "steelblue", size = 1) +
+  facet_wrap(~ region) +
+  ggtitle("Dry Spell Coverage per Region") +
   xlab("Date") +
   ylab("Area in a dry spell (% of cells)")
