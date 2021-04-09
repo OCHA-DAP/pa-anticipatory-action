@@ -1,7 +1,9 @@
 library(dplyr)
 library(sf)
 library(ggplot2)
-
+library(tidyr)
+library(tibble)
+library(lubridate)
 
 # -------------------------------------------------------------------------
 # Exploring agricultural stress and related impacts in Malawi
@@ -50,9 +52,9 @@ df_crop_sel <- df_crop %>%
 # These are still mostly just the earliest years...
 low_years <- df_crop_sel %>% filter(Value < quantile(df_crop_sel$Value, 0.33))
 
-ggplot(df_crop_sel) +
+plt_crop <- ggplot(df_crop_sel) +
   geom_line(aes(x=Year, y=Value)) +
-  labs(y=filter, title='Years with lower 1/3rd cereal yield in Malawi')+
+  labs(y=filter)+
   theme_minimal() +
   geom_vline(xintercept=as.numeric(low_years$Year), colour="red", linetype=2)
 
@@ -74,10 +76,19 @@ df_fewsnet_sel <- df_fewsnet %>%
   summarise(tot = sum(ipc3_plus))%>%
   mutate(date= as.Date(date))
 
-ggplot(df_fewsnet_sel, aes(x=date, y=tot, group=ADMIN1))+
+df_fewsnet_sel_july <- df_fewsnet_sel %>%
+  mutate(month = lubridate::month(date))%>%
+  filter(month>5 & month<8)%>%
+  mutate(season_approx = lubridate::year(date)-1)%>%
+  select(season_approx, ADMIN1, tot)%>%
+  group_by(ADMIN1, season_approx)%>%
+  summarise(tot=sum(tot))
+
+plt_fewsnet <- ggplot(df_fewsnet_sel, aes(x=date, y=tot, group=ADMIN1))+
   geom_line(aes(color=ADMIN1))+
   theme_minimal()+
-  labs(x='Date', y='Population', title='Total population in IPC Phase 3+ by region in Malawi')
+  theme(legend.position = 'bottom')+
+  labs(x='Date', y='Population')
 
 
 # Agricultural stress index -----------------------------------------------
@@ -93,14 +104,41 @@ regions <- c('Central Region', 'Northern Region', 'Southern Region')
 df_asi_sel <- df_asi %>%
   filter(Province %in% regions) %>%
   mutate(Date = as.Date(Date)) %>%
-  filter(Date > '2000-01-01')
+  filter(Date > '2000-01-01')%>%
+  mutate(month_day = format(Date, "%m-%d"))%>%
+  mutate(date_no_year = as.Date(paste0('1800-',month_day), "%Y-%m-%d"))
 
-ggplot(df_asi_sel, aes(x=Date, y=Data)) +
-  geom_line()+
-  facet_wrap(~Province)+
-  labs(y='% of area with mean VHI < 35', title='Agricultural stress in regions in Malawi')+
-  theme_minimal()
+plt_asi <- ggplot(df_asi_sel, aes(x=date_no_year, y=Data, group=Province)) +
+  geom_line(aes(color=Province))+
+  facet_wrap(~Year)+
+  labs(y='% of area with mean VHI < 35', x='Date')+
+  theme_bw()+
+  theme(legend.position = 'bottom')+
+  scale_x_date(date_labels = "%b")+
+  annotate("rect", xmin = as.Date('1800-07-01'), xmax = as.Date('1800-10-01'), ymin = 0, ymax = 100, 
+           alpha = .25)
 
+# Get the mean ASI by region during each season approx (Oct-June)
+df_asi_sel_mean <- df_asi_sel %>%
+  mutate(season_approx = ifelse(df_asi_sel$Month >= 10, df_asi_sel$Year, ifelse(df_asi_sel$Month <= 7, df_asi_sel$Year - 1, 'outside rainy season')))%>%
+  filter(season_approx!='outside rainy season') %>%
+  select(Province, Data, season_approx) %>%
+  group_by(Province, season_approx) %>%
+  summarise(avg_asi = mean(Data)) %>%
+  mutate(season_approx = as.numeric(season_approx))%>%
+  filter(season_approx>1999)%>%
+  mutate(Province = substring(Province, 0, nchar(Province)-7))
+
+# Get the max ASI by region during each season approx (Oct-June)
+df_asi_sel_max <- df_asi_sel %>%
+  mutate(season_approx = ifelse(df_asi_sel$Month >= 10, df_asi_sel$Year, ifelse(df_asi_sel$Month <= 7, df_asi_sel$Year - 1, 'outside rainy season')))%>%
+  filter(season_approx!='outside rainy season') %>%
+  select(Province, Data, season_approx) %>%
+  group_by(Province, season_approx) %>%
+  summarise(max_asi = max(Data)) %>%
+  mutate(season_approx = as.numeric(season_approx))%>%
+  filter(season_approx>1999)%>%
+  mutate(Province = substring(Province, 0, nchar(Province)-7))
 
 # Historical dry spells ---------------------------------------------------
 
@@ -109,11 +147,45 @@ ggplot(df_asi_sel, aes(x=Date, y=Data)) +
 
 df_dryspells_agg <- df_dryspells %>%
   group_by(region, season_approx) %>%
-  summarise(num_ds= n())
+  summarise(num_ds= n()) %>%
+  as.data.frame() %>%
+  add_row(region = 'Northern', season_approx = 2000, num_ds=0) %>%
+  complete(region, season_approx = 2000:2020, 
+           fill = list(num_ds = 0)) 
 
 # What about the total number of dry spell days in each region per growing season?
 df_dryspells_days <- df_dryspells %>%
   group_by(region, season_approx)%>%
-  summarise(days_ds=sum(dry_spell_duration))
+  summarise(days_ds=sum(dry_spell_duration)) %>%
+  as.data.frame() %>%
+  add_row(region = 'Northern', season_approx = 2000, days_ds=0) %>%
+  complete(region, season_approx = 2000:2020, 
+           fill = list(days_ds = 0)) 
 
-# What about dry spells that started in the key flowering time?
+
+# Understanding relationships ---------------------------------------------
+
+# Join and get aggregate statistics by season by region
+df_sum <- df_dryspells_days %>%
+  full_join(df_asi_sel_mean, by=c('region'='Province', 'season_approx'='season_approx'))%>%
+  full_join(df_dryspells_agg, by=c('region', 'season_approx'))%>%
+  full_join(df_asi_sel_max, by=c('region'='Province', 'season_approx'='season_approx'))%>%
+  full_join(df_fewsnet_sel_july, by=c('region'='ADMIN1', 'season_approx'='season_approx'))
+
+# Create scatter plots to understand relationships 
+plot_scatter <- function(x, y, xlab, ylab){
+  plt <- ggplot(df_sum, aes(y=y, x=x, color=region))+
+    geom_point(alpha=0.5, size=2)+
+    #facet_wrap(~region)+
+    theme_minimal()+
+    labs(x=xlab, y=ylab)
+  return(plt)
+}
+
+plt_asi_mean_days <- plot_scatter(df_sum$days_ds, df_sum$avg_asi, 'Number of dry spell days', 'Mean ASI')
+plt_asi_max_days <- plot_scatter(df_sum$days_ds, df_sum$max_asi, 'Number of dry spell days', 'Max ASI')
+
+plt_ipc_days <- plot_scatter(df_sum$days_ds, df_sum$tot, 'Number of dry spell days', 'Population IPC 3+')
+plt_ipc_asi <- plot_scatter(df_sum$avg_asi, df_sum$tot, 'Mean ASI', 'Population IPC 3+')
+
+
