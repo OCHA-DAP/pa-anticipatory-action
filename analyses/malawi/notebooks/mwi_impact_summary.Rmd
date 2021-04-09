@@ -1,0 +1,102 @@
+---
+title: "Exploring the potential impacts of dry spells in Malawi"
+author: "By Centre for Humanitarian Data"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: custom.css
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+source("mwi_impact.R")
+library(kableExtra)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+
+This document explores the location and timing of potential impacts of dry spells on humanitarian need in Malawi. With this analysis we are trying to understand if our historical dry spells are correlated with various potential impact factors, such as food insecurity, agricultural stress, and low crop production. Our assumption is that the occurrence of many dry spells in a region would translate to subsequent increased agricultural stress, lower than average crop production, and more people facing a food security crisis.  
+
+## Baseline overview
+
+#### Crop production
+
+[This data](https://data.humdata.org/dataset/world-bank-agriculture-and-rural-development-indicators-for-malawi) from The World Bank provides various indicators of agricultural and rural development in Malawi. These indicators are provided annually at a national level. This data contains a crop production indicator, however because of the clear trend in increasing crop production over time, it doesn't look very meaningful to identify years with low crop production. We need to know how the crop production deviates from what is expected, and this data isn't really telling us that. 
+
+The figure below instead show cereal yield per hectare. Years in the lower tercile of cereal yield are highlighted. Given that almost all of these years are in the beginning of our time period of interest, this still might not be incredibly meaningful to connect with the occurrence of dry spells. However, it looks like 2015 and 2016 had a notable dip in yields, which could perhaps be the result of drought or dry spells during the growing season. 
+
+```{r crop-prod, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Cereal yield in Malawi, years with lower tercile yield highlighted'}
+
+plt_crop
+
+```
+
+#### Food insecurity
+
+The [FEWSNET IPC data](https://fews.net/IPC) provides us with information on the number of people facing critical food insecurity (Phase 3+) within regions in Malawi. We're looking specifically at the 'Current Situation' figures, which are provided 4X/year from 2009 to 2021. Thinking about the timing of the growing season, we would perhaps expect to see evidence of poor food insecurity for the July values if there was poor crop production potentially resulting from a drought or dry spell.   
+
+The figure below shows us that the populations in the Southern Region have faced significantly more food insecurity than other regions. 
+
+```{r food_insec, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Total population in IPC Phase 3+ by region in Malawi'}
+
+plt_fewsnet
+
+
+```
+
+Note however that these values are not normalized by the total population in each region. 
+
+#### Agricultural stress
+
+The [Agricultural Stress Index (ASI)](http://www.fao.org/giews/earthobservation/country/index.jsp?lang=en&type=11111&code=MWI#) from the FAO is summarized as follows:
+
+> The Agricultural Stress Index (ASI) is a quick-look indicator that facilitates the early identification of cropped land with a high likelihood of water stress (drought). The Index is based on the integration of the Vegetation Health Index (VHI) in two dimensions that are critical in the assessment of a drought event in agriculture: temporal and spatial. The first step of the ASI calculation is a temporal averaging of the VHI, assessing the intensity and duration of dry periods occurring during the crop cycle at the pixel level; this calculation includes the use of crop coefficients, which introduces sensitivity of a crop to water stress during each phenological phase. The second step determines the spatial extent of drought events by calculating the percentage of pixels in arable areas with a VHI value below 35 percent (this value was identified as a critical threshold in assessing the extent of drought in previous research by Kogan, 1995). Each administrative area is classified according to the percentage of the affected area to facilitate the quick interpretation of results.
+
+The figure below shows the ASI across regions in Malawi from 2000-2021. Since we're interested in the relationship to dry spells during the rainy season, it is most relevant to look at values outside of the shaded areas. Across all regions, the 2001, 2003, 2005, and 2014 growing seasons all appear to have been subject to notably higher agricultural stress. The Central and Southern regions also faced relatively high agricultural stress in the 2002 and 2015 seasons. 
+
+```{r asi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=6, fig.align="center", fig.cap='Agricultural stress in regions in Malawi, approximate dry season (July-Oct) shaded'}
+
+plt_asi
+
+```
+
+## Relationship with dry spells
+
+We've calculated summary statistics relating to food insecurity, ASI, and dry spells for each rainy season in each region from 2000-2020. 
+
+#### Comparing dry spells with ASI
+
+The figure below is somewhat surprising. these figures suggest that either: 
+1) High ASI during the rainy season is not positively related to the presence of dry spells in a given region, or
+2) Our definition of dry spells is not effective in capturing instances of an agricultural shock. 
+
+In fact, in the Southern region during seasons where at least one dry spell occurs, both of these figures show a relatively strong **negative relationship** between ASI and both number of dry spells and number of dry spell days. 
+
+
+```{r ds_asi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Relationship between number of dry spell days in a rainy season with max ASI in that season'}
+
+plt_asi_max_days
+
+```
+
+
+#### Comparing dry spells with food insecurity
+
+Ultimately there isn't enough data here to make any conclusions about the relationship between food security crises and the occurrence of dry spells in a season. Although the two seasons with the highest population in IPC 3+ did not have any dry spells occurring. 
+
+```{r ds_ipc, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Relationship between number of dry spell days in a rainy season with population IPC 3+ in June/July'}
+
+plt_ipc_days
+
+```
+
