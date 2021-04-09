@@ -35,7 +35,7 @@ This document explores the location and timing of potential impacts of dry spell
 
 The figure below instead show cereal yield per hectare. Years in the lower tercile of cereal yield are highlighted. Given that almost all of these years are in the beginning of our time period of interest, this still might not be incredibly meaningful to connect with the occurrence of dry spells. However, it looks like 2015 and 2016 had a notable dip in yields, which could perhaps be the result of drought or dry spells during the growing season. 
 
-```{r crop-prod, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Cereal yield in Malawi, years with lower tercile yield highlighted'}
+```{r crop-prod, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Cereal yield in Malawi, highlighting years with yield lower than 5-year rolling average'}
 
 plt_crop
 
@@ -43,11 +43,21 @@ plt_crop
 
 #### Food insecurity
 
-The [FEWSNET IPC data](https://fews.net/IPC) provides us with information on the number of people facing critical food insecurity (Phase 3+) within regions in Malawi. We're looking specifically at the 'Current Situation' figures, which are provided 4X/year from 2009 to 2021. Thinking about the timing of the growing season, we would perhaps expect to see evidence of poor food insecurity for the July values if there was poor crop production potentially resulting from a drought or dry spell.   
+The [FEWS NET IPC data](https://fews.net/IPC) provides us with information on the number of people facing critical food insecurity (Phase 3+) within regions in Malawi. We're looking specifically at the 'Current Situation' figures, which are provided 4X/year from 2009 to 2021. Thinking about the timing of the growing season, we would perhaps expect to see evidence of poor food insecurity for the July values if there was poor crop production potentially resulting from a drought or dry spell.   
 
-The figure below shows us that the populations in the Southern Region have faced significantly more food insecurity than other regions. 
+The figure below shows us that the populations in the Southern region more frequently face food insecurity than other regions. The general trend in higher food insecurity during the late months of the year (the lean season) may be in part due to this being the time when local cereal supplies are lowest and food prices are highest. This data shows the following notable peaks in food insecurity: 
 
-```{r food_insec, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Total population in IPC Phase 3+ by region in Malawi'}
+**Late 2016 in both the Central and Southern regions**: [Reporting from FEWS NET](https://fews.net/southern-africa/malawi/food-security-outlook/june-2016) suggests that this may be due to high staple food prices at that time, likely as result of poor maize production during the 2015/2016 season (which is supported by our figure above). 
+
+> However, due to erratic rains and the El Niño induced drought during the 2015/16 season, maize production this past season was below average. The total cumulative rainfall in most of the south was 55-85 percent of normal, while in the central region localized areas received 70-85 percent of normal rainfall. Significantly fewer households in these areas are currently consuming cereal from their own production and many are instead relying on maize purchases. As a result, market demand for cereals is atypically increasing during the main harvest period and this is driving up maize retail prices. (FEWS NET)
+
+**Late 2018 in the Southern region**: [Reporting from FEWS NET](https://fews.net/southern-africa/malawi/food-security-outlook/december-2018) relates this food insecurity to low crop production in the 2017/2018 season.  
+
+> Most southern and some central districts are facing Crisis (IPC Phase 3) acute food insecurity outcomes due to below-average cereal and cash crops from the 2017/18 production season. Poor households also have below-average incomes as most income earning opportunities are agriculture and depend on rainfall, which has to date been well below normal. (FEWS NET)
+
+[Further reporting](https://fews.net/southern-africa/malawi/food-security-outlook/june-2018) suggests that this poor crop season may have been caused by dryness and erratic rains. 
+
+```{r food_insec, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=4, fig.align="center", fig.cap='Total population in IPC Phase 3+ by region in Malawi from 2009 to 2020'}
 
 plt_fewsnet
 

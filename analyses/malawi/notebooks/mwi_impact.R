@@ -4,6 +4,7 @@ library(ggplot2)
 library(tidyr)
 library(tibble)
 library(lubridate)
+library(zoo)
 
 # -------------------------------------------------------------------------
 # Exploring agricultural stress and related impacts in Malawi
@@ -19,6 +20,8 @@ shp_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp")
 shp_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
 
 df_dryspells <- read.csv(paste0(data_dir, '/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
+df_rainy_season_mean <- read.csv(paste0(data_dir, "/exploration/malawi/dryspells/rainy_seasons_detail_2000_2020_per_pixel_adm1.csv"))
+
 
 df_crop <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/agriculture-and-rural-development_mwi.csv'))
 df_asi <- read.csv(paste0(data_dir, '/exploration/malawi/ASI/malawi_asi_dekad.csv'))
@@ -46,18 +49,20 @@ df_crop_sel <- df_crop %>%
   filter(Indicator.Name == filter) %>%
   mutate(Year = as.numeric(Year))%>%
   mutate(Value = as.numeric(Value))%>%
-  filter(Year > 2000)
- 
-# Get the years with lowest 1/3 yield or production
-# These are still mostly just the earliest years...
-low_years <- df_crop_sel %>% filter(Value < quantile(df_crop_sel$Value, 0.33))
+  mutate(rollavg = zoo::rollmean(Value, k = 5, fill = NA, align='left'))%>%
+  mutate(low = ifelse(Value<rollavg, 1, 0)) %>%
+  filter(Year > 1999)
+
+# Get years where production is lower than 5-year rolling avg of prev years 
+low_years <- df_crop_sel %>%
+  filter(low == 1)
 
 plt_crop <- ggplot(df_crop_sel) +
-  geom_line(aes(x=Year, y=Value)) +
+  geom_bar(stat='identity', aes(x=Year, y=Value), alpha=0.5) +
+  geom_line(aes(x=Year, y=rollavg), alpha=0.7)+
   labs(y=filter)+
   theme_minimal() +
-  geom_vline(xintercept=as.numeric(low_years$Year), colour="red", linetype=2)
-
+  annotate("text", x = as.numeric(low_years$Year), y = low_years$Value+100, color='red',label = as.numeric(low_years$Year), size=2)
 
 # Food insecurity ---------------------------------------------------------
 
@@ -74,7 +79,11 @@ df_fewsnet_sel <- df_fewsnet %>%
   select('ADMIN1', 'ADMIN2', 'date', 'ipc3_plus')%>%
   group_by(ADMIN1, date)%>%
   summarise(tot = sum(ipc3_plus))%>%
-  mutate(date= as.Date(date))
+  mutate(date= as.Date(date))%>%
+  mutate(year = lubridate::year(date))%>%
+  mutate(month_day = format(date, "%m-%d"))%>%
+  mutate(date_no_year = as.Date(paste0('1800-',month_day), "%Y-%m-%d"))%>%
+  mutate(tot = tot/1000000)
 
 df_fewsnet_sel_july <- df_fewsnet_sel %>%
   mutate(month = lubridate::month(date))%>%
@@ -84,13 +93,21 @@ df_fewsnet_sel_july <- df_fewsnet_sel %>%
   group_by(ADMIN1, season_approx)%>%
   summarise(tot=sum(tot))
 
-plt_fewsnet <- ggplot(df_fewsnet_sel, aes(x=date, y=tot, group=ADMIN1))+
-  geom_line(aes(color=ADMIN1))+
-  theme_minimal()+
+high_dates <- df_fewsnet_sel %>%
+  group_by(date) %>%
+  summarise(tot = sum(tot))%>%
+  filter(tot>0)
+
+plt_fewsnet <- ggplot(df_fewsnet_sel, aes(x=date_no_year, y=tot, group=ADMIN1))+
+  geom_bar(stat = 'identity', aes(fill=ADMIN1))+
+  facet_wrap(~year)+
+  scale_x_date(date_labels = "%b")+
+  theme_bw()+
   theme(legend.position = 'bottom')+
-  labs(x='Date', y='Population')
+  labs(x='Date', y='Population IPC 3+ (millions)', fill='Region')#+
+  #annotate("text", x = high_dates$date, y = high_dates$tot+500000, label = substring(high_dates$date, 0, 7), size=2, angle=45)
 
-
+plt_fewsnet
 # Agricultural stress index -----------------------------------------------
   
 # What is 'Area under National Administration'?
