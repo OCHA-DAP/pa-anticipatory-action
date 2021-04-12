@@ -227,8 +227,8 @@ findRainyCessation <- function() {
 }
 
 
-## compute cessation date for every rainy season per pixel. Uses right alignment to compute the 15-d rolling sum. includes the dry spell that ends the rainy season in the rainy season
-findRainyCessation_original <- function() {
+## compute cessation date for every rainy season per pixel. Uses left alignment / "back" method to compute the 15-d rolling sum. includes the dry spell that ends the rainy season in the rainy season
+findRainyCessationPerPixel <- function() {
   
   # identify 15-day periods of up to 25mm cum
   data_long$max_cum_25mm_bin <- ifelse(data_long$rollsum_15d <= 25, 1, 0) # is this day in a 25mm or less 15d period?
