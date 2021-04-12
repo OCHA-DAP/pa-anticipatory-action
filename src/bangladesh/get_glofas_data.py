@@ -8,10 +8,11 @@ import logging
 from pathlib import Path
 import os
 import sys
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from src.indicators.flooding import glofas, glofas_area
-
+from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.glofas.area import AreaFromStations, Station
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
@@ -19,14 +20,14 @@ from src.indicators.flooding import glofas, glofas_area
 COUNTRY_NAME = "bangladesh"
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
-    "Noonkhawa": glofas_area.Station(lon=89.9509, lat=25.9496),
-    "Chilmari": glofas_area.Station(lon=89.7476, lat=25.5451),
-    "Bahadurabad": glofas_area.Station(lon=89.6607, lat=25.1028),
-    "Sariakandi": glofas_area.Station(lon=89.6518, lat=24.8901),
-    "Kazipur": glofas_area.Station(lon=89.7498, lat=24.6637),
-    "Serajganj": glofas_area.Station(lon=89.7479, lat=24.4676),
-    "Aricha": glofas_area.Station(lon=89.6550, lat=23.9032),
-    "Bahadurabad_glofas": glofas_area.Station(lon=89.65, lat=25.15),
+    "Noonkhawa": Station(lon=89.9509, lat=25.9496),
+    "Chilmari": Station(lon=89.7476, lat=25.5451),
+    "Bahadurabad": Station(lon=89.6607, lat=25.1028),
+    "Sariakandi": Station(lon=89.6518, lat=24.8901),
+    "Kazipur": Station(lon=89.7498, lat=24.6637),
+    "Serajganj": Station(lon=89.7479, lat=24.4676),
+    "Aricha": Station(lon=89.6550, lat=23.9032),
+    "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
 LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
 
@@ -45,7 +46,7 @@ def main(download=True, process=False):
         # Remove the GloFAS station as it was not used originally
         ffwc_stations_for_download = FFWC_STATIONS.copy()
         del ffwc_stations_for_download["Bahadurabad_glofas"]
-        area = glofas_area.AreaFromStations(stations=ffwc_stations_for_download)
+        area = AreaFromStations(stations=ffwc_stations_for_download)
         glofas_reanalysis.download(
             country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
         )

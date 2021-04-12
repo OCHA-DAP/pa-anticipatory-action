@@ -6,9 +6,11 @@ import geopandas as gpd
 from pathlib import Path
 import os
 import sys
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from src.indicators.flooding import glofas, glofas_area
+from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.glofas.area import AreaFromShape, Station
 
 
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
@@ -17,12 +19,18 @@ COUNTRY_ISO3 = "npl"
 LEADTIME_HOURS = [x * 24 for x in [5, 10, 15]]
 # TODO: Read in the csv file from GDrive
 STATIONS = {
-    "Karnali": glofas_area.Station(lon=28.75, lat=81.25),
-    "Bimalnagar": glofas_area.Station(lon=28.15, lat=84.45),
-    "Jomsom": glofas_area.Station(lon=28.65, lat=83.55),
+    "Karnali": Station(lon=28.75, lat=81.25),
+    "Bimalnagar": Station(lon=28.15, lat=84.45),
+    "Jomsom": Station(lon=28.65, lat=83.55),
 }
-SHAPEFILE_BASE_DIR = Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
-SHAPEFILE = SHAPEFILE_BASE_DIR / "npl_admbnda_ocha_20201117" / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
+SHAPEFILE_BASE_DIR = (
+    Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
+)
+SHAPEFILE = (
+    SHAPEFILE_BASE_DIR
+    / "npl_admbnda_ocha_20201117"
+    / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
+)
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
@@ -35,8 +43,8 @@ def main(download=True, process=False):
     glofas_reforecast = glofas.GlofasReforecast()
 
     if download:
-        df_admin_boundaries = gpd.read_file(f'zip://{SHAPEFILE}')
-        area = glofas_area.AreaFromShape(df_admin_boundaries.iloc[0]['geometry'])
+        df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
+        area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
         glofas_reanalysis.download(
             country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
         )

@@ -43,5 +43,5 @@ class AreaFromShape(Area):
             north=shape.bounds[3],
             south=shape.bounds[1],
             east=shape.bounds[2],
-            west=shape.bounds[0]
+            west=shape.bounds[0],
         )

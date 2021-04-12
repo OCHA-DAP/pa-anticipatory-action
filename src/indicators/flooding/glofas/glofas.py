@@ -11,7 +11,7 @@ import numpy as np
 import xarray as xr
 import cdsapi
 
-from src.indicators.flooding.glofas_area import Area, Station
+from src.indicators.flooding.glofas.area import Area, Station
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
