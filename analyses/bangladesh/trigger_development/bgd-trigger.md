@@ -19,7 +19,6 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from scipy.stats import norm, pearsonr
@@ -196,6 +195,8 @@ df_ffwc_wl.update(df_ffwc_wl_full, overwrite=False)
 
 ```python
 WATER_THRESH = 19.5 + 0.85
+#WATER_THRESH = 19.5 + 1
+
 NDAYS_THRESH = 3
 
 def get_groups_above_threshold(observations, threshold):
@@ -264,7 +265,7 @@ df_final[['observed', 'glofas_observed']][df_final['event'] == True]
 ### GloFAS vs FFWC
 
 ```python
-def plot_glofas_vs_ffwc(glofas_var_name):
+def plot_glofas_vs_ffwc(glofas_var_name, ylabel='GloFAS ERA5 river discharge [m$^3$ s$^{-1}$]'):
     xvar = 'observed'
     df = df_final[[xvar, glofas_var_name]].dropna()
     x = df[xvar]
@@ -275,13 +276,14 @@ def plot_glofas_vs_ffwc(glofas_var_name):
     idx = df_final['event'] == True
     ax.plot(x[idx], y[idx], 'xr', ms=5, mfc='r', zorder=5)
     ax.set_xlabel('FFWC water level [m]')
-    ax.set_ylabel('GloFAS ERA5 river discharge [m$^3$ s$^{-1}$]')
-    print(min(y[idx]))
+    ax.set_ylabel(ylabel)
 
     split_val = 19.5
     idx = x < split_val
     print("Pearson's for above and below 19.5", pearsonr(x[idx], y[idx]),
     pearsonr(x[~idx], y[~idx]))
+    ax.axvline(19.5, lw=0.3, c='k')
+    
 plot_glofas_vs_ffwc('glofas_observed')
 ```
 
@@ -340,19 +342,19 @@ def plot_stats(glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
     fig, ax = plt.subplots()
     ax.plot(x, TP, label='TP')
     ax.plot(x, FP, label='FP')
-    ax.plot(x, FN, label='FN')
+    #ax.plot(x, FN, label='FN')
     df = df_final[['observed', 'event', glofas_var_name]]
     df = df[df[glofas_var_name].notna()]
     ax.axhline(len(df[df['event']]), c='C0', ls='--')
-    ax.axhline(0, c='C2', ls='--')
-    ax2 = ax.twinx()
-    ax2.plot(x, precision, label='precision', c='r')
-    ax2.plot(x, recall, label='recall', c='y')
-    ax2.plot(x, f1, label='F1', c='k')
-    ax2.set_ylim(-0.05, 1.05)
+    #ax.axhline(0, c='C2', ls='--')
+    #ax2 = ax.twinx()
+    #ax2.plot(x, precision, label='precision', c='r')
+    #ax2.plot(x, recall, label='recall', c='y')
+    #ax2.plot(x, f1, label='F1', c='k')
+    #ax2.set_ylim(-0.05, 1.05)
     ax.legend(loc=2)
-    ax2.legend(loc=0)
-    ax2.axhline(0.2, c='r', ls='--')
+    #ax2.legend(loc=0)
+    #ax2.axhline(0.2, c='r', ls='--')
 
     ax.set_xlabel(f'GloFAS trigger threshold {x_axis_units}')
     ax.set_ylabel('Number')
@@ -387,6 +389,8 @@ def plot_years(df_final, glofas_var, thresh, glofas_xlims):
     df_final['year'] = df_final.index.year
     iax = 0
     for year, df in df_final.groupby('year'):
+        if year == 2021:
+            break
         ax1 = axs[iax]
         x = df.index
         y1 = df['observed']
@@ -426,7 +430,7 @@ for n in range(2, 5):
     
     
 df_final['glofas_observed_sum'] = df_final['glofas_observed'].rolling(3).sum()
-plot_glofas_vs_ffwc('glofas_observed_sum')
+plot_glofas_vs_ffwc('glofas_observed_sum', ylabel='GloFAS ERA5 3-day river volumne [m$^3$ s$^{-1}$]')
 plot_years(df_final, 'glofas_observed_sum', 250000, (40000*3, 140000*3))
 
     
@@ -445,14 +449,21 @@ for nday in [5, 10, 15, 20]:
 ```python
 from matplotlib.ticker import MaxNLocator
 
-for var_type in ['', '_sum']:
+thresh_array = np.arange(60000, 110000, 500)
+df_for_hassan = pd.DataFrame({'glofas_threshold': thresh_array})
+
+
+#for var_type in ['', '_sum']:
+for var_type in ['']: 
     fig, ax1 = plt.subplots()
     ax1.set_ylim(0, 20)
     #ax2 = ax1.twiny()
     i = 0
-    for nday in [10, 15]:
-        for var_suffix in ['1sig-', 'median', '1sig+']:
-            thresh_array = np.arange(60000, 110000, 500)
+    ax1.axhline(5, c='k', lw=1)
+
+    for nday in [5, 10, 15]:
+        #for var_suffix in ['1sig-', 'median', '1sig+']:
+        for var_suffix in ['median']:
             ax = ax1
             if var_type == '_sum':
                 thresh_array *= 3
@@ -464,66 +475,20 @@ for var_type in ['', '_sum']:
             print(var_name, pearsonr(x[idx], y[idx]))
             TP, FP, FN = get_detection_stats(
                 var_name, thresh_array)
-            ax.plot(thresh_array, TP + i*0.05, label=var_name[7:], c=f'C{i}')
+            df_for_hassan[f'{nday}day_true_positive'] = TP
+            df_for_hassan[f'{nday}day_false_positive'] = TP
+            ax.plot(thresh_array, TP + i*0.05, label=f'{nday} day', c=f'C{i}')
             ax.plot(thresh_array, FP, '--', c=f'C{i}')
             i += 1
     ax.legend()
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid(True)
+
+df_for_hassan.to_csv('glofas_forecast_thresholds.csv', index=False)
 ```
 
 ```python
 plot_years(df_final, 'glofas_10day_1sig-', 90000, (40000, 140000))
-```
-
-```python
-year = 2016
-gvar = 'glofas_observed'
-#gvar = 'glofas_15day_median'
-df = df_final[['observed', gvar, 'event']].dropna()
-y1 = df['observed'].diff(1).rolling(15).sum()
-y2 = df[gvar].diff(1).rolling(15).sum()
-x = df.index
-fig, ax = plt.subplots()
-ax.plot(x, y1)
-ax.plot(x[idx], y1[idx], 'or')
-#ax2 = ax.twinx()
-#ax2.plot(x, y2,  c='C1')
-ax.plot(x, y2/10000)
-ax.set_xlim(datetime(year,1,1), datetime(year+1,1,1))
-```
-
-```python
-plt.plot(y2, y1, '.', alpha=0.5)
-plt.plot(y2[idx2], y1[idx2], '.r', alpha=0.5)
-l = np.polyfit(y2.dropna(), y1.dropna(), 1)
-idx2 = df['observed'] > 19.5
-print(pearsonr(y2.dropna(), y1.dropna()))
-x = np.arange(-20000, 20000)
-plt.plot(x, l[1] + l[0]* x)
-print(pearsonr(y2[idx2].dropna(), y1[idx2].dropna()))
-```
-
-```python
-x = df['glofas_observed'].diff(1).values[1:]
-y = df['observed'].diff(1).values[1:]
-plt.plot(x,y,'.', alpha=0.2)
-l = np.polyfit(x, y, 1)
-pearsonr(y,x)
-
-x = np.arange(-20000, 20000)
-plt.plot(x, l[1] + l[0]* np.arange(-20000, 20000))
-plt.xlim(-25500, 25000)
-plt.ylim(-1,1)
-
-```
-
-```python
-x = df['glofas_observed']
-y = df['observed']
-idx = df['event'] == True
-plt.plot(x,y, '.')
-plt.plot(x[idx], y[idx], 'ro')
 ```
 
 # Appendix
@@ -681,7 +646,7 @@ ax.set_xlim(df_ffwc_wl.index[0], df_ffwc_wl.index[10])
 
 ```
 
-## To organize
+### Full 30 year figure
 
 ```python
 fig, ax = plt.subplots(figsize=(20,10))
@@ -703,6 +668,8 @@ ax2.plot(df_final['glofas_observed'], '-', alpha=0.5, c='g',
 ax.legend()
 ax2.legend(loc=2)
 ```
+
+### Attempting to really interpolate -- very slow
 
 ```python
 from scipy import interpolate, integrate
@@ -728,9 +695,62 @@ print(pearsonr(test['observed'][idx], test['glofas_observed'][idx]),
       pearsonr(test['observed'][idx], test['glofas_observed_sum'][idx]))
 ```
 
+### Comparing differences
+
 ```python
 df = df_final.copy()
 x = df_final['observed'].values[1:] - df_final['observed'].values[:-1]
 y= df_final['ffwc_5day'].values[1:] - df_final['ffwc_5day'].values[:-1]
 plt.plot(x,y, '.')
+```
+
+### Exploring summed difference
+
+```python
+year = 2016
+gvar = 'glofas_observed'
+#gvar = 'glofas_15day_median'
+df = df_final[['observed', gvar, 'event']].dropna()
+y1 = df['observed'].diff(1).rolling(15).sum()
+y2 = df[gvar].diff(1).rolling(15).sum()
+x = df.index
+fig, ax = plt.subplots()
+ax.plot(x, y1)
+ax.plot(x, y2/10000)
+ax.set_xlim(datetime(year,1,1), datetime(year+1,1,1))
+```
+
+```python
+idx2 = df['observed'] > 19.5
+
+plt.plot(y2, y1, '.', alpha=0.5)
+plt.plot(y2[idx2], y1[idx2], '.r', alpha=0.5)
+l = np.polyfit(y2.dropna(), y1.dropna(), 1)
+print(pearsonr(y2.dropna(), y1.dropna()))
+x = np.arange(-20000, 20000)
+plt.plot(x, l[1] + l[0]* x)
+print(pearsonr(y2[idx2].dropna(), y1[idx2].dropna()))
+plt.axhline(0, c='k')
+```
+
+```python
+x = df['glofas_observed'].diff(1).values[1:]
+y = df['observed'].diff(1).values[1:]
+plt.plot(x,y,'.', alpha=0.2)
+l = np.polyfit(x, y, 1)
+pearsonr(y,x)
+
+x = np.arange(-20000, 20000)
+plt.plot(x, l[1] + l[0]* np.arange(-20000, 20000))
+plt.xlim(-25500, 25000)
+plt.ylim(-1,1)
+
+```
+
+```python
+x = df['glofas_observed']
+y = df['observed']
+idx = df['event'] == True
+plt.plot(x,y, '.')
+plt.plot(x[idx], y[idx], 'ro')
 ```
