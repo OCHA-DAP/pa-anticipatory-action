@@ -6,10 +6,7 @@ import rasterio
 import rioxarray
 import shutil
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-from indicators.drought.config import Config
-from utils_general.utils import auth_googleapi, download_gdrive, unzip
+from src.utils_general.utils import auth_googleapi, download_gdrive, unzip
 
 logger = logging.getLogger(__name__)
 

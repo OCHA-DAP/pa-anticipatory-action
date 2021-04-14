@@ -14,6 +14,7 @@ class Config:
     RAW_DIR="raw"
     PROCESSED_DIR="processed"
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
+    ANALYSES_DIR = "analyses"
 
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action

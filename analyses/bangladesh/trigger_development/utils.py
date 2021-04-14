@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 
-GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'raw/bangladesh/GLOFAS_Data'
+GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'exploration/bangladesh/GLOFAS_Data'
 print(GLOFAS_DS_FOLDER)
 
 
