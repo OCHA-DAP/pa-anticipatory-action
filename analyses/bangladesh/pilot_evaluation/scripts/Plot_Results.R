@@ -3,13 +3,12 @@ library(ggplot2)
 library(tmap)
 library(dplyr)
 
-setwd("C:/Users/Hannah/Desktop/pa-anticipatory-action/analyses/bangladesh")
-
+data_dir <- Sys.getenv("AA_DATA_DIR")
+bgd_dir <- paste0(data_dir, '/exploration/bangladesh')
 
 # Histograms --------------------------------------------------------------
 
-
-df_flooding <- read.csv('data/FE_Results/MAUZ_flood_summary_QA.csv') 
+df_flooding <- read.csv(paste0(bgd_dir, '/FE_Results/June_Aug/MAUZ_flood_summary_QA.csv')) 
 df_flooding <- df_flooding %>%
   mutate(PEAK_SAT = as.Date(df_flooding$PEAK_SAT, format = '%Y-%m-%d')) %>%
   mutate(PEAK_G = as.Date(df_flooding$PEAK_G, format = '%Y-%m-%d')) %>%
@@ -23,21 +22,17 @@ df_flooding <- df_flooding %>%
 
 ggplot(df_flooding, aes(x=RMSE)) +
   geom_histogram(fill="#69b3a2", color="#e9ecef", alpha=0.9)+
-  #geom_bar(stat='count', fill="#69b3a2", color="#e9ecef", alpha=0.9)+
   theme_bw()+
   ylab('Count')+
   xlab('RMSE')+
-  #xlim(0, 20)+
   theme(text = element_text(size = 20))
-  #scale_x_continuous(trans = 'log10')+
-  #labs(caption='Log x scale')
 
-ggsave('results/rmse.png')
+# ggsave('results/rmse.png')
 
 
 # Choropleth maps ---------------------------------------------------------
 
-shp_flooding <- st_read('data/ADM_Shp/selected_distict_mauza.shp') %>%
+shp_flooding <- st_read(paste0(bgd_dir, '/ADM_Shp/selected_distict_mauza.shp')) %>%
   select(OBJECTID, geometry)%>%
   right_join(df_flooding, by=c('OBJECTID'='PCODE'))
 
@@ -48,5 +43,5 @@ m <- tm_shape(shp_flooding) +
           palette='BuPu',
           style='jenks', 
           title='Satellite-derived\npeak flooding date')
-m
-tmap_save(m, 'results/survey_max_sat.png')
+
+# tmap_save(m, 'results/survey_max_sat.png')

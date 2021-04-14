@@ -3,13 +3,12 @@ library(ggplot2)
 library(tmap)
 library(dplyr)
 
+data_dir <- Sys.getenv("AA_DATA_DIR")
+bgd_dir <- paste0(data_dir, '/exploration/bangladesh')
 
 # 1. Read in and process the time series and summary data -----------------
 
-
-setwd("C:/Users/Hannah/Desktop/pa-anticipatory-action/analyses/bangladesh")
-
-df_flooding <- read.csv('data/FE_Results/June_Aug/MAUZ_flood_summary_QA_survey.csv') 
+df_flooding <- read.csv(paste0(bgd_dir, '/FE_Results/June_Aug/MAUZ_flood_summary_QA_survey.csv')) 
 df_flooding <- df_flooding %>%
   mutate(PEAK_SAT = as.Date(df_flooding$PEAK_SAT, format = '%Y-%m-%d')) %>%
   mutate(PEAK_G = as.Date(df_flooding$PEAK_G, format = '%Y-%m-%d')) %>%
@@ -21,12 +20,12 @@ df_flooding <- df_flooding %>%
   mutate(FWHM_NO = ifelse(FWHM < 200, FWHM, NA))%>%
   mutate(DIFF_SAT = abs(DIFF_SAT))
 
-shp <- st_read('data/ADM_Shp/selected_distict_mauza.shp') %>%
+shp <- st_read(paste0(bgd_dir,'/ADM_Shp/selected_distict_mauza.shp')) %>%
   select(OBJECTID, geometry) %>%
   filter(OBJECTID %in% df_flooding$PCODE)
 
-df_ts_intp <- read.csv('data/FE_Results/June_Aug/MAUZ_flood_extent_interpolated.csv')
-df_ts_sent <- read.csv('data/FE_Results/June_Aug/MAUZ_flood_extent_sentinel.csv')
+df_ts_intp <- read.csv(paste0(bgd_dir, '/FE_Results/June_Aug/MAUZ_flood_extent_interpolated.csv'))
+df_ts_sent <- read.csv(paste0(bgd_dir, '/FE_Results/June_Aug/MAUZ_flood_extent_sentinel.csv'))
 
 # 2. Identify the edge case mauzas for Gaussian fit --------------------------------
 
