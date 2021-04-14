@@ -5,6 +5,7 @@ library(tidyr)
 library(tibble)
 library(lubridate)
 library(zoo)
+library(raster)
 
 # -------------------------------------------------------------------------
 # Exploring agricultural stress and related impacts in Malawi
@@ -76,7 +77,7 @@ plt_crop <- ggplot(df_crop_sel) +
 
 df_fewsnet_sel <- df_fewsnet %>%
   mutate(ipc3_plus = CS_3 + CS_4 + CS_5) %>%
-  select('ADMIN1', 'ADMIN2', 'date', 'ipc3_plus')%>%
+  dplyr::select('ADMIN1', 'ADMIN2', 'date', 'ipc3_plus')%>%
   group_by(ADMIN1, date)%>%
   summarise(tot = sum(ipc3_plus))%>%
   mutate(date= as.Date(date))%>%
@@ -89,7 +90,7 @@ df_fewsnet_sel_july <- df_fewsnet_sel %>%
   mutate(month = lubridate::month(date))%>%
   filter(month>5 & month<8)%>%
   mutate(season_approx = lubridate::year(date)-1)%>%
-  select(season_approx, ADMIN1, tot)%>%
+  dplyr::select(season_approx, ADMIN1, tot)%>%
   group_by(ADMIN1, season_approx)%>%
   summarise(tot=sum(tot))
 
@@ -107,7 +108,6 @@ plt_fewsnet <- ggplot(df_fewsnet_sel, aes(x=date_no_year, y=tot, group=ADMIN1))+
   labs(x='Date', y='Population IPC 3+ (millions)', fill='Region')#+
   #annotate("text", x = high_dates$date, y = high_dates$tot+500000, label = substring(high_dates$date, 0, 7), size=2, angle=45)
 
-plt_fewsnet
 # Agricultural stress index -----------------------------------------------
   
 # What is 'Area under National Administration'?
@@ -139,7 +139,7 @@ plt_asi <- ggplot(df_asi_sel, aes(x=date_no_year, y=Data, group=Province)) +
 df_asi_sel_mean <- df_asi_sel %>%
   mutate(season_approx = ifelse(df_asi_sel$Month >= 10, df_asi_sel$Year, ifelse(df_asi_sel$Month <= 7, df_asi_sel$Year - 1, 'outside rainy season')))%>%
   filter(season_approx!='outside rainy season') %>%
-  select(Province, Data, season_approx) %>%
+  dplyr::select('Province', 'Data', 'season_approx') %>%
   group_by(Province, season_approx) %>%
   summarise(avg_asi = mean(Data)) %>%
   mutate(season_approx = as.numeric(season_approx))%>%
@@ -150,12 +150,24 @@ df_asi_sel_mean <- df_asi_sel %>%
 df_asi_sel_max <- df_asi_sel %>%
   mutate(season_approx = ifelse(df_asi_sel$Month >= 10, df_asi_sel$Year, ifelse(df_asi_sel$Month <= 7, df_asi_sel$Year - 1, 'outside rainy season')))%>%
   filter(season_approx!='outside rainy season') %>%
-  select(Province, Data, season_approx) %>%
+  dplyr::select(Province, Data, season_approx) %>%
   group_by(Province, season_approx) %>%
   summarise(max_asi = max(Data)) %>%
   mutate(season_approx = as.numeric(season_approx))%>%
   filter(season_approx>1999)%>%
   mutate(Province = substring(Province, 0, nchar(Province)-7))
+
+
+# WRSI --------------------------------------------------------------------
+
+#wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
+#wrsi_files <- list.files(path=wrsi_dir, pattern = ".bil")
+
+#test <- raster(paste0(wrsi_dir, 'w2004dd_c.bil'))
+#crs(test) <- CRS('+init=EPSG:4326')
+#plot(test, main='title', col=terrain.colors(100))
+#hist(test)
+
 
 # Historical dry spells ---------------------------------------------------
 

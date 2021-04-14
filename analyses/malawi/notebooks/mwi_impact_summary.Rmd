@@ -29,7 +29,7 @@ This document explores the location and timing of potential impacts of dry spell
 
 ## Baseline overview
 
-#### Crop production
+### Crop production
 
 [This data](https://data.humdata.org/dataset/world-bank-agriculture-and-rural-development-indicators-for-malawi) from The World Bank provides various indicators of agricultural and rural development in Malawi. These indicators are provided annually at a national level. This data contains a crop production indicator, however because of the clear trend in increasing crop production over time, it doesn't look very meaningful to identify years with low crop production. We need to know how the crop production deviates from what is expected, and this data isn't really telling us that. 
 
@@ -41,7 +41,7 @@ plt_crop
 
 ```
 
-#### Food insecurity
+### Food insecurity
 
 The [FEWS NET IPC data](https://fews.net/IPC) provides us with information on the number of people facing critical food insecurity (Phase 3+) within regions in Malawi. We're looking specifically at the 'Current Situation' figures, which are provided 4X/year from 2009 to 2021. Thinking about the timing of the growing season, we would perhaps expect to see evidence of poor food insecurity for the July values if there was poor crop production potentially resulting from a drought or dry spell.   
 
@@ -66,7 +66,7 @@ plt_fewsnet
 
 Note however that these values are not normalized by the total population in each region. 
 
-#### Agricultural stress
+### Agricultural Stress Index (ASI)
 
 The [Agricultural Stress Index (ASI)](http://www.fao.org/giews/earthobservation/country/index.jsp?lang=en&type=11111&code=MWI#) from the FAO is summarized as follows:
 
@@ -80,11 +80,45 @@ plt_asi
 
 ```
 
+### Geospatial Water Requirements Satisfaction Index (WRSI)
+
+WRSI is a spatio-temporal indicator of soil moisture status for a given crop at the end of a particular dekad. 
+
+> The spatially explicit water requirement satisfaction index (WRSI) is an indicator of crop performance based on the availability of water to the crop during a growing season. WRSI is the ratio of seasonal actual crop evapotranspiration (AETc) to the seasonal crop water requirement, which is the same as the potential crop evapotranspiration (PETc). [Source](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf)
+
+WRSI values can be interpreted as follows: 
+
+- WRSI = 100% (“sufficient”)
+- WRSI = 60-99% (“satisfactory”)
+- WRSI = 10-60% (“stress”)
+- WRSI = 0-10% (“wilting”)
+
+WRSI values for a given area can be computed using the GeoWRSI tool, which...
+
+> ...runs a crop-specific water balance model for a selected region in the world using raster data inputs. The program's outputs can be used to help qualitatively assess and monitor crop conditions during the crop growing season, or can be regressed with yields to develop yield estimation models and generate yield estimates and forecasts. [Source](https://www.chc.ucsb.edu/tools/geowrsi)
+
+Values are calculated by dekad for specific crops. The program default is maize, and other options include cotton, rice, beans, and wheat (among others). Historical precipitation and evapotranspiration data are required as inputs and are provided from 2001 - 2016 from the [GeoWRSI archives](https://data.chc.ucsb.edu/products/geowrsi/archives/). WRSI values are also dependent on start-of-season (SOS) and end-of-season (EOS) times for each grid cell. These are determined based on the input data as described in the [README](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf).  
+
+[Past work](http://www.fao.org/3/i8884en/I8884EN.pdf) from FAO has found a significant correlation between WRSI and crop yield at the end of a season in Kenya. 
+
+A more detailed guide for using this tool can be found [here](ftp://ftp.chc.ucsb.edu/pub/org/chg/products/geowrsi/UPDATED_Quick-start%20Guide%20to%20the%20GeoWRSI%20v3.8.pdf). Output WRSI products (in .png format) can also be found for various dedakal periods in southern Africa from [FEWS NET and USGS](https://earlywarning.usgs.gov/fews/product/128).
+
+Further background information can be found from the [GeoWRSI User Manual](ftp://168.167.85.255/software/GeoWRSI/GeoWRSI_v2Manual.pdf) (although from an outdated version).
+
+Some notes on GeoWRSI use: 
+- I'm assuming that there is more updated data available (past 2016) somewhere but I haven't yet been able to find it... I'm sure that we could also source our own data and import it (eg. CHIRPS).
+- The documentation (linked above) hasn't been updated since 2016. The latest software version doesn't quite look the same and is somewhat challenging to navigate. 
+
+### Additional sources to explore
+
+- [Daily NDVI from NOAA](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf)
+
+
 ## Relationship with dry spells
 
 We've calculated summary statistics relating to food insecurity, ASI, and dry spells for each rainy season in each region from 2000-2020. 
 
-#### Comparing dry spells with ASI
+### Comparing dry spells with ASI
 
 The figure below is somewhat surprising. these figures suggest that either: 
 1) High ASI during the rainy season is not positively related to the presence of dry spells in a given region, or
@@ -100,7 +134,7 @@ plt_asi_max_days
 ```
 
 
-#### Comparing dry spells with food insecurity
+### Comparing dry spells with food insecurity
 
 Ultimately there isn't enough data here to make any conclusions about the relationship between food security crises and the occurrence of dry spells in a season. Although the two seasons with the highest population in IPC 3+ did not have any dry spells occurring. 
 
