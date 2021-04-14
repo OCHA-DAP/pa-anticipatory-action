@@ -83,7 +83,7 @@ convertToLongFormatADM3 <- function(data.wideformat){
   data.wideformat$pcode <- mwi_adm3$ADM3_PCODE
   
   data.wideformat <- data.wideformat %>% 
-                        relocate(pcode, .after = ID) 
+                        relocate(pcode, .after = ID) # use pcodes because some adm3's share EN names but have distinct pcodes
   
   # convert wide to long to get dates as rows
   data.longformat <- gather(data.wideformat, date, total_prec, 3:7672)
