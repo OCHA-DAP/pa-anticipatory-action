@@ -234,26 +234,16 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
 ## explore rainy season patterns
 #####
 
-# onset, cessation, duration of rainy seasons by region
-prop.table(table(rainy_seasons_detail$ADM1_EN, rainy_seasons_detail$onset_month), 1)
-prop.table(table(rainy_seasons_detail$ADM1_EN, rainy_seasons_detail$cessation_month), 1)
+# onset, cessation, duration of rainy seasons by TA Note: some pcodes share an EN name
+prop.table(table(rainy_seasons_detail$pcode, rainy_seasons_detail$onset_month), 1)
+prop.table(table(rainy_seasons_detail$pcode, rainy_seasons_detail$cessation_month), 1)
 
-ggplot(rainy_seasons_detail, aes(rainy_season_duration, fill = ADM1_EN)) +
-  geom_histogram(binwidth = 10, position = "dodge") + 
-  ylab("Number of TAs*years") +
-  xlab("Duration in Days") +
-  ggtitle("Rainy Season Duration By Region")
-
-# onset, cessation, duration of rainy seasons per district
-prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month), 1)
-prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$cessation_month), 1)
-
-rainy_seasons_summary_per_district <- rainy_seasons_detail %>%
+rainy_seasons_summary_per_ta <- rainy_seasons_detail %>%
                                       mutate(nov1 = as.Date(paste0(season_approx, '-11-01'), format = "%Y-%m-%d"), # 1 nov before the onset of the season
                                              onset_days_since_nov1 = as.numeric(difftime(onset_date, nov1, units = "days")), # count of days since 1 nov
                                              cessation_days_since_nov1 = as.numeric(difftime(cessation_date, nov1, units = "days")), # count of days since 1 nov
                                              rainy_season_at_least_125d = ifelse(rainy_season_duration >= 125, 1, 0)) %>% # 125 days is length of maize growing season
-                                      group_by(ADM2_EN) %>% # group by district, not TA
+                                      group_by(ADM3_EN) %>% # group by TA
                                       summarise(min_rainy_season_onset_postnov1 = min(onset_days_since_nov1, na.rm = T), # na.rm to remove incomplete seasons
                                                 max_rainy_season_onset_post1nov = max(onset_days_since_nov1, na.rm = T),
                                                 mean_rainy_season_onset_post1nov = mean(onset_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
@@ -271,7 +261,7 @@ rainy_seasons_summary_per_district <- rainy_seasons_detail %>%
                                       unique() %>%
                                       data.frame()
 
-rainy_seasons_summary_per_district
+rainy_seasons_summary_per_ta
 
 #####
 ## identify dry spells that occurred during a rainy season 
@@ -281,15 +271,6 @@ rainy_seasons_summary_per_district
 data_long <- merge(data_long, rainy_seasons, by = c('ID', 'pcode', 'season_approx'), all.x = T)
 data_long$during_rainy_season_bin <-  ifelse(data_long$date >= data_long$onset_date & data_long$date <= data_long$cessation_date, 1, 0)
 data_long$nth_day_of_rainy_season <- ifelse(data_long$during_rainy_season_bin == 1, as.numeric(difftime(data_long$date, data_long$onset_date, units = "days") + 1), NA) # +1 so first day of rainy season is labelled "one"
-
-# find rainy streaks within each rainy season, adm3
-#rainy_streaks <- data_long %>%
-#                  filter(during_rainy_season_bin == 1) %>% # keep days during the rainy season
-#                  group_by(pcode, season_approx) %>%        
-#                  arrange(pcode, date) %>% # sort in ascending order
-#                  mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # number each group of consecutive days with/without rain per adm3 and year
-#                  filter(rainy_day_bin == 1) %>% # keep the rainy streaks
-#                  ungroup() 
 
 # label days on which 14-day rolling sum is 2mm or less of rain as "dry_spell_day"
 data_long$rollsum_14d_less_than_2_bin <- ifelse(data_long$rollsum_14d <= 2, 1, 0) # NOTE: this does not label all days that have less than 2mm because those in the first 13 days don't get flagged
@@ -353,9 +334,9 @@ full_list_dry_spells <- dry_spells_details %>%
                           dplyr::select(pcode, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 #write.csv(full_list_dry_spells, file = paste0(data_dir, "/processed/malawi/dry_spells/full_list_dry_spells_adm3.csv"), row.names = FALSE)
 
-# summary stats per district 
-rainy_season_dry_spells_summary_per_district <- dry_spells_during_rainy_season_list %>% 
-                                                group_by(ADM2_EN) %>%
+# summary stats per TA 
+rainy_season_dry_spells_summary_per_ta <- dry_spells_during_rainy_season_list %>% 
+                                                group_by(pcode) %>%
                                                 summarise(nbr_dry_spells = n(),
                                                           mean_ds_duration = round(mean(dry_spell_duration),1),
                                                           min_ds_duration = min(dry_spell_duration),
@@ -364,47 +345,35 @@ rainy_season_dry_spells_summary_per_district <- dry_spells_during_rainy_season_l
                                                 ungroup() %>%
                                                 as.data.frame()
 
-rainy_season_dry_spells_summary_per_district <- merge(rainy_season_dry_spells_summary_per_district, unique(mwi_adm3_full_ids[, c('ADM2_EN', 'ADM2_PCODE', 'ADM1_EN')]), by.x = c('ADM2_EN'), by.y = c('ADM2_EN'), all.y = T) # ensure every region is in dataset
-rainy_season_dry_spells_summary_per_district$nbr_dry_spells <- ifelse(is.na(rainy_season_dry_spells_summary_per_district$nbr_dry_spells), 0, rainy_season_dry_spells_summary_per_district$nbr_dry_spells) # replace NAs with 0 under nbr of dry spells
+rainy_season_dry_spells_summary_per_ta <- merge(rainy_season_dry_spells_summary_per_ta, unique(mwi_adm3_full_ids[, c('ADM3_EN', 'ADM3_PCODE' ,'ADM2_EN', 'ADM2_PCODE', 'ADM1_EN')]), by.x = c('pcode'), by.y = c('ADM3_PCODE'), all.y = T) # ensure every region is in dataset
+rainy_season_dry_spells_summary_per_ta$nbr_dry_spells <- ifelse(is.na(rainy_season_dry_spells_summary_per_ta$nbr_dry_spells), 0, rainy_season_dry_spells_summary_per_ta$nbr_dry_spells) # replace NAs with 0 under nbr of dry spells
 
-rainy_season_dry_spells_summary_per_district
+rainy_season_dry_spells_summary_per_ta
 
 #####
 ## explore rainy-season dry spells patterns
 #####
 
-
 # how frequently have rainy-season dry spells occurred over the years and across regions/districts?
-summary(rainy_season_dry_spells_summary_per_district$nbr_dry_spells)
-prop.table(table(rainy_season_dry_spells_summary_per_district$nbr_dry_spells))
+summary(rainy_season_dry_spells_summary_per_ta$nbr_dry_spells)
+prop.table(table(rainy_season_dry_spells_summary_per_ta$nbr_dry_spells))
 
-# how many and which districts/regions have not had a rainy-season dry spell?
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(ADM2_EN)) # districts
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells == 0) %>% dplyr::select(ADM2_EN) %>% unique()
+# how many and which TAs have not had a rainy-season dry spell?
+rainy_season_dry_spells_summary_per_ta %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(pcode)) 
+rainy_season_dry_spells_summary_per_ta %>% filter(nbr_dry_spells == 0) %>% dplyr::select(pcode) %>% unique()
 
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(ADM1_EN)) # regions
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells == 0) %>% dplyr::select(ADM1_EN) %>% unique()
-
-# how many and which districts/regions have had a rainy-season dry spells?
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(ADM2_EN)) # districts
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells > 0) %>% dplyr::select(ADM2_EN) %>% unique()
-
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(ADM1_EN)) # regions
-rainy_season_dry_spells_summary_per_district %>% filter(nbr_dry_spells > 0) %>% dplyr::select(ADM1_EN) %>% unique()
+# how many and which TAs have had a rainy-season dry spells?
+rainy_season_dry_spells_summary_per_ta %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(pcode)) 
+rainy_season_dry_spells_summary_per_ta %>% filter(nbr_dry_spells > 0) %>% dplyr::select(pcode) %>% unique()
 
 # when did the dry spells start in each TA?
 prop.table(table(lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)))
-prop.table(table(dry_spells_during_rainy_season_list$ADM3_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)), 1)
-
-# when did the dry spells start in each district?
-prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)), 1)
+prop.table(table(dry_spells_during_rainy_season_list$pcode, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)), 1)
 
 # when did the dry spells end in each TA?
 prop.table(table(lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)))
-prop.table(table(dry_spells_during_rainy_season_list$ADM3_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)), 1)
+prop.table(table(dry_spells_during_rainy_season_list$pcode, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)), 1)
 
-# when did the dry spells end in each district?
-prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(dry_spells_during_rainy_season_list$dry_spell_last_date)), 1)
 
 
   
