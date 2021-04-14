@@ -79,11 +79,16 @@ s2020 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily
 
 s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s2008, s2009, s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020) # all files combined into a stack
 
-# crop and masked area outside of MWI
+# crop to MWI area
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm3_spatial_extent)) # crop converts to a brick - a single raster file
-data_all <- mask(s2000_s2020_cropped, mask = mwi_adm3)
-# saveRDS(data_all, paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5_adm3.RDS")) # 5-deg resolution
-#data_all <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_2000_2020_r5_adm3.RDS")) # 5-deg resolution
+
+# save or read as a raster file. Identical to adm2, adm1. (do not save as RDS or tif as it changes the variable names)
+#writeRaster(s2000_s2020_cropped, filename = paste0(data_dir, '/processed/malawi/dry_spells/s2000_s2020_cropped.grd'), bandorrder='BIL', overwrite=TRUE)
+#s2000_s2020_cropped <- brick(paste0(data_dir, "/processed/malawi/dry_spells/s2000_s2020_cropped.grd")) # read in raster (brick) file
+ 
+data_all <- s2000_s2020_cropped
+nbr_layers <- nlayers(data_all)
+
 # plot(data_all) # visual inspection
 
 # explore compiled raster file ("brick")
@@ -93,24 +98,32 @@ ncell(data_all) # number of cells per layer (nrow * ncol)
 nrow(data_all) # number of rows in a layer
 ncol(data_all) # number of columns in a layer
 nlayers(data_all) # number of layers (days)
-nbr_layers <- nlayers(data_all)
 dim(data_all) # (nrow, ncol, nlayers)
 yres(data_all) # y-resolution
 xres(data_all) # x-resolution
 
-# create list of regions
-region_list <- mwi_adm3[,c('ADM3_PCODE', 'ADM3_EN', 'geometry')]
+# create list of adm3s
+adm3_list <- mwi_adm3[,c('ADM3_PCODE', 'ADM3_EN', 'geometry')]
 
+# get mean values per polygon
+
+## do not use the loop approach: takes two days to run and fails. using extract's nl is much more efficient esp for this number of polygons
 # loop through layers/days to compile MEAN values across layers/days
+# data_mean_values <- data.frame(ID = 1:nrow(mwi_adm3))
+# 
+# for (i in seq_along(1:nbr_layers)) {
+#   
+#   data_mean_values <- computeLayerStat_adm3(i, mean, data_mean_values)
+#   
+# }
 
-data_mean_values <- data.frame(ID = 1:nrow(mwi_adm3))
+# extract all values per polygon
+all_years_values_adm3s <- raster::extract(s2000_s2020_cropped, mwi_adm3, cellnumbers = T, df = T, nl = nbr_layers) 
 
-for (i in seq_along(1:nbr_layers)) {
-  
-  data_mean_values <- computeLayerStat_adm3(i, mean, data_mean_values)
-  
-}
-
+# compute mean per polygon
+data_mean_values <- all_years_values_adm3s %>%
+                          group_by(ID) %>%
+                          summarise(across(2:nbr_layers+1, mean))
 
 # saveRDS(data_mean_values, paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5_adm3.RDS"))
 #data_mean_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5_adm3.RDS")) 
@@ -281,7 +294,7 @@ data_long$nth_day_of_rainy_season <- ifelse(data_long$during_rainy_season_bin ==
 # label days on which 14-day rolling sum is 2mm or less of rain as "dry_spell_day"
 data_long$rollsum_14d_less_than_2_bin <- ifelse(data_long$rollsum_14d <= 2, 1, 0) # NOTE: this does not label all days that have less than 2mm because those in the first 13 days don't get flagged
 
-# identify beginning, end and duration of dry spells per adm3 region (total <= 2mm)
+# identify beginning, end and duration of dry spells per adm3 (total <= 2mm)
 dry_spells_confirmation_dates <- data_long %>%
                                   group_by(pcode) %>%        
                                   arrange(date) %>% # sort date in ascending order
