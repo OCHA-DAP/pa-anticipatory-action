@@ -16,7 +16,7 @@ ndays_threshold_ffwc=3
 FFWC_RL_LOG_FILENAME='Forecast Log Sheet - 2020.xlsx - FFWC.csv'
 # from Hassan
 FFWC_RL_HIS_FILENAME='2020-06-07 Water level data Bahadurabad Upper danger level.xlsx'
-FFWC_RL_FOLDER=Path(os.environ['AA_DATA_DIR']) / 'raw/bangladesh/FFWC_Data'
+FFWC_RL_FOLDER=Path(os.environ['AA_DATA_DIR']) / 'exploration/bangladesh/FFWC_Data'
 
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 Discharge_threshold=100000
