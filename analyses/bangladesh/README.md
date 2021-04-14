@@ -48,17 +48,17 @@ The content within this repository is structured as follows:
 
 #### Historical flooding analysis
 
-1. Generate shapefiles that delineate flood extent over time using [this Google Earth Engine Script](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). Within the script, the following parameters can be changed: 1) start and end dates of a pre-flood period, 2) start and end dates of a flood period, and 3) shapefile to delineate geographic area of interest.
+1. Generate shapefiles that delineate flood extent over time using [this Google Earth Engine Script](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). Within the script, the following parameters can be changed: 1) start and end dates of a pre-flood period, 2) start and end dates of a flood period, and 3) shapefile to delineate geographic area of interest. Within the GEE editor you will be required to manually download the output shapefiles. 
 
 2. Edit the ```config.yml``` file to include the location of the directory where your output shapefiles are stored (```gee_dir```), the admin areas are stored (```adm_dir```) and the location where you want your output data to go (```data_dir```). Also edit the ```adm``` level according to the scale of aggregation that you want to perform. This script can be run by aggregating to ```ADM4```, ```ADM3```, and ```ADM2``` levels, or to the mauza level (with ```MAUZ```).
 
-3. Run a Python script from the terminal in the repository root directory to generate .CSV files that include the flood fraction over time within admin areas. For example: 
+3. Run the ```generate_flood_frac.py``` script from the terminal in the repository root directory to generate .CSV files that include the flood fraction over time within admin areas. For example: 
 
 ```
 python analyses/bangladesh/pilot_evaluation/scripts/generate_flood_frac.py 
 ```
 
-4. Run another Python script to generate the interpolated estimates of flood extent over time. These estimates are created by fitting polynomial and Gaussian functions to the original estimates derived from Sentinel-1 SAR imagery (calculated in the above Google Earth Engine script). This script requires the output from the previous script as input. 
+4. Run the ```generate_interpolated.py``` script to generate the interpolated estimates of flood extent over time. These estimates are created by fitting polynomial and Gaussian functions to the original estimates derived from Sentinel-1 SAR imagery (calculated in the above Google Earth Engine script). This script requires the output from the previous script as input. 
 
 ```
 python analyses/bangladesh/pilot_evaluation/scripts/generate_interpolated.py
