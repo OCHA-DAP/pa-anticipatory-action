@@ -227,8 +227,8 @@ nrow(rainy_seasons_detail) / n_distinct(mwi_adm3_ids$ADM3_PCODE) == 22 # confirm
 rainy_seasons_detail <- rainy_seasons_detail %>% 
                           left_join(mwi_adm3[, c('ADM3_PCODE', 'ADM2_PCODE', 'ADM2_EN', 'ADM1_PCODE', 'ADM1_EN')], by = c('pcode'= 'ADM3_PCODE'))
 
-# save results
-#write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_ADM3.csv"), row.names = FALSE)
+# save results without geometry column
+#write.csv(rainy_seasons_detail[, -15], file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_ADM3.csv"), row.names = FALSE)
 
 #####
 ## explore rainy season patterns
