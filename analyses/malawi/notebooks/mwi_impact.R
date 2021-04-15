@@ -23,7 +23,6 @@ shp_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp")
 df_dryspells <- read.csv(paste0(data_dir, '/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
 df_rainy_season_mean <- read.csv(paste0(data_dir, "/exploration/malawi/dryspells/rainy_seasons_detail_2000_2020_per_pixel_adm1.csv"))
 
-
 df_crop <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/agriculture-and-rural-development_mwi.csv'))
 df_asi <- read.csv(paste0(data_dir, '/exploration/malawi/ASI/malawi_asi_dekad.csv'))
 df_globalipc <- read.csv(paste0(data_dir, '/processed/malawi/GlobalIPCProcessed/malawi_globalipc_admin2.csv'))
@@ -160,14 +159,20 @@ df_asi_sel_max <- df_asi_sel %>%
 
 # WRSI --------------------------------------------------------------------
 
-#wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
-#wrsi_files <- list.files(path=wrsi_dir, pattern = ".bil")
+# Preprocessed in the mwi_wrsi_process.R file,
+# using the outputs from the GeoWRSI software 
+wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
+wrsi_mean <- read.csv(paste0(wrsi_dir, 'wrsi_mean_adm1.csv'))
 
-#test <- raster(paste0(wrsi_dir, 'w2004dd_c.bil'))
-#crs(test) <- CRS('+init=EPSG:4326')
-#plot(test, main='title', col=terrain.colors(100))
-#hist(test)
+wrsi_plt <- wrsi_mean %>%
+  ggplot(aes(x=dekad, y=wrsi, group=ID))+
+  geom_line(aes(color=ID))+
+  facet_wrap(~year)+
+  theme_bw()+
+  theme(legend.position = 'bottom')+
+  labs(x='Dekad', y='WRSI', color='Region')
 
+wrsi_plt
 
 # Historical dry spells ---------------------------------------------------
 

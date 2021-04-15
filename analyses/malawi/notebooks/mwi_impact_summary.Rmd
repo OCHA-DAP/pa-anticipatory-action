@@ -105,6 +105,15 @@ A more detailed guide for using this tool can be found [here](ftp://ftp.chc.ucsb
 
 Further background information can be found from the [GeoWRSI User Manual](ftp://168.167.85.255/software/GeoWRSI/GeoWRSI_v2Manual.pdf) (although from an outdated version).
 
+The results in the figure below are somewhat surprising as we see that the WRSI remains within the 'satisfactory' and 'sufficient' levels. Reports from FEWS NET clearly indicate problems with crop production as result of insufficient precipitation, which would mean that we'd expect to see WRSI values within the 'stress' category (10-60%) at some points. Perhaps averaging the results at the Admin 1 level causes us to miss important local variation, through which 'hotspots' of low WRSI would be evident at some points in time. 
+
+```{r wrsi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=6, fig.align="center", fig.cap='Mean WRSI for maize by region in Malawi from 2002 - 2015'}
+
+wrsi_plt
+
+```
+
+
 Some notes on GeoWRSI use: 
 - I'm assuming that there is more updated data available (past 2016) somewhere but I haven't yet been able to find it... I'm sure that we could also source our own data and import it (eg. CHIRPS).
 - The documentation (linked above) hasn't been updated since 2016. The latest software version doesn't quite look the same and is somewhat challenging to navigate. 
