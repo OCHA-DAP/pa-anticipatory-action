@@ -1,18 +1,3 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,md
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.11.1
-  kernelspec:
-    display_name: pa-anticipatory-action
-    language: python
-    name: pa-anticipatory-action
----
-
 ### Evaluating the forecast skill of GloFAS in Bangladesh
 
 This notebook is to compare the forecast skill of GloFAS for various lead times. We are comparing the reforecast product (lead time 5-30 days) against the reanalysis product. This is an improvement on the ```process-glofas``` notebook and takes the processed GloFAS data created by ```get_glofas_data.py```. 
@@ -33,7 +18,7 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding import glofas
-from src.bangladesh import get_glofas_data
+from src.bangladesh import get_glofas_data as ggd
 
 DATA_DIR = os.environ['AA_DATA_DIR']
 
@@ -44,7 +29,68 @@ GLOFAS_DIR = os.path.join(DATA_DIR, 'processed', 'bangladesh', 'GLOFAS_Data')
 SKILL_DIR = Path(os.path.join(DATA_DIR, 'exploration', 'bangladesh', 'GLOFAS_Data'))
 
 STATION = 'Bahadurabad'
-LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
+LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]### Create GloFAS objects### Read in and interpolate data for station
+```
+
+### Create GloFAS objects
+
+```python
+glofas_reanalysis = glofas.GlofasReanalysis(
+    stations_lon_lat=ggd.FFWC_STATIONS
+)
+glofas_forecast = glofas.GlofasForecast(
+    stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
+)
+glofas_reforecast = glofas.GlofasReforecast(
+    stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
+)
+```
+
+### Read in and interpolate data for station
+
+```python
+da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
+        country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3
+    )[STATION]
+
+def shift_dates(da_dict):
+    return{leadtime_hour:
+        da.assign_coords(time=da.time.values + np.timedelta64(
+            int(leadtime_hour/24), 'D'))
+        for leadtime_hour, da in da_dict.items()
+        }
+
+def interp_dates(da_dict):
+    return {
+        leadtime_hour:
+    da.interp(
+        time=pd.date_range(
+           da.time.min().values, 
+          da.time.max().values), 
+          method='linear')
+    for leadtime_hour, da
+    in da_dict.items()
+    }
+
+da_glofas_forecast_dict = {leadtime_hour:
+    glofas_forecast.read_processed_dataset(
+        country_name=ggd.COUNTRY_NAME, 
+        country_iso3=ggd.COUNTRY_ISO3, 
+        leadtime_hour=leadtime_hour
+    )[STATION]
+    for leadtime_hour in ggd.LEADTIME_HOURS}
+da_glofas_forecast_dict = shift_dates(da_glofas_forecast_dict)
+
+da_glofas_reforecast_dict = {leadtime_hour:
+    glofas_reforecast.read_processed_dataset(
+        country_name=ggd.COUNTRY_NAME, 
+        country_iso3=ggd.COUNTRY_ISO3, 
+        leadtime_hour=leadtime_hour
+    )[STATION]
+    for leadtime_hour in ggd.LEADTIME_HOURS}
+da_glofas_reforecast_dict = interp_dates(
+    shift_dates(da_glofas_reforecast_dict))
+da_glofas_reforecast_dict
 ```
 
 #### Read in and clean up the reforecast and reanalysis
@@ -115,13 +161,15 @@ df_skill = pd.read_csv(known_skill, header=None)
 
 df_crps_avg = df_crps.groupby('leadtime').mean().reset_index()
 
-plt.plot(df_crps_avg.leadtime, df_crps_avg.crps)
+plt.plot(df_crps_avg.leadtime/24, df_crps_avg.crps)
 plt.plot(df_skill[0], df_skill[1])
 plt.title("GloFAS forecast skill at Bahadurabad:\n 1999-2018 reforecast, June-Oct average")
 plt.xlabel("Lead time (days)")
 plt.ylabel("CRPS")
 plt.show()
 ```
+
+### Bias: rank histogram
 
 ```python
 
