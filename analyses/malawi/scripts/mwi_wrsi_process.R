@@ -27,17 +27,16 @@ computeLayerStat <- function(data, layer, stat, data_stat_values, adm){
   return(data_stat_values)
 }
 
-wrsi_mean_adm1 <- data.frame(ID = 1:nrow(shp_adm1))
+wrsi_min_adm1 <- data.frame(ID = 1:nrow(shp_adm1))
 
 for (i in 1:nlayers(wrsi_list)) {
-  wrsi_mean_adm1 <- computeLayerStat(wrsi_list, i, mean, wrsi_mean_adm1, shp_adm1)
+  wrsi_min_adm1 <- computeLayerStat(wrsi_list, i, min, wrsi_min_adm1, shp_adm1)
 }
-
 
 # Clean and save the output -----------------------------------------------
 
 # Get mean WRSI by dekad for adm1 regions
-wrsi_mean <- wrsi_mean_adm1 %>%
+wrsi_min <- wrsi_min_adm1 %>%
   mutate(ID = shp_adm1$ADM1_EN)%>%
   gather(date, wrsi, -ID) %>%
   mutate(year = substr(date, 2, 5)) %>%
@@ -45,4 +44,4 @@ wrsi_mean <- wrsi_mean_adm1 %>%
   dplyr::select(-date) 
 
 # Write out to csv to save results 
-write.csv(wrsi_mean, paste0(wrsi_dir, 'wrsi_mean_adm1.csv'))
+write.csv(wrsi_min, paste0(wrsi_dir, 'wrsi_min_adm1.csv'))

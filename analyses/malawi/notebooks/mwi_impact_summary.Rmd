@@ -33,7 +33,7 @@ This document explores the location and timing of potential impacts of dry spell
 
 [This data](https://data.humdata.org/dataset/world-bank-agriculture-and-rural-development-indicators-for-malawi) from The World Bank provides various indicators of agricultural and rural development in Malawi. These indicators are provided annually at a national level. This data contains a crop production indicator, however because of the clear trend in increasing crop production over time, it doesn't look very meaningful to identify years with low crop production. We need to know how the crop production deviates from what is expected, and this data isn't really telling us that. 
 
-The figure below instead show cereal yield per hectare. Years in the lower tercile of cereal yield are highlighted. Given that almost all of these years are in the beginning of our time period of interest, this still might not be incredibly meaningful to connect with the occurrence of dry spells. However, it looks like 2015 and 2016 had a notable dip in yields, which could perhaps be the result of drought or dry spells during the growing season. 
+The figure below instead show cereal yield per hectare. Years with yield lower than 5-year rolling average are highlighted. Given that almost all of these years are in the beginning of our time period of interest, this still might not be incredibly meaningful to connect with the occurrence of dry spells. However, it looks like 2015 and 2016 had a notable dip in yields, which could perhaps be the result of drought or dry spells during the growing season. 
 
 ```{r crop-prod, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Cereal yield in Malawi, highlighting years with yield lower than 5-year rolling average'}
 
@@ -107,7 +107,7 @@ Further background information can be found from the [GeoWRSI User Manual](ftp:/
 
 The results in the figure below are somewhat surprising as we see that the WRSI remains within the 'satisfactory' and 'sufficient' levels. Reports from FEWS NET clearly indicate problems with crop production as result of insufficient precipitation, which would mean that we'd expect to see WRSI values within the 'stress' category (10-60%) at some points. Perhaps averaging the results at the Admin 1 level causes us to miss important local variation, through which 'hotspots' of low WRSI would be evident at some points in time. 
 
-```{r wrsi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=6, fig.align="center", fig.cap='Mean WRSI for maize by region in Malawi from 2002 - 2015'}
+```{r wrsi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=5, fig.align="center", fig.cap='Mean WRSI for maize by region in Malawi from 2002 - 2015'}
 
 wrsi_plt
 
@@ -115,6 +115,7 @@ wrsi_plt
 
 
 Some notes on GeoWRSI use: 
+
 - I'm assuming that there is more updated data available (past 2016) somewhere but I haven't yet been able to find it... I'm sure that we could also source our own data and import it (eg. CHIRPS).
 - The documentation (linked above) hasn't been updated since 2016. The latest software version doesn't quite look the same and is somewhat challenging to navigate. 
 
@@ -122,34 +123,30 @@ Some notes on GeoWRSI use:
 
 - [Daily NDVI from NOAA](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf)
 
+## Observed dry spells 
+
+The graph below is the result of our pixel-based analysis of daily CHIRPS observed precipitation in Malawi. The figure shows the faction of an Admin 1 region that is experiencing a dry spell for every day between 2000 - 2020. Clearly dry spells occur almost exclusively in the Southern region. In 2008 (end of the 2007 season) over 60% of the Southern region experienced a dry spell. 2005, 2010, 2011, and 2020 also saw at least 40% of the Southern region in a dry spell state. We see that dry spells are almost always (with the exception of 2009) occurring towards the end of the rainy season, approximately around the time of the green harvest. 
+
+```{r ds-px, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=6, fig.align="center", fig.cap='Fraction of region in Malawi experiencing a dry spell from 2000-2020'}
+
+plt_ds_px
+
+```
+
 
 ## Relationship with dry spells
 
 We've calculated summary statistics relating to food insecurity, ASI, and dry spells for each rainy season in each region from 2000-2020. 
 
-### Comparing dry spells with ASI
 
-The figure below is somewhat surprising. these figures suggest that either: 
-1) High ASI during the rainy season is not positively related to the presence of dry spells in a given region, or
-2) Our definition of dry spells is not effective in capturing instances of an agricultural shock. 
+```{r cor-cent, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Correlation matrix of variables in Central region'}
 
-In fact, in the Southern region during seasons where at least one dry spell occurs, both of these figures show a relatively strong **negative relationship** between ASI and both number of dry spells and number of dry spell days. 
-
-
-```{r ds_asi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Relationship between number of dry spell days in a rainy season with max ASI in that season'}
-
-plt_asi_max_days
-
+plt_cor_central
 ```
 
+```{r cor-south, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Correlation matrix of variables in Southern region'}
 
-### Comparing dry spells with food insecurity
-
-Ultimately there isn't enough data here to make any conclusions about the relationship between food security crises and the occurrence of dry spells in a season. Although the two seasons with the highest population in IPC 3+ did not have any dry spells occurring. 
-
-```{r ds_ipc, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Relationship between number of dry spell days in a rainy season with population IPC 3+ in June/July'}
-
-plt_ipc_days
-
+plt_cor_southern
 ```
+
 
