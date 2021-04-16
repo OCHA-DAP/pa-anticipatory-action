@@ -1,0 +1,157 @@
+---
+title: "Exploring the potential impacts of dry spells in Malawi"
+author: "By Centre for Humanitarian Data"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: custom.css
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+source("mwi_impact.R")
+library(kableExtra)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+
+This document explores the location and timing of potential impacts of dry spells on humanitarian need in Malawi. With this analysis we are trying to understand if our historical dry spells are correlated with various potential impact factors, such as food insecurity, agricultural stress, and low crop production. Our assumption is that the occurrence of many dry spells in a region would translate to subsequent increased agricultural stress, lower than average crop production, and more people facing a food security crisis.  
+
+## Baseline overview
+
+### Crop production
+
+[This data](https://data.humdata.org/dataset/world-bank-agriculture-and-rural-development-indicators-for-malawi) from The World Bank provides various indicators of agricultural and rural development in Malawi. These indicators are provided annually at a national level. This data contains a crop production indicator, however because of the clear trend in increasing crop production over time, it doesn't look very meaningful to identify years with low crop production. We need to know how the crop production deviates from what is expected, and this data isn't really telling us that. 
+
+The figure below instead show cereal yield per hectare. Years with yield lower than 5-year rolling average are highlighted. Given that almost all of these years are in the beginning of our time period of interest, this still might not be incredibly meaningful to connect with the occurrence of dry spells. However, it looks like 2015 and 2016 had a notable dip in yields, which could perhaps be the result of drought or dry spells during the growing season. 
+
+```{r crop-prod, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=2.5, fig.align="center", fig.cap='Cereal yield in Malawi, highlighting years with yield lower than 5-year rolling average'}
+
+plt_crop
+
+```
+
+### Food insecurity
+
+The [FEWS NET IPC data](https://fews.net/IPC) provides us with information on the number of people facing critical food insecurity (Phase 3+) within regions in Malawi. We're looking specifically at the 'Current Situation' figures, which are provided 4X/year from 2009 to 2021. Thinking about the timing of the growing season, we would perhaps expect to see evidence of poor food insecurity for the July values if there was poor crop production potentially resulting from a drought or dry spell.   
+
+The figure below shows us that the populations in the Southern region more frequently face food insecurity than other regions. The general trend in higher food insecurity during the late months of the year (the lean season) may be in part due to this being the time when local cereal supplies are lowest and food prices are highest. This data shows the following notable peaks in food insecurity: 
+
+**Late 2016 in both the Central and Southern regions**: [Reporting from FEWS NET](https://fews.net/southern-africa/malawi/food-security-outlook/june-2016) suggests that this may be due to high staple food prices at that time, likely as result of poor maize production during the 2015/2016 season (which is supported by our figure above). 
+
+> However, due to erratic rains and the El Niño induced drought during the 2015/16 season, maize production this past season was below average. The total cumulative rainfall in most of the south was 55-85 percent of normal, while in the central region localized areas received 70-85 percent of normal rainfall. Significantly fewer households in these areas are currently consuming cereal from their own production and many are instead relying on maize purchases. As a result, market demand for cereals is atypically increasing during the main harvest period and this is driving up maize retail prices. (FEWS NET)
+
+**Late 2018 in the Southern region**: [Reporting from FEWS NET](https://fews.net/southern-africa/malawi/food-security-outlook/december-2018) relates this food insecurity to low crop production in the 2017/2018 season.  
+
+> Most southern and some central districts are facing Crisis (IPC Phase 3) acute food insecurity outcomes due to below-average cereal and cash crops from the 2017/18 production season. Poor households also have below-average incomes as most income earning opportunities are agriculture and depend on rainfall, which has to date been well below normal. (FEWS NET)
+
+[Further reporting](https://fews.net/southern-africa/malawi/food-security-outlook/june-2018) suggests that this poor crop season may have been caused by dryness and erratic rains. 
+
+```{r food_insec, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=4, fig.align="center", fig.cap='Total population in IPC Phase 3+ by region in Malawi from 2009 to 2020'}
+
+plt_fewsnet
+
+
+```
+
+Note however that these values are not normalized by the total population in each region. 
+
+### Agricultural Stress Index (ASI)
+
+The [Agricultural Stress Index (ASI)](http://www.fao.org/giews/earthobservation/country/index.jsp?lang=en&type=11111&code=MWI#) from the FAO is summarized as follows:
+
+> The Agricultural Stress Index (ASI) is a quick-look indicator that facilitates the early identification of cropped land with a high likelihood of water stress (drought). The Index is based on the integration of the Vegetation Health Index (VHI) in two dimensions that are critical in the assessment of a drought event in agriculture: temporal and spatial. The first step of the ASI calculation is a temporal averaging of the VHI, assessing the intensity and duration of dry periods occurring during the crop cycle at the pixel level; this calculation includes the use of crop coefficients, which introduces sensitivity of a crop to water stress during each phenological phase. The second step determines the spatial extent of drought events by calculating the percentage of pixels in arable areas with a VHI value below 35 percent (this value was identified as a critical threshold in assessing the extent of drought in previous research by Kogan, 1995). Each administrative area is classified according to the percentage of the affected area to facilitate the quick interpretation of results.
+
+The figure below shows the ASI across regions in Malawi from 2000-2021. Since we're interested in the relationship to dry spells during the rainy season, it is most relevant to look at values outside of the shaded areas. Across all regions, the 2001, 2003, 2005, and 2014 growing seasons all appear to have been subject to notably higher agricultural stress. The Central and Southern regions also faced relatively high agricultural stress in the 2002 and 2015 seasons. 
+
+```{r asi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=6, fig.align="center", fig.cap='Agricultural stress in regions in Malawi, approximate dry season (July-Oct) shaded'}
+
+plt_asi
+
+```
+
+### Geospatial Water Requirements Satisfaction Index (WRSI)
+
+WRSI is a spatio-temporal indicator of soil moisture status for a given crop at the end of a particular dekad. 
+
+> The spatially explicit water requirement satisfaction index (WRSI) is an indicator of crop performance based on the availability of water to the crop during a growing season. WRSI is the ratio of seasonal actual crop evapotranspiration (AETc) to the seasonal crop water requirement, which is the same as the potential crop evapotranspiration (PETc). [Source](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf)
+
+WRSI values can be interpreted as follows: 
+
+- WRSI = 100% (“sufficient”)
+- WRSI = 60-99% (“satisfactory”)
+- WRSI = 10-60% (“stress”)
+- WRSI = 0-10% (“wilting”)
+
+WRSI values for a given area can be computed using the GeoWRSI tool, which...
+
+> ...runs a crop-specific water balance model for a selected region in the world using raster data inputs. The program's outputs can be used to help qualitatively assess and monitor crop conditions during the crop growing season, or can be regressed with yields to develop yield estimation models and generate yield estimates and forecasts. [Source](https://www.chc.ucsb.edu/tools/geowrsi)
+
+Values are calculated by dekad for specific crops. The program default is maize, and other options include cotton, rice, beans, and wheat (among others). Historical precipitation and evapotranspiration data are required as inputs and are provided from 2001 - 2016 from the [GeoWRSI archives](https://data.chc.ucsb.edu/products/geowrsi/archives/). WRSI values are also dependent on start-of-season (SOS) and end-of-season (EOS) times for each grid cell. These are determined based on the input data as described in the [README](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf).  
+
+[Past work](http://www.fao.org/3/i8884en/I8884EN.pdf) from FAO has found a significant correlation between WRSI and crop yield at the end of a season in Kenya. 
+
+A more detailed guide for using this tool can be found [here](ftp://ftp.chc.ucsb.edu/pub/org/chg/products/geowrsi/UPDATED_Quick-start%20Guide%20to%20the%20GeoWRSI%20v3.8.pdf). Output WRSI products (in .png format) can also be found for various dedakal periods in southern Africa from [FEWS NET and USGS](https://earlywarning.usgs.gov/fews/product/128).
+
+Further background information can be found from the [GeoWRSI User Manual](ftp://168.167.85.255/software/GeoWRSI/GeoWRSI_v2Manual.pdf) (although from an outdated version).
+
+```{r wrsi, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=5, fig.align="center", fig.cap='Minimum WRSI for maize by region in Malawi from 2002 - 2015'}
+
+wrsi_plt
+
+```
+
+The results in the figure above show that the minimum WRSI in a region decreases as the onset of the dry season approaches. The WRSI appears to consistently dip right after the onset of the rainy season and subsequently sharply increase. The consistency of this pattern makes it unlikely that these dips are the result of something like a dry spell. 
+
+### Additional sources to explore
+
+- [Daily NDVI from NOAA](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf)
+
+## Observed dry spells 
+
+The graph below is the result of our pixel-based analysis of daily CHIRPS observed precipitation in Malawi. The figure shows the faction of an Admin 1 region that is experiencing a dry spell for every day between 2000 - 2020. Clearly dry spells occur almost exclusively in the Southern region. In 2008 (end of the 2007 season) over 60% of the Southern region experienced a dry spell. 2005, 2010, 2011, and 2020 also saw at least 40% of the Southern region in a dry spell state. We see that dry spells are almost always (with the exception of 2009) occurring towards the end of the rainy season, approximately around the time of the green harvest. 
+
+```{r ds-px, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=6, fig.align="center", fig.cap='Fraction of region in Malawi experiencing a dry spell from 2000-2020'}
+
+plt_ds_px
+
+```
+
+
+## Relationship with dry spells
+
+The figure below tells us about the relationship between dry spells and various impact factors within a given region for a given season. We have summarized these variables as follows: 
+
+- **Maximum percent area of Admin 1 in a dry spell state** for a given growing season (maxs_ds_perc)
+- **Total population in IPC Phase 3 or higher** for the year following the start of a given growing season (total_ipc3plus)
+- **Maximum ASI in an Admin 1** for a given growing season (max_asi)
+- **Minimum WRSI in an Admin 1** for a given growing season (min_wrsi)
+
+```{r cor-all, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Correlation matrix of variables across all regions'}
+
+plt_cor_all
+```
+
+We only see weak correlations when comparing against our measure of dry spells. More dry spells occurring at a given time is weakly correlated with higher populations in a food security crisis in the following year. Contrary to what would be expected, our dry spells measure is negatively correlated (although very weakly) with ASI. 
+
+These results suggest that perhaps our definition of dry spells is not capturing the kind of impact that we are interested in responding to.
+
+We should consider these results with a number of limitations in mind: 
+
+- By looking at a single season at the Admin 1 level, we have likely missed out on a lot of important local variation in our data. 
+- The ASI data is not calibrated for Malawi, and so may have significant error or uncertainty. 
+- The timing of impacts from dry spells is complex and something that we don't fully understand. 
+
+
+
+
