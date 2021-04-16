@@ -14,9 +14,6 @@ jupyter:
 ---
 
 ```python
-import sys
-import os
-from pathlib import Path
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -26,169 +23,28 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
-sys.path.append(path_mod)
+import read_in_data as rd
+from importlib import reload
+reload(rd)
 
-from src.indicators.flooding import glofas
-from src.bangladesh import get_glofas_data as ggd
-
-DATA_DIR = Path(os.environ['AA_DATA_DIR'])
-GLOFAS_DIR = DATA_DIR / 'processed/bangladesh/GLOFAS_Data' 
-STATION = 'Bahadurabad_glofas'
 mpl.rcParams['figure.dpi'] = 300
 ```
 
 ### Create GloFAS objects
 
 ```python
-glofas_reanalysis = glofas.GlofasReanalysis(
-    stations_lon_lat=ggd.FFWC_STATIONS
-)
-glofas_forecast = glofas.GlofasForecast(
-    stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
-)
-glofas_reforecast = glofas.GlofasReforecast(
-    stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
-)
-```
+da_glofas_reanalysis = rd.get_glofas_reanalysis()
+da_glofas_forecast = rd.get_glofas_forecast()
+da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast)
+da_glofas_reforecast = rd.get_glofas_reforecast()
+da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast)
 
-### Read in and interpolate data for station
-
-```python
-da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3
-    )[STATION]
-
-def shift_dates(da_dict):
-    return{leadtime_hour:
-        da.assign_coords(time=da.time.values + np.timedelta64(
-            int(leadtime_hour/24), 'D'))
-        for leadtime_hour, da in da_dict.items()
-        }
-
-def interp_dates(da_dict):
-    return {
-        leadtime_hour:
-    da.interp(
-        time=pd.date_range(
-           da.time.min().values, 
-          da.time.max().values), 
-          method='linear')
-    for leadtime_hour, da
-    in da_dict.items()
-    }
-
-da_glofas_forecast_dict = {leadtime_hour:
-    glofas_forecast.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, 
-        country_iso3=ggd.COUNTRY_ISO3, 
-        leadtime_hour=leadtime_hour
-    )[STATION]
-    for leadtime_hour in ggd.LEADTIME_HOURS}
-da_glofas_forecast_dict = shift_dates(da_glofas_forecast_dict)
-
-da_glofas_reforecast_dict = {leadtime_hour:
-    glofas_reforecast.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, 
-        country_iso3=ggd.COUNTRY_ISO3, 
-        leadtime_hour=leadtime_hour
-    )[STATION]
-    for leadtime_hour in ggd.LEADTIME_HOURS}
-da_glofas_reforecast_dict = interp_dates(
-    shift_dates(da_glofas_reforecast_dict))
-```
-
-### For forecast and reforecast, create summary data array
-Contains median and 1,2,3 sigma centiles
-
-```python
-nsig_max = 3
-percentile_dict = {
-    **{'median': 50.},
-    **{f'{n}sig+': norm.cdf(n) * 100 for n in range(1,nsig_max+1)},
-    **{f'{n}sig-': (1-norm.cdf(n)) * 100 for n in range(1,nsig_max+1)},
-}
-coord_names = ["leadtime_hour", "time"]
-
-def get_da_glofas_summary(da_glofas_dict):
-
-    data_vars_dict = {var_name:
-        (coord_names,
-        np.array([
-            np.percentile(da_glofas, percentile_value, axis=0)
-            for da_glofas in da_glofas_dict.values()
-        ]))
-        for var_name, percentile_value in percentile_dict.items()}
-
-    return xr.Dataset(
-        data_vars=data_vars_dict,
-        coords=dict(
-            time=da_glofas_dict[120].time,
-            leadtime_hour=ggd.LEADTIME_HOURS
-        )
-    )
-
-da_glofas_forecast = get_da_glofas_summary(da_glofas_forecast_dict)
-da_glofas_reforecast = get_da_glofas_summary(da_glofas_reforecast_dict)
 ```
 
  ### Read in FFWC data
 
 ```python
-ffwc_dir = DATA_DIR / 'exploration/bangladesh/FFWC_Data'
-```
-
-```python
-# Read in data from Sazzad that has forecasts
-ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
-ffwc_leadtime_hours = [24, 48, 72, 96, 120]
-
-# Need to combine the three sheets
-df_ffwc_wl_dict = pd.read_excel(
-        ffwc_dir / ffwc_wl_filename,
-                                sheet_name=None,
-                                header=[1], index_col='Date')
-df_ffwc_wl = (df_ffwc_wl_dict['2017']
-              .append(df_ffwc_wl_dict['2018'])
-                        .append(df_ffwc_wl_dict['2019'])
-                        .rename(columns={
-                            f'{leadtime_hour} hrs': f'ffwc_{int(leadtime_hour/24)}day'
-                            for leadtime_hour in ffwc_leadtime_hours
-                        })).drop(columns=['Observed WL']) # drop observed because we will use the mean later
-# Convert date time to just date
-df_ffwc_wl.index = df_ffwc_wl.index.floor('d')
-```
-
-```python
-# Then read in the older data (goes back much futher)
-FFWC_RL_HIS_FILENAME='2020-06-07 Water level data Bahadurabad Upper danger level.xlsx'
-ffwc_rl_name='{}/{}'.format(ffwc_dir,FFWC_RL_HIS_FILENAME)
-df_ffwc_wl_old=pd.read_excel(ffwc_rl_name,index_col=0,header=0)
-df_ffwc_wl_old.index=pd.to_datetime(df_ffwc_wl_old.index,format='%d/%m/%y')
-df_ffwc_wl_old
-df_ffwc_wl_old=df_ffwc_wl_old[['WL']].rename(columns={'WL': 
-                                                    'observed'})[df_ffwc_wl_old.index < df_ffwc_wl.index[0]]
-df_ffwc_wl = pd.concat([df_ffwc_wl_old, df_ffwc_wl])
-```
-
-```python
-# Read in the more recent file from Hassan
-ffwc_full_data_filename = 'SW46.9L_19-11-2020.xls'
-df_ffwc_wl_full = (pd.read_excel(ffwc_dir / ffwc_full_data_filename, 
-                                 index_col='DateTime')
-                   .rename(columns={'WL(m)': 'observed'}))[['observed']]
-
-# Mutliple observations per day. Find mean and std
-df_ffwc_wl_full['date'] = df_ffwc_wl_full.index.date
-df_ffwc_wl_full = (df_ffwc_wl_full.groupby('date').agg(['mean', 'std'])
-)['observed'].rename(columns={'mean': 'observed', 'std': 'obs_std'})
-df_ffwc_wl_full.index = pd.to_datetime(df_ffwc_wl_full.index)
-
-
-# Combine with first DF
-
-df_ffwc_wl = pd.merge(df_ffwc_wl_full[['obs_std']], df_ffwc_wl, left_index=True, right_index=True, how='outer')
-df_ffwc_wl.update(df_ffwc_wl_full, overwrite=False)
+df_ffwc_wl = rd.read_in_ffwc()
 ```
 
 ### Find the true positive events -- three days in a row above threshold
@@ -230,16 +86,16 @@ df_ffwc_wl['event'][events] = True
 df_final = df_ffwc_wl.copy()
 
 # Add glofas obs
-df_glofas = da_glofas_reanalysis.to_dataframe()[[STATION]].rename(columns={STATION: 'glofas_observed'})
+df_glofas = da_glofas_reanalysis.to_dataframe()[[rd.STATION]].rename(columns={rd.STATION: 'glofas_observed'})
 df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 
 # Add glofas forecasts
 glofas_columns = ['median', 
 '1sig-', '2sig-', '3sig-', 
 '1sig+', '2sig+', '3sig+']
-for leadtime_hour in ggd.LEADTIME_HOURS:
-    df_glofas_reforecast = da_glofas_reforecast.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
-    df_glofas_forecast = da_glofas_forecast.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
+for leadtime_hour in da_glofas_reforecast_summary.leadtime_hour:
+    df_glofas_reforecast = da_glofas_reforecast_summary.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
+    df_glofas_forecast = da_glofas_forecast_summary.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
     df_glofas = (pd.concat([df_glofas_reforecast, df_glofas_forecast])
                  .rename(columns={cname: f'glofas_{int(leadtime_hour/24)}day_{cname}' for cname in glofas_columns}))
     df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
@@ -498,33 +354,18 @@ plot_years(df_final, 'glofas_10day_1sig-', 90000, (40000, 140000))
 
 ```python
 year = "2020"
-da_reanalysis = glofas_reanalysis.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3
-    )[STATION].sel(time=slice(year, year))
-da_forecast_720 = (
-        glofas_forecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3, leadtime_hour=720
-        )[STATION]
-        .shift(time=30)
-        .sel(time=slice(year, year))
+da_forecast_720 = (da_glofas_forecast
+        .sel(time=slice(year, year),leadtime_hour=720)
     )
-da_reforecast_720 = (
-        glofas_reforecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3, leadtime_hour=720
-        )[STATION]
-        .shift(time=30)
-        .sel(time=slice(year, year)) 
-    )
-```
+da_ra = da_glofas_reanalysis.sel(time=slice(year, year))
 
-```python
 fig, ax = plt.subplots(figsize=(15, 5))
 for sigma in range(1,4):
     ax.fill_between(da_forecast_720.time, y1=np.percentile(da_forecast_720, norm.cdf(sigma) * 100, axis=0),
                     y2=np.percentile(da_forecast_720, (1 - norm.cdf(sigma)) * 100, axis=0),
                     alpha=0.3 / sigma, fc='b')
 ax.plot(da_forecast_720.time, np.median(da_forecast_720, axis=0), c='b', label='forecast median')
-ax.plot(da_reanalysis.time, da_reanalysis, c='k', label='reanalysis')
+ax.plot(da_ra.time, da_ra, c='k', label='reanalysis')
 ax.legend()
 ax.set_yscale('log')
 ax.set_ylabel('Water discharge (m^3 s^-1)')
@@ -537,13 +378,9 @@ Not really.
 
 ```python
 from statsmodels.graphics.gofplots import qqplot
-for data in da_glofas_forecast_dict[120].values.T[:10]:
+for data in da_glofas_forecast.sel(leadtime_hour=120).values.T[:10]:
     qqplot((data - np.mean(data)) /np.std(data) , line='45')
     plt.xlim(-2.5, 2.5)
-```
-
-```python
-
 ```
 
 ## Comparing the different FFWC datasets
@@ -556,7 +393,7 @@ for data in da_glofas_forecast_dict[120].values.T[:10]:
 - Has forecast (when available) for same date for lead time hours 24, 48, 72, 96, 120
 
 ```python
-ffwc_dir = DATA_DIR / 'exploration/bangladesh/FFWC_Data'
+ffwc_dir = rd.DATA_DIR / 'exploration/bangladesh/FFWC_Data'
 ffwc_discharge_filename = 'Bahadurabad_bsereved_discharge.xlsx'
 ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
 df_ffwc_discharge = pd.read_excel(ffwc_dir / ffwc_discharge_filename, 
@@ -605,7 +442,7 @@ df_ffwc_wl.index = df_ffwc_wl.index.floor('d')
 
 ```python
 FFWC_RL_HIS_FILENAME='2020-06-07 Water level data Bahadurabad Upper danger level.xlsx'
-ffwc_rl_name='{}/{}'.format(FFWC_RL_FOLDER,FFWC_RL_HIS_FILENAME)
+ffwc_rl_name='{}/{}'.format(ffwc_dir,FFWC_RL_HIS_FILENAME)
 df_ffwc_wl_old=pd.read_excel(ffwc_rl_name,index_col=0,header=0)
 df_ffwc_wl_old.index=pd.to_datetime(df_ffwc_wl_old.index,format='%d/%m/%y')
 df_ffwc_wl_old=df_ffwc_wl_old[['WL']].rename(columns={'WL': 
@@ -684,15 +521,6 @@ integration_period = 3
     
 y =  df_final['glofas_observed']
 y.rolling(3).sum()
-```
-
-```python
-#ax.set_xlim(18, None)
-from scipy.stats import pearsonr
-test = df_final[['observed', 'glofas_observed', 'glofas_observed_sum']].dropna()
-idx = test['observed'] > 19.5
-print(pearsonr(test['observed'][idx], test['glofas_observed'][idx]),
-      pearsonr(test['observed'][idx], test['glofas_observed_sum'][idx]))
 ```
 
 ### Comparing differences
