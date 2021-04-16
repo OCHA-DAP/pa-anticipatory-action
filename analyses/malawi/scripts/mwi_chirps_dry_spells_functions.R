@@ -2,7 +2,7 @@
 computeLayerStat <- function(layer, stat, data_stat_values){
   
   # select 1 layer
-  data_layer <- subset(data, layer)
+  data_layer <- subset(data_all, layer)
   
   # extract values from raster cells and compute stat
   data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = stat, df = T)
@@ -17,7 +17,7 @@ computeLayerStat <- function(layer, stat, data_stat_values){
 computeLayerStat_adm3 <- function(layer, stat, data_stat_values){
   
   # select 1 layer
-  data_layer <- subset(data, layer)
+  data_layer <- subset(data_all, layer)
   
   # extract values from raster cells and compute stat
   data_layer.stat <- raster::extract(data_layer, mwi_adm3, fun = stat, df = T)
@@ -82,15 +82,18 @@ convertToLongFormatADM3 <- function(data.wideformat){
   # add pcodes to identify each polygon
   data.wideformat$pcode <- mwi_adm3$ADM3_PCODE
   
+  data.wideformat <- data.wideformat %>% 
+                        relocate(pcode, .after = ID) # use pcodes because some adm3's share EN names but have distinct pcodes
+  
   # convert wide to long to get dates as rows
-  data.longformat <- gather(data.wideformat, date, total_prec, 2:(nbr_layers+1))
+  data.longformat <- gather(data.wideformat, date, total_prec, 3:7672)
   
   # assign "zero" values to NA in total_prec
   data.longformat$total_prec[is.na(data.longformat$total_prec)] <- 0
   
   # reformat 'date' to a date format
   data.longformat$date <- as.Date(data.longformat$date, format = "X%Y.%m.%d")
-  
+
   return(data.longformat)
 }
 
