@@ -28,6 +28,7 @@ df_crop <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/agricu
 df_asi <- read.csv(paste0(data_dir, '/exploration/malawi/ASI/malawi_asi_dekad.csv'))
 df_globalipc <- read.csv(paste0(data_dir, '/processed/malawi/GlobalIPCProcessed/malawi_globalipc_admin2.csv'))
 df_fewsnet <- read.csv(paste0(data_dir, '/processed/malawi/FewsNetWorldPop/malawi_fewsnet_worldpop_admin2.csv'))
+df_price <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/wfp_food_prices_malawi.csv'))
 
 # Crop production ---------------------------------------------------------
 
@@ -65,6 +66,35 @@ plt_crop <- ggplot(df_crop_sel) +
   theme_minimal() +
   annotate("text", x = as.numeric(low_years$Year), y = low_years$Value+100, color='red',label = as.numeric(low_years$Year), size=2)
 
+
+# Crop prices -------------------------------------------------------------
+
+# Drop the hxl row in the top
+df_price <- df_price[-1,]
+
+
+# How have the maize prices changed?
+sel <- df_price %>%
+  filter(cmname == 'Maize - Retail')%>%
+  dplyr::select(date, cmname, price, admname)%>%
+  mutate(date = as.Date(date))%>%
+  mutate(price = as.numeric(price))%>%
+  group_by(date, admname)%>%
+  summarise(med_price = median(price))
+
+plot(diff(sel$med_price, lag=2))
+
+# As is the prices trend with inflation (I'm assuming), so maybe it'll work to difference
+# the series to identify price peaks that would results from dry spells?
+
+Box.test(diff(sel$med_price), lag=1, type="Ljung-Box")
+
+plt_price <- ggplot(sel, aes(x=date, y=med_price, group=admname))+
+  geom_line(aes(color=admname))+
+  labs(x='Date', y='Median price', color='Region')+
+  theme_minimal()
+
+plt_price
 # Food insecurity ---------------------------------------------------------
 
 # Identify population in IPC 3+ across regions. 
@@ -165,10 +195,12 @@ df_asi_sel_max <- df_asi_sel %>%
 # Preprocessed in the mwi_wrsi_process.R file,
 # using the outputs from the GeoWRSI software 
 wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
-wrsi_mean <- read.csv(paste0(wrsi_dir, 'wrsi_mean_adm1.csv')) %>% drop_na()
-#wrsi_min <- read.csv(paste0(wrsi_dir, 'wrsi_min_adm1.csv'))
+#wrsi_mean <- read.csv(paste0(wrsi_dir, 'wrsi_mean_adm1.csv'))
 
-wrsi_plt <- wrsi_mean %>%
+wrsi_min <- read.csv(paste0(wrsi_dir, 'wrsi_min_adm1.csv'))
+wrsi_min[sapply(wrsi_min, is.infinite)] <- NA
+
+wrsi_plt <- wrsi_min %>%
   ggplot(aes(x=dekad, y=wrsi, group=ID))+
   geom_line(aes(color=ID))+
   facet_wrap(~year)+
@@ -176,10 +208,13 @@ wrsi_plt <- wrsi_mean %>%
   theme(legend.position = 'bottom')+
   labs(x='Dekad', y='WRSI', color='Region')
 
+#wrsi_mean_na <- wrsi_mean %>% drop_na()
+wrsi_min_na <- wrsi_min %>% drop_na()
+
 # Get the min WRSI by season by region
 # Assuming that the 20th dekad will always be in the dry season 
-df_wrsi_season <- wrsi_mean %>%
-  mutate(season_approx = ifelse(wrsi_mean$dekad < 20, wrsi_mean$year -1, wrsi_mean$year))%>%
+df_wrsi_season <- wrsi_min_na %>%
+  mutate(season_approx = ifelse(wrsi_min_na$dekad < 20, wrsi_min_na$year -1, wrsi_min_na$year))%>%
   group_by(season_approx, ID) %>%
   summarise(min_wrsi = min(wrsi))
 
@@ -263,7 +298,7 @@ group_cor <- function(grp, df){
 cor_central <- group_cor('Central', df_sum)
 cor_northern <- group_cor('Northern', df_sum)
 cor_southern <- group_cor('Southern', df_sum)
-
+cor_all <- cor(df_sum[,5:8], use='p')
 
 plt_asi_mean_days <- plot_scatter(df_sum$days_ds, df_sum$avg_asi, 'Number of dry spell days', 'Mean ASI')
 plt_asi_max_days <- plot_scatter(df_sum$days_ds, df_sum$max_asi, 'Number of dry spell days', 'Max ASI')
@@ -274,8 +309,20 @@ plt_ipc_asi <- plot_scatter(df_sum$avg_asi, df_sum$tot, 'Mean ASI', 'Population 
 
 # Make corr plots ---------------------------------------------------------
 
+p.mat <- cor_pmat(df_sum[,5:8])
 
 # TODO: Northern has probs with NA
+
+plt_cor_all <- ggcorrplot(cor_central, 
+                              type = "lower", 
+                              insig = "blank", 
+                              lab=TRUE,
+                              ggtheme=theme_bw())
+
+
+
+
+plt_cor_all
 plt_cor_central <- ggcorrplot(cor_central, 
                               p.mat = cor_central, 
                               hc.order = TRUE,
