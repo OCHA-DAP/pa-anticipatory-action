@@ -21,14 +21,18 @@ fn <- fn %>%
                      perc_CS_4p = round((CS_4 + CS_5) * 100 / pop_CS, 1),
                      perc_ML1_3p = round((ML1_3 + ML1_4 + ML1_5) * 100 / pop_ML1, 1),
                      perc_inc_ML1_3p = perc_ML1_3p - perc_CS_3p,
-                     period_ML1 = "Oct - Jan 2021")
+                     period_ML1 = "Oct - Jan 2021",
+                     perc_ML2_3p = round((ML2_3 + ML2_4 + ML2_5) * 100 / pop_ML2, 1),
+                     perc_inc_ML2_3p = perc_ML2_3p - perc_CS_3p,
+                     period_ML2 = "Feb - May 2021")
         
 
-# plot food insecurity current and projected 
+## plot food insecurity current and projected 
 
 li = c(0, 100)
 br = c(0, 20, 40, 60, 80, 100)
 
+# Current situation
 fi_cs_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>% 
                  left_join(fn, by = c('ADM1_EN' = 'ADM1_EN')) %>%
                  ggplot() +
@@ -48,12 +52,12 @@ fi_cs_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>%
                        panel.background = element_blank(),
                        panel.grid.major = element_blank())
 
-
+# at ML1
 fi_ml1_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>% 
                 left_join(fn, by = c('ADM1_EN' = 'ADM1_EN')) %>%
                 ggplot() +
-                geom_sf(aes(fill = perc_ML1_3p), show.legend = T) +   
-                geom_sf_label(aes(label = ADM1_EN), color = "black") +
+                geom_sf(aes(fill = perc_ML1_3p), show.legend = F) +   
+            #    geom_sf_label(aes(label = ADM1_EN), color = "black") +
                 scale_fill_gradient(low = "white", 
                                     high = "red", 
                                     na.value = NA, 
@@ -69,7 +73,7 @@ fi_ml1_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>%
                       panel.background = element_blank(),
                       panel.grid.major = element_blank())
 
-
+# increase by ML1
 fi_inc_ml1_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>% 
                     left_join(fn, by = c('ADM1_EN' = 'ADM1_EN')) %>%
                     ggplot() +
@@ -88,10 +92,36 @@ fi_inc_ml1_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>%
                           panel.background = element_blank(),
                           panel.grid.major = element_blank())
 
-layout <- fi_cs_plot | fi_ml1_plot 
+# at ML2
+fi_ml2_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>% 
+                  left_join(fn, by = c('ADM1_EN' = 'ADM1_EN')) %>%
+                  ggplot() +
+                  geom_sf(aes(fill = perc_ML2_3p), show.legend = T) +   
+               #   geom_sf_label(aes(label = ADM1_EN), color = "black") +
+                  scale_fill_gradient(low = "white", 
+                                      high = "red", 
+                                      na.value = NA, 
+                                      "Percentage of \n regional population",
+                                      breaks=br,
+                                      limits=li) +
+                  ggtitle('Projected Feb-June 2021') +
+                  #, subtitle = "Crisis or worse levels as reported by FewsNet") +
+                  theme(axis.text.x=element_blank(),
+                        axis.ticks.x=element_blank(),
+                        axis.text.y=element_blank(),
+                        axis.ticks.y=element_blank(),
+                        panel.background = element_blank(),
+                        panel.grid.major = element_blank())
+
+# assemble plots
+layout <- fi_cs_plot | fi_ml1_plot | fi_ml2_plot
 layout +
    plot_annotation(
-    title = 'Food Insecurity',
-    subtitle = 'Crisis (IPC 3) or worse levels',
+    title = 'Crisis or Worse Food Insecurity (IPC3+)',
+    #subtitle = 'Crisis (IPC 3) or worse levels',
     caption = 'Data source: FewsNet'
   )
+
+# plot current IPC3+, IPC3+ Jan, IPC3+ Feb+
+
+
