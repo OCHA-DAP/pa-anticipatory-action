@@ -2,11 +2,10 @@ import sys
 import os
 from pathlib import Path
 
-import matplotlib as mpl
-from scipy.stats import norm, pearsonr
 import numpy as np
 import pandas as pd
 import xarray as xr
+from scipy.stats import norm
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -44,7 +43,7 @@ def get_glofas_forecast():
     return convert_dict_to_da(da_glofas_forecast_dict)
 
 
-def get_glofas_reforecast():
+def get_glofas_reforecast(interp=True):
     glofas_reforecast = glofas.GlofasReforecast(
         stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
     )
@@ -56,7 +55,9 @@ def get_glofas_reforecast():
         )[STATION]
         for leadtime_hour in ggd.LEADTIME_HOURS
     }
-    da_glofas_reforecast_dict = interp_dates(shift_dates(da_glofas_reforecast_dict))
+    if interp:
+        da_glofas_reforecast_dict = interp_dates(da_glofas_reforecast_dict)
+    da_glofas_reforecast_dict = shift_dates(da_glofas_reforecast_dict)
     return convert_dict_to_da(da_glofas_reforecast_dict)
 
 
@@ -91,7 +92,6 @@ def convert_dict_to_da(da_glofas_dict):
         leadtime_hour: da_glofas.reindex({"time": time})
         for leadtime_hour, da_glofas in da_glofas_dict.items()
     }
-
     data = np.array([da_glofas.values for da_glofas in da_glofas_dict.values()])
     return xr.DataArray(
         data=data,
@@ -148,7 +148,6 @@ def read_in_ffwc():
     ffwc_rl_name = '{}/{}'.format(ffwc_dir, FFWC_RL_HIS_FILENAME)
     df_ffwc_wl_old = pd.read_excel(ffwc_rl_name, index_col=0, header=0)
     df_ffwc_wl_old.index = pd.to_datetime(df_ffwc_wl_old.index, format='%d/%m/%y')
-    df_ffwc_wl_old
     df_ffwc_wl_old = df_ffwc_wl_old[['WL']].rename(columns={'WL':
                                                                 'observed'})[df_ffwc_wl_old.index < df_ffwc_wl.index[0]]
     df_ffwc_wl = pd.concat([df_ffwc_wl_old, df_ffwc_wl])
