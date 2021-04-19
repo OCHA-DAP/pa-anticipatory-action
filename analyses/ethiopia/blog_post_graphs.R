@@ -126,6 +126,7 @@ fi_ml2_3p_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>%
 #### create plots
 #########
 
+# dec 2020 food insecurity
 png(file = "blog_post_food_insecurity_graph.png",
     width=1820, height=750)
 layout_3p <- fi_cs_3p_plot | fi_ml1_3p_plot | fi_ml2_3p_plot
@@ -137,6 +138,42 @@ layout_3p +
     theme = theme(plot.title = element_text(size = 18),
                   plot.subtitle = element_text(size = 14))
   ) 
+dev.off()
+
+# historical food insecurity reported in october report for 5 kililoch that activated in 2020 + 1 for a 3x2 graph
+hist_cs <- fn_all %>%
+                filter(date %in% c('2009-10-01', '2010-10-01', '2011-10-01', '2012-10-01', '2013-10-01', '2014-10-01', '2015-10-01', '2016-10-01', '2017-10-01', '2018-10-01', '2019-10-01', '2020-10-01'),
+                      ADM1_EN %in% c('Afar', 'Oromia', 'Somali', 'Tigray', 'SNNP', 'Amhara')) %>%
+                select(date, ADM1_EN, pop_CS, CS_1, CS_2, CS_3, CS_4, CS_5, perc_CS_3p, perc_CS_4p) %>%
+                mutate(perc_CS_3 = round(100 * CS_3 / pop_CS, 1),
+                       perc_CS_4 = round(100 * CS_4 / pop_CS, 1))
+
+hist_cs$date <- as.Date(hist_cs$date)
+
+hist_cs.long <- hist_cs[, c('date', "perc_CS_3", "perc_CS_4", "ADM1_EN")] %>%
+                    rename('Crisis-IPC3' = 'perc_CS_3', 'Emergency-IPC4' = 'perc_CS_4') %>%
+                    gather(key = "ipc_phase" , value = "perc", -date, -ADM1_EN)
+
+
+png(file = "blog_post_historical_food_insecurity_graph.png",
+    width=1051, height=578)
+
+ggplot(data = hist_cs.long[order(hist_cs.long$ipc_phase, decreasing = T),], # orders to plot IPC4 on top of IPC3
+       aes(x = date, y = perc, fill = factor(ipc_phase, levels=c("Emergency-IPC4", "Crisis-IPC3")))) + # specifies order of the levels as we want them displayed
+  geom_bar(stat="identity", na.rm = TRUE) +
+  facet_wrap(~ ADM1_EN) +
+  theme_bw() +
+  ggtitle("Historical Food Insecurity in Select Regions", 
+          subtitle = "IPC3 levels in October as reported by FewsNet") +
+  xlab("Year") +
+  ylab("Regional population (%)") +
+  ylim(0, 100) +
+  scale_fill_manual(values = c("#BA0A1B", "#E69F00")) +
+  scale_x_date(breaks = seq.Date(as.Date("2009-10-01"), as.Date("2020-10-01"), by = 'year'),
+               labels = lubridate::year(seq.Date(as.Date("2009-10-01"), as.Date("2020-10-01"), by = 'year'))) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(fill = "IPC level")
+
 dev.off()
 
 
