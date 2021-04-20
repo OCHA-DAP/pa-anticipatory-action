@@ -10,7 +10,7 @@ import xarray as xr
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
-from src.indicators.flooding import glofas
+from src.indicators.flooding.glofas import glofas
 from src.bangladesh import get_glofas_data as ggd
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
@@ -20,7 +20,7 @@ ffwc_dir = DATA_DIR / 'exploration/bangladesh/FFWC_Data'
 
 
 def get_glofas_reanalysis():
-    glofas_reanalysis = glofas.GlofasReanalysis(stations_lon_lat=ggd.FFWC_STATIONS)
+    glofas_reanalysis = glofas.GlofasReanalysis()
     da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
         country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3
     )[STATION]
@@ -28,9 +28,7 @@ def get_glofas_reanalysis():
 
 
 def get_glofas_forecast():
-    glofas_forecast = glofas.GlofasForecast(
-        stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
-    )
+    glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime_hour: glofas_forecast.read_processed_dataset(
             country_name=ggd.COUNTRY_NAME,
@@ -44,9 +42,7 @@ def get_glofas_forecast():
 
 
 def get_glofas_reforecast():
-    glofas_reforecast = glofas.GlofasReforecast(
-        stations_lon_lat=ggd.FFWC_STATIONS, leadtime_hours=ggd.LEADTIME_HOURS
-    )
+    glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime_hour: glofas_reforecast.read_processed_dataset(
             country_name=ggd.COUNTRY_NAME,
