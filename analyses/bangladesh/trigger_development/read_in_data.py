@@ -2,8 +2,7 @@ import sys
 import os
 from pathlib import Path
 
-import matplotlib as mpl
-from scipy.stats import norm, pearsonr
+from scipy.stats import norm
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -93,11 +92,13 @@ def convert_dict_to_da(da_glofas_dict):
     }
 
     data = np.array([da_glofas.values for da_glofas in da_glofas_dict.values()])
+    # Create data array with all lead times, as well as ensemble members (number)
+    # and timestep
     return xr.DataArray(
         data=data,
         dims=["leadtime_hour", "number", "time"],
         coords=dict(
-            number=da_glofas_dict[120].number,
+            number=list(da_glofas_dict.values())[0].number,  # ensemble member number
             time=time,
             leadtime_hour=list(da_glofas_dict.keys()),
         ),
