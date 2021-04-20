@@ -5,16 +5,19 @@ from pathlib import Path
 import logging
 import time
 import os
+from typing import Dict, List
 
 import numpy as np
 import xarray as xr
 import cdsapi
 
+from src.indicators.flooding.glofas.area import Area, Station
+
+
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 GLOFAS_DIR = Path("GLOFAS_Data")
-
 CDSAPI_CLIENT = cdsapi.Client()
 
 logger = logging.getLogger(__name__)
@@ -23,17 +26,14 @@ logger = logging.getLogger(__name__)
 class Glofas:
     def __init__(
         self,
-        stations_lon_lat: dict,
         year_min: int,
         year_max: int,
         cds_name: str,
-        dataset: list,
+        dataset: List[str],
         dataset_variable_name: str,
         system_version_minor: int = None,
         date_variable_prefix: str = "",
-        leadtime_hours: list = None,
     ):
-        self.stations_lon_lat = stations_lon_lat
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
@@ -41,13 +41,12 @@ class Glofas:
         self.dataset_variable_name = dataset_variable_name
         self.system_version_minor = system_version_minor
         self.date_variable_prefix = date_variable_prefix
-        self.leadtime_hours = leadtime_hours
-        self.area = get_area(self.stations_lon_lat)
 
     def _download(
         self,
         country_name: str,
         country_iso3: str,
+        area: Area,
         year: int,
         month: int = None,
         leadtime_hour: int = None,
@@ -71,6 +70,7 @@ class Glofas:
         CDSAPI_CLIENT.retrieve(
             name=self.cds_name,
             request=self._get_query(
+                area=area,
                 year=year,
                 month=month,
                 leadtime_hour=leadtime_hour,
@@ -102,6 +102,7 @@ class Glofas:
 
     def _get_query(
         self,
+        area: Area,
         year: int,
         month: int = None,
         leadtime_hour: int = None,
@@ -115,7 +116,7 @@ class Glofas:
             if month is None
             else str(month).zfill(2),
             f"{self.date_variable_prefix}day": [str(x).zfill(2) for x in range(1, 32)],
-            "area": self.area,
+            "area": area.list_for_api(),
         }
         if leadtime_hour is not None:
             query["leadtime_hour"] = str(leadtime_hour)
@@ -125,7 +126,7 @@ class Glofas:
         return query
 
     @staticmethod
-    def _read_in_ensemble_and_perturbed_datasets(filepath_list):
+    def _read_in_ensemble_and_perturbed_datasets(filepath_list: List[Path]):
         """
         Read in dataset that has both control and ensemble perturbed forecast
         and combine them
@@ -154,53 +155,46 @@ class Glofas:
         ds = xr.combine_by_coords(ds_list)
         return ds
 
-    def _get_station_dataset(self, ds: xr.Dataset, coord_names: list) -> xr.Dataset:
-        return xr.Dataset(
-            data_vars={
-                station_name: (
-                    coord_names,
-                    ds.isel(
-                        latitude=np.abs(ds.latitude - lat).argmin(),
-                        longitude=np.abs(ds.longitude - lon).argmin(),
-                    )["dis24"],
-                )
-                for station_name, (lon, lat) in self.stations_lon_lat.items()
-            },
-            coords={coord_name: ds[coord_name] for coord_name in coord_names},
-        )
-
     def _write_to_processed_file(
-        self, country_name: str, country_iso3: str, ds: xr.Dataset, leadtime_hour: int = None
+        self,
+        country_name: str,
+        country_iso3: str,
+        ds: xr.Dataset,
+        leadtime_hour: int = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_name=country_name, country_iso3=country_iso3, leadtime_hour=leadtime_hour
+            country_name=country_name,
+            country_iso3=country_iso3,
+            leadtime_hour=leadtime_hour,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing to {filepath}")
         ds.to_netcdf(filepath)
         return filepath
 
-    def _get_processed_filepath(self, country_name: str, country_iso3: str, leadtime_hour: int = None) -> Path:
+    def _get_processed_filepath(
+        self, country_name: str, country_iso3: str, leadtime_hour: int = None
+    ) -> Path:
         filename = f"{country_iso3}_{self.cds_name}"
         if leadtime_hour is not None:
-           filename += f"_{str(leadtime_hour).zfill(4)}"
+            filename += f"_{str(leadtime_hour).zfill(4)}"
         filename += ".nc"
-        return (
-            PROCESSED_DATA_DIR
-            / country_name
-            / GLOFAS_DIR
-            / filename
-        )
+        return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
 
-    def read_processed_dataset(self, country_name: str, country_iso3: str, leadtime_hour: int = None):
-        filepath = self._get_processed_filepath(country_name=country_name, country_iso3=country_iso3, leadtime_hour=leadtime_hour)
+    def read_processed_dataset(
+        self, country_name: str, country_iso3: str, leadtime_hour: int = None
+    ):
+        filepath = self._get_processed_filepath(
+            country_name=country_name,
+            country_iso3=country_iso3,
+            leadtime_hour=leadtime_hour,
+        )
         return xr.open_dataset(filepath)
 
 
 class GlofasReanalysis(Glofas):
-    def __init__(self, stations_lon_lat: dict):
+    def __init__(self):
         super().__init__(
-            stations_lon_lat=stations_lon_lat,
             year_min=1979,
             year_max=2020,
             cds_name="cems-glofas-historical",
@@ -214,6 +208,7 @@ class GlofasReanalysis(Glofas):
         self,
         country_name: str,
         country_iso3: str,
+        area: Area,
     ):
         logger.info(
             f"Downloading GloFAS reanalysis for years {self.year_min} - {self.year_max}"
@@ -221,10 +216,15 @@ class GlofasReanalysis(Glofas):
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
             super()._download(
-                country_name=country_name, country_iso3=country_iso3, year=year
+                country_name=country_name,
+                country_iso3=country_iso3,
+                area=area,
+                year=year,
             )
 
-    def process(self, country_name: str, country_iso3: str):
+    def process(
+        self, country_name: str, country_iso3: str, stations: Dict[str, Station]
+    ):
         # Get list of files to open
         logger.info("Processing GloFAS Reanalysis")
         filepath_list = [
@@ -242,7 +242,7 @@ class GlofasReanalysis(Glofas):
         )
         # Create a new dataset with just the station pixels
         logger.info("Looping through stations, this takes some time")
-        ds_new = self._get_station_dataset(ds=ds, coord_names=["time"])
+        ds_new = _get_station_dataset(stations=stations, ds=ds, coord_names=["time"])
         # Write out the new dataset to a file
         self._write_to_processed_file(
             country_name=country_name, country_iso3=country_iso3, ds=ds_new
@@ -250,38 +250,45 @@ class GlofasReanalysis(Glofas):
 
 
 class GlofasForecast(Glofas):
-    def __init__(self, stations_lon_lat: dict, leadtime_hours: list):
+    def __init__(self):
         super().__init__(
-            stations_lon_lat=stations_lon_lat,
             year_min=2019,
             year_max=2021,
             cds_name="cems-glofas-forecast",
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
             dataset_variable_name="product_type",
-            leadtime_hours=leadtime_hours
         )
 
     def download(
         self,
         country_name: str,
         country_iso3: str,
+        area: Area,
+        leadtime_hours: List[int],
     ):
         logger.info(
-            f"Downloading GloFAS forecast for years {self.year_min} - {self.year_max} and leadtime hours {self.leadtime_hours}"
+            f"Downloading GloFAS forecast for years {self.year_min} - {self.year_max} and leadtime hours {leadtime_hours}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
-            for leadtime_hour in self.leadtime_hours:
+            for leadtime_hour in leadtime_hours:
                 super()._download(
                     country_name=country_name,
                     country_iso3=country_iso3,
+                    area=area,
                     year=year,
                     leadtime_hour=leadtime_hour,
                 )
 
-    def process(self, country_name: str, country_iso3: str):
+    def process(
+        self,
+        country_name: str,
+        country_iso3: str,
+        stations: Dict[str, Station],
+        leadtime_hours: List[int],
+    ):
         logger.info("Processing GloFAS Forecast")
-        for leadtime_hour in self.leadtime_hours:
+        for leadtime_hour in leadtime_hours:
             logger.info(f"For lead time {leadtime_hour}")
             # Get list of files to open
             filepath_list = [
@@ -298,17 +305,21 @@ class GlofasForecast(Glofas):
             ds = self._read_in_ensemble_and_perturbed_datasets(filepath_list)
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
-            ds_new = self._get_station_dataset(ds=ds, coord_names=["number", "time"])
+            ds_new = _get_station_dataset(
+                stations=stations, ds=ds, coord_names=["number", "time"]
+            )
             # Write out the new dataset to a file
             self._write_to_processed_file(
-                country_name=country_name, country_iso3=country_iso3, ds=ds_new, leadtime_hour=leadtime_hour
+                country_name=country_name,
+                country_iso3=country_iso3,
+                ds=ds_new,
+                leadtime_hour=leadtime_hour,
             )
 
 
 class GlofasReforecast(Glofas):
-    def __init__(self, stations_lon_lat: dict, leadtime_hours: list):
+    def __init__(self):
         super().__init__(
-            stations_lon_lat=stations_lon_lat,
             year_min=1999,
             year_max=2018,
             cds_name="cems-glofas-reforecast",
@@ -316,32 +327,40 @@ class GlofasReforecast(Glofas):
             dataset_variable_name="product_type",
             system_version_minor=2,
             date_variable_prefix="h",
-            leadtime_hours=leadtime_hours
         )
 
     def download(
         self,
         country_name: str,
         country_iso3: str,
+        area: Area,
+        leadtime_hours: List[int],
     ):
         logger.info(
-            f"Downloading GloFAS reforecast for years {self.year_min} - {self.year_max} and leadtime hours {self.leadtime_hours}"
+            f"Downloading GloFAS reforecast for years {self.year_min} - {self.year_max} and leadtime hours {leadtime_hours}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
             for month in range(1, 13):
-                for leadtime_hour in self.leadtime_hours:
+                for leadtime_hour in leadtime_hours:
                     super()._download(
                         country_name=country_name,
                         country_iso3=country_iso3,
+                        area=area,
                         year=year,
                         month=month,
                         leadtime_hour=leadtime_hour,
                     )
 
-    def process(self, country_name: str, country_iso3: str):
+    def process(
+        self,
+        country_name: str,
+        country_iso3: str,
+        stations: Dict[str, Station],
+        leadtime_hours: List[int],
+    ):
         logger.info("Processing GloFAS Reforecast")
-        for leadtime_hour in self.leadtime_hours:
+        for leadtime_hour in leadtime_hours:
             logger.info(f"For lead time {leadtime_hour}")
             # Get list of files to open
             filepath_list = [
@@ -357,33 +376,21 @@ class GlofasReforecast(Glofas):
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
-            ds = self._read_in_ensemble_and_perturbed_datasets(filepath_list)
+            ds = self._read_in_ensemble_and_perturbed_datasets(
+                filepath_list=filepath_list
+            )
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
-            ds_new = self._get_station_dataset(ds=ds, coord_names=["number", "time"])
+            ds_new = _get_station_dataset(
+                stations=stations, ds=ds, coord_names=["number", "time"]
+            )
             # Write out the new dataset to a file
             self._write_to_processed_file(
-                country_name=country_name, country_iso3=country_iso3, ds=ds_new, leadtime_hour=leadtime_hour
+                country_name=country_name,
+                country_iso3=country_iso3,
+                ds=ds_new,
+                leadtime_hour=leadtime_hour,
             )
-
-
-def get_area(stations_lon_lat: dict, buffer: float = 0.5) -> list:
-    """
-    Args:
-        stations_lon_lat: dictionary of form {station_name: [lon (float), lat (float)]
-        buffer: degrees above / below maximum lat / lon from stations to include in GloFAS query
-
-    Returns:
-        list with format [N, W, S, E]
-    """
-    lon_list = [lon for (lon, lat) in stations_lon_lat.values()]
-    lat_list = [lat for (lon, lat) in stations_lon_lat.values()]
-    return [
-        max(lat_list) + buffer,
-        min(lon_list) - buffer,
-        min(lat_list) - buffer,
-        max(lon_list) + buffer,
-    ]
 
 
 def expand_dims(
@@ -405,3 +412,21 @@ def expand_dims(
         coords=coords,
     )
     return ds
+
+
+def _get_station_dataset(
+    stations: Dict[str, Station], ds: xr.Dataset, coord_names: List[str]
+) -> xr.Dataset:
+    return xr.Dataset(
+        data_vars={
+            station_name: (
+                coord_names,
+                ds.isel(
+                    longitude=np.abs(ds.longitude - station.lon).argmin(),
+                    latitude=np.abs(ds.latitude - station.lat).argmin(),
+                )["dis24"],
+            )
+            for station_name, station in stations.items()
+        },
+        coords={coord_name: ds[coord_name] for coord_name in coord_names},
+    )
