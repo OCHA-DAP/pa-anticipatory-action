@@ -30,6 +30,7 @@ FFWC_STATIONS = {
     "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
 LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
+AREA_BUFFER = 0.5
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ def main(download=True, process=False):
         # Remove the GloFAS station as it was not used originally
         ffwc_stations_for_download = FFWC_STATIONS.copy()
         del ffwc_stations_for_download["Bahadurabad_glofas"]
-        area = AreaFromStations(stations=ffwc_stations_for_download)
+        area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
         glofas_reanalysis.download(
             country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
         )

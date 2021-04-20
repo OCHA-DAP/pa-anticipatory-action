@@ -18,7 +18,7 @@ class Area:
 
 
 class AreaFromStations(Area):
-    def __init__(self, stations: Dict[str, Station], buffer: float = 0.5):
+    def __init__(self, stations: Dict[str, Station], buffer: float = 0.2):
         """
         Args:
             stations: dictionary of form {station_name: Station]
