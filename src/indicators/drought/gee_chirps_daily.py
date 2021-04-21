@@ -18,7 +18,8 @@ ee.Initialize()
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
-# TODO: Refactor out so that user would specify from another script of config
+# TODO: Refactor out so that user would specify from another script or config
+# Start and end dates should be in years
 CHIRPS_START = 2000
 CHIRPS_END = 2003
 DATA_DIR = os.environ["AA_DATA_DIR"]
@@ -44,7 +45,12 @@ def chirps_summary(start, end, adm, stat, out_dir):
         "{}_adm{}_chirps_{}_{}.csv".format(ISO3, str(ADM_LVL), stat.lower(), end[0:4]),
     )
     geemap.zonal_statistics(
-        chirps_image, adm, out_chirps_stats, statistics_type=stat, scale=1000
+        # TODO: Figure out the scale parameter: https://github.com/giswqs/geemap/discussions/435
+        chirps_image,
+        adm,
+        out_chirps_stats,
+        statistics_type=stat,
+        scale=1000,
     )
 
 
