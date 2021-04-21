@@ -21,11 +21,11 @@ sys.path.append(path_mod)
 # TODO: Refactor out so that user would specify from another script or config
 # Start and end dates should be in years
 CHIRPS_START = 2000
-CHIRPS_END = 2003
+CHIRPS_END = 2001
 DATA_DIR = os.environ["AA_DATA_DIR"]
 ADM0 = "Malawi"
 ISO3 = "mwi"
-ADM_LVL = 1
+ADM_LVL = 2
 OUT_DIR = os.path.join(DATA_DIR, "processed/malawi/dry_spells/gee_max_chirps/")
 STAT = "MAXIMUM"  # Allowed statistics type: MEAN, MAXIMUM, MINIMUM, MEDIAN, STD, MIN_MAX, VARIANCE, SUM
 
@@ -39,18 +39,21 @@ def chirps_summary(start, end, adm, stat, out_dir):
         .filterBounds(adm)
         .map(lambda image: image.clip(adm))
     )
+
     chirps_image = chirps.toBands()
     out_chirps_stats = os.path.join(
         out_dir,
         "{}_adm{}_chirps_{}_{}.csv".format(ISO3, str(ADM_LVL), stat.lower(), end[0:4]),
     )
     geemap.zonal_statistics(
-        # TODO: Figure out the scale parameter: https://github.com/giswqs/geemap/discussions/435
         chirps_image,
         adm,
         out_chirps_stats,
         statistics_type=stat,
-        scale=1000,
+        # Note that scale should be the same as the input data's nominal scale.
+        # I've set the appropriate value for CHIRPS but this should be adjusted if using different data. 
+        # Can find it using sample_eeimage.projection().nominalScale() on an ee.Image
+        scale=5566,  
     )
 
 
