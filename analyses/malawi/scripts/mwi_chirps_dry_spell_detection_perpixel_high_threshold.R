@@ -36,7 +36,7 @@ mwi_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp")
 # select shapefile
 mwi_adms <- mwi_adm2
 #mwi_adms <- mwi_adm1
-  
+
 # explore shapefiles
 summary(st_geometry_type(mwi_adms)) # summary of geometry types
 st_crs(mwi_adms) # coordinate reference system of shapefile
@@ -114,9 +114,9 @@ all_years_cell_values_adm2 <- raster::extract(s2000_s2020_cropped, mwi_adm2, cel
 # add pcode for each region
 mwi_adm2_ids$ID <- seq_along(1:n_distinct(mwi_adm2_ids$ADM2_PCODE)) # creates IDs based on layer order, which is used by extract to assign its IDs
 all_years_cell_values_adm2 <- all_years_cell_values_adm2 %>%
-                                left_join(mwi_adm2_ids, by = 'ID') %>%
-                                relocate(ADM2_PCODE, .after = ID) %>% # move the identification columns to the front of the dated values
-                                relocate(ADM2_EN, .after = ADM2_PCODE)
+  left_join(mwi_adm2_ids, by = 'ID') %>%
+  relocate(ADM2_PCODE, .after = ID) %>% # move the identification columns to the front of the dated values
+  relocate(ADM2_EN, .after = ADM2_PCODE)
 
 # mwi_adm1_ids$ID <- seq_along(1:n_distinct(mwi_adm1_ids$ADM1_PCODE)) # creates IDs based on layer order, which is used by extract to assign its IDs
 # all_years_cell_values_adm1 <- all_years_cell_values_adm1 %>%
@@ -137,8 +137,8 @@ cell_ids <- data.frame(unique(data$cell))
 names(cell_ids)[1] <- 'cell'
 
 cell_adms <- data %>%
-               dplyr::select(cell, ADM2_EN, ADM2_PCODE) %>%
-               mutate(cell = as.character(cell))
+  dplyr::select(cell, ADM2_EN, ADM2_PCODE) %>%
+  mutate(cell = as.character(cell))
 
 # cell_adms <- data %>%
 #                 dplyr::select(cell, ADM1_EN, ADM1_PCODE) %>%
@@ -148,7 +148,7 @@ year_by_cell <- crossing(year_list, cell_ids$cell) # create list with all year *
 names(year_by_cell)[2] <- 'cell'
 year_by_cell$year <- as.character(year_by_cell$year)
 year_by_cell$cell <- as.character(year_by_cell$cell)
-  
+
 # transpose data
 data_long <- gather(data, date, total_prec, 5:(nbr_layers + 4)) # convert wide to long to get dates as rows ('cell' = raster cell number)
 data_long$total_prec[is.na(data_long$total_prec)] <- 0 # assign "zero" values to NA in total_prec
@@ -166,18 +166,18 @@ data_long$season_approx <- ifelse(data_long$month >= 10, data_long$year, ifelse(
 
 # compute 10-day rolling sums
 data_long <- data_long %>%
-                          computeRollingSumPerPixel(., window = 10) %>%
-                          rename(rollsum_10d = rollsum)
+  computeRollingSumPerPixel(., window = 10) %>%
+  rename(rollsum_10d = rollsum)
 
 # compute 14-day rolling sums
 data_long <- data_long %>%
-                          computeRollingSumPerPixel(., window = 14) %>%
-                          rename(rollsum_14d = rollsum)
+  computeRollingSumPerPixel(., window = 14) %>%
+  rename(rollsum_14d = rollsum)
 
 # compute 15-day rolling sums using left alignment
 data_long <- data_long %>%
-                          computeBackRollingSumPerPixel(., window = 15) %>%
-                          rename(rollsum_15d = rollsum)
+  computeBackRollingSumPerPixel(., window = 15) %>%
+  rename(rollsum_15d = rollsum)
 
 # label rainy days
 data_long$rainy_day_bin <-  ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
@@ -226,15 +226,15 @@ rainfall_during_rainy_seasons_list <- sqldf::sqldf("select m.*,
                                                  and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 1999 and 2020 rainy seasons because don't have onset/cessation dates for them
 
 rainfall_during_rainy_seasons_stats <- rainfall_during_rainy_seasons_list %>%
-                                        group_by(cell, season_approx) %>%
-                                        summarise(n_days = n(),
-                                                  rainy_season_rainfall = round(sum(total_prec), 1)) %>%
-                                        mutate(cell = as.character(cell),
-                                               season_approx = as.character(season_approx))
+  group_by(cell, season_approx) %>%
+  summarise(n_days = n(),
+            rainy_season_rainfall = round(sum(total_prec), 1)) %>%
+  mutate(cell = as.character(cell),
+         season_approx = as.character(season_approx))
 
 rainy_seasons_detail <- rainy_seasons %>%
-                                  left_join(rainfall_during_rainy_seasons_stats, by = c('cell' = 'cell', 'season_approx' = 'season_approx', 'rainy_season_duration' = 'n_days')) %>%
-                                  full_join(cell_adms, by = 'cell')
+  left_join(rainfall_during_rainy_seasons_stats, by = c('cell' = 'cell', 'season_approx' = 'season_approx', 'rainy_season_duration' = 'n_days')) %>%
+  full_join(cell_adms, by = 'cell')
 
 nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
 nrow(rainy_seasons_detail) / 22 == n_distinct(data$cell) # confirm there is a record for every year and every cell
@@ -252,26 +252,26 @@ combined <- merge(data_long, rainy_seasons, by = c('cell', 'season_approx'), all
 combined$during_rainy_season_bin <-  ifelse(combined$date >= combined$onset_date & combined$date <= combined$cessation_date, 1, 0)
 combined$nth_day_of_rainy_season <- ifelse(combined$during_rainy_season_bin == 1, as.numeric(difftime(combined$date, combined$onset_date, units = "days") + 1), NA) # +1 so first day of rainy season is labelled "one"
 
-# label days on which 14-day rolling sum is 2mm or less of rain as "dry_spell_day"
-combined$rollsum_14d_less_than_2_bin <- ifelse(combined$rollsum_14d <= 2, 1, 0) # NOTE: this does not label all days that have less than 2mm because those in the first 13 days don't get flagged
+# label days on which 14-day rolling sum is 300mm or less of rain as "dry_spell_day"
+combined$rollsum_14d_less_than_300_bin <- ifelse(combined$rollsum_14d <= 300, 1, 0) # NOTE: this does not label all days that have less than 2mm because those in the first 13 days don't get flagged
 
 # identify beginning, end and duration of dry spells per cell (total <= 2mm)
 dry_spells_confirmation_dates <- combined %>%
-                                  group_by(cell) %>%        
-                                  arrange(date) %>% # sort date in ascending order
-                                  mutate(streak_number = runlengthEncoding(rollsum_14d_less_than_2_bin)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14d rolling sum <= 2mm)
-                                  filter(rollsum_14d_less_than_2_bin == 1) %>% # keep streaks that meet the dry spell criterion
-                                  ungroup()
+  group_by(cell) %>%        
+  arrange(date) %>% # sort date in ascending order
+  mutate(streak_number = runlengthEncoding(rollsum_14d_less_than_300_bin)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14d rolling sum <= 2mm)
+  filter(rollsum_14d_less_than_300_bin == 1) %>% # keep streaks that meet the dry spell criterion
+  ungroup()
 
 dry_spells_list <- dry_spells_confirmation_dates %>%
-                        group_by(cell, season_approx, streak_number) %>% # for each dry spell of every adm2 and rainy season
-                        summarize(dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (= 14d rolling sum of <= 2mm of rain)
-                                  dry_spell_first_date = dry_spell_confirmation - 13, # spell started 14th day prior to confirmation day (= first day with a 14d rolling sum below 2mm)
-                                  dry_spell_last_date = max(date),
-                                  dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)) %>% # do not compute total rainfall because 13 days before confirmation date not included in streak
-                        ungroup() %>%
-                        as.data.frame() %>%
-                        dplyr::select(-streak_number)
+  group_by(cell, season_approx, streak_number) %>% # for each dry spell of every adm2 and rainy season
+  summarize(dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (= 14d rolling sum of <= 2mm of rain)
+            dry_spell_first_date = dry_spell_confirmation - 13, # spell started 14th day prior to confirmation day (= first day with a 14d rolling sum below 2mm)
+            dry_spell_last_date = max(date),
+            dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)) %>% # do not compute total rainfall because 13 days before confirmation date not included in streak
+  ungroup() %>%
+  as.data.frame() %>%
+  dplyr::select(-streak_number)
 
 rainfall_during_dry_spells <- sqldf::sqldf("select m.*, 
                                              l.dry_spell_confirmation,
@@ -283,37 +283,36 @@ rainfall_during_dry_spells <- sqldf::sqldf("select m.*,
                                             and m.date between l.dry_spell_first_date and l.dry_spell_last_date") # keep all records during a dry spell
 
 rainfall_during_dry_spells_stats <- rainfall_during_dry_spells %>%
-                                      group_by(cell, dry_spell_confirmation) %>%
-                                      summarise(n_days = n(),
-                                                dry_spell_rainfall = round(sum(total_prec), 1))
+  group_by(cell, dry_spell_confirmation) %>%
+  summarise(n_days = n(),
+            dry_spell_rainfall = round(sum(total_prec), 1))
 
 dry_spells_details <- dry_spells_list %>%
-                        left_join(rainfall_during_dry_spells_stats, by = c('cell' = 'cell', 'dry_spell_confirmation' = 'dry_spell_confirmation', 'dry_spell_duration' = 'n_days'))
+  left_join(rainfall_during_dry_spells_stats, by = c('cell' = 'cell', 'dry_spell_confirmation' = 'dry_spell_confirmation', 'dry_spell_duration' = 'n_days'))
 
 nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were kept
 
-#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel_adm2.csv"), row.names = FALSE)
-#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel_adm1.csv"), row.names = FALSE)
+#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel_adm2_300mm.csv"), row.names = FALSE)
 
 # identify dry spells during rainy seasons per cell
 dry_spells_details$cell <- as.character(dry_spells_details$cell)
 dry_spells_during_rainy_season_list <- dry_spells_details %>%
-                                          left_join(rainy_seasons[, c('cell', 'season_approx', 'onset_date', 'cessation_date')], by = c('cell', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
-                                          mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season 
-                                          filter(confirmation_date_during_rainy_season == 1) %>% # only keep dry spells that were confirmed during rainy season even if started before onset or ended after cessation
-                                          dplyr::select(cell, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+  left_join(rainy_seasons[, c('cell', 'season_approx', 'onset_date', 'cessation_date')], by = c('cell', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
+  mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season 
+  filter(confirmation_date_during_rainy_season == 1) %>% # only keep dry spells that were confirmed during rainy season even if started before onset or ended after cessation
+  dplyr::select(cell, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 # add adm names
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
-                                         left_join(cell_adms, by = c('cell'= 'cell')) %>%
-                                         dplyr::select(cell, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+  left_join(cell_adms, by = c('cell'= 'cell')) %>%
+  dplyr::select(cell, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 # dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% 
 #                                         left_join(cell_adms, by = c('cell'= 'cell')) %>%
 #                                         dplyr::select(cell, ADM1_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm2_300mm.csv"), row.names = FALSE)
 #write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
@@ -326,18 +325,18 @@ df <- data.frame()
 # extract lists of dates per cell
 for (i in seq_along(1:nrow(dry_spells_during_rainy_season_list))) {
   
-    row_list <- listDSDaysPerPixel(i, ADM2_EN)
-    #row_list <- listDSDaysPerPixel(i, ADM1_EN)
-    
-    # add individual row to dataframe
-    df <- rbind(df, row_list)
+  row_list <- listDSDaysPerPixel(i, ADM2_EN)
+  #row_list <- listDSDaysPerPixel(i, ADM1_EN)
+  
+  # add individual row to dataframe
+  df <- rbind(df, row_list)
 }
 
 # identify dates as beling during a cell's rainy season & a dry spell 
 df$rainy_season_dry_spell <- 1
 
 # save
-#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm2_300mm.csv"), row.names = FALSE)
 #write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
@@ -349,8 +348,8 @@ cell_by_day <- crossing(day_list, cell_ids) # create list with all day * cell_id
 cell_by_day$cell <- as.character(cell_by_day$cell)
 
 complete_list <- cell_by_day %>%
-                  left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
-                  left_join(cell_adms[,c('cell', 'ADM2_EN')], by = c('cell')) # add back adm names
+  left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
+  left_join(cell_adms[,c('cell', 'ADM2_EN')], by = c('cell')) # add back adm names
 
 #complete_list <- cell_by_day %>%
 #                    left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
@@ -363,7 +362,7 @@ complete_list$rainy_season_dry_spell <- complete_list$rainy_season_dry_spell %>%
 
 prop.table(table(complete_list$rainy_season_dry_spell))
 
-#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm2_300mm.csv"), row.names = FALSE)
 #write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
@@ -372,22 +371,22 @@ prop.table(table(complete_list$rainy_season_dry_spell))
 
 # compute nbr of cells in rainy_season_dry_spell status per date, per adm
 adm2_ds_counts <- complete_list %>% 
-                    group_by(ADM2_EN, date) %>%
-                    summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm2 region
-                              nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
-                              perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
+  group_by(ADM2_EN, date) %>%
+  summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm2 region
+            nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
+            perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
 summary(adm2_ds_counts)
 
 adm1_ds_counts <- complete_list %>% 
-                    group_by(ADM1_EN, date) %>%
-                    summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm1 region
-                              nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
-                              perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
+  group_by(ADM1_EN, date) %>%
+  summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm1 region
+            nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
+            perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
 summary(adm1_ds_counts)
 
 
 # save
-#write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm2_300mm.csv"), row.names = FALSE)
 #write.csv(adm1_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm1.csv"), row.names = FALSE)
 
 # viz
