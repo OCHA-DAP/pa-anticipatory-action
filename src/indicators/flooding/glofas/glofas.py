@@ -195,7 +195,11 @@ class Glofas:
         return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
 
     def read_processed_dataset(
-        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
+        self,
+        country_name: str,
+        country_iso3: str,
+        version: int = DEFAULT_VERSION,
+        leadtime: int = None,
     ):
         filepath = self._get_processed_filepath(
             country_name=country_name,
@@ -219,7 +223,11 @@ class GlofasReanalysis(Glofas):
         )
 
     def download(
-        self, country_name: str, country_iso3: str, area: Area, version: int = DEFAULT_VERSION
+        self,
+        country_name: str,
+        country_iso3: str,
+        area: Area,
+        version: int = DEFAULT_VERSION,
     ):
         logger.info(
             f"Downloading GloFAS reanalysis v{version} for years {self.year_min} - {self.year_max}"
@@ -235,7 +243,11 @@ class GlofasReanalysis(Glofas):
             )
 
     def process(
-        self, country_name: str, country_iso3: str, stations: Dict[str, Station], version: int = DEFAULT_VERSION
+        self,
+        country_name: str,
+        country_iso3: str,
+        stations: Dict[str, Station],
+        version: int = DEFAULT_VERSION,
     ):
         # Get list of files to open
         logger.info(f"Processing GloFAS Reanalysis v{version}")
@@ -258,7 +270,10 @@ class GlofasReanalysis(Glofas):
         ds_new = _get_station_dataset(stations=stations, ds=ds, coord_names=["time"])
         # Write out the new dataset to a file
         self._write_to_processed_file(
-            country_name=country_name, country_iso3=country_iso3, version=version, ds=ds_new
+            country_name=country_name,
+            country_iso3=country_iso3,
+            version=version,
+            ds=ds_new,
         )
 
 
@@ -302,7 +317,7 @@ class GlofasForecast(Glofas):
         country_iso3: str,
         stations: Dict[str, Station],
         leadtimes: List[int],
-        version: int = DEFAULT_VERSION
+        version: int = DEFAULT_VERSION,
     ):
         logger.info(f"Processing GloFAS Forecast v{version}")
         for leadtime in leadtimes:
@@ -332,7 +347,7 @@ class GlofasForecast(Glofas):
                 country_iso3=country_iso3,
                 ds=ds_new,
                 leadtime=leadtime,
-                version=version
+                version=version,
             )
 
 
@@ -379,7 +394,7 @@ class GlofasReforecast(Glofas):
         country_iso3: str,
         stations: Dict[str, Station],
         leadtimes: List[int],
-        version: int = DEFAULT_VERSION
+        version: int = DEFAULT_VERSION,
     ):
         logger.info(f"Processing GloFAS Reforecast v{version}")
         for leadtime in leadtimes:
