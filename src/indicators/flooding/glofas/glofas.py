@@ -32,7 +32,7 @@ class Glofas:
         cds_name: str,
         dataset: List[str],
         dataset_variable_name: str,
-        system_version_minor: Dict[int:int],
+        system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
     ):
         self.year_min = year_min
@@ -132,7 +132,7 @@ class Glofas:
             "system_version": f"version_{version}_{self.system_version_minor[version]}",
         }
         if leadtime is not None:
-            query["leadtime"] = str(leadtime * 24)
+            query["leadtime_hour"] = str(leadtime * 24)
         logger.debug(f"Query: {query}")
         return query
 
