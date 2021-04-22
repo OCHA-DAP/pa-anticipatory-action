@@ -62,7 +62,7 @@ def get_glofas_reforecast(version: int = 3, interp: bool = True):
 def shift_dates(da_dict):
     return {
         leadtime: da.assign_coords(
-            time=da.time.values + np.timedelta64(int(leadtime / 24), "D")
+            time=da.time.values + np.timedelta64(leadtime, "D")
         )
         for leadtime, da in da_dict.items()
     }
@@ -137,7 +137,7 @@ def read_in_ffwc():
         .append(df_ffwc_wl_dict['2018'])
         .append(df_ffwc_wl_dict['2019'])
         .rename(columns={
-        f'{leadtime} hrs': f'ffwc_{int(leadtime / 24)}day'
+        f'{leadtime} hrs': f'ffwc_{leadtime}day'
         for leadtime in ffwc_leadtimes
     })).drop(columns=['Observed WL'])  # drop observed because we will use the mean later
     # Convert date time to just date

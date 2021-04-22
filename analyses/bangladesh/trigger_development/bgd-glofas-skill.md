@@ -6,6 +6,8 @@ We're specifically interested in the forecast skill during times of potential fl
 
 ```python
 from importlib import reload
+from pathlib import Path
+import os
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -23,6 +25,7 @@ mpl.rcParams['figure.dpi'] = 200
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 SKILL_DIR = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
 SKILL_FILE = 'forecast_skill.csv'
+GLOFAS_VERSION = 2
 ```
 
 ### Read in forecast and reanalysis
@@ -30,10 +33,10 @@ SKILL_FILE = 'forecast_skill.csv'
 Forecast data is shifted to match the day it is supposed to be forecasting. Reforecast is not interpolated, but we do read in the interpolated version to make plotting easier.
 
 ```python
-da_glofas_reanalysis = rd.get_glofas_reanalysis()
-da_glofas_forecast = rd.get_glofas_forecast()
-da_glofas_reforecast = rd.get_glofas_reforecast(interp=False)
-da_glofas_reforecast_interp = rd.get_glofas_reforecast()
+da_glofas_reanalysis = rd.get_glofas_reanalysis(version=GLOFAS_VERSION)
+da_glofas_forecast = rd.get_glofas_forecast(version=GLOFAS_VERSION)
+da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION, interp=False)
+da_glofas_reforecast_interp = rd.get_glofas_reforecast(version=GLOFAS_VERSION)
 ```
 
 Let's take a sample of some of the data to check that it all looks like we would expect. 
@@ -64,10 +67,10 @@ def is_dry_season(month):
     return (month < 6) | (month > 10)
 
 
-df_crps = pd.DataFrame(columns=['leadtime_hour', 'crps'])
-for leadtime_hour in da_glofas_reforecast.leadtime_hour[:-1]:
+df_crps = pd.DataFrame(columns=['leadtime', 'crps'])
+for leadtime in da_glofas_reforecast.leadtime[:-1]:
     forecast = da_glofas_reforecast.sel(
-        leadtime_hour=leadtime_hour.values).dropna(dim='time')
+        leadtime=leadtime.values).dropna(dim='time')
     observations = da_glofas_reanalysis.reindex({'time': forecast.time})
     # For all dates
     crps = xs.crps_ensemble(observations, forecast,member_dim='number')
@@ -83,7 +86,7 @@ for leadtime_hour in da_glofas_reforecast.leadtime_hour[:-1]:
         observations_dry,
         forecast.sel(time=is_dry_season(forecast['time.month'])),
         member_dim='number')
-    df_crps = df_crps.append([{'leadtime_hour': leadtime_hour.values,
+    df_crps = df_crps.append([{'leadtime': leadtime.values,
                               'crps': crps.values,
                                'std': observations.std().values,
                                'mean': observations.mean().values,
@@ -104,11 +107,11 @@ df_skill = pd.read_csv(SKILL_DIR / SKILL_FILE, header=None)
 
 # Plot absolute skill
 fig, ax = plt.subplots()
-ax.plot(df_crps['leadtime_hour']/24, df_crps['crps'], 
+ax.plot(df_crps['leadtime'], df_crps['crps'], 
         label='Full year')
-ax.plot(df_crps['leadtime_hour']/24, df_crps['crps_rainy'], 
+ax.plot(df_crps['leadtime'], df_crps['crps_rainy'], 
         label='Rainy season')
-ax.plot(df_crps['leadtime_hour']/24, df_crps['crps_dry'], 
+ax.plot(df_crps['leadtime'], df_crps['crps_dry'], 
         label='Dry season')
 ax.plot(df_skill[0], df_skill[1], label='From website')
 ax.set_title("GloFAS forecast skill at Bahadurabad:\n 1999-2018 reforecast")
@@ -122,13 +125,13 @@ Rainy season performs the worst, but this is likely because the values during th
 ```python
 # Plot reduced skill with std
 fig, ax = plt.subplots()
-ax.plot(df_crps['leadtime_hour']/24, 
+ax.plot(df_crps['leadtime'], 
         df_crps['crps'] / df_crps['std'], 
         label='Full year')
-ax.plot(df_crps['leadtime_hour']/24, 
+ax.plot(df_crps['leadtime'], 
         df_crps['crps_rainy'] / df_crps['std_rainy'], 
         label='Rainy season')
-ax.plot(df_crps['leadtime_hour']/24, 
+ax.plot(df_crps['leadtime'], 
         df_crps['crps_dry'] / df_crps['std_dry'], 
         label='Dry season')
 ax.set_title("GloFAS relative forecast skill at Bahadurabad:\n 1999-2018 reforecast")
@@ -142,13 +145,13 @@ This is perhpas not exactly what we want because we know this data comes from th
 ```python
 # Plot normalized skill with mean
 fig, ax = plt.subplots()
-ax.plot(df_crps['leadtime_hour']/24, 
+ax.plot(df_crps['leadtime'], 
         df_crps['crps'] / df_crps['mean'], 
         label='Full year')
-ax.plot(df_crps['leadtime_hour']/24, 
+ax.plot(df_crps['leadtime'], 
         df_crps['crps_rainy'] / df_crps['mean_rainy'], 
         label='Rainy season')
-ax.plot(df_crps['leadtime_hour']/24, 
+ax.plot(df_crps['leadtime'], 
         df_crps['crps_dry'] / df_crps['mean_dry'], 
         label='Dry season')
 ax.set_title("GloFAS relative forecast skill at Bahadurabad:\n 1999-2018 reforecast")
@@ -171,12 +174,12 @@ def get_rank(observations, forecast):
 
 def plot_hist(da_forecast):
     fig, ax = plt.subplots()
-    for leadtime_hour in da_forecast.leadtime_hour[:-1]:
+    for leadtime in da_forecast.leadtime[:-1]:
         forecast = da_forecast.sel(
-            leadtime_hour=leadtime_hour.values).dropna(dim='time')
+            leadtime=leadtime.values).dropna(dim='time')
         observations = da_glofas_reanalysis.reindex({'time': forecast.time})
         rank = get_rank(observations.values, forecast.values)
-        ax.hist(rank, histtype='step', label=int(leadtime_hour/24),
+        ax.hist(rank, histtype='step', label=int(leadtime),
                bins=np.arange(0.5, max(rank)+1.5, 1), alpha=0.8)
     ax.legend(loc=9, title="Lead time (days)")
     ax.set_xlabel('Rank')
@@ -188,5 +191,9 @@ for da_forecast in [da_glofas_reforecast, da_glofas_forecast]:
         time=is_rainy_season(da_forecast['time.month']))
     plot_hist(da_forecast)
     
+
+```
+
+```python
 
 ```
