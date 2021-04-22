@@ -27,7 +27,8 @@ def test_get_reanalysis_query():
         'hday': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15',
                  '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
         'area': [1, -4, -2, 3],
-        'system_version': 'version_3_1'
+        'system_version': 'version_3_1',
+        'hydrological_model': 'lisflood'
     }
     assert query == expected_query
 
@@ -45,7 +46,8 @@ def test_get_forecast_query():
                  '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
         'area': [1, -4, -2, 3],
         'system_version': 'version_3_1',
-        'leadtime_hour': '240',
+        'hydrological_model': 'lisflood',
+        'leadtime_hour': '240'
     }
     assert query == expected_query
 
@@ -63,7 +65,8 @@ def test_get_reforecast_query():
                  '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
         'area': [1, -4, -2, 3],
         'system_version': 'version_3_1',
-        'leadtime_hour': '240',
+        'hydrological_model': 'lisflood',
+        'leadtime_hour': '240'
     }
     assert query == expected_query
 
