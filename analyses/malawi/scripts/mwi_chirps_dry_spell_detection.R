@@ -138,6 +138,12 @@ data_long$month <- lubridate::month(data_long$date)
 data_long$day <- lubridate::day(data_long$date) 
 data_long$season_approx <- ifelse(data_long$month >= 10, data_long$year, ifelse(data_long$month <= 7, data_long$year - 1, 'outside rainy season')) # labels the rainy season which overlaps between two calendar years. uses first year as label.
 
+# compute 5-day rolling sums
+data_long <- data_long %>%
+                      group_by(pcode) %>%
+                      computeRollingSum(., window = 5) %>%
+                      rename(rollsum_5d = rollsum)
+
 # compute 10-day rolling sums
 data_long <- data_long %>%
                           group_by(pcode) %>%
@@ -150,13 +156,13 @@ data_long <- data_long %>%
                           computeRollingSum(., window = 14) %>%
                           rename(rollsum_14d = rollsum)
 
-# compute 15-day rolling sums
+# compute 15-day rolling sums 
 data_long <- data_long %>%
                           group_by(pcode) %>%
                           computeRollingSum(., window = 15) %>%
                           rename(rollsum_15d = rollsum)
 
-# compute 15-day backwards rolling sums 
+# compute 15-day left-aligned rolling sums 
 data_long <- data_long %>%
                           group_by(pcode) %>%
                           computeBackRollingSum(., window = 15) %>%
@@ -166,6 +172,7 @@ data_long <- data_long %>%
 data_long$rainy_day_bin <-  ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
 data_long$rainy_day_bin_2mm <-  ifelse(data_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
 
+#saveRDS(data_long, paste0(data_dir, "/processed/malawi/dry_spells/data_long_mean_values.RDS"))
 
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
@@ -174,7 +181,7 @@ data_long$rainy_day_bin_2mm <-  ifelse(data_long$total_prec >= 2, 1, 0) # rainy 
 # Rainy season onset: First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 rainy_onsets <- findRainyOnset()
 
-# Rainy season cessation: 25mm or less of rain in 15 days after 15 March (DCCMS 2008). ## TO DO: Take last rainy day before the 15-day period as cessation date
+# Rainy season cessation: 25mm or less of rain in 15 days after 15 March (DCCMS 2008).
 rainy_cessations <- findRainyCessation()
 
 # combine onset and cessation dates
