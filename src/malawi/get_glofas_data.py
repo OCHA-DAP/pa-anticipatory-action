@@ -16,7 +16,7 @@ from src.indicators.flooding.glofas.area import AreaFromShape, Station
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_NAME = "malawi"
 COUNTRY_ISO3 = "mwi"
-LEADTIME_HOURS = [x * 24 for x in [5, 10, 15]]
+LEADTIMES = [5, 10, 15]
 STATIONS = {
 }
 SHAPEFILE_BASE_DIR = (
@@ -48,13 +48,13 @@ def main(download=True, process=False):
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
         glofas_reforecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
 
     if process:
@@ -65,13 +65,13 @@ def main(download=True, process=False):
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
         glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
 
 
