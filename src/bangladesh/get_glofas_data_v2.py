@@ -67,6 +67,7 @@ def main(download=True, process=False):
             area=area,
             leadtimes=LEADTIMES,
             version=VERSION,
+            split_by_month=True
         )
 
     if process:
@@ -89,6 +90,7 @@ def main(download=True, process=False):
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
+            split_by_month=True
         )
 
 
