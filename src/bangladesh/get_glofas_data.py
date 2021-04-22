@@ -29,7 +29,7 @@ FFWC_STATIONS = {
     "Aricha": Station(lon=89.6550, lat=23.9032),
     "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
+LEADTIMES = [5, 10, 15, 20, 25, 30]
 AREA_BUFFER = 0.5
 
 logging.basicConfig(level=logging.INFO, force=True)
@@ -55,13 +55,13 @@ def main(download=True, process=False):
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
         glofas_reforecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
 
     if process:
@@ -72,13 +72,13 @@ def main(download=True, process=False):
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
         glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
 
 
