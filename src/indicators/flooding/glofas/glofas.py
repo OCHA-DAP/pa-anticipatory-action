@@ -103,7 +103,7 @@ class Glofas:
             / f"version_{version}"
             / self.cds_name
         )
-        filename = f"{country_iso3}_v{version}_{self.cds_name}_{year}"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
         if leadtime is not None:
@@ -177,7 +177,7 @@ class Glofas:
         filepath = self._get_processed_filepath(
             country_name=country_name,
             country_iso3=country_iso3,
-            version=vserion,
+            version=version,
             leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
@@ -188,9 +188,9 @@ class Glofas:
     def _get_processed_filepath(
         self, country_name: str, country_iso3: str, version: int, leadtime: int = None
     ) -> Path:
-        filename = f"{country_iso3}_v{version}_{self.cds_name}"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}"
         if leadtime is not None:
-            filename += f"_{str(leadtime).zfill(4)}"
+            filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
         return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
 
