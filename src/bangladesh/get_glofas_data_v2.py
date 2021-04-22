@@ -49,40 +49,46 @@ def main(download=True, process=False):
         del ffwc_stations_for_download["Bahadurabad_glofas"]
         area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
         glofas_reanalysis.download(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area, version=VERSION
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            area=area,
+            version=VERSION,
         )
         glofas_forecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
-            version=VERSION
+            version=VERSION,
         )
         glofas_reforecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
-            version=VERSION
+            version=VERSION,
         )
 
     if process:
         glofas_reanalysis.process(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS, version=VERSION
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            stations=FFWC_STATIONS,
+            version=VERSION,
         )
         glofas_forecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
-            version=VERSION
+            version=VERSION,
         )
         glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
-            version=VERSION
+            version=VERSION,
         )
 
 
