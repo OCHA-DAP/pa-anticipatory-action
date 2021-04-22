@@ -10,10 +10,21 @@ output:
     toc_depth: 4
 editor_options:
   chunk_output_type: inline
+bibliography: ["mwi_bibliography.bib"]
+biblio-style: "apalike"
+link-citations: true
 ---
 
 ## Background
-This document summaries all the data work that has been done to inform the trigger mechanism for OCHA Anticipatory Action pilot in Malawi. This pilot is focussed on dry spells, and this document explores the historical dry spells, relations with seasonal observed indicators, and the skill of short-term forecast to predict these dry spells. All work presented here has been done by the Centre for Humanitarian Data, but with indispensable help from techincal partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action), and will regularly be referred to in this document. 
+This document summaries all the data work that has been done to inform the trigger mechanism for OCHA Anticipatory Action pilot in Malawi related to prolonged dry spells. It explores the historical dry spells, relations with seasonal observed indicators, and the skill of short-term forecast to predict these dry spells. All work presented here has been done by the Centre for Humanitarian Data, but with indispensable help from technical partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action), and will regularly be referred to in this document. 
+
+### Previous work
+[Assuming now that we will have a separate document for defining historically observed dry spells and add literature on that there]
+To build our analyses, we reviewed previous literature on forecasting dry spells. Generally the body of work on forecasting dry spells is rather limited, and we are not aware of any work attempting to forecast prolonged dry spells in Malawi. However, @streefkerk2020linking researched the ability to forecast 5-day long dry spells. She looked at the correlation between these dry spells and the meteorological indicators of temperature, wind speed, wind direction and ENSO strength. These indicators were chosen, as she showed these are commonly used by local farmers. She showed that these indicators do have predictive value for the occurence of the 5-day dry spells, while these correlations heavily depend on the location. Moreover, the analysis suggests that the while the ENSO phenomenon has predictive value for overall drought, it is less decisive for the occurence of dry spells, as these are more local events. 
+While not focusing on forecasting, @mittal2021co investigated the correlation with total precipitation in a 3-month period and the occurence of a prolonged dry spell in Malawi. This work defines a dry spell as 14 consecutive dry days, where a dry day is a day with <=2mm of precipitation. They found that there was only a weak correlation between the occurence of a dry spell and the total 3-monthly precipitation, where again the strength of the correlation heavily depended on the location. 
+
+Moving away from Malawi, @gbangou2020rainfall researched the predictability of dry spells in Ghana. They analyze how well the forecasts can predict the number of dry spells within a season, where a dry spell is defined as at least 5 consecutive days with less than 1mm of rainfall per day. Moreover, they try to forecast the length of the longest dry spell. For the forecasting, ECMWF's seasonal forecast as well as a statistical model based on Sea Surface Temperatures (SST) is used. They show that skill of these two forecasts, depend on the lead time and location. However, they show the correlations are generally weak. Interestingly, the forecasts do show to be better at predicting the extreme years, though the correlations are still not strong. Nevertheless, they argues that the forecasts have better skill than guessing based on climatologies and thus can be used to inform actions.
+Similar work has been done by @surmaini2021use, but focusing on Indonesia and using NOAA's CFSv2 seasonal forecast model. They showed a bit higher correlations, again also showing that these correlations heavily depend on location. Due to a completely different climate, these results are not directly transferable to Malawi. 
 
 ### Geographical scale
 Analysis done on ADM2 
@@ -21,6 +32,10 @@ Analysis done on ADM2
 ### Historical analysis
 Dry spells [Include full dry spell analysis here or in a separate notebook?]
 Seasonal indicators
+While the focus of this analysis is on dry spells, we also conducted an analysis on a few key seasonal parameters which are often related to seasonal drought. The purpose of this analysis is to understand the generic patterns across the years in Malawi better, and also get a quick feel for if they show the same pattern as the observed dry spells. 
+[Include once aggregation methodology decided...]
+
+
 Impact
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
@@ -102,7 +117,7 @@ CHIRPS
 Shapefiles
 
 #### TODO
-Check format UK Met office (paper, email, ECMWF)
+Check format UK Met office (paper, email, ECMWF) --> same as ECMWF but Met office generally wants to adjust their products to the use case.. 
 Add flexible forecast IRI once understood better
 
 #### Future
@@ -132,7 +147,7 @@ CHIRPS-GEFS is available as raster data at 0.05 resolution. A forecast is produc
 
 #### Analysis
 ### Bias of CHIRPS-GEFS
-We first analyzed the general performance of CHIRPS-GEFS, by computing a bias plot. This plot shows the observed precipitation over 15 days per admin2, retrieved from CHIRPS data, and on the y-axis the forecasted minus observed 15-day precipitation. If the forecast would be perfect, all values would form a horizontal line on the x-axis. However, from this plot we can see that CHIRPS-GEFS has the tendency to overpredict low amount of rainfall, while underpredicting high amounts of rainfall. Since we are interested in the extreme low amount of rainfall, this fact can be problematic for the forecasting skill of dry spells. 
+We first analyzed the general performance of CHIRPS-GEFS, by computing a bias plot. This plot shows the observed precipitation over 15 days per admin2, retrieved from CHIRPS data, and on the y-axis the forecasted minus observed 15-day precipitation. If the forecast would be perfect, all values would form a horizontal line on the x-axis. However, from this plot we can see that CHIRPS-GEFS has the tendency to overpredict low amount of rainfall, while underpredicting high amounts of rainfall. Since we are interested in extremely low amounts of rainfall, this fact can be problematic for the forecasting skill of dry spells. 
 
 ### CHIRPS-GEFS to forecast dry spells
 Besides the bias, the forecast might be good enough to detect dry spells. We define a dry spell as "detected", if any part of the observed dry spell overlaps with any part of the forecasted dry spell. Thus, this is a very loose definition. First, a forecasted dry spell was defined as a forecast projecting less than 2mm of cumulative rainfall, i.e. the same definition as for the observed dry spells. Additionally, we tested several higher thresholds, since as we saw CHIRPS-GEFS has the tendency to overpredict observed numbers. From this we can see that [Only write once final definition of dry spell]
