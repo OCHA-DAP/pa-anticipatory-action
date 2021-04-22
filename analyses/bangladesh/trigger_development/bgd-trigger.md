@@ -13,15 +13,17 @@ from importlib import reload
 reload(rd)
 
 mpl.rcParams['figure.dpi'] = 300
+
+GLOFAS_VERSION = 2
 ```
 
 ### Create GloFAS objects
 
 ```python
-da_glofas_reanalysis = rd.get_glofas_reanalysis()
-da_glofas_forecast = rd.get_glofas_forecast()
+da_glofas_reanalysis = rd.get_glofas_reanalysis(version=GLOFAS_VERSION)
+da_glofas_forecast = rd.get_glofas_forecast(version=GLOFAS_VERSION)
 da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast)
-da_glofas_reforecast = rd.get_glofas_reforecast()
+da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION)
 da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast)
 
 ```
@@ -78,11 +80,11 @@ df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_ind
 glofas_columns = ['median', 
 '1sig-', '2sig-', '3sig-', 
 '1sig+', '2sig+', '3sig+']
-for leadtime_hour in da_glofas_reforecast_summary.leadtime_hour:
-    df_glofas_reforecast = da_glofas_reforecast_summary.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
-    df_glofas_forecast = da_glofas_forecast_summary.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
+for leadtime in da_glofas_reforecast_summary.leadtime:
+    df_glofas_reforecast = da_glofas_reforecast_summary.sel(leadtime=leadtime).to_dataframe()[glofas_columns]
+    df_glofas_forecast = da_glofas_forecast_summary.sel(leadtime=leadtime).to_dataframe()[glofas_columns]
     df_glofas = (pd.concat([df_glofas_reforecast, df_glofas_forecast])
-                 .rename(columns={cname: f'glofas_{int(leadtime_hour/24)}day_{cname}' for cname in glofas_columns}))
+                 .rename(columns={cname: f'glofas_{int(leadtime)}day_{cname}' for cname in glofas_columns}))
     df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
     
 # Any event elements that are NA should be False    
@@ -339,17 +341,17 @@ plot_years(df_final, 'glofas_10day_1sig-', 90000, (40000, 140000))
 
 ```python
 year = "2020"
-da_forecast_720 = (da_glofas_forecast
-        .sel(time=slice(year, year),leadtime_hour=720)
+da_forecast_30 = (da_glofas_forecast
+        .sel(time=slice(year, year),leadtime=30)
     )
 da_ra = da_glofas_reanalysis.sel(time=slice(year, year))
 
 fig, ax = plt.subplots(figsize=(15, 5))
 for sigma in range(1,4):
-    ax.fill_between(da_forecast_720.time, y1=np.percentile(da_forecast_720, norm.cdf(sigma) * 100, axis=0),
-                    y2=np.percentile(da_forecast_720, (1 - norm.cdf(sigma)) * 100, axis=0),
+    ax.fill_between(da_forecast_30.time, y1=np.percentile(da_forecast_30, norm.cdf(sigma) * 100, axis=0),
+                    y2=np.percentile(da_forecast_30, (1 - norm.cdf(sigma)) * 100, axis=0),
                     alpha=0.3 / sigma, fc='b')
-ax.plot(da_forecast_720.time, np.median(da_forecast_720, axis=0), c='b', label='forecast median')
+ax.plot(da_forecast_30.time, np.median(da_forecast_30, axis=0), c='b', label='forecast median')
 ax.plot(da_ra.time, da_ra, c='k', label='reanalysis')
 ax.legend()
 ax.set_yscale('log')
@@ -363,7 +365,7 @@ Not really.
 
 ```python
 from statsmodels.graphics.gofplots import qqplot
-for data in da_glofas_forecast.sel(leadtime_hour=120).values.T[:10]:
+for data in da_glofas_forecast.sel(leadtime=5).values.T[:10]:
     qqplot((data - np.mean(data)) /np.std(data) , line='45')
     plt.xlim(-2.5, 2.5)
 ```
@@ -387,7 +389,7 @@ df_ffwc_discharge = pd.read_excel(ffwc_dir / ffwc_discharge_filename,
 ```
 
 ```python
-ffwc_leadtime_hours = [24, 48, 72, 96, 120]
+ffwc_leadtimes = [1, 2, 3, 4, 5]
 
 # For water level, need to combine the three sheets
 df_ffwc_wl_dict = pd.read_excel(
@@ -398,8 +400,8 @@ df_ffwc_wl = (df_ffwc_wl_dict['2017']
               .append(df_ffwc_wl_dict['2018'])
                         .append(df_ffwc_wl_dict['2019'])
                         .rename(columns={**{
-                            f'{leadtime_hour} hrs': leadtime_hour
-                            for leadtime_hour in ffwc_leadtime_hours
+                            f'{leadtime} hrs': leadtime
+                            for leadtime in ffwc_leadtimes
                         }, **{'Observed WL': 'observed'}}
                         ))
 # Convert date time to just date
@@ -410,9 +412,9 @@ df_ffwc_wl.index = df_ffwc_wl.index.floor('d')
 #              df_ffwc_wl.index.max() + np.timedelta64(5, 'D'))
 # df_ffwc_wl = df_ffwc_wl.reindex(new_index)
 
-# for leadtime_hour in ffwc_leadtime_hours:
-#     df_ffwc_wl[leadtime_hour] = (
-#         df_ffwc_wl[leadtime_hour].shift(int(leadtime_hour/24))
+# for leadtime in ffwc_leadtimes:
+#     df_ffwc_wl[leadtime] = (
+#         df_ffwc_wl[leadtime].shift(int(leadtime/24))
 #     )
 # df_ffwc_wl.dropna(how='all', inplace=True)
 
@@ -566,4 +568,8 @@ y = df['observed']
 idx = df['event'] == True
 plt.plot(x,y, '.')
 plt.plot(x[idx], y[idx], 'ro')
+```
+
+```python
+
 ```
