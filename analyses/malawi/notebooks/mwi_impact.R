@@ -94,7 +94,6 @@ plt_price <- ggplot(sel, aes(x=date, y=med_price, group=admname))+
   labs(x='Date', y='Median price', color='Region')+
   theme_minimal()
 
-plt_price
 # Food insecurity ---------------------------------------------------------
 
 # Identify population in IPC 3+ across regions. 
@@ -283,7 +282,6 @@ df_sum <- df_dryspells_days %>%
 plot_scatter <- function(x, y, xlab, ylab){
   plt <- ggplot(df_sum, aes(y=y, x=x, color=region))+
     geom_point(alpha=0.5, size=2)+
-    #facet_wrap(~region)+
     theme_minimal()+
     labs(x=xlab, y=ylab)
   return(plt)
@@ -307,6 +305,121 @@ plt_ipc_days <- plot_scatter(df_sum$days_ds, df_sum$tot, 'Number of dry spell da
 plt_ipc_asi <- plot_scatter(df_sum$avg_asi, df_sum$tot, 'Mean ASI', 'Population IPC 3+')
 
 
+
+# Monthly temperature -----------------------------------------------------
+
+temp_dir = paste0(data_dir, '/processed/malawi/dry_spells/gee_output/')
+
+temp_files <- list.files(path = temp_dir, pattern='mwi_adm1_ecmwf-era5-monthly_median')
+
+df_list <- list()
+
+for (i in 1:length(temp_files)){
+  
+  df = read.csv(paste0(temp_dir, temp_files[i]), header=FALSE)
+  df = as.data.frame(t(df))
+
+  n<-dim(df)[1]
+  names <- df[(n-8),]
+  colnames(df) <- names
+  df <- df[1:(n-12),]
+
+  df_temp <- df %>%
+    rename(date = ADM1_EN)%>%
+    mutate(date = substr(date, 1,6))
+
+  df_list[[i]] <- df_temp
+
+}
+
+df_temp_all = do.call(rbind, df_list)
+df_temp_all <- df_temp_all %>%
+  gather('Region', 'Temp', -date)%>%
+  mutate(date = paste0(date, '01'))%>%
+  mutate(date = lubridate::as_date(date, format='%Y%m%d'))%>%
+  mutate(month = format(date, "%m"), year = format(date, "%Y")) %>%
+  group_by(month, year, Region) %>%
+  mutate(Temp = as.numeric(Temp))%>%
+  mutate(Temp = Temp - 273.15)
+
+df_temp_avg <- df_temp_all %>%
+  group_by(month, Region) %>%
+  summarise(month_avg_temp = mean(Temp))
+
+df_temp_all <- df_temp_all %>%
+  left_join(df_temp_avg, by=c('Region', 'month'))
+
+plt_temp <- ggplot(df_temp_all)+
+  geom_bar(aes(x=date, y=Temp), stat='identity',fill='lightpink')+
+  geom_line(aes(x=date, y=month_avg_temp), color='darkblue', size=0.25)+
+  #scale_color_discrete(labels = c("Monthly temp", "Average monthly temp"))+
+  facet_grid(rows=vars(Region))+
+  theme_bw()+
+  labs(x='Date', y='Temperature (C)')+
+  theme(legend.position = 'bottom')+
+  coord_cartesian(ylim=c(15,30))
+plt_temp  
+# Monthly precipitation ---------------------------------------------------
+
+precip_files <- list.files(path = temp_dir, pattern='mwi_adm1_ucsb-chg-chirps-daily')
+
+df_list_precip <- list()
+
+for (i in 1:length(precip_files)){
+  
+  df = read.csv(paste0(temp_dir, precip_files[i]), header=FALSE)
+  df = as.data.frame(t(df))
+  
+  n<-dim(df)[1]
+  names <- df[(n-8),]
+  colnames(df) <- names
+  df <- df[1:(n-12),]
+  
+  df_precip <- df %>%
+    rename(date = ADM1_EN)%>%
+    mutate(date = substr(date, 1,8))
+  
+  df_list_precip[[i]] <- df_precip
+  
+}
+
+df_precip_all = do.call(rbind, df_list_precip)
+
+df_precip_all <- df_precip_all %>%
+  gather('Region', 'Precip', -date)%>%
+  mutate(Precip = as.numeric(Precip))%>%
+  mutate(date = lubridate::as_date(date, format='%Y%m%d'))%>%
+  mutate(month = format(date, "%m"), year = format(date, "%Y")) %>%
+  group_by(month, year, Region) %>%
+  summarise(sum_precip = sum(Precip)) %>%
+  mutate(date = lubridate::as_date(paste0(year, month, '01'), format='%Y%m%d'))
+
+df_precip_avg <- df_precip_all %>%
+  group_by(month, Region) %>%
+  summarise(month_avg_precip = mean(sum_precip))
+
+df_precip_all <- df_precip_all %>%
+  left_join(df_precip_avg, by=c('Region', 'month'))
+
+plt_precip <- ggplot(df_precip_all)+
+  geom_bar(aes(x=date, y=sum_precip),fill='lightblue', stat='identity')+
+  geom_line(aes(x=date, y=month_avg_precip), color='darkred', size=0.25)+
+  #scale_color_discrete(labels = c("Total monthly precip", "Average total monthly precip"))+
+  facet_grid(rows=vars(Region))+
+  theme_bw()+
+  labs(x='Date', y='Precipitation (mm)')+
+  theme(legend.position = 'bottom')
+plt_precip
+# # Compare precip and temp -----------------------------------------------
+
+df_precip_temp <- df_precip_all %>%
+  full_join(df_temp_all, by=c('Region', 'date'))
+
+plt_precip_temp <- ggplot(df_precip_temp, aes(x=sum_precip, y=Temp, group=Region))+
+  geom_point(aes(color=Region))+
+  theme_minimal()+
+  labs(x='Total monthly precipitation (mm)', y='Average monthly temperature (C)')
+
 # Make corr plots ---------------------------------------------------------
 
 p.mat <- cor_pmat(df_sum[,5:8])
@@ -318,24 +431,3 @@ plt_cor_all <- ggcorrplot(cor_central,
                               insig = "blank", 
                               lab=TRUE,
                               ggtheme=theme_bw())
-
-
-
-
-plt_cor_all
-plt_cor_central <- ggcorrplot(cor_central, 
-                              p.mat = cor_central, 
-                              hc.order = TRUE,
-                              type = "lower", 
-                              insig = "blank", 
-                              lab=TRUE)
-
-
-plt_cor_southern <- ggcorrplot(cor_southern, 
-                               p.mat = cor_southern, 
-                               hc.order = TRUE,
-                               type = "lower", 
-                               insig = "blank", 
-                               lab=TRUE)
-
-  

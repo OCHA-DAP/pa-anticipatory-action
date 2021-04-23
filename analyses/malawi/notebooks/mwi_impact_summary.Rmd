@@ -113,6 +113,26 @@ wrsi_plt
 
 The results in the figure above show that the minimum WRSI in a region decreases as the onset of the dry season approaches. The WRSI appears to consistently dip right after the onset of the rainy season and subsequently sharply increase. The consistency of this pattern makes it unlikely that these dips are the result of something like a dry spell. 
 
+### Monthly temperature and precipitation
+
+```{r temp, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=5, fig.align="center", fig.cap='Average monthly temperature by region from 2000-2020'}
+
+plt_temp
+
+```
+
+```{r precip, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=5, fig.align="center", fig.cap='Average monthly total precipitation by region from 2000-2020'}
+
+plt_precip
+
+```
+
+```{r precip_temp, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=4, fig.align="center", fig.cap='Relationship between monthly temperature and precipitation by region from 2000-2020'}
+
+plt_precip_temp
+
+```
+
 ### Additional sources to explore
 
 - [Daily NDVI from NOAA](https://iridl.ldeo.columbia.edu/documentation/usgs/adds/wrsi/WRSI_readme.pdf)
