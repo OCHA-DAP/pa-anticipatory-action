@@ -199,8 +199,20 @@ We first analyzed the general performance of CHIRPS-GEFS, by computing a bias pl
 
 ![bias chirps gefs](`r paste0(plot_dir,'/chirps_gefs/plot_mwi_chirpsgefs_15days_density.png')`)
 
+
 #### CHIRPS-GEFS to forecast dry spells
-Besides the bias, the forecast might be good enough to detect dry spells. We define a dry spell as "detected", if any part of the observed dry spell overlaps with any part of the forecasted dry spell. Thus, this is a very loose definition. First, a forecasted dry spell was defined as a forecast projecting less than 2mm of cumulative rainfall, i.e. the same definition as for the observed dry spells. Additionally, we tested several higher thresholds, since as we saw CHIRPS-GEFS has the tendency to overpredict observed numbers. From this we can see that [Only write once final definition of dry spell]
+Besides the bias, the forecast might be good enough to detect dry spells. Sadly, this is not the case as can be seen from the figure. The forecasted dry spells very often don't overlap with the observed dry spells. And the timing is not even close to those of the observed. 
+
+![chirps gefs vs observed](`r paste0(plot_dir,'/chirps_gefs/mean_2mm_th_2_chirpsgefs_dryspell_hm.png')`)
+
+Due to the tendency of CHIRPS-GEFS to overpredict, we also tested different thresholds of the forecasted rainfall as to when to classify it as a dry spell. Since the median of overprediction for 0-2mm of observed rainfall is around 25mm, it is expected that with a forecasted threshold of 25mm most dry spells will be detected. As can be seen in the figure this is indeed the case. However, this comes at a large drawback of forecasting many dry spells that didn't occur. 
+
+![chirps gefs vs observed](`r paste0(plot_dir,'/chirps_gefs/mean_2mm_th_25_chirpsgefs_dryspell_hm.png')`)
+
+TODO: add the numbers of hit/miss
+We define a dry spell as "detected", if any part of the observed dry spell overlaps with any part of the forecasted dry spell. Thus, this is a very loose definition. First, a forecasted dry spell was defined as a forecast projecting less than 2mm of cumulative rainfall, i.e. the same definition as for the observed dry spells. Additionally, we tested several higher thresholds, since as we saw CHIRPS-GEFS has the tendency to overpredict observed numbers. From this we can see that [Only write once final definition of dry spell]
+
+
 
 ## Real-time observation of dry spells
 ![chirps vs arc2](`r paste0(plot_dir,'/arc2/viz_arc2chirps_th_2_chirpsgefs_dryspell_hm.png')`)
