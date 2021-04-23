@@ -368,13 +368,15 @@ class GlofasReforecast(Glofas):
         area: Area,
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
+        split_by_month: bool = False
     ):
         logger.info(
             f"Downloading GloFAS reforecast v{version} for years {self.year_min} - {self.year_max} and leadtime hours {leadtimes}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
-            for month in range(1, 13):
+            month_range = range(1, 13) if split_by_month else [None]
+            for month in month_range:
                 for leadtime in leadtimes:
                     super()._download(
                         country_name=country_name,
@@ -393,11 +395,13 @@ class GlofasReforecast(Glofas):
         stations: Dict[str, Station],
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
+        split_by_month: bool = False
     ):
         logger.info(f"Processing GloFAS Reforecast v{version}")
         for leadtime in leadtimes:
             logger.info(f"For lead time {leadtime}")
             # Get list of files to open
+            month_range = range(1, 13) if split_by_month else [None]
             filepath_list = [
                 self._get_raw_filepath(
                     country_name=country_name,
@@ -408,7 +412,7 @@ class GlofasReforecast(Glofas):
                     leadtime=leadtime,
                 )
                 for year in range(self.year_min, self.year_max + 1)
-                for month in range(1, 13)
+                for month in month_range
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
