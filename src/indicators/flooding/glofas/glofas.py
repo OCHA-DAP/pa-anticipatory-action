@@ -5,7 +5,7 @@ from pathlib import Path
 import logging
 import time
 import os
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 import xarray as xr
@@ -19,6 +19,8 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 GLOFAS_DIR = Path("GLOFAS_Data")
 CDSAPI_CLIENT = cdsapi.Client()
+DEFAULT_VERSION = 3
+HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +28,28 @@ logger = logging.getLogger(__name__)
 class Glofas:
     def __init__(
         self,
-        year_min: int,
+        year_min: Union[int, Dict[int, int]],
         year_max: int,
         cds_name: str,
         dataset: List[str],
         dataset_variable_name: str,
-        system_version_minor: int = None,
+        system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
     ):
+        """
+        Create an instance of a GloFAS object, from which you can download and process raw data, and
+        read in the processed data.
+        :param year_min: The earliest year that the dataset is available. Can be a single integer,
+        or a dictionary with structure {major_version: year_min} if the minimum year depends on the GloFAS
+        model version.
+        :param year_max: The most recent that the dataset is available
+        :param cds_name: The name of the dataset in CDS
+        :param dataset: The sub-datasets that you would like to download (as a list of strings)
+        :param dataset_variable_name: The variable name with which to pass the above datasets in the CDS query
+        :param system_version_minor: The minor version of the GloFAS model. Depends on the major version,
+        so is given as a dictionary with the format {major_version: minor_version}
+        :param date_variable_prefix: Some GloFAS datasets have the prefix "h" in front of some query keys
+        """
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
@@ -47,17 +63,19 @@ class Glofas:
         country_name: str,
         country_iso3: str,
         area: Area,
+        version: int,
         year: int,
         month: int = None,
-        leadtime_hour: int = None,
+        leadtime: int = None,
         use_cache: bool = True,
     ):
         filepath = self._get_raw_filepath(
             country_name=country_name,
             country_iso3=country_iso3,
+            version=version,
             year=year,
             month=month,
-            leadtime_hour=leadtime_hour,
+            leadtime=leadtime,
         )
         # If caching is on and file already exists, don't downlaod again
         if use_cache and filepath.exists():
@@ -71,9 +89,10 @@ class Glofas:
             name=self.cds_name,
             request=self._get_query(
                 area=area,
+                version=version,
                 year=year,
                 month=month,
-                leadtime_hour=leadtime_hour,
+                leadtime=leadtime,
             ),
             target=filepath,
         )
@@ -87,25 +106,33 @@ class Glofas:
         self,
         country_name: str,
         country_iso3: str,
+        version: int,
         year: int,
         month: int = None,
-        leadtime_hour: int = None,
+        leadtime: int = None,
     ):
-        directory = RAW_DATA_DIR / country_name / GLOFAS_DIR / self.cds_name
-        filename = f"{country_iso3}_{self.cds_name}_{year}"
+        directory = (
+            RAW_DATA_DIR
+            / country_name
+            / GLOFAS_DIR
+            / f"version_{version}"
+            / self.cds_name
+        )
+        filename = f"{country_iso3}_{self.cds_name}_v{version}_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
-        if leadtime_hour is not None:
-            filename += f"_lt{str(leadtime_hour).zfill(4)}"
+        if leadtime is not None:
+            filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".grib"
         return directory / Path(filename)
 
     def _get_query(
         self,
         area: Area,
+        version: int,
         year: int,
         month: int = None,
-        leadtime_hour: int = None,
+        leadtime: int = None,
     ) -> dict:
         query = {
             "variable": "river_discharge_in_the_last_24_hours",
@@ -117,11 +144,11 @@ class Glofas:
             else str(month).zfill(2),
             f"{self.date_variable_prefix}day": [str(x).zfill(2) for x in range(1, 32)],
             "area": area.list_for_api(),
+            "system_version": f"version_{version}_{self.system_version_minor[version]}",
+            "hydrological_model": HYDROLOGICAL_MODELS[version],
         }
-        if leadtime_hour is not None:
-            query["leadtime_hour"] = str(leadtime_hour)
-        if self.system_version_minor is not None:
-            query["system_version"] = f"version_2_{self.system_version_minor}"
+        if leadtime is not None:
+            query["leadtime_hour"] = str(leadtime * 24)
         logger.debug(f"Query: {query}")
         return query
 
@@ -159,13 +186,15 @@ class Glofas:
         self,
         country_name: str,
         country_iso3: str,
+        version: int,
         ds: xr.Dataset,
-        leadtime_hour: int = None,
+        leadtime: int = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
             country_name=country_name,
             country_iso3=country_iso3,
-            leadtime_hour=leadtime_hour,
+            version=version,
+            leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing to {filepath}")
@@ -173,21 +202,22 @@ class Glofas:
         return filepath
 
     def _get_processed_filepath(
-        self, country_name: str, country_iso3: str, leadtime_hour: int = None
+        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
     ) -> Path:
-        filename = f"{country_iso3}_{self.cds_name}"
-        if leadtime_hour is not None:
-            filename += f"_{str(leadtime_hour).zfill(4)}"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if leadtime is not None:
+            filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
         return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
 
     def read_processed_dataset(
-        self, country_name: str, country_iso3: str, leadtime_hour: int = None
+        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
     ):
         filepath = self._get_processed_filepath(
             country_name=country_name,
             country_iso3=country_iso3,
-            leadtime_hour=leadtime_hour,
+            version=version,
+            leadtime=leadtime,
         )
         return xr.open_dataset(filepath)
 
@@ -200,8 +230,8 @@ class GlofasReanalysis(Glofas):
             cds_name="cems-glofas-historical",
             dataset=["consolidated_reanalysis"],
             dataset_variable_name="dataset",
+            system_version_minor={2: 1, 3: 1},
             date_variable_prefix="h",
-            system_version_minor=1,
         )
 
     def download(
@@ -209,9 +239,10 @@ class GlofasReanalysis(Glofas):
         country_name: str,
         country_iso3: str,
         area: Area,
+        version: int = DEFAULT_VERSION,
     ):
         logger.info(
-            f"Downloading GloFAS reanalysis for years {self.year_min} - {self.year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {self.year_min} - {self.year_max}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
@@ -220,17 +251,23 @@ class GlofasReanalysis(Glofas):
                 country_iso3=country_iso3,
                 area=area,
                 year=year,
+                version=version,
             )
 
     def process(
-        self, country_name: str, country_iso3: str, stations: Dict[str, Station]
+        self,
+        country_name: str,
+        country_iso3: str,
+        stations: Dict[str, Station],
+        version: int = DEFAULT_VERSION,
     ):
         # Get list of files to open
-        logger.info("Processing GloFAS Reanalysis")
+        logger.info(f"Processing GloFAS Reanalysis v{version}")
         filepath_list = [
             self._get_raw_filepath(
                 country_name=country_name,
                 country_iso3=country_iso3,
+                version=version,
                 year=year,
             )
             for year in range(self.year_min, self.year_max + 1)
@@ -245,17 +282,21 @@ class GlofasReanalysis(Glofas):
         ds_new = _get_station_dataset(stations=stations, ds=ds, coord_names=["time"])
         # Write out the new dataset to a file
         self._write_to_processed_file(
-            country_name=country_name, country_iso3=country_iso3, ds=ds_new
+            country_name=country_name,
+            country_iso3=country_iso3,
+            version=version,
+            ds=ds_new,
         )
 
 
 class GlofasForecast(Glofas):
     def __init__(self):
         super().__init__(
-            year_min=2019,
+            year_min={2: 2019, 3: 2020},
             year_max=2021,
             cds_name="cems-glofas-forecast",
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
+            system_version_minor={2: 1, 3: 1},
             dataset_variable_name="product_type",
         )
 
@@ -264,20 +305,22 @@ class GlofasForecast(Glofas):
         country_name: str,
         country_iso3: str,
         area: Area,
-        leadtime_hours: List[int],
+        leadtimes: List[int],
+        version: int = DEFAULT_VERSION,
     ):
         logger.info(
-            f"Downloading GloFAS forecast for years {self.year_min} - {self.year_max} and leadtime hours {leadtime_hours}"
+            f"Downloading GloFAS forecast v{version} for years {self.year_min[version]} - {self.year_max} and leadtime hours {leadtimes}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(self.year_min[version], self.year_max + 1):
             logger.info(f"...{year}")
-            for leadtime_hour in leadtime_hours:
+            for leadtime in leadtimes:
                 super()._download(
                     country_name=country_name,
                     country_iso3=country_iso3,
                     area=area,
                     year=year,
-                    leadtime_hour=leadtime_hour,
+                    leadtime=leadtime,
+                    version=version,
                 )
 
     def process(
@@ -285,20 +328,22 @@ class GlofasForecast(Glofas):
         country_name: str,
         country_iso3: str,
         stations: Dict[str, Station],
-        leadtime_hours: List[int],
+        leadtimes: List[int],
+        version: int = DEFAULT_VERSION,
     ):
-        logger.info("Processing GloFAS Forecast")
-        for leadtime_hour in leadtime_hours:
-            logger.info(f"For lead time {leadtime_hour}")
+        logger.info(f"Processing GloFAS Forecast v{version}")
+        for leadtime in leadtimes:
+            logger.info(f"For lead time {leadtime}")
             # Get list of files to open
             filepath_list = [
                 self._get_raw_filepath(
                     country_name=country_name,
                     country_iso3=country_iso3,
+                    version=version,
                     year=year,
-                    leadtime_hour=leadtime_hour,
+                    leadtime=leadtime,
                 )
-                for year in range(self.year_min, self.year_max + 1)
+                for year in range(self.year_min[version], self.year_max + 1)
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
@@ -313,7 +358,8 @@ class GlofasForecast(Glofas):
                 country_name=country_name,
                 country_iso3=country_iso3,
                 ds=ds_new,
-                leadtime_hour=leadtime_hour,
+                leadtime=leadtime,
+                version=version,
             )
 
 
@@ -325,7 +371,7 @@ class GlofasReforecast(Glofas):
             cds_name="cems-glofas-reforecast",
             dataset=["control_reforecast", "ensemble_perturbed_reforecasts"],
             dataset_variable_name="product_type",
-            system_version_minor=2,
+            system_version_minor={2: 2, 3: 1},
             date_variable_prefix="h",
         )
 
@@ -334,22 +380,26 @@ class GlofasReforecast(Glofas):
         country_name: str,
         country_iso3: str,
         area: Area,
-        leadtime_hours: List[int],
+        leadtimes: List[int],
+        version: int = DEFAULT_VERSION,
+        split_by_month: bool = False,
     ):
         logger.info(
-            f"Downloading GloFAS reforecast for years {self.year_min} - {self.year_max} and leadtime hours {leadtime_hours}"
+            f"Downloading GloFAS reforecast v{version} for years {self.year_min} - {self.year_max} and leadtime hours {leadtimes}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
-            for month in range(1, 13):
-                for leadtime_hour in leadtime_hours:
+            month_range = range(1, 13) if split_by_month else [None]
+            for month in month_range:
+                for leadtime in leadtimes:
                     super()._download(
                         country_name=country_name,
                         country_iso3=country_iso3,
                         area=area,
+                        version=version,
                         year=year,
                         month=month,
-                        leadtime_hour=leadtime_hour,
+                        leadtime=leadtime,
                     )
 
     def process(
@@ -357,22 +407,26 @@ class GlofasReforecast(Glofas):
         country_name: str,
         country_iso3: str,
         stations: Dict[str, Station],
-        leadtime_hours: List[int],
+        leadtimes: List[int],
+        version: int = DEFAULT_VERSION,
+        split_by_month: bool = False,
     ):
-        logger.info("Processing GloFAS Reforecast")
-        for leadtime_hour in leadtime_hours:
-            logger.info(f"For lead time {leadtime_hour}")
+        logger.info(f"Processing GloFAS Reforecast v{version}")
+        for leadtime in leadtimes:
+            logger.info(f"For lead time {leadtime}")
             # Get list of files to open
+            month_range = range(1, 13) if split_by_month else [None]
             filepath_list = [
                 self._get_raw_filepath(
                     country_name=country_name,
                     country_iso3=country_iso3,
+                    version=version,
                     year=year,
                     month=month,
-                    leadtime_hour=leadtime_hour,
+                    leadtime=leadtime,
                 )
                 for year in range(self.year_min, self.year_max + 1)
-                for month in range(1, 13)
+                for month in month_range
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
@@ -388,8 +442,9 @@ class GlofasReforecast(Glofas):
             self._write_to_processed_file(
                 country_name=country_name,
                 country_iso3=country_iso3,
+                version=version,
                 ds=ds_new,
-                leadtime_hour=leadtime_hour,
+                leadtime=leadtime,
             )
 
 

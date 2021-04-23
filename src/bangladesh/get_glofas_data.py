@@ -29,16 +29,13 @@ FFWC_STATIONS = {
     "Aricha": Station(lon=89.6550, lat=23.9032),
     "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
-AREA_BUFFER = 0.5
-
+LEADTIMES = [5, 10, 11, 12, 13, 14, 15]
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
 def main(download=True, process=False):
 
-    # TODO: flags / config file to toggle these things
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
     glofas_reforecast = glofas.GlofasReforecast()
@@ -46,8 +43,7 @@ def main(download=True, process=False):
     if download:
         # Remove the GloFAS station as it was not used originally
         ffwc_stations_for_download = FFWC_STATIONS.copy()
-        del ffwc_stations_for_download["Bahadurabad_glofas"]
-        area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
+        area = AreaFromStations(stations=ffwc_stations_for_download)
         glofas_reanalysis.download(
             country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
         )
@@ -55,13 +51,13 @@ def main(download=True, process=False):
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
         glofas_reforecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
 
     if process:
@@ -72,13 +68,13 @@ def main(download=True, process=False):
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
         glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
-            leadtime_hours=LEADTIME_HOURS,
+            leadtimes=LEADTIMES,
         )
 
 

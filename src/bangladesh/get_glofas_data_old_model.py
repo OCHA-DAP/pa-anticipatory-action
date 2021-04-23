@@ -1,6 +1,8 @@
+"""
+Download raster data from GLOFAS and extracts time series of water discharge in selected locations,
+matching the FFWC stations data
+"""
 import logging
-
-import geopandas as gpd
 
 # TODO: remove this after making top-level
 from pathlib import Path
@@ -10,42 +12,42 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import AreaFromShape, Station
+from src.indicators.flooding.glofas.area import AreaFromStations, Station
 
-
-# Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
-COUNTRY_NAME = "nepal"
-COUNTRY_ISO3 = "npl"
-LEADTIMES = [5, 10, 15]
-# TODO: Read in the csv file from GDrive
-STATIONS = {
-    "Karnali": Station(lon=28.75, lat=81.25),
-    "Bimalnagar": Station(lon=28.15, lat=84.45),
-    "Jomsom": Station(lon=28.65, lat=83.55),
+# Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
+# Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
+# Bahadurabad_glofas corresponds to the control point identified here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
+COUNTRY_NAME = "bangladesh"
+COUNTRY_ISO3 = "bgd"
+FFWC_STATIONS = {
+    "Noonkhawa": Station(lon=89.9509, lat=25.9496),
+    "Chilmari": Station(lon=89.7476, lat=25.5451),
+    "Bahadurabad": Station(lon=89.6607, lat=25.1028),
+    "Sariakandi": Station(lon=89.6518, lat=24.8901),
+    "Kazipur": Station(lon=89.7498, lat=24.6637),
+    "Serajganj": Station(lon=89.7479, lat=24.4676),
+    "Aricha": Station(lon=89.6550, lat=23.9032),
+    "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
-)
-SHAPEFILE = (
-    SHAPEFILE_BASE_DIR
-    / "npl_admbnda_ocha_20201117"
-    / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
-)
+LEADTIMES = [5, 10, 15, 20, 25, 30]
+AREA_BUFFER = 0.5
 VERSION = 2
-
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=True):
+def main(download=True, process=False):
 
+    # TODO: flags / config file to toggle these things
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
     glofas_reforecast = glofas.GlofasReforecast()
 
     if download:
-        df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
-        area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
+        # Remove the GloFAS station as it was not used originally
+        ffwc_stations_for_download = FFWC_STATIONS.copy()
+        del ffwc_stations_for_download["Bahadurabad_glofas"]
+        area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
         glofas_reanalysis.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
@@ -65,28 +67,30 @@ def main(download=True, process=True):
             area=area,
             leadtimes=LEADTIMES,
             version=VERSION,
+            split_by_month=True
         )
 
     if process:
         glofas_reanalysis.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
+            stations=FFWC_STATIONS,
             version=VERSION,
         )
         glofas_forecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
+            stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
+            stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
+            split_by_month=True
         )
 
 
