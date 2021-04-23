@@ -5,7 +5,7 @@ from pathlib import Path
 import logging
 import time
 import os
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 import xarray as xr
@@ -20,6 +20,7 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 GLOFAS_DIR = Path("GLOFAS_Data")
 CDSAPI_CLIENT = cdsapi.Client()
 DEFAULT_VERSION = 3
+HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 class Glofas:
     def __init__(
         self,
-        year_min: int,
+        year_min: Union[int, Dict[int, int]],
         year_max: int,
         cds_name: str,
         dataset: List[str],
@@ -35,6 +36,20 @@ class Glofas:
         system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
     ):
+        """
+        Create an instance of a GloFAS object, from which you can download and process raw data, and
+        read in the processed data.
+        :param year_min: The earliest year that the dataset is available. Can be a single integer,
+        or a dictionary with structure {major_version: year_min} if the minimum year depends on the GloFAS
+        model version.
+        :param year_max: The most recent that the dataset is available
+        :param cds_name: The name of the dataset in CDS
+        :param dataset: The sub-datasets that you would like to download (as a list of strings)
+        :param dataset_variable_name: The variable name with which to pass the above datasets in the CDS query
+        :param system_version_minor: The minor version of the GloFAS model. Depends on the major version,
+        so is given as a dictionary with the format {major_version: minor_version}
+        :param date_variable_prefix: Some GloFAS datasets have the prefix "h" in front of some query keys
+        """
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
@@ -130,6 +145,7 @@ class Glofas:
             f"{self.date_variable_prefix}day": [str(x).zfill(2) for x in range(1, 32)],
             "area": area.list_for_api(),
             "system_version": f"version_{version}_{self.system_version_minor[version]}",
+            "hydrological_model": HYDROLOGICAL_MODELS[version],
         }
         if leadtime is not None:
             query["leadtime_hour"] = str(leadtime * 24)
@@ -280,7 +296,7 @@ class GlofasReanalysis(Glofas):
 class GlofasForecast(Glofas):
     def __init__(self):
         super().__init__(
-            year_min=2019,
+            year_min={2: 2019, 3: 2020},
             year_max=2021,
             cds_name="cems-glofas-forecast",
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
@@ -297,9 +313,9 @@ class GlofasForecast(Glofas):
         version: int = DEFAULT_VERSION,
     ):
         logger.info(
-            f"Downloading GloFAS forecast v{version} for years {self.year_min} - {self.year_max} and leadtime hours {leadtimes}"
+            f"Downloading GloFAS forecast v{version} for years {self.year_min[version]} - {self.year_max} and leadtime hours {leadtimes}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(self.year_min[version], self.year_max + 1):
             logger.info(f"...{year}")
             for leadtime in leadtimes:
                 super()._download(
@@ -331,7 +347,7 @@ class GlofasForecast(Glofas):
                     year=year,
                     leadtime=leadtime,
                 )
-                for year in range(self.year_min, self.year_max + 1)
+                for year in range(self.year_min[version], self.year_max + 1)
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
@@ -370,13 +386,15 @@ class GlofasReforecast(Glofas):
         area: Area,
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
+        split_by_month: bool = False,
     ):
         logger.info(
             f"Downloading GloFAS reforecast v{version} for years {self.year_min} - {self.year_max} and leadtime hours {leadtimes}"
         )
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
-            for month in range(1, 13):
+            month_range = range(1, 13) if split_by_month else [None]
+            for month in month_range:
                 for leadtime in leadtimes:
                     super()._download(
                         country_name=country_name,
@@ -395,11 +413,13 @@ class GlofasReforecast(Glofas):
         stations: Dict[str, Station],
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
+        split_by_month: bool = False,
     ):
         logger.info(f"Processing GloFAS Reforecast v{version}")
         for leadtime in leadtimes:
             logger.info(f"For lead time {leadtime}")
             # Get list of files to open
+            month_range = range(1, 13) if split_by_month else [None]
             filepath_list = [
                 self._get_raw_filepath(
                     country_name=country_name,
@@ -410,7 +430,7 @@ class GlofasReforecast(Glofas):
                     leadtime=leadtime,
                 )
                 for year in range(self.year_min, self.year_max + 1)
-                for month in range(1, 13)
+                for month in month_range
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
