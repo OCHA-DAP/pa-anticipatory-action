@@ -62,10 +62,10 @@ start = '2001-01-01'
 end = '2001-10-31'
 version = 2
 
-rf_list_slice = da_glofas_reforecast[version].sel(time=slice(start,end))
+rf_list_slice = da_glofas_reforecast_interp[version].sel(time=slice(start,end))
 ra_slice = da_glofas_reanalysis[version].sel(time=slice(start, end))
 
-rf_list_slice.mean(axis=1).plot.line('.', x='time', add_legend=True)
+rf_list_slice.mean(axis=1).plot.line( x='time', add_legend=True)
 ra_slice.plot.line(label='Historical', c='k')
 plt.show()
 ```
@@ -120,65 +120,48 @@ for version in [2,3]:
                                   }], ignore_index=True)
 ```
 
-Plot the skill for the different month divisions
+```python
+def plot_skill(df_crps, division_key=None, add_line_from_website=False,
+              ylabel="CRPS [m$^3$ s$^{-1}$]"):
+    fig, ax = plt.subplots()
+    for version, ls in zip([2,3], [':', '--']):
+        df = df_crps[version].copy()
+        for i, subset in enumerate([None, 'rainy', 'dry']):
+            ykey = f'crps_{subset}' if subset is not None else 'crps'
+            y = df[ykey]
+            if division_key is not None:
+                dkey = f'{division_key}_{subset}' if subset is not None else division_key
+                y /= df[dkey]
+            ax.plot(df['leadtime'], y, ls=ls, c=f'C{i}')
+        ax.plot([], [], ls=ls, c='k', label=f'version {version}')
+    if add_line_from_website:
+        ax.plot(df_skill[0], df_skill[1], ls='-', c='k', lw=0.5, label='from website')
+    # Add colours to legend
+    for i, subset in enumerate(['full year', 'rainy', 'dry']):
+        ax.plot([], [], c=f'C{i}', label=subset)
+    ax.set_title("GloFAS forecast skill at Bahadurabad:\n 1999-2018 reforecast")
+    ax.set_xlabel("Lead time (days)")
+    ax.set_ylabel(ylabel)
+    ax.legend()
+```
 
 ```python
 # Get skill from GloFAS website
 df_skill = pd.read_csv(SKILL_DIR / SKILL_FILE, header=None)
 
 # Plot absolute skill
-fig, ax = plt.subplots()
-for version in [2,3]:
-    df = df_crps[version]
-    ax.plot(df['leadtime'], df['crps'], 
-        label=f'v{version}, full year')
-    ax.plot(df['leadtime'], df['crps_rainy'], 
-        label=f'v{version}, rainy season')
-    ax.plot(df['leadtime'], df['crps_dry'], 
-        label=f'v{version}, dry season')
-ax.plot(df_skill[0], df_skill[1], label='From website')
-ax.set_title("GloFAS forecast skill at Bahadurabad:\n 1999-2018 reforecast")
-ax.set_xlabel("Lead time (days)")
-ax.set_ylabel("CRPS [m$^3$ s$^{-1}$]")
-ax.legend()
-```
+plot_skill(df_crps, add_line_from_website=True)
 
-Rainy season performs the worst, but this is likely because the values during this time period are higher. Try using reduced skill (dividing by standard devation).
+# Rainy season performs the worst, but this is likely because 
+# the values during this time period are higher. Try using 
+# reduced skill (dividing by standard devation).
+plot_skill(df_crps, division_key='std', ylabel="RCRPS")
 
-```python
-# Plot reduced skill with std
-fig, ax = plt.subplots()
-for version in [2,3]:
-    df = df_crps[version]
-    ax.plot(df['leadtime'], df['crps'] / df['std'], 
-        label=f'v{version}, full year')
-    ax.plot(df['leadtime'], df['crps_rainy'] / df['std_rainy'], 
-        label=f'v{version}, rainy season')
-    ax.plot(df['leadtime'], df['crps_dry'] / df['std_dry'], 
-        label=f'v{version}, dry season')
-ax.set_title("GloFAS relative forecast skill at Bahadurabad:\n 1999-2018 reforecast")
-ax.set_xlabel("Lead time (days)")
-ax.set_ylabel("RCRPS")
-ax.legend()
-```
+#This is perhpas not exactly what we want because we know this 
+#data comes from the same location and the dataset has the same properties, 
+#but we are splitting it up by mean value. Therefore try normalizing using mean
+plot_skill(df_crps, division_key='mean', ylabel="NCRPS (CRPS / mean)")
 
-This is perhpas not exactly what we want because we know this data comes from the same location and the dataset has the same properties, but we are splitting it up by mean value. Therefore try normalizing using mean
-
-```python
-# Plot normalized skill with mean
-fig, ax = plt.subplots()
-for version in [2,3]:
-    df = df_crps[version]
-    ax.plot(df['leadtime'], df['crps'] / df['mean'], 
-        label=f'v{version}, full year')
-    ax.plot(df['leadtime'], df['crps_rainy'] / df['mean_rainy'], 
-        label=f'v{version}, rainy season')
-    ax.plot(df['leadtime'], df['crps_dry'] / df['mean_dry'], 
-        label=f'v{version}, dry season')
-ax.set_title("GloFAS relative forecast skill at Bahadurabad:\n 1999-2018 reforecast")
-ax.set_xlabel("Lead time (days)")
-ax.set_ylabel("NCRPS (CRPS / mean)")
-ax.legend()
 ```
 
 ### Bias: rank histogram
@@ -206,15 +189,15 @@ def plot_hist(da_forecast, da_reanalysis):
     ax.set_xlabel('Rank')
     ax.set_ylabel('Number')
     
-version = 2
-for da_forecast in [da_glofas_reforecast, 
-                    da_glofas_forecast
-                   ]:
-    
-    plot_hist(da_forecast[version], da_glofas_reanalysis[version])
-    plot_hist(da_forecast[version].sel(
-        time=is_rainy_season(da_forecast[version]['time.month'])),
-              da_glofas_reanalysis[version])
+for version in [2, 3]:
+    forecast_list = [da_glofas_reforecast]
+    if version == 2:
+        forecast_list += [da_glofas_forecast]
+    for da_forecast in forecast_list:
+        plot_hist(da_forecast[version], da_glofas_reanalysis[version])
+        plot_hist(da_forecast[version].sel(
+            time=is_rainy_season(da_forecast[version]['time.month'])),
+                  da_glofas_reanalysis[version])
     
 
 ```
@@ -259,12 +242,14 @@ for version in [2,3]:
 ```python
 # Plot absolute skill
 fig, ax = plt.subplots()
-for version in [2,3]:
+for version, ls in zip([2,3], [':', '--']):    
     df = df_skill_spread[version]
-    ax.plot(df['leadtime'], df['rmse'], 
-        label=f'v{version} RMSE')
-    ax.plot(df['leadtime'], df['rav'], 
-        label=f'v{version} spread')
+    ax.plot(df['leadtime'], df['rmse'], ls=ls, c='C0')
+    ax.plot(df['leadtime'], df['rav'], ls=ls, c='C1')
+    ax.plot([], [], ls=ls, c='k', label=f'version {version}')
+# Add colours to legend
+for i, subset in enumerate(['RMSE', 'spread']):
+    ax.plot([], [], c=f'C{i}', label=subset)
 ax.set_xlabel("Lead time (days)")
 ax.set_ylabel("Error [m$^3$ s$^{-1}$]")
 ax.legend()
@@ -277,6 +262,14 @@ To try and quantify bias magnitude, examine MAE and RSME differences for positiv
 def calc_mae(observations, forecast):
     return np.abs(observations - forecast.mean(axis=0)).sum() \
         / len(observations.time)
+
+# mean error
+def calc_me(observations, forecast):
+    return (forecast.mean(axis=0) - observations).sum() \
+        / len(observations.time)
+
+def calc_skew(diff):
+    return (np.mean(diff) - np.median(diff)) / np.std(diff)
 
 df_bias = {
     2: pd.DataFrame(columns=['leadtime']),
@@ -291,25 +284,20 @@ for version in [2,3]:
         forecast = da_forecast.sel(
             leadtime=leadtime.values).dropna(dim='time')
         observations = da_reanalysis.reindex({'time': forecast.time})
-        diff = observations - forecast.mean(axis=0)
-        idx_positive = diff > 0
-        idx_negative = diff < 0
+        observations_rainy = observations.sel(time=is_rainy_season(observations['time.month']))
+        forecast_rainy = forecast.sel(time=is_rainy_season(forecast['time.month']))
+        diff = (forecast - observations).values.flatten()
+        diff_rainy = (forecast_rainy - observations_rainy).values.flatten()
+
         df_bias[version] = df_bias[version].append([
-                                {'leadtime': leadtime.values,
-                                 'rmse_positive': calc_rmse(
-                                 observations[idx_positive],
-                                 forecast[:, idx_positive]),
-                                 'rmse_negative': calc_rmse(
-                                 observations[idx_negative],
-                                 forecast[:, idx_negative]),
-                                'mae_positive': calc_mae(
-                                 observations[idx_positive],
-                                 forecast[:, idx_positive]),
-                                 'mae_negative': calc_mae(
-                                 observations[idx_negative],
-                                 forecast[:, idx_negative])  
-                                
+                                {'leadtime': leadtime.values,  
+                                'me': calc_me(observations, forecast),
+                                 'me_rainy': calc_me(observations_rainy, forecast_rainy),
+                                 'skew': calc_skew(diff),
+                                 'skew_rainy': calc_skew(diff_rainy)
                                 }], ignore_index=True)
+        
+
     
 ```
 
@@ -317,11 +305,17 @@ for version in [2,3]:
 fig, ax = plt.subplots()
 for version in [2,3]:
     df = df_bias[version]
-    ax.plot(df['leadtime'], df['rmse_positive'], 
-        label=f'v{version} RMSE +ve')
-    ax.plot(df['leadtime'], df['rmse_negative'], 
-        label=f'v{version} RMSE -ve')
+    #ax.plot(df['leadtime'], df['me'], label=f'v{version}')
+    #ax.plot(df['leadtime'], df['me_rainy'], label=f'v{version} rainy')
+    ax.plot(df['leadtime'], df['skew'], label=f'v{version}')
+    ax.plot(df['leadtime'], df['skew_rainy'], label=f'v{version} rainy')
+
+    
 ax.set_xlabel("Lead time (days)")
-ax.set_ylabel("Error [m$^3$ s$^{-1}$]")
+ax.set_ylabel("Error skew")
 ax.legend()
+```
+
+```python
+
 ```
