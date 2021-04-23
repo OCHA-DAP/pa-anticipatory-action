@@ -135,6 +135,7 @@ This is confirmed by .. [Include graph showing %dry spells detected and % false 
 ![seasonal total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_seasonal_precipitation_distribution.png')`)
 
 #### Total monthly precipitation
+TODO: about same story as seasonal
 <!-- #### Scripts -->
 <!-- Computing the below average and aggregating -->
 <!-- Correlations below average -->
@@ -145,7 +146,7 @@ This is confirmed by .. [Include graph showing %dry spells detected and % false 
 <!-- Shapefiles -->
 
 <!-- #### TODO -->
-<!-- Check format UK Met office (paper, email, ECMWF) --> same as ECMWF but Met office generally wants to adjust their products to the use case..  -->
+<!-- Check format UK Met office (paper, email, ECMWF) -> same as ECMWF but Met office generally wants to adjust their products to the use case.. -->
 <!-- Add flexible forecast IRI once understood better -->
 
 ![monthly total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_distribution.png')`)
@@ -196,12 +197,13 @@ For each forecast, the raster cell values were aggregated to admin2 [by.....]
 #### Bias of CHIRPS-GEFS
 We first analyzed the general performance of CHIRPS-GEFS, by computing a bias plot. This plot shows the observed precipitation over 15 days per admin2, retrieved from CHIRPS data, and on the y-axis the forecasted minus observed 15-day precipitation. If the forecast would be perfect, all values would form a horizontal line on the x-axis. However, from this plot we can see that CHIRPS-GEFS has the tendency to overpredict low amount of rainfall, while underpredicting high amounts of rainfall. Since we are interested in extremely low amounts of rainfall, this fact can be problematic for the forecasting skill of dry spells. 
 
-![seasonal below average precipitation confusion matrix](`r paste0(plot_dir,'/chirps_gefs/plot_mwi_chirpsgefs_15days_density.png')`)
+![bias chirps gefs](`r paste0(plot_dir,'/chirps_gefs/plot_mwi_chirpsgefs_15days_density.png')`)
 
 #### CHIRPS-GEFS to forecast dry spells
 Besides the bias, the forecast might be good enough to detect dry spells. We define a dry spell as "detected", if any part of the observed dry spell overlaps with any part of the forecasted dry spell. Thus, this is a very loose definition. First, a forecasted dry spell was defined as a forecast projecting less than 2mm of cumulative rainfall, i.e. the same definition as for the observed dry spells. Additionally, we tested several higher thresholds, since as we saw CHIRPS-GEFS has the tendency to overpredict observed numbers. From this we can see that [Only write once final definition of dry spell]
 
 ## Real-time observation of dry spells
-Chirps vs ARC2
+![chirps vs arc2](`r paste0(plot_dir,'/arc2/viz_arc2chirps_th_2_chirpsgefs_dryspell_hm.png')`)
+
 
 ## References
