@@ -10,9 +10,13 @@ output:
     toc_depth: 4
 editor_options:
   chunk_output_type: inline
+bibliography: ["mwi_bibliography.bib"]
+biblio-style: "apalike"
+link-citations: true
 ---
 
 ### Background
+<!-- Dry spell is defined as unique start date - adm2 combination -->
 This is a descriptive summary of the groundtruth dataset of dry spells in Malawi that was created to inform the OCHA Anticipatory Action pilot. More information about the trigger mechanism for OCHA Anticipatory Action in Malawi or the computation of the dataset can be found [here](https://github.com/OCHA-DAP/pa-anticipatory-action).
 
 We identified, for each district (n = 32), all dry spells that occurred during their rainy season. To do so we identified the onset and cessation date of the rainy season for each district and every year. We report on the characteristics of the rainy seasons as well as the dry spells.
@@ -36,16 +40,10 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
 ```
 
 ### Data Source
-We analysed the CHIRPS global daily datasets between 2000 and 2020 (5-degree resolution) at the district (admin2) level.
-
-### Methodology
-We extracted the mean rain fallen within a district for every day between 1 Jan 2000 and 31 Dec 2020 (by selecting raster cells whose centre lied within the district). 
-
-We then computed the 10-day, 14-day, and 15-day rolling sums for each district. The earliest records in the dataset were assigned rolling sums of NA (non-applicable) until at least 10/14/15 records were available, respectively. 
-
-"Total rainfall" was summed over the relevant period and rounded to the first decimal.
+We chose to use CHIRPS as data source of historical precipitation. Different data sets exist, but among those that we had access to CHIRPS generally shows good accuracy in Malawi [@zhao2019evaluating]. We used the CHIRPS data between 1 Jan 2000 and 31 Dec 2020 at 0.05-degree resolution. 
 
 ### Definitions
+Many different definitions of a dry spell, rainy day, rainy season onset, and rainy season cessation exist. The following definitions were used in the current analysis, based on literature and consultation with partners.
 
 **Dry spells:** At least 14 consecutive days with a total rainfall less than 2 mm during the rainy season in an ADMIN2 region.
 
@@ -53,9 +51,22 @@ We then computed the 10-day, 14-day, and 15-day rolling sums for each district. 
 
 **Rainy season onset:** First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 
-**Rainy season cessation:** 25mm or less of rain in 15 days after 15 March (DCCMS 2008).
+**Rainy season cessation:** First day of a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
 
 **Rainy season duration:** Rainy season cessation date minus rainy season onset (in days).
+
+### Methodology
+[TODO: Do we also want to include the experimentation with different dry spell definitions? ]
+The CHIRPS data is released as raster data, so we aggregated this to district (admin2) level, by extracting the mean value of all raster cells whose centre lied within the district. 
+Different methodologies for aggregation from the raster cells to the admin areas were explored, which are further explained in [TODO: Add appendix]. It was chosen to compute the analysis on the district (admin2) level, since this gives a higher granularity for anticipatory actions than on region (admin1) level. Moreover, it was chosen to not go down to TA (admin3) level since the uncertainty of forecasts is too high to predict on such a small scale. 
+Besides the admin level, a methodology has to be chosen to aggregate the raster cells to the desired admin level. It was chosen to use the mean of the raster cells within a district, since it ... [TODO: add if we finalize decision to use mean or pixel based]. 
+Lastly, we also analyzed the detection of dry spells when allowing less than 2 mm per day instead of a total of 2mm over 14 days. This was done due to the tendency of CHIRPS, or satellite precipitation products in general, to overestimate low amounts (<0.1mm/day) of rainfall [dinku2011challenges]. Since we didn't see large differences in patterns, see appendix, we chose to stick to the original definition for this analysis. 
+
+After we extracted the mean rain fallen within a district for every day over the last 20 years, we then computed the 10-day, 14-day, and 15-day rolling sums for each district. The earliest records in the dataset were assigned rolling sums of NA (non-applicable) until at least 10/14/15 records were available, respectively. Using these sums, the dry spells and rainy seasons were computed. 
+
+"Total rainfall" was summed over the relevant period and rounded to the first decimal.
+
+
 
 ### Rainy Seasons
 
@@ -167,7 +178,7 @@ rainy_seasons_summary_per_region %>%
 #### Durations
 
 ```{r}
-#[TODO: Summary of rainy season duration results.]
+#[TODO: Summary of rainy season duration results. Add boxplot]
 ```
 
 ```{r rainy-duration-table, include = T} 
@@ -186,10 +197,13 @@ rainy_seasons_summary_per_region %>%
 
 &nbsp;
 
+#### Total rainfall
+[TODO: add boxplot total rainfall per season]
+
 ### Dry Spells
 
 A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. The graph presents frequency over the years by region. A summary per district follows in table format.
-
+[TODO: add heatmap]
 &nbsp;
 
 ```{r dry-spells}
@@ -272,11 +286,11 @@ rainy_season_dry_spells_summary_per_region %>%
 
 #### Frequency
 
-```{r}
-#[TODO: Summary on frequency of dry spells]
 
-#[TODO: Adjust below comparison]
-```
+[TODO: Summary on frequency of dry spells]
+
+[TODO: Adjust below comparison]
+
 
 We note a convergence between these results and the Analysis of Predictable Food Crises in Malawi carried out in January 2020 by WFP. The analysis reported on the location, frequency and impact of dry spells at the Traditional Authority (TA; adm3) level in 2011-2019. Similar findings include:
 
