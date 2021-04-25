@@ -16,7 +16,7 @@ from src.indicators.flooding.glofas.area import AreaFromShape, Station
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_NAME = "malawi"
 COUNTRY_ISO3 = "mwi"
-LEADTIMES = [5, 10, 15]
+LEADTIMES = [5, 10, 15, 20, 25, 30]
 STATIONS = {
 }
 SHAPEFILE_BASE_DIR = (
@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=False):
+def main(download=True, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
