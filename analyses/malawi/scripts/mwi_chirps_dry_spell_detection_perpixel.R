@@ -94,18 +94,18 @@ s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s20
 
 # crop area outside of MWI
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adms_spatial_extent)) # crop automatically converts to a brick - a single raster file
-nbr_layers <- nlayers(s2000_s2020_cropped)
 
 # save as a raster file not RDS (same spatial_extent with adm1 and adm2)
 #writeRaster(s2000_s2020_cropped, filename = paste0(data_dir, '/processed/malawi/dry_spells/s2000_s2020_cropped.tif'), format="GTiff", overwrite=TRUE, options=c("INTERLEAVE=BAND","COMPRESS=LZW"))
 #s2000_s2020_cropped <- brick(paste0(data_dir, "/processed/malawi/dry_spells/s2000_s2020_cropped.tif")) # read in saved raster file
+
+nbr_layers <- nlayers(s2000_s2020_cropped)
 
 # extract every cell value over 20 years per adm region (Note: not exploding multipart polygons)
 all_years_cell_values_adm2 <- raster::extract(s2000_s2020_cropped, mwi_adm2, cellnumbers = T, df = T, nl = nbr_layers) # return a df with polygon id, cell id, and values per cell for every day of 2000-2020 (1 day/layer at a time)
 #all_years_cell_values_adm1 <- raster::extract(s2000_s2020_cropped, mwi_adm1, cellnumbers = T, df = T, nl = nbr_layers) # return a df with polygon id, cell id, and values per cell for every day of 2000-2020 (1 day/layer at a time)
 
 # save/read the extracted values
-
 #saveRDS(all_years_cell_values_adm2, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
 #all_years_cell_values_adm2 <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
 #saveRDS(all_years_cell_values_adm1, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm1.RDS"))
@@ -333,7 +333,7 @@ for (i in seq_along(1:nrow(dry_spells_during_rainy_season_list))) {
     df <- rbind(df, row_list)
 }
 
-# identify dates as beling during a cell's rainy season & a dry spell 
+# identify dates as being during a cell's rainy season & a dry spell 
 df$rainy_season_dry_spell <- 1
 
 # save
@@ -378,17 +378,49 @@ adm2_ds_counts <- complete_list %>%
                               perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
 summary(adm2_ds_counts)
 
-adm1_ds_counts <- complete_list %>% 
-                    group_by(ADM1_EN, date) %>%
-                    summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm1 region
-                              nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
-                              perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
-summary(adm1_ds_counts)
+# adm1_ds_counts <- complete_list %>% 
+#                     group_by(ADM1_EN, date) %>%
+#                     summarise(nbr_cells = n_distinct(cell),  # compute nbr cells in adm1 region
+#                               nbr_ds_cells = sum(rainy_season_dry_spell), # compute nbr cells that were in a dry spell
+#                               perc_ds_cells = round(nbr_ds_cells * 100 / nbr_cells, 1))
+# summary(adm1_ds_counts)
 
 
 # save
 #write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm2.csv"), row.names = FALSE)
 #write.csv(adm1_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm1.csv"), row.names = FALSE)
+
+########
+# compute % of cells that were in a dry spell and in rainy season, per day to determine rainy season dry spells at adm
+#######
+
+# keep start/end dates of rainy seasons and all dry spells
+cell_summary <- dry_spells_details %>%
+                        left_join(rainy_seasons[, c('cell', 'season_approx', 'onset_date', 'cessation_date')], by = c('cell', 'season_approx'), all.x = T, all.y = T) %>%
+                        dplyr::select(cell, season_approx, dry_spell_first_date, dry_spell_last_date, onset_date, cessation_date) %>%
+                        left_join(cell_adms, by = c('cell'= 'cell')) %>%
+                        filter(!is.na(onset_date) & !is.na(cessation_date)) # exclude records when beginning or rainy season is unknown (2009/2020) 
+
+# extract lists of dates per cell for each event (rainy season, dry spell)
+df2 <- data.frame()
+
+for (i in seq_along(1:nrow(cell_summary))) {
+  
+  row_lists <- listRainyDrySpellDaysPerPixel(i)
+  
+  row_ds_dates <- row_lists$ds_dates_list
+  row_ds_dates$event <- "ds"
+  
+  row_rs_dates <- row_lists$rs_dates_list
+  row_rs_dates$event <- "rs"
+  
+  # add individual row to dataframe
+  df2 <- rbind(df2, row_ds_dates, row_rs_dates)
+}
+
+
+# save
+#write.csv(df2, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_rainy_season_at_50p_adm2)per_pixel.csv"), row.names = FALSE)
 
 # viz
 ggplot(data = adm2_ds_counts, aes(x = date, y = perc_ds_cells)) +
