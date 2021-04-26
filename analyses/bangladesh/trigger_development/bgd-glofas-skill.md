@@ -26,7 +26,6 @@ DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 SKILL_DIR = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
 SKILL_FILE = 'forecast_skill.csv'
 LEADTIMES_V2 = [5, 10, 15, 20, 25, 30]
-LEADTIMES_V3 = [5, 10, 15]
 ```
 
 ### Read in forecast and reanalysis
@@ -45,12 +44,12 @@ da_glofas_forecast = {
 
 da_glofas_reforecast = {
     2: rd.get_glofas_reforecast(version=2, interp=False, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_reforecast(interp=False, leadtimes=LEADTIMES_V3)
+    3: rd.get_glofas_reforecast(interp=False)
 }
 
 da_glofas_reforecast_interp = {
     2: rd.get_glofas_reforecast(version=2, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_reforecast(leadtimes=LEADTIMES_V3)
+    3: rd.get_glofas_reforecast()
 }
 ```
 
@@ -268,6 +267,12 @@ def calc_me(observations, forecast):
     return (forecast.mean(axis=0) - observations).sum() \
         / len(observations.time)
 
+def calc_mpe(observations, forecast):
+    mean_forecast = forecast.mean(axis=0)
+    return ((mean_forecast - observations) / mean_forecast).sum() \
+        / len(observations.time) * 100
+
+
 def calc_skew(diff):
     return (np.mean(diff) - np.median(diff)) / np.std(diff)
 
@@ -294,7 +299,9 @@ for version in [2,3]:
                                 'me': calc_me(observations, forecast),
                                  'me_rainy': calc_me(observations_rainy, forecast_rainy),
                                  'skew': calc_skew(diff),
-                                 'skew_rainy': calc_skew(diff_rainy)
+                                 'skew_rainy': calc_skew(diff_rainy),
+                                'mpe': calc_mpe(observations, forecast),
+                              'mpe_rainy': calc_mpe(observations_rainy, forecast_rainy)
                                 }], ignore_index=True)
         
 
@@ -303,16 +310,20 @@ for version in [2,3]:
 
 ```python
 fig, ax = plt.subplots()
-for version in [2,3]:
+for version, ls in zip([2,3], [':', '--']):    
     df = df_bias[version]
-    #ax.plot(df['leadtime'], df['me'], label=f'v{version}')
-    #ax.plot(df['leadtime'], df['me_rainy'], label=f'v{version} rainy')
-    ax.plot(df['leadtime'], df['skew'], label=f'v{version}')
-    ax.plot(df['leadtime'], df['skew_rainy'], label=f'v{version} rainy')
+    ax.plot(df['leadtime'], df['mpe'], ls=ls, c='C0')
+    ax.plot(df['leadtime'], df['mpe_rainy'], ls=ls, c='C1')
+    ax.plot([], [], ls=ls, c='k', label=f'version {version}')
+# Add colours to legend
+for i, subset in enumerate(['full year', 'rainy']):
+    ax.plot([], [], c=f'C{i}', label=subset)
 
     
 ax.set_xlabel("Lead time (days)")
-ax.set_ylabel("Error skew")
+#ax.set_ylabel("Mean error [m$^3$ s$^{-1}$]")
+ax.set_ylabel("Mean error (%)")
+
 ax.legend()
 ```
 
