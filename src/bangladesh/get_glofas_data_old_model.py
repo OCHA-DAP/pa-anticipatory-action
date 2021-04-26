@@ -29,13 +29,16 @@ FFWC_STATIONS = {
     "Aricha": Station(lon=89.6550, lat=23.9032),
     "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-LEADTIMES = [5, 10, 11, 12, 13, 14, 15]
+LEADTIMES = [5, 10, 15, 20, 25, 30]
+AREA_BUFFER = 0.5
+VERSION = 2
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
 def main(download=True, process=False):
 
+    # TODO: flags / config file to toggle these things
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
     glofas_reforecast = glofas.GlofasReforecast()
@@ -43,38 +46,51 @@ def main(download=True, process=False):
     if download:
         # Remove the GloFAS station as it was not used originally
         ffwc_stations_for_download = FFWC_STATIONS.copy()
-        area = AreaFromStations(stations=ffwc_stations_for_download)
+        del ffwc_stations_for_download["Bahadurabad_glofas"]
+        area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
         glofas_reanalysis.download(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            area=area,
+            version=VERSION,
         )
         glofas_forecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
+            version=VERSION,
         )
         glofas_reforecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
+            version=VERSION,
+            split_by_month=True
         )
 
     if process:
         glofas_reanalysis.process(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            stations=FFWC_STATIONS,
+            version=VERSION,
         )
         glofas_forecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
+            version=VERSION,
         )
         glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
+            version=VERSION,
+            split_by_month=True
         )
 
 
