@@ -25,7 +25,23 @@ Some data sources are privately shared by partners, but most of the data is open
 By making our code and learnings open-source, we hope to encourage everyone to together reach more impactful anticipatory action. 
 We are always happy to discuss ideas, so don't hesitate to contact us. 
 
+## Documented analyses
+
+The pages below hold documented examples of some of the analyses that are held in this repository. Many of these pages are components of larger, potentially still in progress, pieces of work for an AA pilot. 
+
+#### Malawi
+- [Identifying historical dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/historical_dry_spells_description.html)
+- [Baseline overview of factors relating to dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/mwi_impact_summary.html)
+- [Forecasting dry spells](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/mwi_technical_background_pilot.html)
+
+#### Bangladesh
+- [Analysis of satellite imagery to identify past flooding](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bangladesh/validation/summary_flooding.html)
+
+#### Burkina Faso
+- [Baseline overview of risk and vulnerability](https://ocha-dap.github.io/pa-anticipatory-action/analyses/burkina_faso/notebooks/bfa_risk_overview.html)
+
 ## Getting started
+
 Create a virtual environment and install the requirements with 
    ``` bash
    pip install -r requirements.txt
@@ -41,32 +57,15 @@ The indicators and analyses folders contain more specific information on the dat
 
 ## Repository structure
 ```
-├── indicators              <- generalized code to retrieve and process data, compute indices, etc.
-|    ├── drought            <- contains indicator related scripts
-|    |    ├── data          <- this data is not saved on Github, but folder will be created when data is downloaded
-|    |    └── README        <- indicator specific information
-|    |
-|    ├── flooding
-|    ├── food_insecurity
-|    └── cholera
+
+├── analyses           <- analyses at the country level 
 |
-├── analyses                <- analyses at the country level 
-|    ├── country_template   <- contains standardized country directory structure
-|    |    ├── notebooks     <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
-|    |    ├── results       <- Results from analysis which may include model outputs, figures, reports.  
-|    |    ├── scripts       <- Scripts to perform generalized data processing and analysis steps. These scripts might refer to the indicators folders
-|    |    ├── data          <- Can include raw data as well as processed data
-|    |    ├── config.yml    <- config file to specify country specific variables   
-|    |    └── README.md     <- details about the project, instructions to reproduce the analysis
-|    |    
-|    ├── bangladesh
-|    ├── chad
-|    ├── ethiopia
-|    ├── malawi
-|    └── somalia
+├── dashboard          <- RShiny dashboard to show status of potential upcoming pilot activations
 |
-├── utils_general           <-- All-purpose code that is generalizable across indicators and/or countries
+├── src                <- data collection and processing scripts, generalized on a per-country or per-indicator level 
+|
 ├── requirements.txt
 ├── README
 └── LICENSE
+
 ```
