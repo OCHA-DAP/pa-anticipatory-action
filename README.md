@@ -25,7 +25,7 @@ Some data sources are privately shared by partners, but most of the data is open
 By making our code and learnings open-source, we hope to encourage everyone to together reach more impactful anticipatory action. 
 We are always happy to discuss ideas, so don't hesitate to contact us. 
 
-## Documented analyses
+## Examples
 
 The pages below hold documented examples of some of the analyses that are held in this repository. Many of these pages are components of larger, potentially still in progress, pieces of work for an AA pilot. 
 
