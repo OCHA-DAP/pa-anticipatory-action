@@ -296,16 +296,16 @@ nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were 
 
 # identify dry spells during rainy seasons per cell
 dry_spells_details$cell <- as.character(dry_spells_details$cell)
-dry_spells_during_rainy_season_list <- dry_spells_details %>%
-  left_join(rainy_seasons[, c('cell', 'season_approx', 'onset_date', 'cessation_date')], by = c('cell', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
-  mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season 
-  filter(confirmation_date_during_rainy_season == 1) %>% # only keep dry spells that were confirmed during rainy season even if started before onset or ended after cessation
-  dplyr::select(cell, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+                              dry_spells_during_rainy_season_list <- dry_spells_details %>%
+                                left_join(rainy_seasons[, c('cell', 'season_approx', 'onset_date', 'cessation_date')], by = c('cell', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
+                                mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season 
+                                filter(confirmation_date_during_rainy_season == 1) %>% # only keep dry spells that were confirmed during rainy season even if started before onset or ended after cessation
+                                dplyr::select(cell, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 # add adm names
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
-  left_join(cell_adms, by = c('cell'= 'cell')) %>%
-  dplyr::select(cell, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+                                left_join(cell_adms, by = c('cell'= 'cell')) %>%
+                                dplyr::select(cell, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 # dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% 
 #                                         left_join(cell_adms, by = c('cell'= 'cell')) %>%

@@ -340,6 +340,36 @@ df$rainy_season_dry_spell <- 1
 #write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm2.csv"), row.names = FALSE)
 #write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm1.csv"), row.names = FALSE)
 
+
+##############
+# build list of rainy season dates per cell
+##############
+rainy_seasons_detail.nonas <- rainy_seasons_detail %>% 
+                                  dplyr::select(cell, season_approx, onset_date, cessation_date, ADM2_PCODE) %>%
+                                  drop_na() 
+  
+# build dataframe of dates per cell
+df.rain <- data.frame()
+
+# extract lists of dates per cell
+for (i in seq_along(1:nrow(rainy_seasons_detail.nonas))) {
+  
+  row_list <- listRSDaysPerPixel(i, ADM2_PCODE)
+  
+  # add individual row to dataframe
+  df.rain <- rbind(df.rain, row_list)
+}
+
+# identify dates as being during a cell's rainy season & a dry spell 
+df.rain$rainy_season <- 1
+
+# save
+#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm1.csv"), row.names = FALSE)
+
+
+
+
 ##############
 # build list of dates, across all cells, with binary dry spell/no
 ##############
@@ -351,6 +381,33 @@ cell_by_day$cell <- as.character(cell_by_day$cell)
 complete_list <- cell_by_day %>%
                   left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
                   left_join(cell_adms[,c('cell', 'ADM2_EN')], by = c('cell')) # add back adm names
+
+#complete_list <- cell_by_day %>%
+#                    left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
+#                    left_join(cell_adms[,c('cell', 'ADM1_EN')], by = c('cell')) # add back adm names
+
+nrow(subset(complete_list, rainy_season_dry_spell == 1)) == nrow(df) # check 
+
+# assign 0 to records without a dry spell
+complete_list$rainy_season_dry_spell <- complete_list$rainy_season_dry_spell %>% replace_na(0)
+
+prop.table(table(complete_list$rainy_season_dry_spell))
+
+#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm1.csv"), row.names = FALSE)
+
+
+##############
+# build list of dates, across all cells, with binary rainy season/no
+##############
+
+day_list <- data.frame(date = seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'day'))
+cell_by_day <- crossing(day_list, cell_ids) # create list with all day * cell_id combinations
+cell_by_day$cell <- as.character(cell_by_day$cell)
+
+complete_list <- cell_by_day %>%
+  left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
+  left_join(cell_adms[,c('cell', 'ADM2_EN')], by = c('cell')) # add back adm names
 
 #complete_list <- cell_by_day %>%
 #                    left_join(df[,c('cell', 'date', 'rainy_season_dry_spell')], by = c('date', 'cell')) %>%
