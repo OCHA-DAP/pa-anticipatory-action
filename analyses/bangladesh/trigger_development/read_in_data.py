@@ -18,6 +18,9 @@ GLOFAS_DIR = DATA_DIR / "processed/bangladesh/GLOFAS_Data"
 STATION = "Bahadurabad_glofas"
 ffwc_dir = DATA_DIR / 'exploration/bangladesh/FFWC_Data'
 
+# Event definition
+EVENT_WATER_THRESH = 19.5 + 0.85
+EVENT_NDAYS_THRESH = 3
 
 def get_glofas_reanalysis(version: int = 3):
     glofas_reanalysis = glofas.GlofasReanalysis()
@@ -116,7 +119,6 @@ def get_da_glofas_summary(da_glofas):
         var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
         for var_name, percentile_value in percentile_dict.items()
     }
-
     return xr.Dataset(
         data_vars=data_vars_dict,
         coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime),
@@ -126,7 +128,7 @@ def get_da_glofas_summary(da_glofas):
 def read_in_ffwc():
     # Read in data from Sazzad that has forecasts
     ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
-    ffwc_leadtimes = [24, 48, 72, 96, 120]
+    ffwc_leadtimes = [1, 2, 3, 4, 5]
 
     # Need to combine the three sheets
     df_ffwc_wl_dict = pd.read_excel(
@@ -137,7 +139,7 @@ def read_in_ffwc():
         .append(df_ffwc_wl_dict['2018'])
         .append(df_ffwc_wl_dict['2019'])
         .rename(columns={
-        f'{leadtime} hrs': f'ffwc_{leadtime}day'
+        f'{leadtime*24} hrs': f'ffwc_{leadtime}day'
         for leadtime in ffwc_leadtimes
     })).drop(columns=['Observed WL'])  # drop observed because we will use the mean later
     # Convert date time to just date
@@ -170,3 +172,26 @@ def read_in_ffwc():
     df_ffwc_wl.update(df_ffwc_wl_full, overwrite=False)
 
     return df_ffwc_wl
+
+
+def get_events(df_ffwc_wl):
+    groups = get_groups_above_threshold(df_ffwc_wl['observed'],
+                                        EVENT_WATER_THRESH)
+
+    # Only take those that are 3 consecutive days
+    groups = [group for group in groups
+              if group[1] - group[0] >= EVENT_NDAYS_THRESH]
+
+    # Mark the first date in each series as TP
+    events = [group[0] + EVENT_NDAYS_THRESH - 1 for group in groups]
+
+    df_ffwc_wl['event'] = False
+    df_ffwc_wl['event'][events] = True
+
+    return df_ffwc_wl
+
+
+def get_groups_above_threshold(observations, threshold):
+    return np.where(np.diff(np.hstack(([False],
+                                           observations > threshold,
+                                           [False]))))[0].reshape(-1, 2)

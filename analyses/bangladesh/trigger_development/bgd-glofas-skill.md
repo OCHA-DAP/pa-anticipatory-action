@@ -125,7 +125,7 @@ def plot_skill(df_crps, division_key=None, add_line_from_website=False,
     fig, ax = plt.subplots()
     for version, ls in zip([2,3], [':', '--']):
         df = df_crps[version].copy()
-        for i, subset in enumerate([None, 'rainy', 'dry']):
+        for i, subset in enumerate([None, 'rainy']):#, 'dry']):
             ykey = f'crps_{subset}' if subset is not None else 'crps'
             y = df[ykey]
             if division_key is not None:
@@ -136,7 +136,7 @@ def plot_skill(df_crps, division_key=None, add_line_from_website=False,
     if add_line_from_website:
         ax.plot(df_skill[0], df_skill[1], ls='-', c='k', lw=0.5, label='from website')
     # Add colours to legend
-    for i, subset in enumerate(['full year', 'rainy', 'dry']):
+    for i, subset in enumerate(['full year', 'rainy']):#, 'dry']):
         ax.plot([], [], c=f'C{i}', label=subset)
     ax.set_title("GloFAS forecast skill at Bahadurabad:\n 1999-2018 reforecast")
     ax.set_xlabel("Lead time (days)")
