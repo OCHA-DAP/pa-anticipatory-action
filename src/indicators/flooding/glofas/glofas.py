@@ -211,7 +211,11 @@ class Glofas:
         return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
 
     def read_processed_dataset(
-        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
+        self,
+        country_name: str,
+        country_iso3: str,
+        version: int = DEFAULT_VERSION,
+        leadtime: int = None,
     ):
         filepath = self._get_processed_filepath(
             country_name=country_name,

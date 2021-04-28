@@ -16,7 +16,8 @@ from src.indicators.flooding.glofas.area import AreaFromStations, Station
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-# Bahadurabad_glofas corresponds to the control point identified here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
+# Bahadurabad_glofas corresponds to the control point identified here:
+# https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_NAME = "bangladesh"
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
