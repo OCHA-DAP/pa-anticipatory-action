@@ -44,6 +44,16 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
 
 ```
 
+## Definitions
+This analysis
+
+- Only looks at the Southern region
+- Only looks at the months of December, January, February
+- Includes all dry spells, regardless of whether they occurred during the rainy season or not (only relevant for December)
+- Classifies a month as having experienced a dry spell, if at least **7** days of that month were within a dry spell
+- Computes the occurence of a dry spell and the monthly precipitation as the mean value of all cells within an admin2
+- Classifies a match between monthly precipitation and a dry spell, if they occurred during the same month **and** in the same admin2.
+
 ## What is the monthly precipitation in months during which a dry spell occurred? 
 The figure below shows the monthly precipitation, colored by whether a dry spell started during that month. 
 From this figure we can see that 
@@ -51,28 +61,33 @@ From this figure we can see that
 1) Months with a dry spell do on average have less precipitation than the months during which no dry spell occurred
 2) Nevertheless, many months with no dry spell also have precipitation in the same range as those months with a dry spell. 
 
-![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_distribution_southern.png')`){ width=70% }
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_distribution_facet_decjanfeb_southern_ds7.png')`)
 
-We can further divide this distribution by month. We can see that precipitation patterns clearly differ by month, which is expected. Moreover, the figures show that the separability of the occurrence of a dry spell differs by month.       
-Note: during December one dry spell occurred which the plot is somehow not showing. During this month there was 170 mm of rainfall. 
+We can see that precipitation patterns clearly differ by month, which is expected. Moreover, the figures show that the separability of the occurrence of a dry spell differs by month. This becomes more clear when looking at a boxplot
 
-![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_distribution_facet_month_southern.png')`)
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds7.png')`)
 
 ## What is a sensible threshold for the amount of monthly precipitation? 
 In order to use the monthly precipitation as a proxy for the occurence of a dry spell, we need to set a threshold on the amount of monthly precipitation. I.e. if the precipitation is forecasted to be lower than X, we trigger and else we don't. 
 
-One method to get a sense for this, is by investigating a range of thresholds, and for each of them looking at the percentage of months with a dry spell that are below the threshold, and the percentage of months without a dry spell that are above the threshold. This is shown in the figure below. The figure shows that there is a decent trade-off between sensitivity and specificity around a threshold of 100 mms.    
+One method to get a sense for this, is by investigating a range of thresholds, and for each of them looking at the percentage of months with a dry spell that are below the threshold, and the percentage of months without a dry spell that are above the threshold. This is shown in the figure below. The figure shows that there is the trade-off between sensitivity and specificity depends on the month. Moreover, there is better separability during January and February than during December.    
 Note: there is probably a better way to visualize this
 
-![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_threshold_categorized_southern.png')`)
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_threshold_decjanfeb_southern_ds7.png')`)
 
 ## What is the co-occurrence of <=100 mm monthly precipitation and dry spells? 
 To further understand the co-occurence of low amounts of monthly precipitation and dry spells, it is important to look at the temporal distribution. To do so, the below figure shows a heatmap indicating the months with less than 100 mm of precipitation and the occurrence of dry spells. 
 From this figure it becomes clear that there were 5 periods during which many districts experienced a dry spell. During 4 out of those 5 periods, there was also less than 100 mm of monthly precipitation in most of the districts. The 5th period, during January 2010, received more rain (between 140 and 160 mm depending on the district). 
 
 Moreover, we can see that there are several events where many districts received less than 100 mm of rainfall, but no dry spell was observed. These events mainly occur during March.
+Note: need to update this figure to include all dry spells, also those outside the rainy season
 
 ![](`r paste0(exploration_dry_spell_dir,'mwi_viz_hm_dry_spell_monthly_precip_mean_th100_adm2_southern.png')`)
+
+## Forecasts
+This image shows the resolution of ECMWF's forecast. Due to the low resolution combined with the high uncertainy of long-term forecasts, we should look at admin1 and not admin2
+
+![](`r paste0(exploration_dry_spell_dir,'ecmwf_forecast_resolution_mwi.png')`)
 
 ## Next steps
 - Discuss better method to determine threshold? 
