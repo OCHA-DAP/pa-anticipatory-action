@@ -246,15 +246,11 @@ class GlofasReanalysis(Glofas):
         country_iso3: str,
         area: Area,
         version: int = DEFAULT_VERSION,
-        year_min: int = None,
-        year_max: int = None
     ):
-        year_min = self.year_min if year_min is None else year_min
-        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reanalysis v{version} for years {year_min} - {year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {self.year_min} - {self.year_max}"
         )
-        for year in range(year_min, year_max + 1):
+        for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
             super()._download(
                 country_name=country_name,

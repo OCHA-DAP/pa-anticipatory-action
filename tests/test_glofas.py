@@ -1,6 +1,4 @@
 # If you run black on this file you will be sorry
-from unittest import mock
-
 import numpy as np
 import xarray as xr
 
