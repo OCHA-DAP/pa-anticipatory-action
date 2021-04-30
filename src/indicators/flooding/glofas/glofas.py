@@ -160,25 +160,25 @@ class Glofas:
         """
         ds_list = []
         for data_type in ["cf", "pf"]:
-            ds = xr.open_mfdataset(
+            with xr.open_mfdataset(
                 filepath_list,
                 engine="cfgrib",
                 backend_kwargs={
                     "indexpath": "",
                     "filter_by_keys": {"dataType": data_type},
                 },
-            )
-            # Delete history attribute in order to merge
-            del ds.attrs["history"]
-            # Extra processing require for control forecast
-            if data_type == "cf":
-                ds = expand_dims(
-                    ds=ds,
-                    dataset_name="dis24",
-                    coord_names=["number", "time", "latitude", "longitude"],
-                    expansion_dim=0,
-                )
-            ds_list.append(ds)
+            ) as ds:
+                # Delete history attribute in order to merge
+                del ds.attrs["history"]
+                # Extra processing require for control forecast
+                if data_type == "cf":
+                    ds = expand_dims(
+                        ds=ds,
+                        dataset_name="dis24",
+                        coord_names=["number", "time", "latitude", "longitude"],
+                        expansion_dim=0,
+                    )
+                ds_list.append(ds)
         ds = xr.combine_by_coords(ds_list)
         return ds
 
@@ -223,7 +223,7 @@ class Glofas:
             version=version,
             leadtime=leadtime,
         )
-        return xr.open_dataset(filepath)
+        return xr.load_dataset(filepath)
 
 
 class GlofasReanalysis(Glofas):
@@ -278,12 +278,15 @@ class GlofasReanalysis(Glofas):
         ]
         # Read in the dataset
         logger.info(f"Reading in {len(filepath_list)} files")
-        ds = xr.open_mfdataset(
+
+        with xr.open_mfdataset(
             filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}
-        )
-        # Create a new dataset with just the station pixels
-        logger.info("Looping through stations, this takes some time")
-        ds_new = _get_station_dataset(stations=stations, ds=ds, coord_names=["time"])
+        ) as ds:
+            # Create a new dataset with just the station pixels
+            logger.info("Looping through stations, this takes some time")
+            ds_new = _get_station_dataset(
+                stations=stations, ds=ds, coord_names=["time"]
+            )
         # Write out the new dataset to a file
         self._write_to_processed_file(
             country_name=country_name,
