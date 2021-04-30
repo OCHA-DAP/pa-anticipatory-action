@@ -1,4 +1,6 @@
 # If you run black on this file you will be sorry
+from unittest import mock
+
 import numpy as np
 import xarray as xr
 
@@ -83,3 +85,15 @@ def test_expand_dims():
     assert 'z' not in ds.dims.keys()
     ds = glofas.expand_dims(ds=ds, dataset_name='var_a', coord_names=['z', 'x', 'y'], expansion_dim=0)
     assert 'z' in ds.dims.keys()
+
+
+@mock.patch('src.indicators.flooding.glofas.glofas.cdsapi.Client.retrieve')
+@mock.patch('src.indicators.flooding.glofas.glofas.Path.mkdir')
+@mock.patch.dict('src.indicators.flooding.glofas.glofas.os.environ',
+                 {'AA_DATA_DIR': '/tmp'})
+def test_reanalysis_download(fake_mkdir,  fake_retrieve):
+    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_reanalysis.download('fake_country', 'abc', FAKE_AREA,
+                               year_min=2000, year_max=2000)
+    #fake_retrieve.assert_called_with(name='cems-glofas-historical')
+    #fake_retrieve.assert_called_with(name='cems-glofas-historical')

@@ -15,10 +15,9 @@ from src.indicators.flooding.glofas.area import Area, Station
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-RAW_DATA_DIR = DATA_DIR / "raw"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
+RAW_DATA_DIR = "raw"
+PROCESSED_DATA_DIR = "processed"
 GLOFAS_DIR = Path("GLOFAS_Data")
-CDSAPI_CLIENT = cdsapi.Client()
 DEFAULT_VERSION = 3
 HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
@@ -85,7 +84,7 @@ class Glofas:
             return filepath
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.debug(f"Querying for {filepath}...")
-        CDSAPI_CLIENT.retrieve(
+        cdsapi.Client().retrieve(
             name=self.cds_name,
             request=self._get_query(
                 area=area,
@@ -112,7 +111,8 @@ class Glofas:
         leadtime: int = None,
     ):
         directory = (
-            RAW_DATA_DIR
+            DATA_DIR
+            / RAW_DATA_DIR
             / country_name
             / GLOFAS_DIR
             / f"version_{version}"
@@ -197,6 +197,8 @@ class Glofas:
             leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
+        # Netcdf seems to have problems overwriting; delete the file if it exists
+        filepath.unlink(missing_ok=True)
         logger.info(f"Writing to {filepath}")
         ds.to_netcdf(filepath)
         return filepath
@@ -208,7 +210,7 @@ class Glofas:
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
+        return DATA_DIR / PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
 
     def read_processed_dataset(
         self,
@@ -244,11 +246,15 @@ class GlofasReanalysis(Glofas):
         country_iso3: str,
         area: Area,
         version: int = DEFAULT_VERSION,
+        year_min: int = None,
+        year_max: int = None
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reanalysis v{version} for years {self.year_min} - {self.year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {year_min} - {year_max}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             super()._download(
                 country_name=country_name,
@@ -300,7 +306,7 @@ class GlofasForecast(Glofas):
     def __init__(self):
         super().__init__(
             year_min={2: 2019, 3: 2020},
-            year_max=2021,
+            year_max=2020,
             cds_name="cems-glofas-forecast",
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
             system_version_minor={2: 1, 3: 1},
