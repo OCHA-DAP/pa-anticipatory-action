@@ -13,6 +13,8 @@ sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
 from src.bangladesh import get_glofas_data as ggd
 
+pd.options.mode.chained_assignment = None
+
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 GLOFAS_DIR = DATA_DIR / "processed/bangladesh/GLOFAS_Data"
 STATION = "Bahadurabad_glofas"

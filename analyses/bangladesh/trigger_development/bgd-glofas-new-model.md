@@ -97,9 +97,9 @@ df_glofas = da_glofas_reanalysis[version].to_dataframe()[[rd.STATION]].rename(co
 df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 
 # Add glofas forecasts
-glofas_columns = ['median']
-#'1sig-', '2sig-', '3sig-', 
-#'1sig+', '2sig+', '3sig+']
+glofas_columns = ['median',
+'1sig-', '2sig-', '3sig-', 
+'1sig+', '2sig+', '3sig+']
 for leadtime in da_glofas_reforecast_summary.leadtime:
     df_glofas_reforecast = da_glofas_reforecast_summary.sel(leadtime=leadtime).to_dataframe()[glofas_columns]
     df_glofas_forecast = da_glofas_forecast_summary.sel(leadtime=leadtime).to_dataframe()[glofas_columns]
@@ -121,23 +121,39 @@ df_final = df_final[df_final.index >= df_ffwc_wl.index[0]]
 GLOFAS_DETECTION_WINDOW_AHEAD = 30
 GLOFAS_DETECTION_WINDOW_BEHIND = 5
 
+GLOFAS_MIN_DAYS_ABOVE_THRESH = 3
+
 def get_glofas_detections(glofas_var, thresh):
     groups = rd.get_groups_above_threshold(glofas_var, thresh)
-    return [group[0] for group in groups]
+    return [group[0] for group in groups
+            if group[1] - group[0] >= GLOFAS_MIN_DAYS_ABOVE_THRESH   
+           ]
 
-def get_detection_stats(glofas_var_name, thresh_array):
+def get_detection_stats(df_final, glofas_var_name, thresh_array, use_glofas_events=False,
+                       window_behind=GLOFAS_DETECTION_WINDOW_BEHIND,
+                       window_ahead=GLOFAS_DETECTION_WINDOW_AHEAD):
     df_ds = pd.DataFrame(data={'thresh': thresh_array, 'TP': 0, 'FN': 0, 'FP': 0, 'day_offset': None})
     nthresh = len(thresh_array)
     # Drop any NAs in the glofas columns
-    df = df_final[['observed', 'event', glofas_var_name]]
+    if use_glofas_events:
+        df = df_final[['glofas_observed', glofas_var_name]]
+    else:
+        df = df_final[['observed', 'event', glofas_var_name]]
+        event_var_name = 'event'
     df = df[df[glofas_var_name].notna()]
     for ithresh, row in df_ds.iterrows():
+        if use_glofas_events:
+            groups = get_glofas_detections(df['glofas_observed'], row['thresh'])
+            events = [group + GLOFAS_MIN_DAYS_ABOVE_THRESH - 1 for group in groups]
+            event_var_name = f'event_glofas_{ithresh}'
+            df[event_var_name] = False
+            df[event_var_name][events] = True
         detections = get_glofas_detections(df[glofas_var_name], row['thresh'])
         detected_event_dates = []
         day_offset = {}
         for detection in detections:
-            detected_events = df['event'][detection-GLOFAS_DETECTION_WINDOW_BEHIND:
-                                    detection+GLOFAS_DETECTION_WINDOW_AHEAD]
+            detected_events = df[event_var_name][detection-window_behind:
+                                    detection+window_ahead]
             detected_event_dates += (
                 list(detected_events[detected_events==True].index))
             if sum(detected_events) == 0:
@@ -148,10 +164,10 @@ def get_detection_stats(glofas_var_name, thresh_array):
                 date_of_event = detected_events.index[idx]
                 if date_of_event not in day_offset:
                     day_offset[date_of_event] = []
-                day_offset[date_of_event] += [idx - GLOFAS_DETECTION_WINDOW_BEHIND]
+                day_offset[date_of_event] += [idx - window_behind]
         # Get the unique event dates
         detected_event_dates = list(set(detected_event_dates))
-        event_dates = df.index[df['event']]
+        event_dates = df.index[df[event_var_name]]
         events_are_detected = [event_date in detected_event_dates for event_date in event_dates]
         df_ds.at[ithresh, 'TP'] = sum(events_are_detected)
         df_ds.at[ithresh, 'FN'] = sum([not event_detected for event_detected in events_are_detected])
@@ -170,8 +186,8 @@ def get_more_stats(df):
 ```
 
 ```python
-def plot_stats(glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
-    df_ds = get_detection_stats(glofas_var_name,
+def plot_stats(df_final, glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
+    df_ds = get_detection_stats(df_final, glofas_var_name,
                                 thresh_array)
     df_ds = get_more_stats(df_ds)
 
@@ -198,15 +214,15 @@ def plot_stats(glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
     ax.set_ylabel('Number')
     
     
-def print_stats_for_val(glofas_var_name, thresh_array, trigger_val):
-    df_ds = get_detection_stats(glofas_var_name,
+def print_stats_for_val(df_final, glofas_var_name, thresh_array, trigger_val):
+    df_ds = get_detection_stats(df_final, glofas_var_name,
                                 thresh_array)
     i = np.argmin(np.abs(thresh_array - trigger_val))
     print(f'Stats for trigger value of {trigger_val}:')
     print(f'TP: {df_ds["TP"][i]:.0f}, FP: {df_ds["FP"][i]:.0f}, FN: {df_ds["FN"][i]:.0f}')
     
-def plot_offset_days(glofas_var_name, thresh_array):
-    df_ds = get_detection_stats(glofas_var_name, thresh_array)
+def plot_offset_days(df_final, glofas_var_name, thresh_array):
+    df_ds = get_detection_stats(df_final, glofas_var_name, thresh_array)
     fig, ax = plt.subplots()
     for i, row in df_ds.iterrows():
         y = row['day_offset_reduced']
@@ -224,17 +240,17 @@ def plot_offset_days(glofas_var_name, thresh_array):
 thresh_array = np.arange(70000, 110000, 500)
 glofas_var_name = 'glofas_observed'
 
-plot_stats(glofas_var_name, thresh_array)
-plot_offset_days(glofas_var_name, thresh_array)
+plot_stats(df_final, glofas_var_name, thresh_array)
+plot_offset_days(df_final, glofas_var_name, thresh_array)
 
 # Print out last year's trigger stats for 1 in 5 year val of 97000
-print_stats_for_val(glofas_var_name, thresh_array, THRESH_1IN5)
+print_stats_for_val(df_final, glofas_var_name, thresh_array, THRESH_1IN5)
 
 
 ```
 
 ```python
-def plot_years(df_final, glofas_var, thresh, glofas_xlims):
+def plot_years(df_final, thresh, glofas_var='glofas_observed', glofas_xlims=(40000, 140000), forecast_var=None):
     fig, axs = plt.subplots(17, 2, figsize=(10, 30))
     fig.autofmt_xdate()
     axs = axs.flat
@@ -252,7 +268,6 @@ def plot_years(df_final, glofas_var, thresh, glofas_xlims):
         ax1.set_xlim(datetime(year, 3, 1), datetime(year, 10, 31))
         ax1.set_ylim(19.0, 21.5)
         ax1.set_title(year, pad=0)
-
         ax2 = ax1.twinx()
         y2 = df[glofas_var]
         ax2.plot(x, y2, '-g')
@@ -262,78 +277,71 @@ def plot_years(df_final, glofas_var, thresh, glofas_xlims):
             a = detection - GLOFAS_DETECTION_WINDOW_BEHIND
             b = detection + GLOFAS_DETECTION_WINDOW_AHEAD
             ax2.plot(x[a:b], y2[a:b], '-y', lw=3)
+            ax2.plot(x[detection], y2[detection], 'x', c='m')   
+        if forecast_var is not None:
+            y3 = df[forecast_var]
+            ax2.plot(x, y3, '-g', alpha=0.5)
+            for detection in get_glofas_detections(y3, thresh):
+                a = detection - GLOFAS_DETECTION_WINDOW_BEHIND
+                b = detection + GLOFAS_DETECTION_WINDOW_AHEAD
+                ax2.plot(x[a:b], y3[a:b], '-c', lw=3, alpha=0.5)
+                ax2.plot(x[detection], y3[detection], '^', c='m')
         iax += 1
 
 
-plot_years(df_final, 'glofas_observed', THRESH_1IN5, (40000, 140000))
+plot_years(df_final, THRESH_1IN5)
 
 ```
 
 ### Forecasts
 
 ```python
-def get_detection_stats(glofas_var_name, thresh_array):
-    df_ds = pd.DataFrame(data={'thresh': thresh_array, 'TP': 0, 'FN': 0, 'FP': 0, 'day_offset': None})
-    nthresh = len(thresh_array)
-    # Drop any NAs in the glofas columns
-    df = df_final[['observed', 'event', glofas_var_name]]
-    df = df[df[glofas_var_name].notna()]
-    print(sum(df['event']))
-    print(df.index[df['event']==True])
-    for ithresh, row in df_ds.iterrows():
-        detections = get_glofas_detections(df[glofas_var_name], row['thresh'])
-        detected_event_dates = []
-        day_offset = {}
-        for detection in detections:
-            detected_events = df['event'][detection-GLOFAS_DETECTION_WINDOW_BEHIND:
-                                    detection+GLOFAS_DETECTION_WINDOW_AHEAD]
-            detected_event_dates += (
-                list(detected_events[detected_events==True].index))
-            if sum(detected_events) == 0:
-                df_ds.at[ithresh, 'FP'] += 1
-            # Get index where events are detected
-            idx_detection = np.where(detected_events)[0]
-            for idx in idx_detection:
-                date_of_event = detected_events.index[idx]
-                if date_of_event not in day_offset:
-                    day_offset[date_of_event] = []
-                day_offset[date_of_event] += [idx - GLOFAS_DETECTION_WINDOW_BEHIND]
-        # Get the unique event dates
-        detected_event_dates = list(set(detected_event_dates))
-        event_dates = df.index[df['event']]
-        events_are_detected = [event_date in detected_event_dates for event_date in event_dates]
-        df_ds.at[ithresh, 'TP'] = sum(events_are_detected)
-        df_ds.at[ithresh, 'FN'] = sum([not event_detected for event_detected in events_are_detected])
-        df_ds.at[ithresh, 'day_offset'] = day_offset.copy()
-    # Take the minimum value for each event detection
-    df_ds['day_offset_reduced'] = df_ds['day_offset'].apply(lambda x: [value[0] for value in x.values() if x is not None])
-    return df_ds
+df_final.columns
+```
 
+```python
+leadtimes = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
+thresh_dict = {
+    #1.5: 77000.0,
+    2:  83000.0,
+    5: 97000.0,
+    10: 105000.0,
+    #20: 108000.0
+}
+df_forecast_dict = {}
+var = 'median'
+var = '1sig-'
 
-leadtimes = [5, 10, 11, 12, 13, 14, 15]
-df_forecast = pd.DataFrame(data={'leadtime': leadtimes, 'TP': 0, 'FP': 0, 'FN': 0})
-thresh_array = [THRESH_1IN5]
+for rp, thresh in thresh_dict.items():
+    df_forecast = pd.DataFrame(data={'leadtime': leadtimes, 'TP': 0, 'FP': 0, 'FN': 0})
+    for irow, row in df_forecast.iterrows():
+        glofas_var_name = f'glofas_{row["leadtime"]}day_{var}'
+        df_ds = get_detection_stats(df_final, glofas_var_name, [thresh], use_glofas_events=True)
+        for q in ['TP', 'FP',  'FN']:
+            df_forecast.at[irow, q] = df_ds[q][0]
+    df_forecast['precision'] = df_forecast['TP'] / (df_forecast['TP'] + df_forecast['FP'])
+    df_forecast['recall'] = df_forecast['TP'] / (df_forecast['TP'] + df_forecast['FN'])
+    df_forecast_dict[rp] = df_forecast
 
-for irow, row in df_forecast.iterrows():
-    glofas_var_name = f'glofas_{row["leadtime"]}day_median'
-    df_ds = get_detection_stats(glofas_var_name, thresh_array)
-    print(df_ds)
-    for q in ['TP', 'FP',  'FN']:
-        df_forecast.at[irow, q] = df_ds[q][0]
     
-df_forecast
-
-```
-
-```python
-plot_years(df_final, 'glofas_5day_median', THRESH_1IN5, (40000, 140000))
-
-```
-
-```python
-
-```
-
-```python
-
+    
+for ls_dict, offset_frac in zip([
+    {'TP': '-', 'FP': '--', 'FN': ':'},
+    {'precision': '-', 'recall': '--'}
+],
+    [0.1, 0.01]
+):
+    fig, ax = plt.subplots()
+    i = 0
+    for rp, df in df_forecast_dict.items():
+        for iq, q in enumerate(ls_dict.keys()):
+            ax.plot(df['leadtime'], df[q] + offset_frac * i + offset_frac /2 * iq, 
+                    ls=ls_dict[q], marker='o',  c=f'C{i}')
+        ax.plot([], [], c=f'C{i}', label=f'RP: 1 in {rp} y')
+        i += 1
+    for q in ls_dict.keys():
+        ax.plot([], [], c='k', ls=ls_dict[q], label=q)
+    ax.legend()
+    ax.set_xlabel('Lead time (days)')
+    ax.set_ylabel('Number')
 ```
