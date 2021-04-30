@@ -20,7 +20,7 @@ DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 SKILL_DIR = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
 SKILL_FILE = 'forecast_skill.csv'
 LEADTIMES_V2 = [5, 10, 15, 20, 25, 30]
-THRESH_1IN5 = 97000
+MAIN_VERSION = 3
 ```
 
 ### Create GloFAS objects
@@ -64,14 +64,19 @@ def get_return_period_function(observations):
     df_rp['rank'] = np.arange(n) + 1
     df_rp['exceedance_probability'] = df_rp['rank'] / (n+1)
     df_rp['rp'] = 1 / df_rp['exceedance_probability']
-
     return interp1d(df_rp['rp'], df_rp['discharge'])
 
+rp_dict = {}
 for version in [2,3]:
     f_rp = get_return_period_function(da_glofas_reanalysis[version])
     print(f'Version {version}')
     for year in [1.5, 2, 5, 10, 20]:
-          print(year, np.round(f_rp(year), -3))
+        val = 5000*np.round(f_rp(year) / 5000)
+        print(year, val)
+        if version == MAIN_VERSION:
+            rp_dict[year] = val
+# Make 1 in 5 year always 100,000
+rp_dict[5] = 100000
 ```
 
  ### Read in FFWC data with events
@@ -83,17 +88,15 @@ df_ffwc_wl = rd.get_events(rd.read_in_ffwc())
 ### Add GloFAS to FFWC
 
 ```python
-# Use new version
-version = 3
-da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast[version])
-da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast_interp[version])
+da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast[MAIN_VERSION])
+da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast_interp[MAIN_VERSION])
 
 
 # Create final df
 df_final = df_ffwc_wl.copy()
 
 # Add glofas obs
-df_glofas = da_glofas_reanalysis[version].to_dataframe()[[rd.STATION]].rename(columns={rd.STATION: 'glofas_observed'})
+df_glofas = da_glofas_reanalysis[MAIN_VERSION].to_dataframe()[[rd.STATION]].rename(columns={rd.STATION: 'glofas_observed'})
 df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 
 # Add glofas forecasts
@@ -125,7 +128,7 @@ GLOFAS_MIN_DAYS_ABOVE_THRESH = 3
 
 def get_glofas_detections(glofas_var, thresh):
     groups = rd.get_groups_above_threshold(glofas_var, thresh)
-    return [group[0] for group in groups
+    return [group[0] + GLOFAS_MIN_DAYS_ABOVE_THRESH - 1 for group in groups
             if group[1] - group[0] >= GLOFAS_MIN_DAYS_ABOVE_THRESH   
            ]
 
@@ -243,8 +246,8 @@ glofas_var_name = 'glofas_observed'
 plot_stats(df_final, glofas_var_name, thresh_array)
 plot_offset_days(df_final, glofas_var_name, thresh_array)
 
-# Print out last year's trigger stats for 1 in 5 year val of 97000
-print_stats_for_val(df_final, glofas_var_name, thresh_array, THRESH_1IN5)
+# Print out last year's trigger stats for 1 in 5 year val
+print_stats_for_val(df_final, glofas_var_name, thresh_array, rp_dict[5])
 
 
 ```
@@ -289,15 +292,11 @@ def plot_years(df_final, thresh, glofas_var='glofas_observed', glofas_xlims=(400
         iax += 1
 
 
-plot_years(df_final, THRESH_1IN5)
+plot_years(df_final, rp_dict[5])
 
 ```
 
 ### Forecasts
-
-```python
-df_final.columns
-```
 
 ```python
 leadtimes = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
@@ -310,7 +309,7 @@ thresh_dict = {
 }
 df_forecast_dict = {}
 var = 'median'
-var = '1sig-'
+#var = '1sig-'
 
 for rp, thresh in thresh_dict.items():
     df_forecast = pd.DataFrame(data={'leadtime': leadtimes, 'TP': 0, 'FP': 0, 'FN': 0})
@@ -344,4 +343,14 @@ for ls_dict, offset_frac in zip([
     ax.legend()
     ax.set_xlabel('Lead time (days)')
     ax.set_ylabel('Number')
+```
+
+```python
+# Between 10 and 15 days, the number of TP and FN is the same.
+# Only difference is number of FP:
+df_forecast_dict[5][['leadtime', 'FP']]
+```
+
+```python
+
 ```
