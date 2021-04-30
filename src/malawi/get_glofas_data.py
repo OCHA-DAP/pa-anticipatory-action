@@ -18,6 +18,8 @@ COUNTRY_NAME = "malawi"
 COUNTRY_ISO3 = "mwi"
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 STATIONS = {
+    "glofas_1": Station(lat=-16.55, lon=35.15),
+    "glofas_2": Station(lat=-16.25, lon=34.95),
 }
 SHAPEFILE_BASE_DIR = (
     Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
@@ -32,7 +34,7 @@ logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=True):
+def main(download=False, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
