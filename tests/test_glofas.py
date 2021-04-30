@@ -87,13 +87,28 @@ def test_expand_dims():
     assert 'z' in ds.dims.keys()
 
 
+from pathlib import Path
 @mock.patch('src.indicators.flooding.glofas.glofas.cdsapi.Client.retrieve')
 @mock.patch('src.indicators.flooding.glofas.glofas.Path.mkdir')
-@mock.patch.dict('src.indicators.flooding.glofas.glofas.os.environ',
-                 {'AA_DATA_DIR': '/tmp'})
+@mock.patch.object(glofas, 'DATA_DIR', Path('/tmp'))
 def test_reanalysis_download(fake_mkdir,  fake_retrieve):
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_reanalysis.download('fake_country', 'abc', FAKE_AREA,
                                year_min=2000, year_max=2000)
-    #fake_retrieve.assert_called_with(name='cems-glofas-historical')
-    #fake_retrieve.assert_called_with(name='cems-glofas-historical')
+    expected_args= {
+        'name': 'cems-glofas-historical',
+        'request': {
+            'variable': 'river_discharge_in_the_last_24_hours',
+                        'format': 'grib',
+    'dataset': ['consolidated_reanalysis'],
+    'hyear': '2000',
+    'hmonth': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
+    'hday': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15',
+             '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
+    'area': [1, -4, -2, 3],
+    'system_version': 'version_3_1',
+    'hydrological_model': 'lisflood'
+        },
+    'target': Path('/tmp/raw/fake_country/GLOFAS_Data/version_3/cems-glofas-historical/abc_cems-glofas-historical_v3_2000.grib')
+    }
+    fake_retrieve.assert_called_with(**expected_args)
