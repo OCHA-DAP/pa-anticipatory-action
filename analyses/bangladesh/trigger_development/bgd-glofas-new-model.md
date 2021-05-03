@@ -70,12 +70,13 @@ rp_dict = {}
 for version in [2,3]:
     f_rp = get_return_period_function(da_glofas_reanalysis[version])
     print(f'Version {version}')
-    for year in [1.5, 2, 5, 10, 20]:
+    for year in [1.5, 2, 3, 4, 5, 10, 20]:
         val = 5000*np.round(f_rp(year) / 5000)
         print(year, val)
         if version == MAIN_VERSION:
             rp_dict[year] = val
 # Make 1 in 5 year always 100,000
+rp_dict[4] = 95000
 rp_dict[5] = 100000
 ```
 
@@ -300,18 +301,18 @@ plot_years(df_final, rp_dict[5])
 
 ```python
 leadtimes = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
-thresh_dict = {
-    #1.5: 77000.0,
-    2:  83000.0,
-    5: 97000.0,
-    10: 105000.0,
-    #20: 108000.0
-}
+thresh_list = [
+    80000,
+    #5000,
+    90000,
+    #5000,
+    100000
+]
 df_forecast_dict = {}
 var = 'median'
 #var = '1sig-'
 
-for rp, thresh in thresh_dict.items():
+for thresh in thresh_list:
     df_forecast = pd.DataFrame(data={'leadtime': leadtimes, 'TP': 0, 'FP': 0, 'FN': 0})
     for irow, row in df_forecast.iterrows():
         glofas_var_name = f'glofas_{row["leadtime"]}day_{var}'
@@ -320,7 +321,7 @@ for rp, thresh in thresh_dict.items():
             df_forecast.at[irow, q] = df_ds[q][0]
     df_forecast['precision'] = df_forecast['TP'] / (df_forecast['TP'] + df_forecast['FP'])
     df_forecast['recall'] = df_forecast['TP'] / (df_forecast['TP'] + df_forecast['FN'])
-    df_forecast_dict[rp] = df_forecast
+    df_forecast_dict[thresh] = df_forecast
 
     
     
@@ -332,11 +333,11 @@ for ls_dict, offset_frac in zip([
 ):
     fig, ax = plt.subplots()
     i = 0
-    for rp, df in df_forecast_dict.items():
+    for thresh, df in df_forecast_dict.items():
         for iq, q in enumerate(ls_dict.keys()):
             ax.plot(df['leadtime'], df[q] + offset_frac * i + offset_frac /2 * iq, 
                     ls=ls_dict[q], marker='o',  c=f'C{i}')
-        ax.plot([], [], c=f'C{i}', label=f'RP: 1 in {rp} y')
+        ax.plot([], [], c=f'C{i}', label=f'{thresh} m$^3$ s$^-1$')
         i += 1
     for q in ls_dict.keys():
         ax.plot([], [], c='k', ls=ls_dict[q], label=q)
@@ -348,9 +349,36 @@ for ls_dict, offset_frac in zip([
 ```python
 # Between 10 and 15 days, the number of TP and FN is the same.
 # Only difference is number of FP:
-df_forecast_dict[5][['leadtime', 'FP']]
+df_forecast_dict[100000][['leadtime', 'FP']]
 ```
 
 ```python
+thresh = 80000
+fig, axs = plt.subplots(3, figsize=(8,6))
+df = df_final[(df_final.index > datetime(1999, 1, 1)) & (df_final.index < datetime(2019, 1, 1))]
+for i, q in enumerate(['glofas_observed', 'glofas_10day_median', 'glofas_15day_median'][::-1]):
+    if i == 2:
+        c1 = 'k'
+        c2 = 'C3'
+    else:
+        c1 = 'C0'
+        c2 = 'C1'
+    ax = axs[i]
+    x = df.index
+    y = df[q]
+    ax.plot(x, y, '-', c=c1, lw=0.5)
+    ax.set_ylim(0, 120000)
+    #ax.set_xlim(0, 120000)
+    ax.minorticks_on()
+    ax.axhline(thresh, c='r', lw=0.5)
+    for detection in get_glofas_detections(y, thresh):
+        a = detection - GLOFAS_DETECTION_WINDOW_BEHIND
+        b = detection + GLOFAS_DETECTION_WINDOW_AHEAD
+        #ax.plot(x[a:b], y[a:b], '-r', lw=1, alpha=0.5)
+        ax.plot(x[detection], y[detection], '.', c=c2)
 
+```
+
+```python
+df_final
 ```
