@@ -27,10 +27,14 @@ da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION, station=
 da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast)
 ```
 
+### Overview of historical discharge
+
 ```python
-def basic_plot(da_glofas_reforecast):
-    
+da_glofas_reanalysis.sel(time=slice('1999-01-01','2020-12-31')).plot.line(x='time', add_legend=True)
+plt.show()
 ```
+
+### Checking out the skill
 
 ```python
 def is_rainy_season(month):
