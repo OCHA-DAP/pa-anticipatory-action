@@ -34,7 +34,7 @@ knitr::opts_chunk$set(include = FALSE) # do not print output by default
 Ce rapport présente une exploration sommaire des risques et vulnérabilités humanitaries au Tchad. Des données sont compilées et présentées sur ces sujets:
 
 - [Risque d'inondations](https://geonode.wfp.org/layers/geonode%3Atcd_ica_floodrisk_geonode_mar2017)
-- [Risque de sécheresse](https://geonode.wfp.org/layers/geonode%3Atcd_ica_floodrisk_geonode_mar2017)
+- [Risque de sécheresse](https://geonode.wfp.org/layers/geonode%3Atcd_ica_droughtrisk_geonode_mar2017)
 - [Risque de chocs naturels](https://geonode.wfp.org/layers/geonode%3Atcd_ica_naturalshocksrisk_geonode_mar2017)
 - [Analyse ICA](https://geonode.wfp.org/layers/geonode%3Atcd_ica_categories_areas_geonode_mar2017)
 - [Population](https://data.humdata.org/dataset/population-statistics-of-chad)
