@@ -1,0 +1,133 @@
+---
+title: '<img src="ocha_logo.png" style="height:40px;float:left; margin:10px" /><img src="centre_logo.png" style="height:50px;float:left; margin:10px" />'
+pagetitle: 'BFA Risk Analysis'
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+<br>
+<br>
+<br>
+
+# Baseline Risk Analysis for Burkina Faso
+Analysis last updated `r Sys.Date()`
+
+<br>
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+source("data_summary.R")
+library(kableExtra)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+
+This is an initial exploration into humanitarian risks and vulnerabilities in Burkina Faso. Data is compiled and presented on the following elements: 
+
+- [Flooding risk](https://geonode.wfp.org//layers/geonode%3Abfa_ica_floodrisk_geonode_20180712)
+- [Drought risk](https://geonode.wfp.org//layers/geonode%3Abfa_ica_droughtrisk_geonode_20180712)
+- [Population](https://data.humdata.org/dataset/burkina-faso-population-statistic)
+- [Internally displaced persons](https://data.humdata.org/dataset/situation-des-personnes-deplacees-internes)
+- [Food security](https://data.humdata.org/dataset/cadre-harmonise)
+- [Poverty](https://data.humdata.org/dataset/burkina-faso-mpi)
+- [Operational presence](https://data.humdata.org/dataset/burkina-faso-presence-operationnelle)
+- [Seasonal precipitation forecast](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/)
+
+These factors vary across regions as shown by the figure below.
+
+***
+
+## Geographic overview of key factors
+
+The North-Eastern regions of Burkina Faso (eg. Sahel, Centre-Nord) are more vulnerable, with high flood and drought risk. These regions also have a population more vulnerable to food insecurity and larger number of IDPs relative to the rest of the country. The country's humanitarian presence is also most focused on these regions.
+
+
+```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
+
+combine_map(shp_sum)
+
+```
+
+&nbsp;
+&nbsp;
+
+***
+
+## Tabular overview of key factors
+
+
+```{r, include=T}
+
+df_sum_display %>%
+  knitr::kable(caption = "Risk, vulnerability, and capacity factors by region",
+               col.names = c('Region', 'Humanitarian activities', 'IDPs', 'Multidimensional\npoverty index', 'Drought risk', 'Flood risk', 'Total population\n', 'IPC Phase 3+'),
+               align = c('l', 'l', 'l', 'l', 'l', 'l', 'l', 'l')) %>%
+        collapse_rows(columns = 1, valign = "top") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T) 
+
+```
+
+&nbsp;
+&nbsp;
+
+***
+
+## Populations facing high hazard risk
+
+We see a greater total population in regions facing high flooding risk. By this factor alone, we could perhaps estimate that flooding would have a larger humanitarian impact.
+
+
+```{r, include=T}
+
+high_hazard %>%
+  knitr::kable(caption = "Populations vulnerable to high hazard risk",
+               col.names = c('Total population','Men over 60', 'Women over 60', 'IDPs'),
+               align = c('l', 'l', 'l', 'l')) %>%
+        collapse_rows(columns = 1, valign = "top") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T)
+
+```
+
+&nbsp;
+&nbsp;
+
+***
+
+## Number of humanitarian activities by cluster
+
+This figure shows that a significant majority of humanitarian activities are within the WASH cluster, with a notable number also for Nutrition and Health. 
+
+Also see [this page](https://app.powerbi.com/view?r=eyJrIjoiNjgyYTM1ZjQtNzFhMC00OTUwLWFiYWYtZDdlN2VjMjE2Y2NkIiwidCI6IjBmOWUzNWRiLTU0NGYtNGY2MC1iZGNjLTVlYTQxNmU2ZGM3MCIsImMiOjh9&pageName=ReportSection) for a more detailed breakdown. 
+
+```{r sector, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=3, fig.align="center"}
+
+plot_op_sum_type
+
+```
+
+
+&nbsp;
+&nbsp;
+
+***
+
+## Precipitation forecast across Africa, April-May-June
+
+Forecast shows potential above-average rainfall for the eastern regions and potential below-average rainfall for the western regions of Burkina Faso. 
+
+```{r img1, echo = FALSE, include=T, fig.align='center', out.width='75%'}
+
+include_graphics(paste0(bfa_dir, 'iri_forecast.png'))
+```

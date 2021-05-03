@@ -126,7 +126,7 @@ def get_da_glofas_summary(da_glofas):
 def read_in_ffwc():
     # Read in data from Sazzad that has forecasts
     ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
-    ffwc_leadtimes = [24, 48, 72, 96, 120]
+    ffwc_leadtimes = [1, 2, 3, 4, 5]
 
     # Need to combine the three sheets
     df_ffwc_wl_dict = pd.read_excel(
@@ -137,7 +137,7 @@ def read_in_ffwc():
         .append(df_ffwc_wl_dict['2018'])
         .append(df_ffwc_wl_dict['2019'])
         .rename(columns={
-        f'{leadtime} hrs': f'ffwc_{leadtime}day'
+        f'{leadtime*24} hrs': f'ffwc_{leadtime}day'
         for leadtime in ffwc_leadtimes
     })).drop(columns=['Observed WL'])  # drop observed because we will use the mean later
     # Convert date time to just date
