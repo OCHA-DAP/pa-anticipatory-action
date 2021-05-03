@@ -82,7 +82,7 @@ From this figure it becomes clear that there were 5 periods during which many di
 Moreover, we can see that there are several events where many districts received less than 100 mm of rainfall, but no dry spell was observed. These events mainly occur during March.
 Note: need to update this figure to include all dry spells, also those outside the rainy season
 
-![](`r paste0(exploration_dry_spell_dir,'mwi_viz_hm_dry_spell_monthly_precip_mean_th100_adm2_southern.png')`)
+![](`r paste0(exploration_dry_spell_dir,'mwi_viz_hm_dry_spell_monthly_precip_mean_th100_adm2_southern_decjanfeb.png')`)
 
 ## Forecasts
 This image shows the resolution of ECMWF's forecast. Due to the low resolution combined with the high uncertainy of long-term forecasts, we should look at admin1 and not admin2
