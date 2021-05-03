@@ -2,16 +2,16 @@ import sys
 import os
 from pathlib import Path
 
-from scipy.stats import norm
 import numpy as np
 import pandas as pd
 import xarray as xr
+from scipy.stats import norm
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import glofas
-from src.bangladesh import get_glofas_data_v2 as ggd
+from src.bangladesh import get_glofas_data as ggd
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 GLOFAS_DIR = DATA_DIR / "processed/bangladesh/GLOFAS_Data"
@@ -27,7 +27,7 @@ def get_glofas_reanalysis(version: int = 3):
     return da_glofas_reanalysis
 
 
-def get_glofas_forecast(version: int = 3):
+def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
     glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
@@ -36,13 +36,13 @@ def get_glofas_forecast(version: int = 3):
             version=version,
             leadtime=leadtime,
         )[STATION]
-        for leadtime in ggd.LEADTIMES
+        for leadtime in leadtimes
     }
     da_glofas_forecast_dict = shift_dates(da_glofas_forecast_dict)
     return convert_dict_to_da(da_glofas_forecast_dict)
 
 
-def get_glofas_reforecast(version: int = 3):
+def get_glofas_reforecast(version: int = 3, interp: bool = True, leadtimes: list = ggd.LEADTIMES):
     glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
@@ -51,9 +51,11 @@ def get_glofas_reforecast(version: int = 3):
             version=version,
             leadtime=leadtime,
         )[STATION]
-        for leadtime in ggd.LEADTIMES
+        for leadtime in leadtimes
     }
-    da_glofas_reforecast_dict = interp_dates(shift_dates(da_glofas_reforecast_dict))
+    if interp:
+        da_glofas_reforecast_dict = interp_dates(da_glofas_reforecast_dict)
+    da_glofas_reforecast_dict = shift_dates(da_glofas_reforecast_dict)
     return convert_dict_to_da(da_glofas_reforecast_dict)
 
 
@@ -88,7 +90,6 @@ def convert_dict_to_da(da_glofas_dict):
         leadtime: da_glofas.reindex({"time": time})
         for leadtime, da_glofas in da_glofas_dict.items()
     }
-
     data = np.array([da_glofas.values for da_glofas in da_glofas_dict.values()])
     # Create data array with all lead times, as well as ensemble members (number)
     # and timestep
@@ -147,7 +148,6 @@ def read_in_ffwc():
     ffwc_rl_name = '{}/{}'.format(ffwc_dir, FFWC_RL_HIS_FILENAME)
     df_ffwc_wl_old = pd.read_excel(ffwc_rl_name, index_col=0, header=0)
     df_ffwc_wl_old.index = pd.to_datetime(df_ffwc_wl_old.index, format='%d/%m/%y')
-    df_ffwc_wl_old
     df_ffwc_wl_old = df_ffwc_wl_old[['WL']].rename(columns={'WL':
                                                                 'observed'})[df_ffwc_wl_old.index < df_ffwc_wl.index[0]]
     df_ffwc_wl = pd.concat([df_ffwc_wl_old, df_ffwc_wl])

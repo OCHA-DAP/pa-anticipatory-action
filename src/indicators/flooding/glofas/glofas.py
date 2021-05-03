@@ -297,7 +297,7 @@ class GlofasForecast(Glofas):
     def __init__(self):
         super().__init__(
             year_min={2: 2019, 3: 2020},
-            year_max=2021,
+            year_max=2020,
             cds_name="cems-glofas-forecast",
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
             system_version_minor={2: 1, 3: 1},
