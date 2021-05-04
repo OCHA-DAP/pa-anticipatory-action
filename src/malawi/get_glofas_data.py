@@ -9,26 +9,28 @@ import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
+from src.indicators.flooding.config import Config
 from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import AreaFromShape, Station
 
-
-# Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_NAME = "malawi"
-COUNTRY_ISO3 = "mwi"
-LEADTIMES = [5, 10, 15, 20, 25, 30]
+config = Config()
+parameters = config.parameters(COUNTRY_NAME)
+
+country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, COUNTRY_NAME)
+country_data_raw_dir = os.path.join(config.DATA_DIR, config.RAW_DIR, COUNTRY_NAME)
+
+SHAPEFILE = os.path.join(
+    country_data_raw_dir, config.SHAPEFILE_DIR, parameters["path_admin0_shp"]
+)
+LEADTIMES = parameters["glofas"]["leadtimes"]
+COUNTRY_ISO3 = parameters["iso3_code"].lower()
+# TODO: Figure out how to get this from how it's stored in the config.yml
 STATIONS = {
     "glofas_1": Station(lat=-16.55, lon=35.15),
     "glofas_2": Station(lat=-16.25, lon=34.95),
 }
-SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
-)
-SHAPEFILE = (
-    SHAPEFILE_BASE_DIR
-    / "mwi_adm_nso_20181016_shp"
-    / "mwi_admbnda_adm0_nso_20181016.shp"
-)
+
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)

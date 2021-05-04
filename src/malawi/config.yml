@@ -14,7 +14,7 @@ foodinsecurity:
   #no data available for 2018-10 but there is for 2018-12
   #no data availabele for 2012-07. Removing here cause else assigning values due to borders and different shapefiles
   fewsnet_dates_add: ["201812"]
-  fewsnet_dates_remove: ["201207","201810","202008"]
+  fewsnet_dates_remove: ["201207", "201810", "202008"]
   pop_filename: "mwi_pop_adm2_32_districts.csv" #downloaded from https://data.humdata.org/search?q=malawi+population&ext_search_source=main-nav
   pop_col: "p2019pop"
   adm0c_pop: "ADM0_EN"
@@ -31,3 +31,19 @@ foodinsecurity:
     Mzuzu city: Mzuzu City
     Nkhata bay: Nkhata Bay
     Zomba city: Zomba City
+
+climate:
+  rainy_start_month: 10
+  rainy_end_month: 4
+
+glofas:
+  stations:
+    1:
+      name: "glofas_1"
+      lat: -16.55
+      long: 35.15
+    2:
+      name: "glofas_2"
+      lat: -16.25
+      long: 34.95
+  leadtimes: [5, 10, 15, 20, 25, 30]
