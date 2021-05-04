@@ -18,13 +18,14 @@ editor_options:
 <br>
 <br>
 
-# Analyse de base pour le Tchad
+# Analyse du risque pour le Tchad
 Dernière mise à jour `r Sys.Date()`
 
 <br>
 
-```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+```{r setup, include = FALSE, message = FALSE, warning = FALSE, error=FALSE}
 source("tcd_risk_data_summary.R")
+
 library(kableExtra)
 library(knitr)
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
@@ -38,20 +39,20 @@ Ce rapport présente une exploration sommaire des risques et vulnérabilités hu
 - [Risque de chocs naturels](https://geonode.wfp.org/layers/geonode%3Atcd_ica_naturalshocksrisk_geonode_mar2017)
 - [Analyse ICA](https://geonode.wfp.org/layers/geonode%3Atcd_ica_categories_areas_geonode_mar2017)
 - [Population](https://data.humdata.org/dataset/population-statistics-of-chad)
-- [Internally displaced persons](https://data.humdata.org/dataset/population-au-tchad-et-total-idps-retournes-refugies-sadd)
-- [Food security](https://data.humdata.org/dataset/cadre-harmonise)
-- [Poverty](https://data.humdata.org/dataset/chad-mpi)
-- [Operational presence](https://data.humdata.org/dataset/chad-operational-presence)
-- [Seasonal precipitation forecast](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/)
+- [Personnes déplacées à l'interne](https://data.humdata.org/dataset/population-au-tchad-et-total-idps-retournes-refugies-sadd)
+- [Sécurité alimentaire](https://data.humdata.org/dataset/cadre-harmonise)
+- [Pauvreté](https://data.humdata.org/dataset/chad-mpi)
+- [Présence opérationnelle](https://data.humdata.org/dataset/chad-operational-presence)
+- [Projections de précipitations saisonnières](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/)
 
-L'analyse ICA (Integrated Context Analysis) montre les aires de convergence de hauts niveaux de récurrence de l'insécurité alimentaire et la propensité majeure aux chocs naturels (inondations, sécheresses, glissements de terrain). L'analyse de risques de chocs naturels en est découlée. Ces analyses de 2017 furent un effort conjoint entre le Bureau Régional du Programme d'Alimentation Mondiale à Dakar (RBD), de leur Unité en Analyse Géospatiale (GIS) du bureau-mère et de leur division Programme.
+L'analyse ICA (Integrated Context Analysis) montre les aires de convergence de hauts niveaux de récurrence de l'insécurité alimentaire et la propensité majeure aux chocs naturels (inondations, sécheresses, glissements de terrain). L'analyse de risques de chocs naturels en est découlée. Ces analyses de 2017 furent un effort conjoint entre le Bureau régional du programme d'alimentation mondiale à Dakar (RBD), de leur Unité en analyse géospatiale (GIS) du bureau-mère et de leur division Programme.
 
 
 ***
 
-Ces facteurs varient par région comme on peut le voir ci-bas. 
+Les facteurs varient par région comme on peut le voir ci-bas. 
 
-## Geographic overview of key factors
+## Survol géographique de facteurs clé
 
 The North-Eastern regions of Burkina Faso (eg. Sahel, Centre-Nord) are more vulnerable, with high flood and drought risk. These regions also have a population more vulnerable to food insecurity and larger number of IDPs relative to the rest of the country. The country's humanitarian presence is also most focused on these regions.
 
@@ -70,7 +71,7 @@ combine_map(shp_sum)
 ## Tabular overview of key factors
 
 
-```{r, include=T}
+```{r, include=T, eval=F}
 
 df_sum_display %>%
   knitr::kable(caption = "Risk, vulnerability, and capacity factors by region",
@@ -92,7 +93,7 @@ df_sum_display %>%
 We see a greater total population in regions facing high flooding risk. By this factor alone, we could perhaps estimate that flooding would have a larger humanitarian impact.
 
 
-```{r, include=T}
+```{r, include=T, eval=F}
 
 high_hazard %>%
   knitr::kable(caption = "Populations vulnerable to high hazard risk",
@@ -115,7 +116,7 @@ This figure shows that a significant majority of humanitarian activities are wit
 
 Also see [this page](https://app.powerbi.com/view?r=eyJrIjoiNjgyYTM1ZjQtNzFhMC00OTUwLWFiYWYtZDdlN2VjMjE2Y2NkIiwidCI6IjBmOWUzNWRiLTU0NGYtNGY2MC1iZGNjLTVlYTQxNmU2ZGM3MCIsImMiOjh9&pageName=ReportSection) for a more detailed breakdown. 
 
-```{r sector, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=3, fig.align="center"}
+```{r sector, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=3, fig.align="center", eval=F}
 
 plot_op_sum_type
 
@@ -131,7 +132,7 @@ plot_op_sum_type
 
 Forecast shows potential above-average rainfall for the eastern regions and potential below-average rainfall for the western regions of Burkina Faso. 
 
-```{r img1, echo = FALSE, include=T, fig.align='center', out.width='75%'}
+```{r img1, echo = FALSE, include=T, fig.align='center', out.width='75%', eval=F}
 
 include_graphics(paste0(tcd_dir, 'iri_2021Aprissue_JJJ21.gif'))
 ```
