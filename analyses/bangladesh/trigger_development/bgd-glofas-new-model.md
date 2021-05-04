@@ -9,6 +9,7 @@ import matplotlib as mpl
 import pandas as pd
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.stats import pearsonr
 
 import read_in_data as rd
 reload(rd)
@@ -380,5 +381,24 @@ for i, q in enumerate(['glofas_observed', 'glofas_10day_median', 'glofas_15day_m
 ```
 
 ```python
-df_final
+def plot_glofas_vs_ffwc(glofas_var_name, ylabel='GloFAS ERA5 river discharge [m$^3$ s$^{-1}$]'):
+    xvar = 'observed'
+    df = df_final[[xvar, glofas_var_name]].dropna()
+    x = df[xvar]
+    y = df[glofas_var_name]
+
+    fig, ax = plt.subplots()
+    ax.plot(x, y, '.', alpha=0.5)
+    idx = df_final['event'] == True
+    ax.plot(x[idx], y[idx], 'xr', ms=5, mfc='r', zorder=5)
+    ax.set_xlabel('FFWC water level [m]')
+    ax.set_ylabel(ylabel)
+    ax.set_ylim(-2000, 142000)
+    split_val = 19.5
+    idx = x < split_val
+    print("Pearson's for above and below 19.5", pearsonr(x[idx], y[idx]),
+    pearsonr(x[~idx], y[~idx]))
+    ax.axvline(19.5, lw=0.3, c='k')
+    
+plot_glofas_vs_ffwc('glofas_observed')
 ```
