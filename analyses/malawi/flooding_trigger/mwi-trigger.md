@@ -16,15 +16,24 @@ reload(rd)
 mpl.rcParams['figure.dpi'] = 300
 
 GLOFAS_VERSION = 3
-STATION = 'glofas_2'
+STATIONS = ['glofas_1', 'glofas_2']
 ```
 
+### Read in GloFAS data
+
 ```python
-da_glofas_reanalysis = rd.get_glofas_reanalysis(version=GLOFAS_VERSION, station=STATION)
-da_glofas_forecast = rd.get_glofas_forecast(version=GLOFAS_VERSION, station=STATION)
-da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast)
-da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION, station=STATION)
-da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast)
+da_glofas_reanalysis = dict()
+da_glofas_reforecast = dict()
+da_glofas_forecast = dict()
+da_glofas_forecast_summary = dict()
+da_glofas_reforecast_summary = dict()
+
+for station in STATIONS: 
+    da_glofas_reanalysis[station] = rd.get_glofas_reanalysis(version=GLOFAS_VERSION, station=station)
+    da_glofas_reforecast[station] = rd.get_glofas_reforecast(version=GLOFAS_VERSION, station=station)
+    da_glofas_forecast[station] = rd.get_glofas_forecast(version=GLOFAS_VERSION, station=station)
+    da_glofas_forecast_summary[station] = rd.get_da_glofas_summary(da_glofas_forecast[station])
+    da_glofas_reforecast_summary[station] = rd.get_da_glofas_summary(da_glofas_reforecast[station])
 ```
 
 ### Overview of historical discharge

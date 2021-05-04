@@ -31,7 +31,6 @@ from src.utils_general.raster_manipulation import (
 )
 from src.utils_general.plotting import plot_raster_boundaries_clip
 
-DATA_PRIVATE_DIR = os.path.join(os.environ["AA_DATA_PRIVATE_DIR"])
 country = "malawi"
 config = Config()
 parameters = config.parameters(country)
@@ -46,12 +45,12 @@ adm1_bound_path = os.path.join(
 
 df_bound = gpd.read_file(adm1_bound_path)
 
-floodscan_dir = os.path.join(DATA_PRIVATE_DIR, "floodscan-africa-1998-2020")
+floodscan_dir = os.path.join(config.DATA_PRIVATE_DIR, "floodscan-africa-1998-2020")
 floodscan_path = os.path.join(
     floodscan_dir, "aer_sfed_area_300s_19980112-20201231_v05r01.nc"
 )
 country_floodscan_dir = os.path.join(
-    DATA_PRIVATE_DIR, "processed", country, "floodscan"
+    config.DATA_PRIVATE_DIR, "processed", country, "floodscan"
 )
 country_floodscan_path = os.path.join(
     country_floodscan_dir, f"{country}_floodscan_1998_2020.nc"
@@ -59,11 +58,15 @@ country_floodscan_path = os.path.join(
 
 
 def main():
-    # #Only needed once to clip data to country, takes some time
+    # Only needed once to clip data to country, takes some time
     # also actually the stats can be computed without clipping
-    # ds=xr.load_dataset(floodscan_path)
-    # ds_clip = ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
-    # ds_clip.to_netcdf(country_floodscan_path)
+    ds = xr.load_dataset(floodscan_path)
+    ds_clip = (
+        ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
+        .rio.write_crs("EPSG:4326")
+        .rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+    )
+    ds_clip.to_netcdf(country_floodscan_path)
     # load the data
     ds = xr.load_dataset(country_floodscan_path)
     # compute statistics at adm1 level
@@ -132,5 +135,4 @@ def alldates_statistics_total(ds, raster_transform, adm_path, data_var="SFED_ARE
 
 
 if __name__ == "__main__":
-    # main()
-    print(parameters)
+    main()
