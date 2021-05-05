@@ -14,6 +14,18 @@ editor_options:
   chunk_output_type: inline
 ---
 
+```{css style settings, echo = FALSE}
+
+# this code chunk allows to modify the appearance of block quoted text throughout the document
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+```
+
 <br>
 <br>
 <br>
@@ -34,10 +46,10 @@ knitr::opts_chunk$set(include = FALSE) # do not print output by default
 
 Ce rapport présente une exploration sommaire des risques et vulnérabilités humanitaries au Tchad. Des données sont compilées et présentées sur ces sujets:
 
+- [Analyse ICA](https://geonode.wfp.org/layers/geonode%3Atcd_ica_categories_areas_geonode_mar2017)
 - [Risque d'inondations](https://geonode.wfp.org/layers/geonode%3Atcd_ica_floodrisk_geonode_mar2017)
 - [Risque de sécheresse](https://geonode.wfp.org/layers/geonode%3Atcd_ica_droughtrisk_geonode_mar2017)
 - [Risque de chocs naturels](https://geonode.wfp.org/layers/geonode%3Atcd_ica_naturalshocksrisk_geonode_mar2017)
-- [Analyse ICA](https://geonode.wfp.org/layers/geonode%3Atcd_ica_categories_areas_geonode_mar2017)
 - [Population](https://data.humdata.org/dataset/population-statistics-of-chad)
 - [Personnes déplacées à l'interne](https://data.humdata.org/dataset/population-au-tchad-et-total-idps-retournes-refugies-sadd)
 - [Sécurité alimentaire](https://data.humdata.org/dataset/cadre-harmonise)
@@ -45,19 +57,40 @@ Ce rapport présente une exploration sommaire des risques et vulnérabilités hu
 - [Présence opérationnelle](https://data.humdata.org/dataset/chad-operational-presence)
 - [Projections de précipitations saisonnières](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/)
 
-L'analyse ICA (Integrated Context Analysis) montre les aires de convergence de hauts niveaux de récurrence de l'insécurité alimentaire et la propensité majeure aux chocs naturels (inondations, sécheresses, glissements de terrain). L'analyse de risques de chocs naturels en est découlée. Ces analyses de 2017 furent un effort conjoint entre le Bureau régional du programme d'alimentation mondiale à Dakar (RBD), de leur Unité en analyse géospatiale (GIS) du bureau-mère et de leur division Programme.
-
+Certaines données sont offertes au niveau Admin 2 (Départements). Dans certains cas, une moyenne pour la Région (Admin 1) a été calculée.
 
 ***
+### Carte géographique du pays
 
-Les facteurs varient par région comme on peut le voir ci-bas. 
+![](`r "admins.png"`){width=600px}
 
-## Survol géographique de facteurs clé
+### Sommaire de l'AIC
 
-The North-Eastern regions of Burkina Faso (eg. Sahel, Centre-Nord) are more vulnerable, with high flood and drought risk. These regions also have a population more vulnerable to food insecurity and larger number of IDPs relative to the rest of the country. The country's humanitarian presence is also most focused on these regions.
+L'analyse de risques de chocs naturels (sécheresses et inondations) fit partie de l'analyse AIC ("Analyse intégrée du contexte") conduite par le Programme d'alimentation mondiale. Celle-ci montre les zones de haute convergence entre la récurrence de l'insécurité alimentaire et la propension aux chocs naturels (inondations, sécheresses, glissements de terrain). 
+
+```{r aic, echo = FALSE, fig.show="hold", out.width="50%",  fig.align='center', dpi = 300}
+
+#par(mar = c(4, 4, .1, .1))
+#include_graphics(aic_areas_map_path)
+aic_areas_map_path <- "aic-areas-map.png"
+aic_areas_table_path <- "aic-areas-table.png"
+
+```
+
+![](`r aic_areas_map_path`){width=600px}
+![](`r aic_areas_table_path`){width=500px} 
+
+On peut lire le [rapport ici](https://geonode.wfp.org/documents/8911). La liste complète des classifications est en annexe.
+
+### Cartes de facteurs clé
+
+Les régions les plus affectées par les sécheresses et par les inondations diffèrent. Par conséquent le risque de chocs naturels recouvre une vaste partie du territoire. La région de Lac comprend le plus grand nombre de personne en insécurité alimentaire malgré le fait qu'elle ne soit pas la plus populeuse. Les données sur les chocs naturels et l'insécurité alimentaires ne couvrent pas une période ajacente. Une analyse additionnelle sera nécessaire pour comprendre le lien entre les chocs et la présence de choc.
+
+La région de Lac fut la seule récipiendaire d'activités humanitaires reportées en juin 2020. Elle est la région avec l'index multidimensionnel de pauvreté le plus élevé du pays et reçoit un des plus grands nombres de personnes déplacées internes après Ouaddaï.
 
 
-```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
+
+```{r maps, include=T, message= FALSE, warning=FALSE}
 
 combine_map(shp_sum)
 
@@ -68,18 +101,17 @@ combine_map(shp_sum)
 
 ***
 
-## Tabular overview of key factors
+### Données en format tabulaire
 
-
-```{r, include=T, eval=F}
+```{r table, include=T}
 
 df_sum_display %>%
-  knitr::kable(caption = "Risk, vulnerability, and capacity factors by region",
-               col.names = c('Region', 'Humanitarian activities', 'IDPs', 'Multidimensional\npoverty index', 'Drought risk', 'Flood risk', 'Total population\n', 'IPC Phase 3+'),
-               align = c('l', 'l', 'l', 'l', 'l', 'l', 'l', 'l')) %>%
-        collapse_rows(columns = 1, valign = "top") %>%
-        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
-                      fixed_thead = T) 
+  arrange(Admin1) %>%
+  knitr::kable(caption = "Risques, vulnérabliités et facteurs de capacité par Région",
+               col.names = c('Région', 'Risque sécheresse', 'Risque inondations', 'Risque chocs naturels' ,'Population', 'IPC Phase 3+', 'Index multidimensionnel\npauvreté', 'PDIs', 'Activités humanitaires'),
+               align = c('l', 'l', 'l', 'l', 'l', 'l', 'l', 'l',  'l')) %>%
+        kableExtra::collapse_rows(columns = 1, valign = "top") %>%
+        kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = T) 
 
 ```
 
@@ -88,51 +120,38 @@ df_sum_display %>%
 
 ***
 
-## Populations facing high hazard risk
+### Prévisions de précipitations
 
-We see a greater total population in regions facing high flooding risk. By this factor alone, we could perhaps estimate that flooding would have a larger humanitarian impact.
+Les prévisions de l'[IRI](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/) les plus récentes projettent une saison des pluies avec un cumul de précipitations au-delà de la normale pour la majeure partie du pays, et une saison en-deçà de la normale dans le sud est.
 
+```{r iri, echo = FALSE, include=T, fig.align='center', out.width='75%', eval=F}
 
-```{r, include=T, eval=F}
-
-high_hazard %>%
-  knitr::kable(caption = "Populations vulnerable to high hazard risk",
-               col.names = c('Total population','Men over 60', 'Women over 60', 'IDPs'),
-               align = c('l', 'l', 'l', 'l')) %>%
-        collapse_rows(columns = 1, valign = "top") %>%
-        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
-                      fixed_thead = T)
-
-```
-
-&nbsp;
-&nbsp;
-
-***
-
-## Number of humanitarian activities by cluster
-
-This figure shows that a significant majority of humanitarian activities are within the WASH cluster, with a notable number also for Nutrition and Health. 
-
-Also see [this page](https://app.powerbi.com/view?r=eyJrIjoiNjgyYTM1ZjQtNzFhMC00OTUwLWFiYWYtZDdlN2VjMjE2Y2NkIiwidCI6IjBmOWUzNWRiLTU0NGYtNGY2MC1iZGNjLTVlYTQxNmU2ZGM3MCIsImMiOjh9&pageName=ReportSection) for a more detailed breakdown. 
-
-```{r sector, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=3, fig.align="center", eval=F}
-
-plot_op_sum_type
+include_graphics(paste0(tcd_dir, 'IRI_JJA21_Afr_pcp.gif'))
 
 ```
 
 
-&nbsp;
-&nbsp;
+### Annexe
 
-***
+Résultats de l'analyse intégrée du contexte.
 
-## Precipitation forecast across Africa, April-May-June
 
-Forecast shows potential above-average rainfall for the eastern regions and potential below-average rainfall for the western regions of Burkina Faso. 
+```{r annex, include=T}
 
-```{r img1, echo = FALSE, include=T, fig.align='center', out.width='75%', eval=F}
+shp_ica_all %>%
+  dplyr::select(admin1Name_fr, adm2_name, ICA_Areas) %>%
+  mutate(f_sec = ifelse(ICA_Areas %in% c('Area 1a','Area 1b','Area 3a'), "Élevée", 
+                        ifelse(ICA_Areas %in% c('Area 2a','Area 2b','Area 3b'), "Moyenne",  
+                               "Faible")),
+         nat = ifelse(ICA_Areas %in% c('Area 1a','Area 2a','Area 4a'), "Élevée", 
+                        ifelse(ICA_Areas %in% c('Area 1b','Area 2b','Area 4b'), "Moyenne",  
+                               "Faible")),
+         ) %>%
+  arrange(admin1Name_fr, adm2_name) %>%
+  knitr::kable(caption = "Analyse intégrée du contexte au Tchad (2017)",
+               col.names = c('Région','Département', 'Aire AIC', 'Récurrence insécurité alimentaire', 'Exposition aux chocs naturels'),
+               align = c('l', 'l', 'l', 'l', 'l')) %>%
+        kableExtra::collapse_rows(columns = 1, valign = "top") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = T) 
 
-include_graphics(paste0(tcd_dir, 'iri_2021Aprissue_JJJ21.gif'))
 ```

@@ -1,6 +1,6 @@
 ## Load in and transform datasets
 
-# list of adms regions
+# list of adms regions (70 Départements (Admin2) and 23 Regions (Admin1), 1:1 relationship between pcodes and names)
 adms <- read_excel(paste0(data_dir, '/raw/chad/', 'Shapefiles/tcd_adminboundaries_tabulardata-20170616.xlsx'), sheet = 2) %>%
   dplyr::select(admin2Pcode, admin2Name_fr, admin1Pcode, admin1Name_fr)
 
@@ -156,12 +156,12 @@ shp_shocks <- shp_shocks_all %>% # compute mean drought index per admin1 (= take
   dplyr::select(admin1Pcode, admin1Name_fr, NS_Risk) %>% 
   group_by(admin1Pcode, admin1Name_fr) %>% 
   summarise(mean_NS_Risk = round(mean(NS_Risk, na.rm = T), 0)) %>% # removes NA and may inflate average if NAs were true zeroes. Rounding, maybe should be ceiling/floor function instead
-  mutate(NS_Class = ifelse(mean_NS_Risk <= 2, 1, 
+  mutate(NSClass = ifelse(mean_NS_Risk <= 2, 1, 
                              ifelse(mean_NS_Risk >= 3 & mean_NS_Risk < 4, 2,
                                     ifelse(mean_NS_Risk >= 4, 3, NA))),
-         Dr_Text = ifelse(NS_Class == 1, "Low",
-                          ifelse(NS_Class == 2, "Medium", 
-                                 ifelse(NS_Class == 3, "High", NA))))
+         NSText = ifelse(NSClass == 1, "Low",
+                          ifelse(NSClass == 2, "Medium", 
+                                 ifelse(NSClass == 3, "High", NA))))
 
 # ICA Categories
 shp_ica_all <- st_read(paste0(tcd_dir, 'tcd_ica_categories_areas_geonode_mar2017/tcd_ica_categories_areas_geonode_mar2017.shp'))
