@@ -8,11 +8,21 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import xskillscore as xs
+from scipy.interpolate import interp1d
+import os
+from pathlib import Path
+import sys
 
 import read_in_data as rd
 from importlib import reload
 reload(rd)
 
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
+sys.path.append(path_mod)
+
+from src.indicators.flooding.config import Config
+
+config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 GLOFAS_VERSION = 3
@@ -22,11 +32,11 @@ STATIONS = ['glofas_1', 'glofas_2']
 ### Read in GloFAS data
 
 ```python
-da_glofas_reanalysis = dict()
-da_glofas_reforecast = dict()
-da_glofas_forecast = dict()
-da_glofas_forecast_summary = dict()
-da_glofas_reforecast_summary = dict()
+da_glofas_reanalysis = {}
+da_glofas_reforecast = {}
+da_glofas_forecast = {}
+da_glofas_forecast_summary = {}
+da_glofas_reforecast_summary = {}
 
 for station in STATIONS: 
     da_glofas_reanalysis[station] = rd.get_glofas_reanalysis(version=GLOFAS_VERSION, station=station)
@@ -36,11 +46,60 @@ for station in STATIONS:
     da_glofas_reforecast_summary[station] = rd.get_da_glofas_summary(da_glofas_reforecast[station])
 ```
 
+### Read in the baseline impact data
+
+```python
+df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'malawi', 'mvac_dodma_flood_ta.csv'))
+```
+
 ### Overview of historical discharge
 
 ```python
-da_glofas_reanalysis.sel(time=slice('1999-01-01','2020-12-31')).plot.line(x='time', add_legend=True)
-plt.show()
+for station in STATIONS: 
+    da_plt = da_glofas_reanalysis[station].sel(time=slice('1999-01-01','2020-12-31'))
+    df_flood = df_mvac_flood_ta[df_mvac_flood_ta['name']==station]
+
+    fig, ax = plt.subplots()
+    da_plt.plot(x='time', add_legend=True, ax=ax)
+    ax.set_title(f'Historical streamflow at {station}')
+    ax.set_xlabel("Date")
+    ax.set_ylabel('Discharge [m$^3$ s$^{-1}$]')
+    ax.axvspan(np.datetime64('2010-01-01'), np.datetime64('2019-12-31'), alpha=0.2, color='gray', label='Flooding monitoring')
+
+    for year in df_flood.Year.unique():
+        ax.axvspan(np.datetime64(f'{str(year)}-01-01'), np.datetime64(f'{str(year)}-12-31'), color='#ffb2a6', label='Flooding in TA')
+    
+    ax.legend()
+    
+    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_historical.png')
+```
+
+### Calculate the return period
+
+```python
+def get_return_period_function(observations, station):
+    df_rp = (observations.to_dataframe()
+                 .rename(columns={station: 'discharge'})
+                 .resample(rule='A', kind='period')
+                 .max() 
+                 .sort_values(by='discharge', ascending=False)
+                )
+    df_rp["year"] = df_rp.index.year
+     
+    n = len(df_rp)
+    df_rp['rank'] = np.arange(n) + 1
+    df_rp['exceedance_probability'] = df_rp['rank'] / (n+1)
+    df_rp['rp'] = 1 / df_rp['exceedance_probability']
+    return interp1d(df_rp['rp'], df_rp['discharge'])
+
+rp_dict = {}
+
+for station in STATIONS:
+    f_rp = get_return_period_function(da_glofas_reanalysis[station], station)
+    for year in [1.5, 2, 3, 4, 5, 10, 20]:
+        val = 5000*np.round(f_rp(year) / 5000)
+        #if version == MAIN_VERSION:
+        rp_dict[year] = val
 ```
 
 ### Checking out the skill
@@ -92,7 +151,7 @@ def get_skill(da_glofas_reforecast, da_glofas_reanalysis):
 ```
 
 ```python
-def plot_skill(df_crps, division_key=None, add_line_from_website=False,
+def plot_skill(df_crps, title, division_key=None, add_line_from_website=False,
               ylabel="CRPS [m$^3$ s$^{-1}$]"):
     fig, ax = plt.subplots()
     df = df_crps.copy()
@@ -109,18 +168,22 @@ def plot_skill(df_crps, division_key=None, add_line_from_website=False,
     # Add colours to legend
     for i, subset in enumerate(['full year', 'rainy', 'dry']):
         ax.plot([], [], c=f'C{i}', label=subset)
-    ax.set_title("GloFAS forecast skill in Malawi:\n 1999-2019 reforecast")
+    ax.set_title(title)
     ax.set_xlabel("Lead time (days)")
     ax.set_ylabel(ylabel)
     ax.legend()
+    
 ```
 
 ```python
-df_crps = get_skill(da_glofas_reforecast, da_glofas_reanalysis)
-```
+df_crps = dict()
 
-```python
-plot_skill(df_crps)
-plot_skill(df_crps, division_key='std', ylabel="RCRPS")
-plot_skill(df_crps, division_key='mean', ylabel="NCRPS (CRPS / mean)")
+for station in STATIONS:
+    df_crps[station] = get_skill(da_glofas_reforecast[station], da_glofas_reanalysis[station])
+    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast")
+    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_crps.png')
+    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='std', ylabel="RCRPS")
+    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_rcrps.png')
+    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='mean', ylabel="NCRPS (CRPS / mean)")
+    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_ncrps.png')
 ```
