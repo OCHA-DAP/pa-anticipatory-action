@@ -4,9 +4,12 @@ iso2_code: "MW"
 path_admin0_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm0_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
 path_admin1_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm1_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
 path_admin2_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm2_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
+path_admin3_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm3_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
 shp_adm0c: "ADM0_EN"
 shp_adm1c: "ADM1_EN"
 shp_adm2c: "ADM2_EN"
+crs_degrees: 4326 # EPSG code of coordinate system to use in degrees
+crs_meters: 20936 # EPSG code of coordinate system to use in meters (https://epsg.io/20936)
 
 foodinsecurity:
   region: "southern-africa"
