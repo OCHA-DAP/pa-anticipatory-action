@@ -3,6 +3,7 @@ library(sf)
 library(lubridate)
 library(readxl)
 library(yaml)
+library(tmap)
 
 # Get overall config params and read in data
 data_dir <- Sys.getenv("AA_DATA_DIR")
@@ -15,12 +16,31 @@ stations <- config$glofas$stations
 stations <- data.frame(do.call(rbind.data.frame, stations))
 
 # Get the TAs associates with each of the GloFAS stations
-shp_stations <- stations %>%
+shp_stations_geom <- stations %>%
   st_as_sf(coords = c("long", "lat"), crs = config$crs_degrees) %>%
   st_join(shp_adm3) %>%
   select('ADM2_EN', 'ADM3_EN', 'name') %>%
-  st_set_geometry(NULL) %>%
   mutate(ADM3_EN = substr(ADM3_EN, 4, nchar(ADM3_EN)))
+
+shp_stations <- shp_stations_geom %>%
+  st_set_geometry(NULL)
+
+
+# Baseline map ------------------------------------------------------------
+
+
+# Simple maps to show the study area
+
+tmap_mode('view')
+adm2 <- shp_adm2%>%
+  filter(ADM2_EN %in% c('Chikwawa', 'Nsanje'))
+base_map <- tm_basemap(leaflet::providers$Esri.WorldTopoMap) +
+  tm_shape(adm2)+
+  tm_polygons(col='#fc6f6f', alpha=0.2, id='ADM2_EN')+
+  tm_layout(frame=FALSE)+
+  tm_shape(shp_stations_geom)+
+  tm_dots(col='blue', id='name', size = 0.5)
+
 
 # MVAC Flooding from DoDMA ------------------------------------------------
 
