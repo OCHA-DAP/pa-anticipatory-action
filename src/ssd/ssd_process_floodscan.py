@@ -46,7 +46,7 @@ def main():
                                 adm1_bound_path)
     #save to file
     df_month_total_adm1.drop("geometry", axis=1).to_csv(
-        os.path.join(COUNTRY_FLOODSCAN_DIR, f"{country}_floodscan_statistics_admin1_test.csv"), index=False)
+        os.path.join(COUNTRY_FLOODSCAN_DIR, f"{country}_floodscan_statistics_admin1.csv"), index=False)
 
 def alldates_statistics_total(ds, raster_transform, adm_path, data_var="SFED_AREA"):
     # compute statistics on level in adm_path for all dates in ds
