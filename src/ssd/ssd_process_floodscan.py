@@ -13,21 +13,19 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
 DATA_PRIVATE_DIR = os.path.join(os.environ["AA_DATA_PRIVATE_DIR"])
-country="malawi"
+COUNTRY="ssd"
 config=Config()
-parameters = config.parameters(country)
+parameters = config.parameters(COUNTRY)
 
-country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
+COUNTRY_DIR = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, COUNTRY)
+COUNTRY_DATA_RAW_DIR = os.path.join(config.DATA_DIR,config.RAW_DIR,COUNTRY)
 
-adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
-
-df_bound = gpd.read_file(adm1_bound_path)
+ADM_BOUND_PATH=os.path.join(COUNTRY_DATA_RAW_DIR,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 
 FLOODSCAN_DIR = os.path.join(DATA_PRIVATE_DIR,"floodscan-africa-1998-2020")
 FLOODSCAN_PATH = os.path.join(FLOODSCAN_DIR,"aer_sfed_area_300s_19980112-20201231_v05r01.nc")
-COUNTRY_FLOODSCAN_DIR = os.path.join(DATA_PRIVATE_DIR,"processed",country,"floodscan")
-# country_floodscan_path = os.path.join(country_floodscan_dir,f"{country}_floodscan_1998_2020_test.nc")
+COUNTRY_FLOODSCAN_DIR = os.path.join(DATA_PRIVATE_DIR,"processed",COUNTRY,"floodscan")
+# country_floodscan_path = os.path.join(country_floodscan_dir,f"{country}_floodscan_1998_2020.nc")
 
 def main():
     # #Only needed once to clip data to country, takes some time
@@ -43,10 +41,10 @@ def main():
     df_month_total_adm1 = alldates_statistics_total(
                                 ds,
                                 ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform(),
-                                adm1_bound_path)
+                                ADM_BOUND_PATH)
     #save to file
     df_month_total_adm1.drop("geometry", axis=1).to_csv(
-        os.path.join(COUNTRY_FLOODSCAN_DIR, f"{country}_floodscan_statistics_admin1.csv"), index=False)
+        os.path.join(COUNTRY_FLOODSCAN_DIR, f"{COUNTRY}_floodscan_statistics_admin1.csv"), index=False)
 
 def alldates_statistics_total(ds, raster_transform, adm_path, data_var="SFED_AREA"):
     # compute statistics on level in adm_path for all dates in ds
