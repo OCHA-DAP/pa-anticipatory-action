@@ -3,6 +3,7 @@ import numpy as np
 import geopandas as gpd
 from rasterstats import zonal_stats
 import xarray as xr
+import rioxarray
 
 from pathlib import Path
 import sys
@@ -22,8 +23,8 @@ COUNTRY_DATA_RAW_DIR = os.path.join(config.DATA_DIR,config.RAW_DIR,COUNTRY)
 
 ADM_BOUND_PATH=os.path.join(COUNTRY_DATA_RAW_DIR,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 
-FLOODSCAN_DIR = os.path.join(DATA_PRIVATE_DIR,"floodscan-africa-1998-2020")
-FLOODSCAN_PATH = os.path.join(FLOODSCAN_DIR,"aer_sfed_area_300s_19980112-20201231_v05r01.nc")
+FLOODSCAN_DIR = os.path.join(DATA_PRIVATE_DIR,"raw","floodscan-africa-1998-2020")
+FLOODSCAN_PATH = os.path.join(FLOODSCAN_DIR,"aer_sfed_area_300s_19980112_20201231_v05r01.nc")
 COUNTRY_FLOODSCAN_DIR = os.path.join(DATA_PRIVATE_DIR,"processed",COUNTRY,"floodscan")
 # country_floodscan_path = os.path.join(country_floodscan_dir,f"{country}_floodscan_1998_2020.nc")
 
@@ -35,16 +36,16 @@ def main():
     # ds_clip.to_netcdf(country_floodscan_path)
     #load the data
     ds=xr.open_dataset(FLOODSCAN_PATH)
-    # ds_sel=ds.sel(time="2020-01")
+    ds_sel=ds.sel(time="2020-01")
     #compute statistics at adm1 level
     #this takes some time
     df_month_total_adm1 = alldates_statistics_total(
-                                ds,
-                                ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform(),
+                                ds_sel,
+                                ds_sel.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform(),
                                 ADM_BOUND_PATH)
     #save to file
     df_month_total_adm1.drop("geometry", axis=1).to_csv(
-        os.path.join(COUNTRY_FLOODSCAN_DIR, f"{COUNTRY}_floodscan_statistics_admin1.csv"), index=False)
+        os.path.join(COUNTRY_FLOODSCAN_DIR, f"{COUNTRY}_floodscan_statistics_admin1_test.csv"), index=False)
 
 def alldates_statistics_total(ds, raster_transform, adm_path, data_var="SFED_AREA"):
     # compute statistics on level in adm_path for all dates in ds
