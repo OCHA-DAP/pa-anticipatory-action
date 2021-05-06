@@ -11,8 +11,8 @@ import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-
-from src.indicators.flooding import glofas
+from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.glofas.area import AreaFromStations, Station
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
@@ -21,42 +21,63 @@ from src.indicators.flooding import glofas
 COUNTRY_NAME = "bangladesh"
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
-    "Noonkhawa": [89.9509, 25.9496],
-    "Chilmari": [89.7476, 25.5451],
-    "Bahadurabad": [89.6607, 25.1028],
-    "Bahadurabad_glofas": [89.65, 25.15],
-    "Sariakandi": [89.6518, 24.8901],
-    "Kazipur": [89.7498, 24.6637],
-    "Serajganj": [89.7479, 24.4676],
-    "Aricha": [89.6550, 23.9032],
+    "Noonkhawa": Station(lon=89.9509, lat=25.9496),
+    "Chilmari": Station(lon=89.7476, lat=25.5451),
+    "Bahadurabad": Station(lon=89.6607, lat=25.1028),
+    "Sariakandi": Station(lon=89.6518, lat=24.8901),
+    "Kazipur": Station(lon=89.7498, lat=24.6637),
+    "Serajganj": Station(lon=89.7479, lat=24.4676),
+    "Aricha": Station(lon=89.6550, lat=23.9032),
+    "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-LEADTIME_HOURS = [120, 240, 360, 480, 600, 720]
-
+LEADTIMES = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=False, process=False):
+def main(download=True, process=True):
 
-    # TODO: flags / config file to toggle these things
-    glofas_reanalysis = glofas.GlofasReanalysis(stations_lon_lat=FFWC_STATIONS)
-    glofas_forecast = glofas.GlofasForecast(
-        stations_lon_lat=FFWC_STATIONS, leadtime_hours=LEADTIME_HOURS
-    )
-    glofas_reforecast = glofas.GlofasReforecast(
-        stations_lon_lat=FFWC_STATIONS, leadtime_hours=LEADTIME_HOURS
-    )
+    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_forecast = glofas.GlofasForecast()
+    glofas_reforecast = glofas.GlofasReforecast()
 
     if download:
-        glofas_reanalysis.download(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
-        glofas_forecast.download(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
-        glofas_reforecast.download(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+        # Remove the GloFAS station as it was not used originally
+        ffwc_stations_for_download = FFWC_STATIONS.copy()
+        area = AreaFromStations(stations=ffwc_stations_for_download)
+        glofas_reanalysis.download(
+            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
+        )
+        glofas_forecast.download(
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            area=area,
+            leadtimes=LEADTIMES,
+        )
+        glofas_reforecast.download(
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            area=area,
+            leadtimes=LEADTIMES,
+        )
 
     if process:
-        glofas_reanalysis.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
-        glofas_forecast.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
-        glofas_reforecast.process(country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+        glofas_reanalysis.process(
+            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS
+        )
+        glofas_forecast.process(
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            stations=FFWC_STATIONS,
+            leadtimes=LEADTIMES,
+        )
+        glofas_reforecast.process(
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            stations=FFWC_STATIONS,
+            leadtimes=LEADTIMES,
+        )
 
 
 if __name__ == "__main__":
-    main(download=False, process=False)
+    main()

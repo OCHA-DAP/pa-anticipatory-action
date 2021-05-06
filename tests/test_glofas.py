@@ -2,7 +2,8 @@
 import numpy as np
 import xarray as xr
 
-from src.indicators.flooding import glofas
+from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.glofas.area import Area
 
 FAKE_STATIONS_LON_LAT = {
     'station_east': [1, 0],
@@ -10,11 +11,13 @@ FAKE_STATIONS_LON_LAT = {
     'station_north': [0, 3],
     'station_south': [0, -4]
 }
+FAKE_AREA = Area(north=1, south=-2, east=3, west=-4)
+VERSION = 3
 
 
 def test_get_reanalysis_query():
-    glofas_reanalysis = glofas.GlofasReanalysis(FAKE_STATIONS_LON_LAT)
-    query = glofas_reanalysis._get_query(year=2000)
+    glofas_reanalysis = glofas.GlofasReanalysis()
+    query = glofas_reanalysis._get_query(area=FAKE_AREA, version=VERSION, year=2000)
     expected_query = {
         'variable': 'river_discharge_in_the_last_24_hours',
         'format': 'grib',
@@ -23,49 +26,49 @@ def test_get_reanalysis_query():
         'hmonth': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
         'hday': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15',
                  '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
-        'area': glofas.get_area(FAKE_STATIONS_LON_LAT),
-        'system_version': 'version_2_1'
+        'area': [1, -4, -2, 3],
+        'system_version': 'version_3_1',
+        'hydrological_model': 'lisflood'
     }
     assert query == expected_query
 
 
 def test_get_forecast_query():
-    glofas_forecast = glofas.GlofasForecast(FAKE_STATIONS_LON_LAT, leadtime_hours=[])
-    query = glofas_forecast._get_query(year=2000, month=1, leadtime_hour=240)
+    glofas_forecast = glofas.GlofasForecast()
+    query = glofas_forecast._get_query(area=FAKE_AREA, version=VERSION, year=2000, leadtime=10)
     expected_query = {
         'variable': 'river_discharge_in_the_last_24_hours',
         'format': 'grib',
         'product_type': ['control_forecast', 'ensemble_perturbed_forecasts'],
         'year': '2000',
-        'month': '01',
+        'month': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
         'day': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15',
                  '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
-        'area': glofas.get_area(FAKE_STATIONS_LON_LAT),
+        'area': [1, -4, -2, 3],
+        'system_version': 'version_3_1',
+        'hydrological_model': 'lisflood',
         'leadtime_hour': '240'
     }
     assert query == expected_query
 
 
 def test_get_reforecast_query():
-    glofas_reforecast = glofas.GlofasReforecast(FAKE_STATIONS_LON_LAT, leadtime_hours=[])
-    query = glofas_reforecast._get_query(year=2000, month=1, leadtime_hour=240)
+    glofas_reforecast = glofas.GlofasReforecast()
+    query = glofas_reforecast._get_query(area=FAKE_AREA, version=VERSION, year=2000, leadtime=10)
     expected_query = {
         'variable': 'river_discharge_in_the_last_24_hours',
         'format': 'grib',
         'product_type': ['control_reforecast', 'ensemble_perturbed_reforecasts'],
         'hyear': '2000',
-        'hmonth': '01',
+        'hmonth': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'],
         'hday': ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15',
                  '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31'],
-        'area': glofas.get_area(FAKE_STATIONS_LON_LAT),
-        'leadtime_hour': '240',
-        'system_version': 'version_2_2'
+        'area': [1, -4, -2, 3],
+        'system_version': 'version_3_1',
+        'hydrological_model': 'lisflood',
+        'leadtime_hour': '240'
     }
     assert query == expected_query
-
-
-def test_get_area():
-    assert glofas.get_area(stations_lon_lat=FAKE_STATIONS_LON_LAT, buffer=0.1) == [3.1, -2.1, -4.1, 1.1]
 
 
 def test_expand_dims():

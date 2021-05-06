@@ -7,6 +7,7 @@ coloredlogs==14.0
 rioxarray==0.1.1
 tqdm==4.50.2
 rasterstats==0.14.0
+cdsapi==0.5.1
 cdstoolbox_remote==0.0.1
 pygsheets==2.0.3.1
 cftime==1.3.0
