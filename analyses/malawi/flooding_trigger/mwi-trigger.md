@@ -52,28 +52,6 @@ for station in STATIONS:
 df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'malawi', 'mvac_dodma_flood_ta.csv'))
 ```
 
-### Overview of historical discharge
-
-```python
-for station in STATIONS: 
-    da_plt = da_glofas_reanalysis[station].sel(time=slice('1999-01-01','2020-12-31'))
-    df_flood = df_mvac_flood_ta[df_mvac_flood_ta['name']==station]
-
-    fig, ax = plt.subplots()
-    da_plt.plot(x='time', add_legend=True, ax=ax)
-    ax.set_title(f'Historical streamflow at {station}')
-    ax.set_xlabel("Date")
-    ax.set_ylabel('Discharge [m$^3$ s$^{-1}$]')
-    ax.axvspan(np.datetime64('2010-01-01'), np.datetime64('2019-12-31'), alpha=0.2, color='gray', label='Flooding monitoring')
-
-    for year in df_flood.Year.unique():
-        ax.axvspan(np.datetime64(f'{str(year)}-01-01'), np.datetime64(f'{str(year)}-12-31'), color='#ffb2a6', label='Flooding in TA')
-    
-    ax.legend()
-    
-    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_historical.png')
-```
-
 ### Calculate the return period
 
 ```python
@@ -96,10 +74,45 @@ rp_dict = {}
 
 for station in STATIONS:
     f_rp = get_return_period_function(da_glofas_reanalysis[station], station)
+    rp_dict[station] = {}
     for year in [1.5, 2, 3, 4, 5, 10, 20]:
-        val = 5000*np.round(f_rp(year) / 5000)
-        #if version == MAIN_VERSION:
-        rp_dict[year] = val
+        val = 10*np.round(f_rp(year) / 10)
+        rp_dict[station][year] = val
+```
+
+```python
+pd.DataFrame(rp_dict)
+```
+
+### Overview of historical discharge
+
+```python
+# Return periods to focus on, with display colours
+rps = {
+    3: '#32a852',
+    5: '#9c2788'
+}
+
+for station in STATIONS: 
+    da_plt = da_glofas_reanalysis[station].sel(time=slice('1999-01-01','2020-12-31'))
+    df_flood = df_mvac_flood_ta[df_mvac_flood_ta['name']==station]
+
+    fig, ax = plt.subplots()
+    da_plt.plot(x='time', add_legend=True, ax=ax)
+    ax.set_title(f'Historical streamflow at {station}')
+    ax.set_xlabel("Date")
+    ax.set_ylabel('Discharge [m$^3$ s$^{-1}$]')
+    ax.axvspan(np.datetime64('2010-01-01'), np.datetime64('2019-12-31'), alpha=0.2, color='gray', label='Flooding monitoring')
+
+    for year in df_flood.Year.unique():
+        ax.axvspan(np.datetime64(f'{str(year)}-01-01'), np.datetime64(f'{str(year)}-12-31'), color='#ffb2a6', label='Flooding in TA')
+    
+    for key, value in rps.items():
+        ax.axhline(rp_dict[station][key], 0, 1, color=value, label=f'{str(key)} return period')
+        
+    ax.legend()
+    
+    plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_historical.png')
 ```
 
 ### Checking out the skill
