@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import Area, Station
+from src.indicators.flooding.glofas.area import Area
 
 
 def test_expand_dims():

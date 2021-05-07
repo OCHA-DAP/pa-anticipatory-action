@@ -30,12 +30,12 @@ FFWC_STATIONS = {
     "Aricha": Station(lon=89.6550, lat=23.9032),
     "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-LEADTIMES = [5, 10, 11, 12, 13, 14, 15]
+LEADTIMES = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=False):
+def main(download=True, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
