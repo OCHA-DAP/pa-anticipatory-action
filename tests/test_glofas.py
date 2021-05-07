@@ -132,25 +132,3 @@ class TestDownload(unittest.TestCase):
             ),
         }
         fake_retrieve.assert_called_with(**expected_args)
-
-
-@mock.patch("src.indicators.flooding.glofas.glofas.xr.open_mfdataset")
-@mock.patch("src.indicators.flooding.glofas.glofas.Path.mkdir")
-@mock.patch.object(glofas, "DATA_DIR", Path("/tmp"))
-class TestProcess(unittest.TestCase):
-    def setUp(self):
-        self.country_name = "fake_country"
-        self.country_iso3 = "abc"
-        self.stations = {'fake_station': Station(lon=1.0, lat=2.0)}
-        self.raw_data = xr.Dataset(
-        )
-
-    def test_reanalysis_process(self, fake_mkdir, fake_open_mfdataset):
-        glofas_reanalysis = glofas.GlofasReanalysis()
-        glofas_reanalysis.year_min, glofas_reanalysis.year_max = (2000, 2001)
-        glofas_reanalysis.process(
-            country_name=self.country_name,
-            country_iso3=self.country_iso3,
-            stations=self.stations
-        )
-        fake_open_mfdataset.assert_called_with(x=1)
