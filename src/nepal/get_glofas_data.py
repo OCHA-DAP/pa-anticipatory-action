@@ -12,13 +12,10 @@ sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import AreaFromShape, Station
 
-
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_NAME = "nepal"
 COUNTRY_ISO3 = "npl"
-#LEADTIMES = [5, 10, 15, 20]
-#LEADTIMES = [1, 2, 3, 4]
-LEADTIMES = [6, 7, 8, 9]
+LEADTIMES = [x + 1 for x in range(20)]
 # TODO: Read in the csv file from GDrive
 STATIONS = {
     "Karnali": Station(lon=28.75, lat=81.25),
@@ -54,14 +51,14 @@ def main(download=True, process=True):
             area=area,
             version=VERSION,
         )
-        #glofas_forecast.download(
-        #    country_name=COUNTRY_NAME,
-        #    country_iso3=COUNTRY_ISO3,
-        #    area=area,
-        #    leadtimes=LEADTIMES,
-        #    version=VERSION,
-        #)
         glofas_reforecast.download(
+            country_name=COUNTRY_NAME,
+            country_iso3=COUNTRY_ISO3,
+            area=area,
+            leadtimes=LEADTIMES,
+            version=VERSION,
+        )
+        glofas_forecast.download(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
@@ -76,14 +73,14 @@ def main(download=True, process=True):
             stations=STATIONS,
             version=VERSION,
         )
-        glofas_forecast.process(
+        glofas_reforecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
-        glofas_reforecast.process(
+        glofas_forecast.process(
             country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
