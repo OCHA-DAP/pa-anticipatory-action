@@ -3,12 +3,13 @@ import os
 from pathlib import Path
 import geopandas as gpd
 from rasterstats import zonal_stats
+import rioxarray
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
 from src.indicators.drought import ecmwf_seasonal
@@ -57,7 +58,6 @@ def compute_stats_per_admin(country,adm_level=1):
     adm_boundaries_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
 
     ds = get_ecmwf_forecast_by_leadtime()
-    ds=ds.sel(time="2020-01")
     df=compute_zonal_stats(ds,ds.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
 
     df.to_csv(os.path.join(country_data_processed_dir,"ecmwf_seasonal_data",f"{parameters['iso3_code']}_seasonal-monthly-single-levels_v5_adm{adm_level}_stats.csv"))
