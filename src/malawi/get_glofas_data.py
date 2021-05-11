@@ -14,13 +14,11 @@ from src.indicators.flooding.glofas.area import AreaFromShape, Station
 
 
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
-COUNTRY_NAME = "malawi"
 COUNTRY_ISO3 = "mwi"
 LEADTIMES = [5, 10, 15, 20, 25, 30]
-STATIONS = {
-}
+STATIONS = {}
 SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
+    Path(os.environ["AA_DATA_DIR"]) / "public" / COUNTRY_ISO3 / "raw" / "cod_ab"
 )
 SHAPEFILE = (
     SHAPEFILE_BASE_DIR
@@ -41,34 +39,26 @@ def main(download=True, process=True):
     if download:
         df_admin_boundaries = gpd.read_file(SHAPEFILE)
         area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
-        glofas_reanalysis.download(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
-        )
+        glofas_reanalysis.download(country_iso3=COUNTRY_ISO3, area=area)
         glofas_forecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
         )
         glofas_reforecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
         )
 
     if process:
-        glofas_reanalysis.process(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations=STATIONS
-        )
+        glofas_reanalysis.process(country_iso3=COUNTRY_ISO3, stations=STATIONS)
         glofas_forecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
             leadtimes=LEADTIMES,
         )
         glofas_reforecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
             leadtimes=LEADTIMES,
