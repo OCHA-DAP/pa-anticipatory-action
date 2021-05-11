@@ -17,9 +17,11 @@ from src.indicators.drought.config import Config
 
 config=Config()
 
-DATA_DIR = config.DATA_DIR
-DATA_PRIVATE_DIR = config.DATA_PRIVATE_DIR
+DATA_DIR = Path(config.DATA_DIR)
+DATA_PUBLIC_DIR = config.PUBLIC_DIR
+DATA_PRIVATE_DIR = config.PRIVATE_DIR
 RAW_DATA_DIR = config.RAW_DIR
+GLOBAL_DATA_DIR = "glb"
 SHAPEFILE_DIR = config.SHAPEFILE_DIR
 PROCESSED_DATA_DIR = config.PROCESSED_DIR
 FLOODSCAN_DIR = Path("floodscan")
@@ -53,14 +55,13 @@ class Floodscan():
         """
         config=Config()
         parameters = config.parameters(country_name)
-        adm_boundaries_path = os.path.join(DATA_DIR,RAW_DATA_DIR,country_name,config.SHAPEFILE_DIR,parameters[f"path_admin{adm_level}_shp"])
+        adm_boundaries_path = os.path.join(DATA_DIR,DATA_PUBLIC_DIR,RAW_DATA_DIR,parameters["iso3_code"].lower(),config.SHAPEFILE_DIR,parameters[f"path_admin{adm_level}_shp"])
         ds=self.read_raw_dataset()
-
         #get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
         coords_transform=ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform()
         #this takes a few hours to compute
         df = self.compute_stats_per_area(ds,coords_transform,adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
-        self._write_to_processed_file(country_name,parameters["iso3_code"],adm_level,df)
+        self._write_to_processed_file(parameters["iso3_code"],adm_level,df)
 
     def compute_stats_per_area(self, ds, raster_transform, adm_path, adm_col, data_var="SFED_AREA",percentile_list=[2,4,6,8,10,20]):
         """
@@ -102,12 +103,10 @@ class Floodscan():
         return df_hist
 
     def read_processed_dataset(self,
-        country_name: str,
         country_iso3: str,
         adm_level: int,
     ):
         filepath = self._get_processed_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             adm_level=adm_level,
         )
@@ -115,13 +114,11 @@ class Floodscan():
 
     def _write_to_processed_file(
         self,
-        country_name: str,
         country_iso3: str,
         adm_level: int,
         df: pd.DataFrame,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             adm_level=adm_level,
         )
@@ -135,8 +132,10 @@ class Floodscan():
             self,
     ):
         directory = (
+                DATA_DIR /
                 DATA_PRIVATE_DIR
                 / RAW_DATA_DIR
+                / GLOBAL_DATA_DIR
                 / FLOODSCAN_DIR
         )
 
@@ -144,9 +143,8 @@ class Floodscan():
 
     def _get_processed_filepath(
         self,
-           country_name: str,
            country_iso3: str,
            adm_level: int,
     ) -> Path:
         filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
-        return DATA_PRIVATE_DIR / PROCESSED_DATA_DIR / country_name / FLOODSCAN_DIR / filename
+        return DATA_DIR / DATA_PRIVATE_DIR / PROCESSED_DATA_DIR / country_iso3 / FLOODSCAN_DIR / filename
