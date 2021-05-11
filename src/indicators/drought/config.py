@@ -11,11 +11,12 @@ from src.utils_general.utils import parse_yaml
 
 class Config:
     ### general directories
-    RAW_DIR="raw"
-    PROCESSED_DIR="processed"
+    RAW_DIR = "raw"
+    PROCESSED_DIR = "processed"
+    PUBLIC_DIR = "public"
+    PRIVATE_DIR = "private"
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
-    DATA_PRIVATE_DIR = Path(os.environ["AA_DATA_PRIVATE_DIR"])
-    ANALYSES_DIR = "analyses"
+    GLOBAL_ISO3 = 'glb'
 
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
@@ -23,7 +24,7 @@ class Config:
             self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
         )
         self.DIR_PATH = DIR_PATH
-        self.DROUGHTDATA_DIR= os.path.join(self.DATA_DIR, self.RAW_DIR,  'drought')
+        self.GLOBAL_DIR = os.path.join(self.DATA_DIR, self.PUBLIC_DIR, self.RAW_DIR,  self.GLOBAL_ISO3)
         self._parameters = None
 
 
@@ -44,7 +45,7 @@ class Config:
 
     ### Shapefiles
     #country specific shapefiles
-    SHAPEFILE_DIR = 'Shapefiles'
+    SHAPEFILE_DIR = 'cod_ab'
 
     #TODO: check if this is a good world boundaries file and if there is any copyright or so to it
     #world shapefile so used by all countries, save in drought folder
@@ -61,7 +62,7 @@ class Config:
     #set enddate to Jan next year, to make sure the latest date is always included in the download
     #If download takes too long, you can change the url to only download from a shorter time period
     IRI_URL = f"https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/.NMME_Seasonal_Forecast/.Precipitation_ELR/.prob/F/(Mar%202017)/(Jan%20{NEXT_YEAR})/RANGEEDGES/data.nc"
-    IRI_DIR = "IRI"
+    IRI_DIR = "iri"
     #downloads data from 2017 till the latest date available for the current year
     IRI_NC_FILENAME_RAW = f"IRI_2017{TODAY_YEAR}.nc"
     IRI_NC_FILENAME_CRS = f"IRI_2017{TODAY_YEAR}_crs.nc"
