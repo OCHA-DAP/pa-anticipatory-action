@@ -501,8 +501,8 @@ def main(country, suffix,download, config=None):
     if "fewsnet_dates_remove" in parameters["foodinsecurity"].keys():
         fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
 
-    country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, country)
-    country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, country)
+    country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower())
+    country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower())
     glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
 
     pop_path = os.path.join(country_data_raw_dir,config.POPSUBN_DIR,pop_filename)
