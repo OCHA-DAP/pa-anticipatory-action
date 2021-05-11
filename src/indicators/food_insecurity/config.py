@@ -55,20 +55,20 @@ class Config:
     ADMIN2_COL = "ADMIN2"
 
     #### FewsNet
-    FEWSNET_RAW_DIR = "FewsNetRaw"
+    FEWSNET_RAW_DIR = "fewsnet"
     #region can either be a part of a continent (e.g. east-africa) and a country (e.g. ethiopia)
     FEWSNET_FILENAME = "{region}{date}/{regionabb}_{date}_{period}.shp"
 
     #these are the standard dates fewsnet should have published data. In 2016 they changed the months of publication
     #in the config per country, dates can be added and removed
-    FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
+    FEWSWORLDPOP_PROCESSED_DIR = "fewsnet/worldpop"
     FEWSWORLDPOP_PROCESSED_FILENAME = "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
-    FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
+    FEWSADMPOP_PROCESSED_DIR = "fewsnet/cod_ps"
     FEWSADMPOP_PROCESSED_FILENAME = "{country}_fewsnet_admin{admin_level}{suffix}.csv"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
 
     #### Worldpop
-    WORLDPOP_RAW_DIR = "WorldPop"
+    WORLDPOP_RAW_DIR = "worldpop"
     # can make this more variable with a dict, e.g. if we want 1km and 100m or if we also want not UNadj
     # we are currently using 1km because this is generally granular enough and speeds up the calculations a lot
     WORLDPOP_FILENAME = "{country_iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
@@ -78,14 +78,14 @@ class Config:
     WORLDPOP_URL=WORLDPOP_BASEURL+"{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
 
     #### Subnational population
-    POPSUBN_RAW_DIR = "Population_subnational"
+    POPSUBN_RAW_DIR = "cod_ps"
 
     #### Worldbank historical national population
     WB_POP_FILENAME = "Worldbank_TotalPopulation.csv"
 
     #### Global IPC
-    GLOBALIPC_RAW_DIR = "GlobalIPC"
-    GLOBALIPC_PROCESSED_DIR = "GlobalIPCProcessed"
+    GLOBALIPC_RAW_DIR = "ipc_global"
+    GLOBALIPC_PROCESSED_DIR = "ipc_global"
     GLOBALIPC_URL="http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"
     GLOBALIPC_FILENAME_RAW="{country}_globalipc_raw.xlsx"
     GLOBALIPC_FILENAME_NEWCOLNAMES="{country}_globalipc_newcolumnnames.xlsx"

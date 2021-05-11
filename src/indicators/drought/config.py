@@ -17,6 +17,7 @@ class Config:
     PRIVATE_DIR = "private"
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
     GLOBAL_ISO3 = 'glb'
+    PLOT_DIR = 'plots'
 
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
@@ -49,7 +50,7 @@ class Config:
 
     #TODO: check if this is a good world boundaries file and if there is any copyright or so to it
     #world shapefile so used by all countries, save in drought folder
-    WORLD_SHP_PATH=os.path.join('raw', 'drought','TM_WORLD_BORDERS-0','TM_WORLD_BORDERS-0.3.shp')
+    WORLD_SHP_PATH=os.path.join('private', 'raw', 'glb', 'cod_ab', 'TM_WORLD_BORDERS-0','TM_WORLD_BORDERS-0.3.shp')
 
     ### Name mappings
     #to rename the variables of different providers to

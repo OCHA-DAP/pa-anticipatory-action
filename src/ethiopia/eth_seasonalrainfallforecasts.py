@@ -50,9 +50,9 @@ def main(download, config=None):
     if config is None:
         config = Config()
     parameters = config.parameters(country)
-    output_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,config.iso3_code, config.PLOT_DIR)
+    output_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,parameters['iso3_code'], config.PLOT_DIR)
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    adm_path=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.iso3_code,config.SHAPEFILE_DIR, parameters['path_admin1_shp'])
+    adm_path=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,parameters['iso3_code'],config.SHAPEFILE_DIR, parameters['path_admin1_shp'])
     statlist_plot=['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched']
     df_bound = gpd.read_file(adm_path)
 

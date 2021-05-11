@@ -1,6 +1,6 @@
 country_name: "malawi"
-iso3_code: "MWI"
-iso2_code: "MW"
+iso3_code: "mwi"
+iso2_code: "mw"
 path_admin0_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm0_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
 path_admin1_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm1_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
 path_admin2_shp: "mwi_adm_nso_20181016_shp/mwi_admbnda_adm2_nso_20181016.shp" #downloaded from https://data.humdata.org/dataset/malawi-administrative-level-0-3-boundaries
