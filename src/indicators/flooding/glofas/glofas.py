@@ -74,7 +74,6 @@ class Glofas:
             month=month,
             leadtime=leadtime,
         )
-        print(filepath)
         # If caching is on and file already exists, don't downlaod again
         if use_cache and filepath.exists():
             logger.debug(
