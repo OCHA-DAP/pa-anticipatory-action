@@ -23,16 +23,16 @@ def retrieve_worldpop_dirname():
 
 class Config:
     ### general directories
-    RAW_DIR = 'raw'
-    DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
-    ANALYSES_DIR = "analyses"
+
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
         DIR_PATH = getattr(
             self, "DIR_PATH", Path(os.path.dirname(os.path.realpath(__file__))).parents[1]
         )
         self.DIR_PATH = DIR_PATH
+        #TODO: make sure this is not used anymore and then remove
         self.FOODINSECURITYDATA_DIR = os.path.join(self.DATA_DIR, 'raw', 'food_insecurity')
+
         self._parameters = None
 
 
@@ -41,12 +41,27 @@ class Config:
             self._parameters = parse_yaml(os.path.join(self.DIR_PATH, country.lower(), 'config.yml'))
         return self._parameters
 
+
+    ### Data directory paths
+    DATA_DIR = os.paht.join(os.environ["AA_DATA_DIR"])
+    DATA_PUBLIC_DIR = os.path.join(DATA_DIR,"public")
+    DATA_PRIVATE_DIR = os.path.join(DATA_DIR,"private")
+    DATA_PUBLIC_RAW_DIR = os.path.join(DATA_PUBLIC_DIR,'raw')
+    DATA_PRIVATE_RAW_DIR = os.path.join(DATA_PRIVATE_DIR, 'raw')
+    DATA_PUBLIC_PROCESSED_DIR = os.path.join(DATA_PUBLIC_DIR,'processed')
+    DATA_PRIVATE_PROCESSED_DIR = os.path.join(DATA_PRIVATE_DIR, 'processed')
+
+    ### Shapefiles
+    SHAPEFILE_DIR = 'cod_ab'
+
+    ### Repo paths
+    ANALYSES_DIR = "analyses"
+
     #General date objects
     TODAY = datetime.now()
     TODAY_YEAR = TODAY.strftime("%Y")
 
-    ### Shapefiles
-    SHAPEFILE_DIR = 'Shapefiles'
+
 
     ### General values
     IPC_PERIOD_NAMES = ["CS", "ML1", "ML2"]
@@ -55,20 +70,22 @@ class Config:
     ADMIN2_COL = "ADMIN2"
 
     #### FewsNet
-    FEWSNET_RAW_DIR = "FewsNetRaw"
+    #TODO: replace raw by dir
+    FEWSNET_DIR = "fewsnet"
     #region can either be a part of a continent (e.g. east-africa) and a country (e.g. ethiopia)
     FEWSNET_FILENAME = "{region}{date}/{regionabb}_{date}_{period}.shp"
 
     #these are the standard dates fewsnet should have published data. In 2016 they changed the months of publication
     #in the config per country, dates can be added and removed
-    FEWSWORLDPOP_PROCESSED_DIR = "FewsNetWorldPop"
+    FEWSWORLDPOP_PROCESSED_DIR = os.path.join(FEWSNET_DIR,"worldpop")
     FEWSWORLDPOP_PROCESSED_FILENAME = "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
-    FEWSADMPOP_PROCESSED_DIR = "FewsNetAdmPop"
+    FEWSADMPOP_PROCESSED_DIR = os.path.join(FEWSNET_DIR,"cod_ab")
     FEWSADMPOP_PROCESSED_FILENAME = "{country}_fewsnet_admin{admin_level}{suffix}.csv"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
 
     #### Worldpop
-    WORLDPOP_RAW_DIR = "WorldPop"
+    #TODO change worldpop_raw_dir to worldpop_dir
+    WORLDPOP_DIR = "worldpop"
     # can make this more variable with a dict, e.g. if we want 1km and 100m or if we also want not UNadj
     # we are currently using 1km because this is generally granular enough and speeds up the calculations a lot
     WORLDPOP_FILENAME = "{country_iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
@@ -78,14 +95,17 @@ class Config:
     WORLDPOP_URL=WORLDPOP_BASEURL+"{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
 
     #### Subnational population
-    POPSUBN_RAW_DIR = "Population_subnational"
+    POPSUBN_RAW_DIR = "cod_ps"
 
     #### Worldbank historical national population
+    WORLDBANK_DIR = "worldbank"
     WB_POP_FILENAME = "Worldbank_TotalPopulation.csv"
 
     #### Global IPC
-    GLOBALIPC_RAW_DIR = "GlobalIPC"
-    GLOBALIPC_PROCESSED_DIR = "GlobalIPCProcessed"
+    #TODO: replace raw and processed by globalipc_dir
+    GLOBALIPC_RAW_DIR = "ipc_global"
+    GLOBALIPC_PROCESSED_DIR = "ipc_global"
+    GLOBALIPC_DIR = "ipc_global"
     GLOBALIPC_URL="http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"
     GLOBALIPC_FILENAME_RAW="{country}_globalipc_raw.xlsx"
     GLOBALIPC_FILENAME_NEWCOLNAMES="{country}_globalipc_newcolumnnames.xlsx"
