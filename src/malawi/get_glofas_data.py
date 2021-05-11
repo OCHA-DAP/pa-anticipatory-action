@@ -18,7 +18,7 @@ COUNTRY_ISO3 = "mwi"
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 STATIONS = {}
 SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "public" / COUNTRY_ISO3 / "raw" / "cod_ab"
+    Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
 )
 SHAPEFILE = (
     SHAPEFILE_BASE_DIR
