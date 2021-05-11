@@ -281,11 +281,12 @@ def retrieve_fewsnet_worldpop(country, admin_level, suffix="", download=False, c
     if "fewsnet_dates_remove" in parameters.keys():
         fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
 
-    country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
-    country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
+    country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, country)
+    glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
+    country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, country)
 
-    fewsnet_raw_dir = os.path.join(config.FOODINSECURITYDATA_DIR, config.FEWSNET_RAW_DIR)
-    worldpop_dir = os.path.join(country_data_raw_dir, config.WORLDPOP_RAW_DIR)
+    fewsnet_raw_dir = os.path.join(glb_data_raw_dir, config.FEWSNET_DIR)
+    worldpop_dir = os.path.join(country_data_raw_dir, config.WORLDPOP_DIR)
 
     if download:
         for d in fewsnet_dates:
