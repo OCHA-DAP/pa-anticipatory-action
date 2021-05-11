@@ -43,7 +43,7 @@ class Config:
 
 
     ### Data directory paths
-    DATA_DIR = os.paht.join(os.environ["AA_DATA_DIR"])
+    DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
     DATA_PUBLIC_DIR = os.path.join(DATA_DIR,"public")
     DATA_PRIVATE_DIR = os.path.join(DATA_DIR,"private")
     DATA_PUBLIC_RAW_DIR = os.path.join(DATA_PUBLIC_DIR,'raw')
@@ -82,7 +82,6 @@ class Config:
     FEWSADMPOP_PROCESSED_DIR = os.path.join(FEWSNET_DIR,"cod_ab")
     FEWSADMPOP_PROCESSED_FILENAME = "{country}_fewsnet_admin{admin_level}{suffix}.csv"
     FEWSNET_DATES = ["200907","200910"] + [f"{str(i)}{m}" for i in range(2010,2016) for m in ["01","04","07","10"]] + [f"{str(i)}{m}" for i in range(2016,int(TODAY_YEAR)+1) for m in ["02","06","10"]]
-
     #### Worldpop
     #TODO change worldpop_raw_dir to worldpop_dir
     WORLDPOP_DIR = "worldpop"
@@ -95,7 +94,7 @@ class Config:
     WORLDPOP_URL=WORLDPOP_BASEURL+"{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
 
     #### Subnational population
-    POPSUBN_RAW_DIR = "cod_ps"
+    POPSUBN_DIR = "cod_ps"
 
     #### Worldbank historical national population
     WORLDBANK_DIR = "worldbank"
