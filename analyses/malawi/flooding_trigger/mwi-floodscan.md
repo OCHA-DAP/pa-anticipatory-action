@@ -1,7 +1,6 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,md
     text_representation:
       extension: .md
       format_name: markdown
@@ -66,10 +65,7 @@ for station in STATIONS:
 ### Explore Floodscan data
 
 ```python
-df_floodscan = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'malawi', 'floodscan', 'mwi_floodscan_stats_adm2.csv'))
-df_floodscan = df_floodscan[df_floodscan['ADM2_EN'].isin(ADM2_SEL)]
-df_floodscan = df_floodscan[['ADM2_EN','date', 'mean_cell', 'max_cell', 'min_cell']]
-df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
+df_floodscan = rd.get_floodscan_processed()
 ```
 
 ```python

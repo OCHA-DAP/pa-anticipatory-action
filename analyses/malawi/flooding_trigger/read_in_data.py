@@ -11,11 +11,21 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.floodscan import floodscan
 from src.malawi import get_glofas_data as ggd
+from src.malawi import get_floodscan_data as gfd
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 GLOFAS_DIR = DATA_DIR / "processed/malawi/GLOFAS_Data"
 STATION = "glofas_1"
+
+
+def get_floodscan_processed(adm: int = 2):
+    floodscan_processed = floodscan.Floodscan()
+    df_floodscan = floodscan_processed.read_processed_dataset(
+        country_name=gfd.COUNTRY_NAME, country_iso3=gfd.COUNTRY_ISO3, adm_level=adm,
+    )
+    return df_floodscan
 
 
 def get_glofas_reanalysis(version: int = 3, station: str = STATION):
