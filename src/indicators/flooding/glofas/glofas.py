@@ -15,9 +15,9 @@ from src.indicators.flooding.glofas.area import Area, Station
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-RAW_DATA_DIR = DATA_DIR / "raw"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
-GLOFAS_DIR = Path("GLOFAS_Data")
+RAW_DATA_DIR = DATA_DIR / "public" / "raw"
+PROCESSED_DATA_DIR = DATA_DIR / "public" / "processed"
+GLOFAS_DIR = Path("glofas")
 CDSAPI_CLIENT = cdsapi.Client()
 DEFAULT_VERSION = 3
 HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
@@ -88,11 +88,7 @@ class Glofas:
         CDSAPI_CLIENT.retrieve(
             name=self.cds_name,
             request=self._get_query(
-                area=area,
-                version=version,
-                year=year,
-                month=month,
-                leadtime=leadtime,
+                area=area, version=version, year=year, month=month, leadtime=leadtime,
             ),
             target=filepath,
         )
@@ -208,7 +204,7 @@ class Glofas:
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
+        return PROCESSED_DATA_DIR / country_iso3 / GLOFAS_DIR / filename
 
     def read_processed_dataset(
         self,
