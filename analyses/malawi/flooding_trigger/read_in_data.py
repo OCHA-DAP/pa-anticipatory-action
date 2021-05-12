@@ -21,7 +21,7 @@ STATION = "glofas_1"
 def get_glofas_reanalysis(version: int = 3, station: str = STATION):
     glofas_reanalysis = glofas.GlofasReanalysis()
     da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3, version=version
+        country_iso3=ggd.COUNTRY_ISO3, version=version
     )[station]
     return da_glofas_reanalysis
 
@@ -32,10 +32,7 @@ def get_glofas_forecast(
     glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME,
-            country_iso3=ggd.COUNTRY_ISO3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
         )[station]
         for leadtime in leadtimes
     }
@@ -52,10 +49,7 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME,
-            country_iso3=ggd.COUNTRY_ISO3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
         )[station]
         for leadtime in leadtimes
     }

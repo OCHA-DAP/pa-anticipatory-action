@@ -130,20 +130,16 @@ def read_in_ffwc():
 
     # Need to combine the three sheets
     df_ffwc_wl_dict = pd.read_excel(
-        ffwc_dir / ffwc_wl_filename, sheet_name=None, header=[1], index_col="Date"
-    )
-    df_ffwc_wl = (
-        df_ffwc_wl_dict["2017"]
-        .append(df_ffwc_wl_dict["2018"])
-        .append(df_ffwc_wl_dict["2019"])
-        .rename(
-            columns={
-                f"{leadtime} hrs": f"ffwc_{leadtime}day" for leadtime in ffwc_leadtimes
-            }
-        )
-    ).drop(
-        columns=["Observed WL"]
-    )  # drop observed because we will use the mean later
+        ffwc_dir / ffwc_wl_filename,
+        sheet_name=None,
+        header=[1], index_col='Date')
+    df_ffwc_wl = (df_ffwc_wl_dict['2017']
+        .append(df_ffwc_wl_dict['2018'])
+        .append(df_ffwc_wl_dict['2019'])
+        .rename(columns={
+        f'{leadtime*24} hrs': f'ffwc_{leadtime}day'
+        for leadtime in ffwc_leadtimes
+    })).drop(columns=['Observed WL'])  # drop observed because we will use the mean later
     # Convert date time to just date
     df_ffwc_wl.index = df_ffwc_wl.index.floor("d")
 

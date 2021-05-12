@@ -20,11 +20,18 @@ parameters = config.parameters(COUNTRY_NAME)
 country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, COUNTRY_NAME)
 country_data_raw_dir = os.path.join(config.DATA_DIR, config.RAW_DIR, COUNTRY_NAME)
 
-SHAPEFILE = os.path.join(
-    country_data_raw_dir, config.SHAPEFILE_DIR, parameters["path_admin0_shp"]
-)
 LEADTIMES = parameters["glofas"]["leadtimes"]
 COUNTRY_ISO3 = parameters["iso3_code"].lower()
+
+SHAPEFILE_DIR = (
+    Path(os.environ["AA_DATA_DIR"])
+    / "public"
+    / "raw"
+    / COUNTRY_ISO3
+    / "cod_ab"
+    / parameters["path_admin0_shp"]
+)
+
 # TODO: Figure out how to get this from how it's stored in the config.yml
 STATIONS = {
     "glofas_1": Station(lat=-16.55, lon=35.15),
@@ -45,37 +52,21 @@ def main(download=False, process=True):
     if download:
         df_admin_boundaries = gpd.read_file(SHAPEFILE)
         area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
-        glofas_reanalysis.download(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
-        )
+        glofas_reanalysis.download(country_iso3=COUNTRY_ISO3, area=area)
         glofas_forecast.download(
-            country_name=COUNTRY_NAME,
-            country_iso3=COUNTRY_ISO3,
-            area=area,
-            leadtimes=LEADTIMES,
+            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES,
         )
         glofas_reforecast.download(
-            country_name=COUNTRY_NAME,
-            country_iso3=COUNTRY_ISO3,
-            area=area,
-            leadtimes=LEADTIMES,
+            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES,
         )
 
     if process:
-        glofas_reanalysis.process(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations=STATIONS
-        )
+        glofas_reanalysis.process(country_iso3=COUNTRY_ISO3, stations=STATIONS)
         glofas_forecast.process(
-            country_name=COUNTRY_NAME,
-            country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
-            leadtimes=LEADTIMES,
+            country_iso3=COUNTRY_ISO3, stations=STATIONS, leadtimes=LEADTIMES,
         )
         glofas_reforecast.process(
-            country_name=COUNTRY_NAME,
-            country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
-            leadtimes=LEADTIMES,
+            country_iso3=COUNTRY_ISO3, stations=STATIONS, leadtimes=LEADTIMES,
         )
 
 
