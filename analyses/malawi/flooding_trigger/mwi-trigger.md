@@ -25,6 +25,7 @@ from src.indicators.flooding.config import Config
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
+PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 ```
@@ -49,7 +50,7 @@ for station in STATIONS:
 ### Read in the baseline impact data
 
 ```python
-df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'malawi', 'mvac_dodma_flood_ta.csv'))
+df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'mwi', 'mvac_dodma_flood_ta.csv'))
 ```
 
 ### Calculate the return period
@@ -112,7 +113,7 @@ for station in STATIONS:
         
     ax.legend()
     
-    plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_historical.png')
+    plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas.png')
 ```
 
 ### Checking out the skill
@@ -194,9 +195,9 @@ df_crps = dict()
 for station in STATIONS:
     df_crps[station] = get_skill(da_glofas_reforecast[station], da_glofas_reanalysis[station])
     plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast")
-    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_crps.png')
+    plt.savefig(PLOT_DIR / f'{station}_crps.png')
     plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='std', ylabel="RCRPS")
-    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_rcrps.png')
+    plt.savefig(PLOT_DIR / f'{station}_rcrps.png')
     plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='mean', ylabel="NCRPS (CRPS / mean)")
-    #plt.savefig(f'C:/Users/Hannah/Desktop/mwi_plots/{station}_ncrps.png')
+    plt.savefig(PLOT_DIR / f'{station}_ncrps.png')
 ```
