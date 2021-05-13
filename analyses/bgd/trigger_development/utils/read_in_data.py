@@ -17,11 +17,32 @@ pd.options.mode.chained_assignment = None
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 STATION = "Bahadurabad_glofas"
-ffwc_dir = DATA_DIR / 'public/exploration/bgd/FFWC_Data'
+ffwc_dir = DATA_DIR / 'private/exploration/bgd/FFWC_Data'
 
 # Event definition
 EVENT_WATER_THRESH = 19.5 + 0.85
 EVENT_NDAYS_THRESH = 3
+
+
+GLOFAS_EXPLORATION_FOLDER = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
+
+
+def get_glofas_df(glofas_dir: Path = GLOFAS_EXPLORATION_FOLDER,
+                  district_list: list = None,
+                  year_min: int = 1979,
+                  year_max: int = 2021) -> pd.DataFrame:
+    """
+    Get GloFAS data from the exploration directory -- from the 2020 analysis
+    """
+    glofas_df = pd.DataFrame(columns=district_list)
+    for year in range(year_min, year_max):
+        glofas_filename = Path(f'{year}.csv')
+        glofas_df = glofas_df.append(
+            pd.read_csv(glofas_dir / glofas_filename,
+                        index_col=0))
+    glofas_df.index = pd.to_datetime(glofas_df.index, format='%Y-%m-%d')
+    return glofas_df
+
 
 def get_glofas_reanalysis(version: int = 3):
     glofas_reanalysis = glofas.GlofasReanalysis()
