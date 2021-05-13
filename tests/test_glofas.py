@@ -29,7 +29,6 @@ def test_expand_dims():
 @mock.patch.object(glofas, "DATA_DIR", Path("/tmp"))
 class TestDownload(unittest.TestCase):
     def setUp(self):
-        self.country_name = "fake_country"
         self.country_iso3 = "abc"
         self.area = Area(north=1, south=-2, east=3, west=-4)
         self.year = 2000
@@ -42,7 +41,6 @@ class TestDownload(unittest.TestCase):
     def test_reanalysis_download(self, fake_mkdir, fake_retrieve):
         glofas_reanalysis = glofas.GlofasReanalysis()
         glofas_reanalysis.download(
-            country_name=self.country_name,
             country_iso3=self.country_iso3,
             area=self.area,
             year_min=self.year,
@@ -62,7 +60,7 @@ class TestDownload(unittest.TestCase):
                 "hydrological_model": "lisflood",
             },
             "target": Path(
-                f"/tmp/raw/{self.country_name}/GLOFAS_Data/version_3/cems-glofas-historical"
+                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-historical"
                 f"/{self.country_iso3}_cems-glofas-historical_v3_2000.grib"
             ),
         }
@@ -71,7 +69,6 @@ class TestDownload(unittest.TestCase):
     def test_forecast_download(self, fake_mkdir, fake_retrieve):
         glofas_forecast = glofas.GlofasForecast()
         glofas_forecast.download(
-            country_name=self.country_name,
             country_iso3=self.country_iso3,
             area=self.area,
             leadtimes=[self.leadtime],
@@ -93,7 +90,7 @@ class TestDownload(unittest.TestCase):
                 "leadtime_hour": f"{self.expected_leadtime}",
             },
             "target": Path(
-                f"/tmp/raw/{self.country_name}/GLOFAS_Data/version_3/cems-glofas-forecast"
+                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-forecast"
                 f"/{self.country_iso3}_cems-glofas-forecast_v3_2000_lt10d.grib"
             ),
         }
@@ -102,7 +99,6 @@ class TestDownload(unittest.TestCase):
     def test_reforecast_download(self, fake_mkdir, fake_retrieve):
         glofas_reforecast = glofas.GlofasReforecast()
         glofas_reforecast.download(
-            country_name=self.country_name,
             country_iso3=self.country_iso3,
             area=self.area,
             leadtimes=[self.leadtime],
@@ -127,7 +123,7 @@ class TestDownload(unittest.TestCase):
                 "leadtime_hour": f"{self.expected_leadtime}",
             },
             "target": Path(
-                f"/tmp/raw/{self.country_name}/GLOFAS_Data/version_3/cems-glofas-reforecast"
+                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-reforecast"
                 f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000_lt10d.grib"
             ),
         }

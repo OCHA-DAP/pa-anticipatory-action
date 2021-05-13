@@ -14,7 +14,8 @@ import cdsapi
 from src.indicators.flooding.glofas.area import Area, Station
 
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"
+DATA_DIR = Path(os.environ["AA_DATA_DIR"])
+PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
 GLOFAS_DIR = Path("glofas")
@@ -109,6 +110,7 @@ class Glofas:
     ):
         directory = (
             DATA_DIR
+            / PUBLIC_DATA_DIR
             / RAW_DATA_DIR
             / country_iso3
             / GLOFAS_DIR
