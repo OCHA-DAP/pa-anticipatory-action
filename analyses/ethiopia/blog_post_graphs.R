@@ -127,8 +127,8 @@ fi_ml2_3p_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>%
 #########
 
 # dec 2020 food insecurity
-png(file = "blog_post_food_insecurity_graph.png",
-    width=1820, height=750)
+#png(file = "blog_post_food_insecurity_graph.png",
+#    width=1820, height=750)
 layout_3p <- fi_cs_3p_plot | fi_ml1_3p_plot | fi_ml2_3p_plot
 layout_3p +
   plot_annotation(
@@ -155,8 +155,8 @@ hist_cs.long <- hist_cs[, c('date', "perc_CS_3", "perc_CS_4", "ADM1_EN")] %>%
                     gather(key = "ipc_phase" , value = "perc", -date, -ADM1_EN)
 
 
-png(file = "blog_post_historical_food_insecurity_graph.png",
-    width=1051, height=578)
+#png(file = "blog_post_historical_food_insecurity_graph.png",
+#    width=1051, height=578)
 
 ggplot(data = hist_cs.long[order(hist_cs.long$ipc_phase, decreasing = T),], # orders to plot IPC4 on top of IPC3
        aes(x = date, y = perc, fill = factor(ipc_phase, levels=c("Emergency-IPC4", "Crisis-IPC3")))) + # specifies order of the levels as we want them displayed
@@ -175,5 +175,47 @@ ggplot(data = hist_cs.long[order(hist_cs.long$ipc_phase, decreasing = T),], # or
   labs(fill = "IPC level")
 
 dev.off()
+
+## triggered areas (taken from POC dashboard)
+
+ipc_indices_data <- read.csv("../../dashboard/data/foodinsecurity/ethiopia_foodinsec_trigger.csv") 
+
+# convert date string as a Date format
+ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%Y-%m-%d")
+
+# select latest records. Last date of fewsnet and global ipc can differ so selected separately.
+latest_report_per_source <- ipc_indices_data %>% 
+                                 group_by(source) %>%
+                                 slice(which.max(date)) %>% # keep only latest records for each source 
+                                 ungroup() %>%
+                                 select(source, date) %>%
+                                 unique()
+ 
+ipc_indices_data_latest <- ipc_indices_data %>% 
+                               right_join(latest_report_per_source, by = c('source' = 'source', 'date' = 'date'))
+# build datasets per country, source. Ensures all regions are represented if no projections in certain regions
+latest_fs <-  eth_adm1 %>%
+                left_join(ipc_indices_data_latest, by = c('ADM1_EN' = 'ADMIN1'))
+ 
+
+# generate list of triggered regions across sources. Feb-May 2021 is ML2 for FewsNet and Jan-June 2021 is ML1 for GlobalIPC
+fs_trigger_list <- latest_fs %>%
+  mutate(threshold_reached_H1_2021 = ifelse((source == 'FewsNet' & threshold_reached_ML2 == 'True') | (source == 'GlobalIPC' & threshold_reached_ML1 == 'True'), 1, 0)) %>%
+  group_by(ADM1_EN) %>%
+  mutate(threshold_reached_H1_2021 = ifelse(sum(threshold_reached_H1_2021) > 0, 1, 0)) %>% # assigns 1 to threshold_reached_H1_2021 if either source met threshold
+  ungroup() %>%
+  select(Shape_Leng, Shape_Area, ADM1_EN, threshold_reached_H1_2021, geometry) %>%
+  unique()
+
+# produce  map of triggered regions across sources
+trigger_palette <- c("#EEEEEE", "#F2645A") # grey first, tomato second
+
+fs_trigger_map <- fs_trigger_list %>% 
+  tmap::tm_shape() +
+  tmap::tm_polygons("threshold_reached_H1_2021", 
+              palette = trigger_palette, 
+              title = "Food Insecurity Threshold Met",
+              legend.show = FALSE) +
+  tmap::tm_text(text = "ADM1_EN", size = 0.75, col = "black") 
 
 
