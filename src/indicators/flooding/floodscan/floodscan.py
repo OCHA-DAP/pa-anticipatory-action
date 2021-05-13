@@ -51,22 +51,25 @@ class Floodscan:
         custom_path: str = None,
         custom_id_col: str = "",
         custom_name: str = "",
+        start_date: str = "1998-01-12",
+        end_date: str = "2020-12-31",
     ):
         """
         Load data, call function to compute statistics per admin, and save the results to a csv
         Args:
             country_name: name of the country of interest
             adm_level: admin level to compute the statistics on
-            custom_area: whether or not a custom area (non adm) should be used to get zonal stats,
-            custom_path: str = file path to the custom area shapefile
-            custom_id_col: str = the name of the id column for features in the custom area shapefile
-            custom_name: str = the name of the custom area (for the output file)
+            custom_path: file path to the custom area shapefile
+            custom_id_col: the name of the id column for features in the custom area shapefile
+            custom_name: the name of the custom area (for the output file)
+            start_date: to filter by start date
+            end_date: to filter by end date
         """
         config = Config()
         parameters = config.parameters(country_name)
         country_iso3 = parameters["iso3_code"]
 
-        ds = self.read_raw_dataset()
+        ds = self.read_raw_dataset().sel(time=slice(start_date, end_date))
 
         # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
         coords_transform = (
@@ -82,9 +85,7 @@ class Floodscan:
             df = self.compute_stats_per_area(
                 ds, coords_transform, boundaries_path, custom_id_col,
             )
-            self._write_to_processed_file(
-                country_name, parameters["iso3_code"], adm_level, df
-            )
+            self._write_to_processed_file(country_iso3, adm_level, df, custom_name)
 
         else:
             boundaries_path = os.path.join(
@@ -102,9 +103,7 @@ class Floodscan:
                 boundaries_path,
                 parameters[f"shp_adm{adm_level}c"],
             )
-            self._write_to_processed_file(
-                country_name, parameters["iso3_code"], adm_level, df
-            )
+            self._write_to_processed_file(country_iso3, adm_level, df, custom_name)
 
     def compute_stats_per_area(
         self,
