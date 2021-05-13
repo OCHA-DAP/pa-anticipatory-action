@@ -4,6 +4,7 @@ from pathlib import Path
 import geopandas as gpd
 from rasterstats import zonal_stats
 import rioxarray
+import logging
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,8 @@ sys.path.append(path_mod)
 from src.indicators.drought import ecmwf_seasonal
 from src.malawi import get_ecmwf_seasonal_data as gesd
 from src.indicators.drought.config import Config
+
+logger = logging.getLogger(__name__)
 
 #TODO: not sure which functions to include here and which in the ecmwf_seasonal file
 
@@ -48,7 +51,7 @@ def get_ecmwf_forecast_by_leadtime(version: int = 5):
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
 #TODO: not sure if this is the best structure, should it instead be inside a class?
-def compute_stats_per_admin(country,adm_level=1):
+def compute_stats_per_admin(country,adm_level=1,use_cache=True):
     config = Config()
     parameters = config.parameters(country)
     country_iso3=parameters["iso3_code"]
@@ -60,12 +63,21 @@ def compute_stats_per_admin(country,adm_level=1):
     ds = get_ecmwf_forecast_by_leadtime()
     #loop over dates
     for date in ds.time.values:
-        ds_sel=ds.sel(time=date)
-        df=compute_zonal_stats(ds_sel,ds_sel.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
-        date_dt=pd.to_datetime(date)
+        date_dt = pd.to_datetime(date)
+        output_path=os.path.join(country_data_processed_dir,"ecmwf",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv")
+        # If caching is on and file already exists, don't download again
+        if use_cache and Path(output_path).exists():
+            logger.debug(
+                f"{output_path} already exists and cache is set to True, skipping"
+            )
+        else:
+            print(date)
+            ds_sel=ds.sel(time=date)
+            df=compute_zonal_stats(ds_sel,ds_sel.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
 
-        df["date"] = date_dt
-        df.to_csv(os.path.join(country_data_processed_dir,"ecmwf",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"))
+
+            df["date"] = date_dt
+            df.to_csv()
 
 #TODO: create function to retrieve the stats file
 
