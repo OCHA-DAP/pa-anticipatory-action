@@ -501,14 +501,16 @@ def main(country, suffix,download, config=None):
     if "fewsnet_dates_remove" in parameters["foodinsecurity"].keys():
         fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
 
-    country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
-    country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
+    country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower())
+    country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower())
+    glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
 
-    pop_path = os.path.join(country_data_raw_dir,config.POPSUBN_RAW_DIR,pop_filename)
-    fewsnet_raw_dir = os.path.join(config.FOODINSECURITYDATA_DIR, config.FEWSNET_RAW_DIR)
+    pop_path = os.path.join(country_data_raw_dir,config.POPSUBN_DIR,pop_filename)
+    fewsnet_raw_dir = os.path.join(glb_data_raw_dir, config.FEWSNET_DIR)
+
     admin2bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR,
                                    parameters[f'path_admin2_shp'])
-    histpop_path = os.path.join(config.FOODINSECURITYDATA_DIR,config.WB_POP_FILENAME)
+    histpop_path = os.path.join(glb_data_raw_dir,"worldbank",config.WB_POP_FILENAME)
     output_dir = os.path.join(country_data_processed_dir, config.FEWSADMPOP_PROCESSED_DIR)
     # create output dir if it doesn't exist yet
     Path(output_dir).mkdir(parents=True, exist_ok=True)
