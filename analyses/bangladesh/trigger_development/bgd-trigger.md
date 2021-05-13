@@ -15,15 +15,16 @@ reload(rd)
 mpl.rcParams['figure.dpi'] = 300
 
 GLOFAS_VERSION = 2
+LEADTIMES_V2 = [5, 10, 15, 20, 25, 30]
 ```
 
 ### Create GloFAS objects
 
 ```python
 da_glofas_reanalysis = rd.get_glofas_reanalysis(version=GLOFAS_VERSION)
-da_glofas_forecast = rd.get_glofas_forecast(version=GLOFAS_VERSION)
+da_glofas_forecast = rd.get_glofas_forecast(version=GLOFAS_VERSION, leadtimes=LEADTIMES_V2)
 da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast)
-da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION)
+da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION, leadtimes=LEADTIMES_V2)
 da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast)
 
 ```
@@ -149,8 +150,6 @@ def get_detection_stats(glofas_var_name, thresh_array):
     df = df[df[glofas_var_name].notna()]
     for ithresh, thresh in enumerate(thresh_array):
         detections = get_glofas_detections(df[glofas_var_name], thresh)
-        detection_window_min = 0
-        detection_window_max = 7
         detected_event_dates = []
         for detection in detections:
             detected_events = df['event'][detection:
@@ -209,6 +208,13 @@ def get_thresh_and_max_precision_with_no_fn( glofas_var_name, thresh_array):
     print('threshold', thresh_array[FN==0][-5:])
     print('precision', precision[FN==0][-5:])
     print('FP', FP[FN==0][-5:])
+    
+def print_stats_for_val(glofas_var_name, thresh_array, trigger_val):
+    TP, FP, FN = get_detection_stats(glofas_var_name,
+                                thresh_array)
+    i = np.argmin(np.abs(thresh_array - trigger_val))
+    print(f'Stats for trigger value of {trigger_val}:')
+    print(f'TP: {TP[i]:.0f}, FP: {FP[i]:.0f}, FN: {FN[i]:.0f}')
 ```
 
 ```python
@@ -216,6 +222,9 @@ thresh_array = np.arange(70000, 110000, 500)
 glofas_var_name = 'glofas_observed'
 plot_stats(glofas_var_name, thresh_array)
 get_thresh_and_max_precision_with_no_fn(glofas_var_name, thresh_array)
+
+# Print out last year's trigger stats -- 1 in 5 year val of 98000
+print_stats_for_val(glofas_var_name, thresh_array, 98000)
 ```
 
 From this plot, it looks like the highest possible threshold with no FN is around 83,000. 

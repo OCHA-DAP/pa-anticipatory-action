@@ -13,10 +13,15 @@ sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
 from src.bangladesh import get_glofas_data as ggd
 
+pd.options.mode.chained_assignment = None
+
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 STATION = "Bahadurabad_glofas"
 ffwc_dir = DATA_DIR / 'public/exploration/bgd/FFWC_Data'
 
+# Event definition
+EVENT_WATER_THRESH = 19.5 + 0.85
+EVENT_NDAYS_THRESH = 3
 
 def get_glofas_reanalysis(version: int = 3):
     glofas_reanalysis = glofas.GlofasReanalysis()
@@ -113,7 +118,6 @@ def get_da_glofas_summary(da_glofas):
         var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
         for var_name, percentile_value in percentile_dict.items()
     }
-
     return xr.Dataset(
         data_vars=data_vars_dict,
         coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime),
@@ -167,3 +171,26 @@ def read_in_ffwc():
     df_ffwc_wl.update(df_ffwc_wl_full, overwrite=False)
 
     return df_ffwc_wl
+
+
+def get_events(df_ffwc_wl):
+    groups = get_groups_above_threshold(df_ffwc_wl['observed'],
+                                        EVENT_WATER_THRESH)
+
+    # Only take those that are 3 consecutive days
+    groups = [group for group in groups
+              if group[1] - group[0] >= EVENT_NDAYS_THRESH]
+
+    # Mark the first date in each series as TP
+    events = [group[0] + EVENT_NDAYS_THRESH - 1 for group in groups]
+
+    df_ffwc_wl['event'] = False
+    df_ffwc_wl['event'][events] = True
+
+    return df_ffwc_wl
+
+
+def get_groups_above_threshold(observations, threshold):
+    return np.where(np.diff(np.hstack(([False],
+                                           observations > threshold,
+                                           [False]))))[0].reshape(-1, 2)
