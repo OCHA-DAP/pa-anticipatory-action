@@ -11,8 +11,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.stats import pearsonr
 
-import read_in_data as rd
-reload(rd)
+from utils import utils
+reload(utils)
 
 mpl.rcParams['figure.dpi'] = 200
 
@@ -28,24 +28,24 @@ MAIN_VERSION = 3
 
 ```python
 da_glofas_reanalysis = {
-    2: rd.get_glofas_reanalysis(version=2),
-    3: rd.get_glofas_reanalysis()
+    2: utils.get_glofas_reanalysis(version=2),
+    3: utils.get_glofas_reanalysis()
 }
 
 da_glofas_forecast = {
-    2: rd.get_glofas_forecast(version=2, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_forecast(),
+    2: utils.get_glofas_forecast(version=2, leadtimes=LEADTIMES_V2),
+    3: utils.get_glofas_forecast(),
 
 }
 
 da_glofas_reforecast = {
-    2: rd.get_glofas_reforecast(version=2, interp=False, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_reforecast(interp=False)
+    2: utils.get_glofas_reforecast(version=2, interp=False, leadtimes=LEADTIMES_V2),
+    3: utils.get_glofas_reforecast(interp=False)
 }
 
 da_glofas_reforecast_interp = {
-    2: rd.get_glofas_reforecast(version=2, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_reforecast()
+    2: utils.get_glofas_reforecast(version=2, leadtimes=LEADTIMES_V2),
+    3: utils.get_glofas_reforecast()
 }
 ```
 
@@ -53,8 +53,8 @@ da_glofas_reforecast_interp = {
 
 ```python
 def get_return_period_function(observations):
-    df_rp = (observations.to_dataframe()[[rd.STATION]]
-                 .rename(columns={rd.STATION: 'discharge'})
+    df_rp = (observations.to_dataframe()[[utils.STATION]]
+                 .rename(columns={utils.STATION: 'discharge'})
                  .resample(rule='A', kind='period')
                  .max() 
                  .sort_values(by='discharge', ascending=False)
@@ -88,21 +88,21 @@ rp_dict[5] = 100000
  ### Read in FFWC data with events
 
 ```python
-df_ffwc_wl = rd.get_events(rd.read_in_ffwc())
+df_ffwc_wl = utils.get_events(utils.read_in_ffwc())
 ```
 
 ### Add GloFAS to FFWC
 
 ```python
-da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast[MAIN_VERSION])
-da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast_interp[MAIN_VERSION])
+da_glofas_forecast_summary = utils.get_da_glofas_summary(da_glofas_forecast[MAIN_VERSION])
+da_glofas_reforecast_summary = utils.get_da_glofas_summary(da_glofas_reforecast_interp[MAIN_VERSION])
 
 
 # Create final df
 df_final = df_ffwc_wl.copy()
 
 # Add glofas obs
-df_glofas = da_glofas_reanalysis[MAIN_VERSION].to_dataframe()[[rd.STATION]].rename(columns={rd.STATION: 'glofas_observed'})
+df_glofas = da_glofas_reanalysis[MAIN_VERSION].to_dataframe()[[utils.STATION]].rename(columns={utils.STATION: 'glofas_observed'})
 df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 
 # Add glofas forecasts
@@ -133,7 +133,7 @@ GLOFAS_DETECTION_WINDOW_BEHIND = 5
 GLOFAS_MIN_DAYS_ABOVE_THRESH = 3
 
 def get_glofas_detections(glofas_var, thresh):
-    groups = rd.get_groups_above_threshold(glofas_var, thresh)
+    groups = utils.get_groups_above_threshold(glofas_var, thresh)
     return [group[0] + GLOFAS_MIN_DAYS_ABOVE_THRESH - 1 for group in groups
             if group[1] - group[0] >= GLOFAS_MIN_DAYS_ABOVE_THRESH   
            ]
@@ -438,8 +438,4 @@ def plot_glofas_vs_ffwc(glofas_var_name, ylabel='GloFAS ERA5 river discharge [m$
     ax.axvline(19.5, lw=0.3, c='k')
     
 plot_glofas_vs_ffwc('glofas_observed')
-```
-
-```python
-
 ```

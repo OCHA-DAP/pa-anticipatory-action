@@ -16,14 +16,12 @@ import xskillscore as xs
 import numpy as np
 from scipy.stats import rankdata
 
-import read_in_data as rd
-reload(rd)
+from utils import utils
 
 mpl.rcParams['figure.dpi'] = 200
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-SKILL_DIR = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
 SKILL_FILE = 'forecast_skill.csv'
 LEADTIMES_V2 = [5, 10, 15, 20, 25, 30]
 ```
@@ -34,22 +32,22 @@ Forecast data is shifted to match the day it is supposed to be forecasting. Refo
 
 ```python
 da_glofas_reanalysis = {
-    2: rd.get_glofas_reanalysis(version=2),
-    3: rd.get_glofas_reanalysis()
+    2: utils.get_glofas_reanalysis(version=2),
+    3: utils.get_glofas_reanalysis()
 }
 
 da_glofas_forecast = {
-    2: rd.get_glofas_forecast(version=2, leadtimes=LEADTIMES_V2),
+    2: utils.get_glofas_forecast(version=2, leadtimes=LEADTIMES_V2),
 }
 
 da_glofas_reforecast = {
-    2: rd.get_glofas_reforecast(version=2, interp=False, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_reforecast(interp=False)
+    2: utils.get_glofas_reforecast(version=2, interp=False, leadtimes=LEADTIMES_V2),
+    3: utils.get_glofas_reforecast(interp=False)
 }
 
 da_glofas_reforecast_interp = {
-    2: rd.get_glofas_reforecast(version=2, leadtimes=LEADTIMES_V2),
-    3: rd.get_glofas_reforecast()
+    2: utils.get_glofas_reforecast(version=2, leadtimes=LEADTIMES_V2),
+    3: utils.get_glofas_reforecast()
 }
 ```
 
@@ -133,7 +131,7 @@ def plot_skill(df_crps, division_key=None, add_line_from_website=False,
 
 ```python
 # Get skill from GloFAS website
-df_skill = pd.read_csv(SKILL_DIR / SKILL_FILE, header=None)
+df_skill = pd.read_csv(utils.GLOFAS_EXPLORATION_FOLDER / SKILL_FILE, header=None)
 
 # Plot absolute skill
 plot_skill(df_crps, add_line_from_website=True)
@@ -307,8 +305,4 @@ ax.set_xlabel("Lead time (days)")
 ax.set_ylabel("Mean error (%)")
 
 ax.legend()
-```
-
-```python
-
 ```
