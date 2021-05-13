@@ -26,7 +26,6 @@ def get_ecmwf_forecast(version: int = 5):
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
     ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
-            country_name=gesd.COUNTRY_NAME,
             country_iso3=gesd.COUNTRY_ISO3,
             version=version,
         )
@@ -52,15 +51,16 @@ def get_ecmwf_forecast_by_leadtime(version: int = 5):
 def compute_stats_per_admin(country,adm_level=1):
     config = Config()
     parameters = config.parameters(country)
+    country_iso3=parameters["iso3_code"]
 
-    country_data_raw_dir = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
-    country_data_processed_dir = os.path.join(config.DATA_DIR, config.PROCESSED_DIR, country)
+    country_data_raw_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, country_iso3)
+    country_data_processed_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, config.PROCESSED_DIR, country_iso3)
     adm_boundaries_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
 
     ds = get_ecmwf_forecast_by_leadtime()
     df=compute_zonal_stats(ds,ds.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
 
-    df.to_csv(os.path.join(country_data_processed_dir,"ecmwf_seasonal_data",f"{parameters['iso3_code']}_seasonal-monthly-single-levels_v5_adm{adm_level}_stats.csv"))
+    df.to_csv(os.path.join(country_data_processed_dir,"ecmwf",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_adm{adm_level}_stats.csv"))
 
 #TODO: create function to retrieve the stats file
 

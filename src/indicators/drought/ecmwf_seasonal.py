@@ -14,10 +14,10 @@ import cdsapi
 from src.indicators.flooding.glofas.area import Area
 
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"])
+DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
-ECMWF_SEASONAL_DIR = Path("ecmwf_seasonal_data")
+ECMWF_SEASONAL_DIR = Path("ecmwf")
 CDSAPI_CLIENT = cdsapi.Client()
 DEFAULT_VERSION = 5
 
@@ -49,7 +49,6 @@ class EcmwfSeasonal:
 
     def _download(
         self,
-        country_name: str,
         country_iso3: str,
         area: Area,
         version: int,
@@ -59,7 +58,6 @@ class EcmwfSeasonal:
         use_cache: bool = True,
     ):
         filepath = self._get_raw_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             year=year,
@@ -93,7 +91,6 @@ class EcmwfSeasonal:
 
     def _get_raw_filepath(
         self,
-        country_name: str,
         country_iso3: str,
         version: int,
         year: int,
@@ -102,7 +99,7 @@ class EcmwfSeasonal:
     ):
         directory = (
             RAW_DATA_DIR
-            / country_name
+            / country_iso3
             / ECMWF_SEASONAL_DIR
             / self.cds_name
         )
@@ -168,14 +165,12 @@ class EcmwfSeasonal:
 
     def _write_to_processed_file(
         self,
-        country_name: str,
         country_iso3: str,
         version: int,
         ds: xr.Dataset,
         leadtime: int = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             leadtime=leadtime,
@@ -186,23 +181,21 @@ class EcmwfSeasonal:
         return filepath
 
     def _get_processed_filepath(
-        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
+        self, country_iso3: str, version: int, leadtime: int = None
     ) -> Path:
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return PROCESSED_DATA_DIR / country_name / ECMWF_SEASONAL_DIR / filename
+        return PROCESSED_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / filename
 
     def read_processed_dataset(
         self,
-        country_name: str,
         country_iso3: str,
         version: int = DEFAULT_VERSION,
         leadtime: int = None,
     ):
         filepath = self._get_processed_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             leadtime=leadtime,
@@ -222,7 +215,6 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
 
     def download(
         self,
-        country_name: str,
         country_iso3: str,
         area: Area,
         # leadtimes: List[int],
@@ -238,7 +230,6 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
 
             for month in month_range:
                 super()._download(
-                    country_name=country_name,
                     country_iso3=country_iso3,
                     area=area,
                     year=year,
@@ -248,7 +239,6 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
 
     def process(
         self,
-        country_name: str,
         country_iso3: str,
         # leadtimes: List[int],
         version: int = DEFAULT_VERSION,
@@ -257,7 +247,6 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         # Get list of files to open
         filepath_list = [
             self._get_raw_filepath(
-                country_name=country_name,
                 country_iso3=country_iso3,
                 version=version,
                 year=year,
@@ -273,7 +262,6 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
 
         # Write out the new dataset to a file
         self._write_to_processed_file(
-            country_name=country_name,
             country_iso3=country_iso3,
             ds=ds,
             version=version,
