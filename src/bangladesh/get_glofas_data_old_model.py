@@ -17,7 +17,6 @@ from src.indicators.flooding.glofas.area import AreaFromStations, Station
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
 # Bahadurabad_glofas corresponds to the control point identified here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
-COUNTRY_NAME = "bangladesh"
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
     "Noonkhawa": Station(lon=89.9509, lat=25.9496),
@@ -49,48 +48,42 @@ def main(download=True, process=False):
         del ffwc_stations_for_download["Bahadurabad_glofas"]
         area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
         glofas_reanalysis.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             version=VERSION,
         )
         glofas_forecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
             version=VERSION,
-            split_by_month=True
+            split_by_month=True,
         )
 
     if process:
         glofas_reanalysis.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             version=VERSION,
         )
         glofas_forecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
-            split_by_month=True
+            split_by_month=True,
         )
 
 
