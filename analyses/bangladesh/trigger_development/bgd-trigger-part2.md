@@ -71,11 +71,11 @@ df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_ind
 glofas_columns = ['median', 
 '1sig-', '2sig-', '3sig-', 
 '1sig+', '2sig+', '3sig+']
-for leadtime_hour in da_glofas_reforecast_summary.leadtime_hour:
-    df_glofas_reforecast = da_glofas_reforecast_summary.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
-    df_glofas_forecast = da_glofas_forecast_summary.sel(leadtime_hour=leadtime_hour).to_dataframe()[glofas_columns]
+for leadtime in da_glofas_reforecast_summary.leadtime:
+    df_glofas_reforecast = da_glofas_reforecast_summary.sel(leadtime=leadtime).to_dataframe()[glofas_columns]
+    df_glofas_forecast = da_glofas_forecast_summary.sel(leadtime=leadtime).to_dataframe()[glofas_columns]
     df_glofas = (pd.concat([df_glofas_reforecast, df_glofas_forecast])
-                 .rename(columns={cname: f'glofas_{int(leadtime_hour/24)}day_{cname}' for cname in glofas_columns}))
+                 .rename(columns={cname: f'glofas_{leadtime}day_{cname}' for cname in glofas_columns}))
     df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 
 # Any event elements that are NA should be False    
@@ -108,16 +108,18 @@ x = df_discharge['glofas_observed']
 ax.plot(x, y, '.', alpha=0.5)
 
 l = np.arange(-10000, 200000, 10000)
-ax.plot(l, l, c='r')
+ax.plot(l, l, c='r', label='Ideal relation')
 
 m_gf, b_gf = np.polyfit(x, y, 1)
-plt.plot(l,   m_gf * l+ b_gf)
+plt.plot(l,   m_gf * l+ b_gf, label='Line of best fit')
 
 
 ax.set_xlim(0, 150000)
 ax.set_ylim(0, 150000)
 ax.set_ylabel('FFWC water discharge (m^3 s^-1)')
 ax.set_xlabel('GloFAS water discharge (m^3 s^-1)')
+
+ax.legend()
 
 ```
 
@@ -149,6 +151,8 @@ x = df_discharge_high['ffwc_discharge']
 z = (y-x)/x
 plt.hist(z, bins=bins)
 ```
+
+### Plot FFWC river discharge against water level
 
 ```python
 xvar = 'observed'
@@ -183,9 +187,10 @@ plt.plot(f_discharge_to_wl(x), x)
 
 ```
 
+Using the line of best fit in the figure above, derive a relation to convert river discharge values to water level values. Apply this relation to the GloFAS river discharge data to get a GloFAS-predicted water level. Then use the GloFAS water level to define flooding events as is done in FFWC, and compare.
+
 ```python
 # Convert GloFAS to FFWC using line
-
 def convert_glofas_discharge_to_ffwc_wl(glofas_discharge):
     return  f_discharge_to_wl(m_gf * glofas_discharge + b_gf)
 
@@ -272,22 +277,12 @@ def plot_stats(glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
 
     ax.set_xlabel(f'GloFAS trigger threshold {x_axis_units}')
     ax.set_ylabel('Number')
-    
-    
-def get_thresh_and_max_precision_with_no_fn( glofas_var_name, thresh_array):
-    TP, FP, FN = get_detection_stats(glofas_var_name,
-                                thresh_array)
-    precision, recall, f1 = get_more_stats(TP, FP, FN)
-    print('threshold', thresh_array[FN==0][-5:])
-    print('precision', precision[FN==0][-5:])
-    print('FP', FP[FN==0][-5:])
 ```
 
 ```python
 thresh_array = np.arange(19.0, 22.0, 0.05)
 glofas_var_name = 'wl_estimate'
 plot_stats(glofas_var_name, thresh_array, x_axis_units='[m]')
-get_thresh_and_max_precision_with_no_fn(glofas_var_name, thresh_array)
 ```
 
 ```python
@@ -324,7 +319,8 @@ plot_years(df_final, 'wl_estimate', 20.35)
 ```
 
 ```python
-convert_glofas_discharge_to_ffwc_wl(82000)
+# Figure out which river discharge value corresponds to the danger level
+convert_glofas_discharge_to_ffwc_wl(89000)
 ```
 
 ## New event detection method
@@ -332,14 +328,14 @@ convert_glofas_discharge_to_ffwc_wl(82000)
 - We know that the discharge / WL relationship breaks down exactly above the danger level of 19.5 m
 - New algorithm:
     - Use FFWC forecast to check if water is above danger level 5 days in advance
-    - If yes, 
+    - If yes, only then examine GloFAS forecast
+    
+With this method we can perhaps increase the correspondence between GloFAS and FFWC
 
 
-First check how quickly WL increases during events
+First check how quickly WL increases during events. If FFWC does not reach the danger level around 10 or 15 days before, then we can't use this method
 
 ```python
-
-
 for event_date in df_final[df_final['event'] == True].index:
     date_delta = timedelta(days=15)
     date_range = np.arange(event_date - date_delta, event_date + date_delta,
@@ -358,6 +354,4 @@ How many days before event is danger level reached:
 - 4
 - (2nd event of 2020 stayed above danger level from previous event)
 
-```python
-
-```
+Unfortunately the DL is not reached early enough. We could potentially use a lower value, but we would need more FFWC data to perform this analysis.
