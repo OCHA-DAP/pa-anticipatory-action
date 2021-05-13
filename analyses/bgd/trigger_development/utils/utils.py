@@ -17,14 +17,14 @@ pd.options.mode.chained_assignment = None
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 STATION = "Bahadurabad_glofas"
-ffwc_dir = DATA_DIR / 'private/exploration/bgd/FFWC_Data'
+FFWC_DIR = DATA_DIR / 'private/exploration/bgd/ffwc'
 
 # Event definition
 EVENT_WATER_THRESH = 19.5 + 0.85
 EVENT_NDAYS_THRESH = 3
 
 
-GLOFAS_EXPLORATION_FOLDER = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
+GLOFAS_EXPLORATION_FOLDER = DATA_DIR / 'public/exploration/bgd/glofas'
 
 
 def get_glofas_df(glofas_dir: Path = GLOFAS_EXPLORATION_FOLDER,
@@ -152,7 +152,7 @@ def read_in_ffwc():
 
     # Need to combine the three sheets
     df_ffwc_wl_dict = pd.read_excel(
-        ffwc_dir / ffwc_wl_filename,
+        FFWC_DIR / ffwc_wl_filename,
         sheet_name=None,
         header=[1], index_col='Date')
     df_ffwc_wl = (df_ffwc_wl_dict['2017']
@@ -167,7 +167,7 @@ def read_in_ffwc():
 
     # Then read in the older data (goes back much futher)
     FFWC_RL_HIS_FILENAME = '2020-06-07 Water level data Bahadurabad Upper danger level.xlsx'
-    ffwc_rl_name = '{}/{}'.format(ffwc_dir, FFWC_RL_HIS_FILENAME)
+    ffwc_rl_name = '{}/{}'.format(FFWC_DIR, FFWC_RL_HIS_FILENAME)
     df_ffwc_wl_old = pd.read_excel(ffwc_rl_name, index_col=0, header=0)
     df_ffwc_wl_old.index = pd.to_datetime(df_ffwc_wl_old.index, format='%d/%m/%y')
     df_ffwc_wl_old = df_ffwc_wl_old[['WL']].rename(columns={'WL':
@@ -176,7 +176,7 @@ def read_in_ffwc():
 
     # Read in the more recent file from Hassan
     ffwc_full_data_filename = 'SW46.9L_19-11-2020.xls'
-    df_ffwc_wl_full = (pd.read_excel(ffwc_dir / ffwc_full_data_filename,
+    df_ffwc_wl_full = (pd.read_excel(FFWC_DIR / ffwc_full_data_filename,
                                      index_col='DateTime')
                        .rename(columns={'WL(m)': 'observed'}))[['observed']]
 

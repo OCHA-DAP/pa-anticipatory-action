@@ -27,7 +27,7 @@ FFWC_Stations_lonlat = {
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 GLOFAS_DS_FILENAME = 'CEMS_ECMWF_dis24_{}_glofas_v2.1.nc'
-GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'exploration/bangladesh/GLOFAS_Data'
+GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'public/exploration/bgd/glofas'
 
 
 def unzip(zip_file_path, save_path):

@@ -90,13 +90,13 @@ df_final = df_final[df_final.index >= df_ffwc_wl.index[0]]
 
 ```python
 ffwc_discharge_filename = 'bahadurabad_discharge_01.xlsx'
-df_ffwc_discharge=pd.read_excel(rd.ffwc_dir / ffwc_discharge_filename,
-                index_col='Date').rename(
+df_ffwc_discharge = pd.read_excel(rd.FFWC_DIR / ffwc_discharge_filename,
+                                  index_col='Date').rename(
     columns={'Discharge (m3/s)': 'ffwc_discharge'})
 df_discharge = pd.merge(
-                            df_final, df_ffwc_discharge,
-                            how='inner',
-                             left_index=True, right_index=True)
+    df_final, df_ffwc_discharge,
+    how='inner',
+    left_index=True, right_index=True)
 ```
 
 ### Plot GloFAS vs FFWC discharge
