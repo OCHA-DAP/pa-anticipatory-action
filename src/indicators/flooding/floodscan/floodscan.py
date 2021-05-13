@@ -18,10 +18,10 @@ from src.indicators.drought.config import Config
 config=Config()
 
 DATA_DIR = Path(config.DATA_DIR)
-DATA_PUBLIC_DIR = config.PUBLIC_DIR
-DATA_PRIVATE_DIR = config.PRIVATE_DIR
+PRIVATE_DATA_DIR = config.PRIVATE_DIR
+PUBLIC_DATA_DIR = config.PUBLIC_DIR
 RAW_DATA_DIR = config.RAW_DIR
-GLOBAL_DATA_DIR = "glb"
+GLOBAL_DIR = "glb"
 SHAPEFILE_DIR = config.SHAPEFILE_DIR
 PROCESSED_DATA_DIR = config.PROCESSED_DIR
 FLOODSCAN_DIR = Path("floodscan")
@@ -55,13 +55,14 @@ class Floodscan():
         """
         config=Config()
         parameters = config.parameters(country_name)
-        adm_boundaries_path = os.path.join(DATA_DIR,DATA_PUBLIC_DIR,RAW_DATA_DIR,parameters["iso3_code"].lower(),config.SHAPEFILE_DIR,parameters[f"path_admin{adm_level}_shp"])
+        country_iso3 = parameters["iso3_code"]
+        adm_boundaries_path = os.path.join(DATA_DIR,PUBLIC_DATA_DIR, RAW_DATA_DIR,country_iso3,config.SHAPEFILE_DIR,parameters[f"path_admin{adm_level}_shp"])
         ds=self.read_raw_dataset()
         #get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
         coords_transform=ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.transform()
         #this takes a few hours to compute
         df = self.compute_stats_per_area(ds,coords_transform,adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
-        self._write_to_processed_file(parameters["iso3_code"],adm_level,df)
+        self._write_to_processed_file(country_iso3,adm_level,df)
 
     def compute_stats_per_area(self, ds, raster_transform, adm_path, adm_col, data_var="SFED_AREA",percentile_list=[2,4,6,8,10,20]):
         """
@@ -132,10 +133,10 @@ class Floodscan():
             self,
     ):
         directory = (
-                DATA_DIR /
-                DATA_PRIVATE_DIR
+                DATA_DIR
+                / PRIVATE_DATA_DIR
                 / RAW_DATA_DIR
-                / GLOBAL_DATA_DIR
+                / GLOBAL_DIR
                 / FLOODSCAN_DIR
         )
 
@@ -147,4 +148,4 @@ class Floodscan():
            adm_level: int,
     ) -> Path:
         filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
-        return DATA_DIR / DATA_PRIVATE_DIR / PROCESSED_DATA_DIR / country_iso3 / FLOODSCAN_DIR / filename
+        return DATA_DIR /PRIVATE_DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / FLOODSCAN_DIR / filename
