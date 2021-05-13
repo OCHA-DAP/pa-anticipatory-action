@@ -48,8 +48,7 @@ class Floodscan:
         self,
         country_name: str,
         adm_level: int = DEFAULT_ADMIN_LEVEL,
-        custom_area: bool = False,
-        custom_path: str = "",
+        custom_path: str = None,
         custom_id_col: str = "",
         custom_name: str = "",
     ):
@@ -58,33 +57,16 @@ class Floodscan:
         Args:
             country_name: name of the country of interest
             adm_level: admin level to compute the statistics on
+            custom_area: whether or not a custom area (non adm) should be used to get zonal stats,
+            custom_path: str = file path to the custom area shapefile
+            custom_id_col: str = the name of the id column for features in the custom area shapefile
+            custom_name: str = the name of the custom area (for the output file)
         """
         config = Config()
         parameters = config.parameters(country_name)
         country_iso3 = parameters["iso3_code"]
-        adm_boundaries_path = os.path.join(
-            DATA_DIR,
-            PUBLIC_DATA_DIR,
-            RAW_DATA_DIR,
-            country_iso3,
-            config.SHAPEFILE_DIR,
-            parameters[f"path_admin{adm_level}_shp"],
-        )
+
         ds = self.read_raw_dataset()
-        # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
-        coords_transform = (
-            ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
-            .rio.write_crs("EPSG:4326")
-            .rio.transform()
-        )
-        # this takes a few hours to compute
-        df = self.compute_stats_per_area(
-            ds,
-            coords_transform,
-            adm_boundaries_path,
-            parameters[f"shp_adm{adm_level}c"],
-        )
-        self._write_to_processed_file(country_iso3, adm_level, df)
 
         # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
         coords_transform = (
@@ -93,7 +75,7 @@ class Floodscan:
             .rio.transform()
         )
 
-        if custom_area:
+        if custom_path:
             boundaries_path = custom_path
 
             # this takes a few hours to compute
@@ -190,11 +172,20 @@ class Floodscan:
         return pd.read_csv(filepath, index_col=False)
 
     def _write_to_processed_file(
-        self, country_iso3: str, adm_level: int, df: pd.DataFrame,
+        self,
+        country_iso3: str,
+        adm_level: int,
+        df: pd.DataFrame,
+        custom_name: str = None,
     ) -> Path:
-        filepath = self._get_processed_filepath(
-            country_iso3=country_iso3, adm_level=adm_level,
-        )
+        if custom_name:
+            filepath = self._get_processed_filepath(
+                country_iso3=country_iso3, adm_level=adm_level, custom_name=custom_name
+            )
+        else:
+            filepath = self._get_processed_filepath(
+                country_iso3=country_iso3, adm_level=adm_level,
+            )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         filepath.unlink(missing_ok=True)
         logger.info(f"Writing to {filepath}")
@@ -208,8 +199,13 @@ class Floodscan:
 
         return directory / Path(FLOODSCAN_FILENAME)
 
-    def _get_processed_filepath(self, country_iso3: str, adm_level: int,) -> Path:
-        filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
+    def _get_processed_filepath(
+        self, country_iso3: str, adm_level: int, custom_name: str = None
+    ) -> Path:
+        if custom_name:
+            filename = f"{country_iso3.lower()}_floodscan_stats_{custom_name}.csv"
+        else:
+            filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
         return (
             DATA_DIR
             / PRIVATE_DATA_DIR
