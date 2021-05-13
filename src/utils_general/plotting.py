@@ -113,7 +113,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     lats=ds_nc.coords[lat]
     prob=ds_nc[forec_val]
 
-    boundaries_adm1_path = os.path.join(os.environ['AA_DATA_DIR'], 'raw', country, config.SHAPEFILE_DIR,parameters['path_admin2_shp'])
+    boundaries_adm1_path = os.path.join(os.environ['AA_DATA_DIR'], 'public', 'raw', parameters['iso3_code'], config.SHAPEFILE_DIR,parameters['path_admin2_shp'])
     boundaries_world_path = os.path.join(os.environ['AA_DATA_DIR'], config.WORLD_SHP_PATH)
     # load admin boundaries shapefile
     df_adm = gpd.read_file(boundaries_adm1_path)
