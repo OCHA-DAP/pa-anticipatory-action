@@ -76,8 +76,12 @@ for version in [2,3]:
         print(year, val)
         if version == MAIN_VERSION:
             rp_dict[year] = val
+```
+
+For the new model, the 1 in 5 y RP is around 97000, so it rounds down to 95000. But since it's so close to the model version 2 1 in 5 year value of 98000, we just round them both up to 100,000
+
+```python
 # Make 1 in 5 year always 100,000
-rp_dict[4] = 95000
 rp_dict[5] = 100000
 ```
 
@@ -191,6 +195,10 @@ def get_more_stats(df):
 ```
 
 ```python
+### Event detection stats
+```
+
+```python
 def plot_stats(df_final, glofas_var_name, thresh_array, x_axis_units='[m$^3$ s$^{-1}$]'):
     df_ds = get_detection_stats(df_final, glofas_var_name,
                                 thresh_array)
@@ -240,6 +248,8 @@ def plot_offset_days(df_final, glofas_var_name, thresh_array):
     x_axis_units='[m$^3$ s$^{-1}$]'
     ax.set_xlabel(f'GloFAS trigger threshold {x_axis_units}')
 ```
+
+### Plot detection stats and days offset
 
 ```python
 thresh_array = np.arange(70000, 110000, 500)
@@ -300,6 +310,26 @@ plot_years(df_final, rp_dict[5])
 
 ### Forecasts
 
+
+We want to evaulate the performance of the 15-day forecast
+compared to 10-day. 
+
+Unfortunately, the forecast + reforecast lack coverage
+around key dates:
+- Reforecast: 1999 to 2018
+- Forecast: October 2020 to now
+Therefore, misses all events correctly detected by observations 
+(1988, 2019, 2x 2020) 
+
+However, we know that the GloFAS model does not correctly capture all FFWC-based events. If we compare the GLoFAS forecast directly to FFWC events, then the results include both the forecast performance, as well as the GloFAS-FFWC relation, complicating the interpretation.
+
+It's better to compare GloFAS forecast performance to GloFAS-based events (defined by trigger value). 
+
+Using the 1 in 5 year RP value, we get very small number statistics. 
+Thus we can explore using lower thresholds to obtain more events.
+
+
+
 ```python
 leadtimes = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
 thresh_list = [
@@ -354,6 +384,9 @@ df_forecast_dict[100000][['leadtime', 'FP']]
 ```
 
 ```python
+# Make a plot showing GloFAS "events" in the bottom panel,
+# and forecast detections in the top two panels
+
 thresh = 80000
 fig, axs = plt.subplots(3, figsize=(8,6))
 df = df_final[(df_final.index > datetime(1999, 1, 1)) & (df_final.index < datetime(2019, 1, 1))]
@@ -380,7 +413,11 @@ for i, q in enumerate(['glofas_observed', 'glofas_10day_median', 'glofas_15day_m
 
 ```
 
+### Figures for slide deck
+
 ```python
+# Plot GloFAS new model vs FFWC 
+
 def plot_glofas_vs_ffwc(glofas_var_name, ylabel='GloFAS ERA5 river discharge [m$^3$ s$^{-1}$]'):
     xvar = 'observed'
     df = df_final[[xvar, glofas_var_name]].dropna()
@@ -401,4 +438,8 @@ def plot_glofas_vs_ffwc(glofas_var_name, ylabel='GloFAS ERA5 river discharge [m$
     ax.axvline(19.5, lw=0.3, c='k')
     
 plot_glofas_vs_ffwc('glofas_observed')
+```
+
+```python
+
 ```
