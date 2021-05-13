@@ -58,44 +58,44 @@ def compute_stats_per_admin(country,adm_level=1):
     adm_boundaries_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
 
     ds = get_ecmwf_forecast_by_leadtime()
-    df=compute_zonal_stats(ds,ds.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
+    #loop over dates
+    for date in ds.time.values:
+        ds_sel=ds.sel(time=date)
+        df=compute_zonal_stats(ds_sel,ds_sel.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
+        date_dt=pd.to_datetime(date)
 
-    df.to_csv(os.path.join(country_data_processed_dir,"ecmwf",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_adm{adm_level}_stats.csv"))
+        df["date"] = date_dt
+        df.to_csv(os.path.join(country_data_processed_dir,"ecmwf",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"))
 
 #TODO: create function to retrieve the stats file
 
 def compute_zonal_stats(ds, raster_transform, adm_path,adm_col):
     # compute statistics on level in adm_path for all dates in ds
     df_list = []
-    for date in ds.time.values:
-        for leadtime in ds.leadtime.values:
-            for number in ds.number.values:
-                df = gpd.read_file(adm_path)[[adm_col,"geometry"]]
-                ds_date = ds.sel(time=date,number=number,leadtime=leadtime)
+    for leadtime in ds.leadtime.values:
+        for number in ds.number.values:
+            df = gpd.read_file(adm_path)[[adm_col,"geometry"]]
+            ds_date = ds.sel(number=number,leadtime=leadtime)
 
-                df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
-                    zonal_stats(vectors=df, raster=ds_date.values, affine=raster_transform, nodata=np.nan))[
-                    ["mean", "max", "min"]]
+            df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
+                zonal_stats(vectors=df, raster=ds_date.values, affine=raster_transform, nodata=np.nan))[
+                ["mean", "max", "min"]]
 
-                percentile_list = [10, 20, 30, 40, 50, 60, 70, 80]
-                df[[f"percentile_{str(p)}" for p in percentile_list]] = pd.DataFrame(
-                    zonal_stats(vectors=df, raster=ds_date.values, affine=raster_transform, nodata=np.nan,
-                                stats=" ".join([f"percentile_{str(p)}" for p in percentile_list])))[
-                    [f"percentile_{str(p)}" for p in percentile_list]]
+            percentile_list = [10, 20, 30, 40, 50, 60, 70, 80]
+            df[[f"percentile_{str(p)}" for p in percentile_list]] = pd.DataFrame(
+                zonal_stats(vectors=df, raster=ds_date.values, affine=raster_transform, nodata=np.nan,
+                            stats=" ".join([f"percentile_{str(p)}" for p in percentile_list])))[
+                [f"percentile_{str(p)}" for p in percentile_list]]
 
-                df["date"] = pd.to_datetime(date)
-                df["number"] = number
-                df["leadtime"] = leadtime
+            # df["date"] = pd.to_datetime(date)
+            df["number"] = number
+            df["leadtime"] = leadtime
 
-                df_list.append(df)
-            df_hist = pd.concat(df_list)
-            df_hist = df_hist.sort_values(by="date")
-            #drop the geometry column, else csv becomes huge
-            df_hist=df_hist.drop("geometry",axis=1)
-
-    return df_hist
-
-
+            df_list.append(df)
+        df_hist = pd.concat(df_list)
+        # df_hist = df_hist.sort_values(by="date")
+        #drop the geometry column, else csv becomes huge
+        df_hist=df_hist.drop("geometry",axis=1)
 
     return df_hist
 
