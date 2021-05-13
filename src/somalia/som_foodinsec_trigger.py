@@ -24,8 +24,11 @@ country="somalia"
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_data_raw_dir = os.path.join(config.DATA_DIR, 'raw', country)
-country_data_processed_dir = os.path.join(config.DATA_DIR, 'processed', country)
+
+country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower())
+glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
+country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower())
+
 fewsnet_dir = os.path.join(country_data_processed_dir, config.FEWSWORLDPOP_PROCESSED_DIR)
 fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
 globalipc_dir=os.path.join(country_data_processed_dir, config.GLOBALIPC_PROCESSED_DIR)
