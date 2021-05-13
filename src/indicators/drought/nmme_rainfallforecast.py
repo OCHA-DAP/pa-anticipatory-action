@@ -22,7 +22,7 @@ def download_nmme(config,date):
         config (Config): config for the drought indicator
         date (str): date of publication in YYYYMM format
     """
-    NMME_dir = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR)
+    NMME_dir = os.path.join(config.GLOBAL_DIR, config.NMME_DIR)
     Path(NMME_dir).mkdir(parents=True, exist_ok=True)
     NMME_filepath = os.path.join(NMME_dir, config.NMME_NC_FILENAME_RAW.format(date=date))
     #assuming the files don't get updated so only download if doesn't exist yet
@@ -60,7 +60,7 @@ def get_nmme_data(config,date,download=False):
     """
     if download:
         download_nmme(config,date)
-    NMME_filepath = os.path.join(config.DROUGHTDATA_DIR, config.NMME_DIR, config.NMME_NC_FILENAME_CRS.format(date=date,tercile=config.LOWERTERCILE))
+    NMME_filepath = os.path.join(config.GLOBAL_DIR, config.NMME_DIR, config.NMME_NC_FILENAME_CRS.format(date=date,tercile=config.LOWERTERCILE))
 
     nmme_ds = rioxarray.open_rasterio(NMME_filepath)
     #nmme's data comes in fractions while other sources come in percentages, so convert to percentages
