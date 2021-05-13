@@ -3,10 +3,10 @@ library(sf)
 
 # set path variables
 data_dir <- Sys.getenv("AA_DATA_DIR")
-shapefile_path <- paste0(data_dir, "/raw/ethiopia/Shapefiles/ET_Admin_OCHA_2020")
+shapefile_path <- paste0(data_dir, "/public/raw/eth/cod_ab/ET_Admin_OCHA_2020")
 
 # read data
-fn_all <- read.csv(paste0(data_dir, "/processed/ethiopia/FewsNetAdmPop/ethiopia_fewsnet_admin1.csv"))
+fn_all <- read.csv(paste0(data_dir, "/public/processed/eth/fewsnet/cod_ps/ethiopia_fewsnet_admin1.csv"))
 
 eth_adm1 <- st_read(paste0(shapefile_path, "/eth_admbnda_adm1_csa_bofed_20201008.shp"))
 
