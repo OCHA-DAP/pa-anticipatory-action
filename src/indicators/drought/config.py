@@ -35,7 +35,8 @@ class Config:
             self._parameters = parse_yaml(os.path.join(self.DIR_PATH, country.lower(), 'config.yml'))
         return self._parameters
 
-
+    ### repo paths
+    ANALYSES_DIR = "analyses"
 
     #General date objects
     #Might also just want to download separate file for every month, since that is the structure of the other forecasts
