@@ -18,6 +18,7 @@ class Config:
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
     GLOBAL_ISO3 = 'glb'
     PLOT_DIR = 'plots'
+    ANALYSIS_DIR = 'analyses'
 
     def __init__(self):
         #get the absolute path to the root directory, i.e. pa-anticipatory-action
