@@ -6,6 +6,7 @@ library(tibble)
 library(lubridate)
 library(zoo)
 library(raster)
+library(ggcorrplot)
 
 # -------------------------------------------------------------------------
 # Exploring agricultural stress and related impacts in Malawi
@@ -21,13 +22,13 @@ shp_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp")
 shp_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
 
 df_dryspells <- read.csv(paste0(data_dir, '/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
-df_rainy_season_mean <- read.csv(paste0(data_dir, "/exploration/malawi/dryspells/rainy_seasons_detail_2000_2020_per_pixel_adm1.csv"))
-
+df_dryspells_px <- read.csv(paste0(data_dir, '/processed/malawi/dry_spells/ds_counts_per_pixel_adm1.csv'))
 
 df_crop <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/agriculture-and-rural-development_mwi.csv'))
 df_asi <- read.csv(paste0(data_dir, '/exploration/malawi/ASI/malawi_asi_dekad.csv'))
 df_globalipc <- read.csv(paste0(data_dir, '/processed/malawi/GlobalIPCProcessed/malawi_globalipc_admin2.csv'))
 df_fewsnet <- read.csv(paste0(data_dir, '/processed/malawi/FewsNetWorldPop/malawi_fewsnet_worldpop_admin2.csv'))
+df_price <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/wfp_food_prices_malawi.csv'))
 
 # Crop production ---------------------------------------------------------
 
@@ -65,6 +66,34 @@ plt_crop <- ggplot(df_crop_sel) +
   theme_minimal() +
   annotate("text", x = as.numeric(low_years$Year), y = low_years$Value+100, color='red',label = as.numeric(low_years$Year), size=2)
 
+
+# Crop prices -------------------------------------------------------------
+
+# Drop the hxl row in the top
+df_price <- df_price[-1,]
+
+
+# How have the maize prices changed?
+sel <- df_price %>%
+  filter(cmname == 'Maize - Retail')%>%
+  dplyr::select(date, cmname, price, admname)%>%
+  mutate(date = as.Date(date))%>%
+  mutate(price = as.numeric(price))%>%
+  group_by(date, admname)%>%
+  summarise(med_price = median(price))
+
+plot(diff(sel$med_price, lag=2))
+
+# As is the prices trend with inflation (I'm assuming), so maybe it'll work to difference
+# the series to identify price peaks that would results from dry spells?
+
+Box.test(diff(sel$med_price), lag=1, type="Ljung-Box")
+
+plt_price <- ggplot(sel, aes(x=date, y=med_price, group=admname))+
+  geom_line(aes(color=admname))+
+  labs(x='Date', y='Median price', color='Region')+
+  theme_minimal()
+
 # Food insecurity ---------------------------------------------------------
 
 # Identify population in IPC 3+ across regions. 
@@ -86,14 +115,6 @@ df_fewsnet_sel <- df_fewsnet %>%
   mutate(date_no_year = as.Date(paste0('1800-',month_day), "%Y-%m-%d"))%>%
   mutate(tot = tot/1000000)
 
-df_fewsnet_sel_july <- df_fewsnet_sel %>%
-  mutate(month = lubridate::month(date))%>%
-  filter(month>5 & month<8)%>%
-  mutate(season_approx = lubridate::year(date)-1)%>%
-  dplyr::select(season_approx, ADMIN1, tot)%>%
-  group_by(ADMIN1, season_approx)%>%
-  summarise(tot=sum(tot))
-
 high_dates <- df_fewsnet_sel %>%
   group_by(date) %>%
   summarise(tot = sum(tot))%>%
@@ -107,6 +128,16 @@ plt_fewsnet <- ggplot(df_fewsnet_sel, aes(x=date_no_year, y=tot, group=ADMIN1))+
   theme(legend.position = 'bottom')+
   labs(x='Date', y='Population IPC 3+ (millions)', fill='Region')#+
   #annotate("text", x = high_dates$date, y = high_dates$tot+500000, label = substring(high_dates$date, 0, 7), size=2, angle=45)
+
+# Get the total IPC 3+ population associated with the PREVIOUS season
+# Just shift everything back by 1 year - we'll assume that IPC 3+ pops from Jan - Dec
+# are most impacted by the growing season from the previous year
+# Remember that pop is in MILLIONS
+df_fewsnet_season <- df_fewsnet_sel %>%
+  mutate(season_approx = year -1) %>%
+  group_by(season_approx, ADMIN1)%>%
+  summarise(total_ipc3plus = sum(tot))
+
 
 # Agricultural stress index -----------------------------------------------
   
@@ -160,14 +191,31 @@ df_asi_sel_max <- df_asi_sel %>%
 
 # WRSI --------------------------------------------------------------------
 
-#wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
-#wrsi_files <- list.files(path=wrsi_dir, pattern = ".bil")
+# Preprocessed in the mwi_wrsi_process.R file,
+# using the outputs from the GeoWRSI software 
+wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
+#wrsi_mean <- read.csv(paste0(wrsi_dir, 'wrsi_mean_adm1.csv'))
 
-#test <- raster(paste0(wrsi_dir, 'w2004dd_c.bil'))
-#crs(test) <- CRS('+init=EPSG:4326')
-#plot(test, main='title', col=terrain.colors(100))
-#hist(test)
+wrsi_min <- read.csv(paste0(wrsi_dir, 'wrsi_min_adm1.csv'))
+wrsi_min[sapply(wrsi_min, is.infinite)] <- NA
 
+wrsi_plt <- wrsi_min %>%
+  ggplot(aes(x=dekad, y=wrsi, group=ID))+
+  geom_line(aes(color=ID))+
+  facet_wrap(~year)+
+  theme_bw()+
+  theme(legend.position = 'bottom')+
+  labs(x='Dekad', y='WRSI', color='Region')
+
+#wrsi_mean_na <- wrsi_mean %>% drop_na()
+wrsi_min_na <- wrsi_min %>% drop_na()
+
+# Get the min WRSI by season by region
+# Assuming that the 20th dekad will always be in the dry season 
+df_wrsi_season <- wrsi_min_na %>%
+  mutate(season_approx = ifelse(wrsi_min_na$dekad < 20, wrsi_min_na$year -1, wrsi_min_na$year))%>%
+  group_by(season_approx, ID) %>%
+  summarise(min_wrsi = min(wrsi))
 
 # Historical dry spells ---------------------------------------------------
 
@@ -192,24 +240,63 @@ df_dryspells_days <- df_dryspells %>%
            fill = list(days_ds = 0)) 
 
 
+# Historical dry spells - pixel-based -------------------------------------
+
+df_dryspells_px <- df_dryspells_px %>%
+  mutate(date= as.Date(date))%>%
+  mutate(year = lubridate::year(date))%>%
+  mutate(month_day = format(date, "%m-%d"))%>%
+  mutate(date_no_year = as.Date(paste0('1800-',month_day), "%Y-%m-%d"))
+
+plt_ds_px <- df_dryspells_px %>%
+  ggplot(aes(x=date_no_year, y=perc_ds_cells, group=ADM1_EN))+
+  geom_line(aes(color=ADM1_EN))+
+  facet_wrap(~year)+
+  theme_bw()+
+  theme(legend.position = 'bottom')+
+  scale_x_date(date_labels = "%b")+
+  labs(x='Date', y='Percent of pixels in a dry spell', color='Region')
+
+# Get the max dry spell fraction by season by adm1
+df_ds_px_season <- df_dryspells_px %>%
+  mutate(month = lubridate::month(date)) %>%
+  mutate(season_approx = ifelse(df_dryspells_px$month >= 10, df_dryspells_px$year, ifelse(df_dryspells_px$month <= 7, df_dryspells_px$year - 1, 'outside rainy season')))%>%
+  filter(season_approx!='outside rainy season') %>%
+  dplyr::select('ADM1_EN', 'perc_ds_cells', 'season_approx') %>%
+  group_by(ADM1_EN, season_approx) %>%
+  summarise(max_ds_perc = max(perc_ds_cells))
+
+
 # Understanding relationships ---------------------------------------------
 
 # Join and get aggregate statistics by season by region
 df_sum <- df_dryspells_days %>%
-  full_join(df_asi_sel_mean, by=c('region'='Province', 'season_approx'='season_approx'))%>%
   full_join(df_dryspells_agg, by=c('region', 'season_approx'))%>%
   full_join(df_asi_sel_max, by=c('region'='Province', 'season_approx'='season_approx'))%>%
-  full_join(df_fewsnet_sel_july, by=c('region'='ADMIN1', 'season_approx'='season_approx'))
+  full_join(df_fewsnet_season, by=c('region'='ADMIN1', 'season_approx'='season_approx'))%>%
+  full_join(df_ds_px_season, by=c('region'='ADM1_EN', 'season_approx'='season_approx')) %>%
+  full_join(df_wrsi_season, by=c('region'='ID', 'season_approx'='season_approx'))
+
 
 # Create scatter plots to understand relationships 
 plot_scatter <- function(x, y, xlab, ylab){
   plt <- ggplot(df_sum, aes(y=y, x=x, color=region))+
     geom_point(alpha=0.5, size=2)+
-    #facet_wrap(~region)+
     theme_minimal()+
     labs(x=xlab, y=ylab)
   return(plt)
 }
+
+group_cor <- function(grp, df){
+  df_sel <- df %>%
+    filter(region==grp)
+  return(cor(df_sel[,5:8], use='p'))
+}
+
+cor_central <- group_cor('Central', df_sum)
+cor_northern <- group_cor('Northern', df_sum)
+cor_southern <- group_cor('Southern', df_sum)
+cor_all <- cor(df_sum[,5:8], use='p')
 
 plt_asi_mean_days <- plot_scatter(df_sum$days_ds, df_sum$avg_asi, 'Number of dry spell days', 'Mean ASI')
 plt_asi_max_days <- plot_scatter(df_sum$days_ds, df_sum$max_asi, 'Number of dry spell days', 'Max ASI')
@@ -218,3 +305,129 @@ plt_ipc_days <- plot_scatter(df_sum$days_ds, df_sum$tot, 'Number of dry spell da
 plt_ipc_asi <- plot_scatter(df_sum$avg_asi, df_sum$tot, 'Mean ASI', 'Population IPC 3+')
 
 
+
+# Monthly temperature -----------------------------------------------------
+
+temp_dir = paste0(data_dir, '/processed/malawi/dry_spells/gee_output/')
+
+temp_files <- list.files(path = temp_dir, pattern='mwi_adm1_ecmwf-era5-monthly_median')
+
+df_list <- list()
+
+for (i in 1:length(temp_files)){
+  
+  df = read.csv(paste0(temp_dir, temp_files[i]), header=FALSE)
+  df = as.data.frame(t(df))
+
+  n<-dim(df)[1]
+  names <- df[(n-8),]
+  colnames(df) <- names
+  df <- df[1:(n-12),]
+
+  df_temp <- df %>%
+    rename(date = ADM1_EN)%>%
+    mutate(date = substr(date, 1,6))
+
+  df_list[[i]] <- df_temp
+
+}
+
+df_temp_all = do.call(rbind, df_list)
+df_temp_all <- df_temp_all %>%
+  gather('Region', 'Temp', -date)%>%
+  mutate(date = paste0(date, '01'))%>%
+  mutate(date = lubridate::as_date(date, format='%Y%m%d'))%>%
+  mutate(month = format(date, "%m"), year = format(date, "%Y")) %>%
+  group_by(month, year, Region) %>%
+  mutate(Temp = as.numeric(Temp))%>%
+  mutate(Temp = Temp - 273.15)
+
+df_temp_avg <- df_temp_all %>%
+  group_by(month, Region) %>%
+  summarise(month_avg_temp = mean(Temp))
+
+df_temp_all <- df_temp_all %>%
+  left_join(df_temp_avg, by=c('Region', 'month'))
+
+plt_temp <- ggplot(df_temp_all)+
+  geom_bar(aes(x=date, y=Temp), stat='identity',fill='lightpink')+
+  geom_line(aes(x=date, y=month_avg_temp), color='darkblue', size=0.25)+
+  #scale_color_discrete(labels = c("Monthly temp", "Average monthly temp"))+
+  facet_grid(rows=vars(Region))+
+  theme_bw()+
+  labs(x='Date', y='Temperature (C)')+
+  theme(legend.position = 'bottom')+
+  coord_cartesian(ylim=c(15,30))
+plt_temp  
+# Monthly precipitation ---------------------------------------------------
+
+precip_files <- list.files(path = temp_dir, pattern='mwi_adm1_ucsb-chg-chirps-daily')
+
+df_list_precip <- list()
+
+for (i in 1:length(precip_files)){
+  
+  df = read.csv(paste0(temp_dir, precip_files[i]), header=FALSE)
+  df = as.data.frame(t(df))
+  
+  n<-dim(df)[1]
+  names <- df[(n-8),]
+  colnames(df) <- names
+  df <- df[1:(n-12),]
+  
+  df_precip <- df %>%
+    rename(date = ADM1_EN)%>%
+    mutate(date = substr(date, 1,8))
+  
+  df_list_precip[[i]] <- df_precip
+  
+}
+
+df_precip_all = do.call(rbind, df_list_precip)
+
+df_precip_all <- df_precip_all %>%
+  gather('Region', 'Precip', -date)%>%
+  mutate(Precip = as.numeric(Precip))%>%
+  mutate(date = lubridate::as_date(date, format='%Y%m%d'))%>%
+  mutate(month = format(date, "%m"), year = format(date, "%Y")) %>%
+  group_by(month, year, Region) %>%
+  summarise(sum_precip = sum(Precip)) %>%
+  mutate(date = lubridate::as_date(paste0(year, month, '01'), format='%Y%m%d'))
+
+df_precip_avg <- df_precip_all %>%
+  group_by(month, Region) %>%
+  summarise(month_avg_precip = mean(sum_precip))
+
+df_precip_all <- df_precip_all %>%
+  left_join(df_precip_avg, by=c('Region', 'month'))
+
+plt_precip <- ggplot(df_precip_all)+
+  geom_bar(aes(x=date, y=sum_precip),fill='lightblue', stat='identity')+
+  geom_line(aes(x=date, y=month_avg_precip), color='darkred', size=0.25)+
+  #scale_color_discrete(labels = c("Total monthly precip", "Average total monthly precip"))+
+  facet_grid(rows=vars(Region))+
+  theme_bw()+
+  labs(x='Date', y='Precipitation (mm)')+
+  theme(legend.position = 'bottom')
+plt_precip
+# # Compare precip and temp -----------------------------------------------
+
+df_precip_temp <- df_precip_all %>%
+  full_join(df_temp_all, by=c('Region', 'date'))
+
+plt_precip_temp <- ggplot(df_precip_temp, aes(x=sum_precip, y=Temp, group=Region))+
+  geom_point(aes(color=Region))+
+  theme_minimal()+
+  labs(x='Total monthly precipitation (mm)', y='Average monthly temperature (C)')
+
+# Make corr plots ---------------------------------------------------------
+
+p.mat <- cor_pmat(df_sum[,5:8])
+
+# TODO: Northern has probs with NA
+
+plt_cor_all <- ggcorrplot(cor_central, 
+                              type = "lower", 
+                              insig = "blank", 
+                              lab=TRUE,
+                              ggtheme=theme_bw())

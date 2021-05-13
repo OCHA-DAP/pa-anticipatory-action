@@ -1,23 +1,17 @@
 from pathlib import Path
 import os
-import sys
 import xarray as xr
 import geopandas as gpd
 import rioxarray
 from shapely.geometry import mapping
-import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import logging
 import urllib
 import rasterio
 
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-from utils_general.utils import download_ftp
-from indicators.drought.config import Config
-from utils_general.plotting import plot_raster_boundaries_clip, plot_histogram
+from src.utils_general.utils import download_ftp
+from src.utils_general.plotting import plot_raster_boundaries_clip, plot_histogram
 
 
 def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
@@ -50,7 +44,7 @@ def download_chirps(config,year,resolution="25",write_crs=False):
             year (str or int): year for which the data should be downloaded in YYYY format
             resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         """
-    chirps_dir = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR)
+    chirps_dir = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
     chirps_filepath = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_RAW.format(year=year,resolution=resolution))
     # TODO: decide if only download if file doesn't exist. Not sure if ever gets updated
@@ -91,7 +85,7 @@ def get_chirps_data(config, year, resolution="25", download=False):
     if download:
         download_chirps(config,year,resolution)
 
-    chirps_filepath_crs = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR,config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution))
+    chirps_filepath_crs = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR,config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution))
     #TODO: would prefer rioxarray but crashes when clipping
     ds = xr.open_dataset(chirps_filepath_crs)
     # ds = rioxarray.open_rasterio(chirps_filepath_crs)

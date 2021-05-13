@@ -30,12 +30,12 @@ chirps_path <- paste0(data_dir, "/raw/drought/chirps")
 #####
 
 # read in country shapefiles
-#mwi_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp"))
-mwi_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
+mwi_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp"))
+#mwi_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
 
 # select shapefile
-#mwi_adms <- mwi_adm2
-mwi_adms <- mwi_adm1
+mwi_adms <- mwi_adm2
+#mwi_adms <- mwi_adm1
   
 # explore shapefiles
 summary(st_geometry_type(mwi_adms)) # summary of geometry types
@@ -51,7 +51,7 @@ mwi_adms_spatial_extent <- st_bbox(mwi_adms)
 
 # list years and adm2/adm1 regions to be analysed
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN') 
-mwi_adm1_ids <- as.data.frame(mwi_adm1) %>% dplyr::select('ADM1_PCODE', 'ADM1_EN') 
+#mwi_adm1_ids <- as.data.frame(mwi_adm1) %>% dplyr::select('ADM1_PCODE', 'ADM1_EN') 
 
 year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'year')))
 

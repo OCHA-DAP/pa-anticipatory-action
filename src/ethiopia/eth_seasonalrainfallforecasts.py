@@ -50,9 +50,9 @@ def main(download, config=None):
     if config is None:
         config = Config()
     parameters = config.parameters(country)
-    output_dir=os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country,'drought')
+    output_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,parameters['iso3_code'], config.PLOT_DIR)
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    adm_path=os.path.join(config.DATA_DIR,config.RAW_DIR,country, config.SHAPEFILE_DIR, parameters['path_admin1_shp'])
+    adm_path=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,parameters['iso3_code'],config.SHAPEFILE_DIR, parameters['path_admin1_shp'])
     statlist_plot=['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched']
     df_bound = gpd.read_file(adm_path)
 
@@ -69,15 +69,15 @@ def main(download, config=None):
     iri_ds_sel_array = iri_ds_sel["prob_below"].values
     #this is mainly for debugging purposes, to check if forecasted values and admin shapes correcltly align
     fig_bound = plot_raster_boundaries(iri_ds_sel, country, parameters, config)#,forec_val="prob")
-    fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png',bbox_inches='tight')
+    # fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png',bbox_inches='tight')
     #comput statistics per admin
     iri_df=compute_raster_statistics(adm_path,iri_ds_sel_array,iri_transform,50)
     # plot the statistics
     fig_stats = plot_spatial_columns(iri_df, ['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched'])
-    fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
+    # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
     # plot the statistics with bins
     fig_stats_bins = plot_spatial_columns(iri_df, ['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched'],predef_bins=bins)
-    fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+    # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
 
 
     provider="ICPAC"
@@ -89,17 +89,17 @@ def main(download, config=None):
 
     # this is mainly for debugging purposes, to check if forecasted values and admin shapes correcltly align
     fig_bound = plot_raster_boundaries(icpac_ds, country, parameters, config)
-    fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'),
-                      format='png', bbox_inches='tight')
+    # fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'),
+    #                   format='png', bbox_inches='tight')
     # comput statistics per admin
     icpac_ds_array = icpac_ds[config.LOWERTERCILE].values
     icpac_df = compute_raster_statistics(adm_path, icpac_ds_array, icpac_transform, 50)
     # plot the statistics
     fig_stats = plot_spatial_columns(icpac_df, statlist_plot)
-    fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
+    # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
     # plot the statistics with bins
     fig_stats_bins = plot_spatial_columns(icpac_df, statlist_plot,predef_bins=bins)
-    fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+    # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
 
     provider="NMME"
     nmme_ds, nmme_transform = get_nmme_data(config, pubdate_str, download=download)
@@ -110,28 +110,28 @@ def main(download, config=None):
     print("NMME max value", nmme_ds_clip[config.LOWERTERCILE].max())
     #this is mainly for debugging purposes, to check if forecasted values and admin shapes correcltly align
     fig_bound = plot_raster_boundaries(nmme_ds_sel, country, parameters, config)
-    fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png',bbox_inches='tight')
+    # fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png',bbox_inches='tight')
 
     #compute statistics per admin
     nmme_df=compute_raster_statistics(adm_path,nmme_ds_sel_array,nmme_transform,50)
 
     # plot the statistics
     fig_stats = plot_spatial_columns(nmme_df, statlist_plot)
-    fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
+    # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
     # plot the statistics with bins
     fig_stats_bins = plot_spatial_columns(nmme_df, statlist_plot, predef_bins=bins)
-    fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+    # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
 
     #Create plot of raw dat of the different providers that only shows Ethiopia
     bins=[0,40,45,50,55,60,70,100]
     bins=[0,37.5,42.5,47.5,57.5,67.5,100]
     fig_clip=plot_raster_boundaries_clip([iri_ds_sel,icpac_ds,nmme_ds_sel],adm_path,cmap="YlOrRd",predef_bins=bins,title_list=["IRI","ICPAC","NMME"],suptitle=f"Probability of below average rainfall \n for forecasts published in {pubmonth_abbr} {pubyear}, forecasting {forecseason} ({leadtime} month leadtime)",legend_label="Probability below average precipitation")
-    fig_clip.savefig(os.path.join(output_dir, f'IRIICPACNMME_Cbelow_clipped.png'),
-                     format='png', bbox_inches='tight')
+    # fig_clip.savefig(os.path.join(output_dir, f'IRIICPACNMME_Cbelow_clipped.png'),
+    #                  format='png', bbox_inches='tight')
 
     bins=[0,40,45,50,55,60,70,100]
     fig_clip=plot_raster_boundaries_clip([icpac_ds],adm_path,cmap="YlOrRd",predef_bins=bins,suptitle=f"ICPAC rainfall probabilistic forecast for March-May 2021, published in {pubmonth_abbr} {pubyear}",legend_label="Probability of below-average rainfall")
-    fig_clip.savefig(os.path.join(output_dir, f'ICPAC_Cbelow_clipped.png'),format='png', bbox_inches='tight')
+    # fig_clip.savefig(os.path.join(output_dir, f'ICPAC_Cbelow_clipped.png'),format='png', bbox_inches='tight')
 
 
 

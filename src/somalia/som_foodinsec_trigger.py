@@ -24,13 +24,19 @@ country="somalia"
 suffix=""
 config=Config()
 parameters = config.parameters(country)
-country_folder = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
-fewsnet_dir = os.path.join(country_folder, config.FEWSWORLDPOP_PROCESSED_DIR)
+
+country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower())
+glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
+country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower())
+
+fewsnet_dir = os.path.join(country_data_processed_dir, config.FEWSWORLDPOP_PROCESSED_DIR)
 fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(country=country,admin_level=admin_level,suffix=suffix)
-globalipc_dir=os.path.join(country_folder, config.GLOBALIPC_PROCESSED_DIR)
+globalipc_dir=os.path.join(country_data_processed_dir, config.GLOBALIPC_PROCESSED_DIR)
 globalipc_path=os.path.join(globalipc_dir,f"{country}_globalipc_admin{admin_level}{suffix}.csv")
 
-adm_bound_path= os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
+adm_bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f'path_admin{admin_level}_shp'])
+
+
 
 df_fn=pd.read_csv(os.path.join(fewsnet_dir,fewsnet_filename))
 df_fn["source"]="FewsNet"
