@@ -90,8 +90,8 @@ To conclude, the confusion matrix with a threshold of 180 mm is as follows. Thus
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_confusionmatrix_th180_adm1.png')`)
 
 
-## Does the difference in definition of a dry spell make a difference? 
-Within this pilot, the accepted definition of a dry spell is that of <=2mm cumulative precipitation during 14 consecutive days. However, observational and forecast products often have trouble detecting such small amounts of rainfall and therefore many practitioners before us have defined dry spells based on dry days. Meaning that a dry spell consists of at least 14 consecutive dry days. The definition of a dry day differs between projects, but we take a commonly used defnition of 4mm/day. 
+## Does a change in definition of a dry spell produce different results? 
+Within this pilot, the accepted definition of a dry spell is that of <=2mm cumulative precipitation during 14 consecutive days. However, observational and forecast products often have trouble detecting such small amounts of rainfall and therefore many practitioners before us have defined dry spells based on dry days. Meaning that a dry spell consists of at least 14 consecutive dry days. The definition of a dry day differs between projects, but we take a commonly used definition of 4mm/day. 
 
 We compute the same analysis with this different definition, and find that the optimal threshold is also at 180mm. As shown below. 
 
@@ -107,6 +107,11 @@ When looking at the confusion matrix, we can see slightly more agreement. 90% of
 
 NOTE: these numbers are missing the dry spells outside the rainy season, which will probably lower the 90%! 
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_confusionmatrix_th180_4mm_adm1.png')`)
+
+## How does the severity of dry spells differ? 
+To support our discussion on severity, here is the heatmap on admin2 with <=2mm cumulative rainfall
+
+![](`r paste0(exploration_dry_spell_dir,'mwi_viz_hm_dry_spell_mean_adm2_southern_decjanfeb.png')`)
 
 <!-- ## Forecasts -->
 <!-- This image shows the resolution of ECMWF's forecast. Due to the low resolution combined with the high uncertainy of long-term forecasts, we should look at admin1 and not admin2 -->
