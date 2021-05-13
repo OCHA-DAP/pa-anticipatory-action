@@ -16,9 +16,8 @@ from src.bangladesh import get_glofas_data as ggd
 pd.options.mode.chained_assignment = None
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-GLOFAS_DIR = DATA_DIR / "processed/bangladesh/GLOFAS_Data"
 STATION = "Bahadurabad_glofas"
-ffwc_dir = DATA_DIR / 'exploration/bangladesh/FFWC_Data'
+ffwc_dir = DATA_DIR / 'public/exploration/bgd/FFWC_Data'
 
 # Event definition
 EVENT_WATER_THRESH = 19.5 + 0.85
@@ -27,7 +26,7 @@ EVENT_NDAYS_THRESH = 3
 def get_glofas_reanalysis(version: int = 3):
     glofas_reanalysis = glofas.GlofasReanalysis()
     da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3, version=version
+        country_iso3=ggd.COUNTRY_ISO3, version=version
     )[STATION]
     return da_glofas_reanalysis
 
@@ -36,7 +35,6 @@ def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
     glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME,
             country_iso3=ggd.COUNTRY_ISO3,
             version=version,
             leadtime=leadtime,
@@ -51,7 +49,6 @@ def get_glofas_reforecast(version: int = 3, interp: bool = True, leadtimes: list
     glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME,
             country_iso3=ggd.COUNTRY_ISO3,
             version=version,
             leadtime=leadtime,
