@@ -77,7 +77,7 @@ def compute_stats_per_admin(country,adm_level=1,use_cache=True):
 
 
             df["date"] = date_dt
-            df.to_csv()
+            df.to_csv(output_path)
 
 #TODO: create function to retrieve the stats file
 
