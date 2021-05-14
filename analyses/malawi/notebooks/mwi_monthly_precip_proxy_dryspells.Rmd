@@ -43,12 +43,12 @@ exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/
 ## Definitions
 This analysis
 
-- Only looks at the Southern region
-- Only looks at the months of December, January, February
-- Defines a dry spell as less than 2mm cumulative precipitation during 14 consecutive days. The second part of the analysis compares this with a definition of 14 consecutive dry days, where a dry day is defined as receiving less than 4mm on one day. 
+- Only looks at the Southern region since almost all historical dry spells occurred in that region
+- Only looks at the months of December, January, February since these months the crops are most sensitive to dry spells
+- Defines a dry spell as at least 14 consecutive days with less than 2mm cumulative precipitation. The second part of the analysis compares this with a definition of at least 14 consecutive dry days, where a dry day is defined as receiving less than 4mm on one day. 
 - Includes all dry spells, regardless of whether they occurred during the rainy season or not (only relevant for December)
 - Classifies a month as having experienced a dry spell, if at least **7** days of that month were within a dry spell
-- Aggregates historical dry spells and monthly precipitation to admin1 (Southern region), since forecasts have too much spatial uncertainty to forecast ad the admin2 level
+- Aggregates historical dry spells and monthly precipitation to admin1 (Southern region), since precipitation forecasts have too much spatial uncertainty to forecast ad the admin2 level
 - Computes the monthly precipitation as the mean value of all cells within the admin1
 - Firstly computes the occurrence of a dry spell as the mean value of all cells within an admin2. Therafter, this is aggregated to admin1 by identifying it as a dry spell if at least one admin2 within the admin1 experienced a dry spell at that time.
 - Classifies a match between monthly precipitation and a dry spell, if they occurred during the same month **and** in the same admin1.
