@@ -52,17 +52,15 @@ from src.utils_general.plotting import plot_raster_boundaries_clip
 country="malawi"
 config=Config()
 parameters = config.parameters(country)
-
+country_iso3=parameters["iso3_code"]
 country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
-country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country)
-country_data_exploration_dir = os.path.join(config.DATA_DIR,"exploration",country)
-drought_data_exploration_dir= os.path.join(config.DATA_DIR, "exploration",  'drought')
-chirps_monthly_dir=os.path.join(drought_data_exploration_dir,"CHIRPS")
-chirps_monthly_path=os.path.join(chirps_monthly_dir,"chirps_global_monthly.nc")
-drought_data_exploration_dir= os.path.join(config.DATA_DIR, "exploration",  'drought')
-chirps_monthly_dir=os.path.join(drought_data_exploration_dir,"CHIRPS")
-chirps_monthly_mwi_path=os.path.join(chirps_monthly_dir,"chirps_mwi_monthly.nc")
+country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR, config.RAW_DIR,country_iso3)
+country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country_iso3)
+country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
+chirps_country_data_exploration_dir= os.path.join(config.DATA_DIR,config.PUBLIC_DIR, "exploration", country_iso3,'chirps')
+# chirps_monthly_dir=os.path.join(drought_data_exploration_dir,"CHIRPS")
+# chirps_monthly_path=os.path.join(chirps_monthly_dir,"chirps_global_monthly.nc")
+chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps_mwi_monthly.nc")
 ```
 
 ### Read in forecast and observational data
