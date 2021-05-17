@@ -16,9 +16,13 @@ link-citations: true
 ---
 ## Questions
 - I am currently aggregating dry spells from admin2 to admin1, by saying if any of the admin2's experienced a dry spell, so did the admin1. Do you think this is a good methodology or should we take severity into account? 
-  - we could do pixel-based as well, but then we need to set a pixel threshold (would suggest 30%), and we need to recompute them outside the rainy season.
-- Did you compute the 4mm/day outside the rainy season as well?
-- Do we want to set the threshold to overlap as much as possible with the dry spells, or to be a one in three/five years event? 
+  - Discussed with Josee: set severity such that it is approx a 1 in 3 year event --> remove occurences where <=3 adm2's had a dry spell
+<!-- - Did you compute the 4mm/day outside the rainy season as well? -->
+<!-- - Do we want to set the threshold to overlap as much as possible with the dry spells, or to be a one in three/five years event?  -->
+<!--   - set dry spells to be one in three years event and then overlap as much as possible -->
+
+### To do
+- Remove occurrences of dry spells where <=3 adm2's within Southern region experienced a dry spell
 
 ## Background
 Since previous work showed that it is difficult to forecast dry spells in Malawi, this document explores the option of using monthly precipitation as a proxy for the occurrence of dry spells and the forecasting skill for monthly precipitation. 
