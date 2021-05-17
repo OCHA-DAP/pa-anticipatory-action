@@ -51,7 +51,7 @@ def get_ecmwf_forecast_by_leadtime(version: int = 5):
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
 #TODO: not sure if this is the best structure, should it instead be inside a class?
-def compute_stats_per_admin(country,adm_level=1,use_cache=True):
+def compute_stats_per_admin(country,adm_level=1,use_cache=True,interpolate=True):
     config = Config()
     parameters = config.parameters(country)
     country_iso3=parameters["iso3_code"]
@@ -60,11 +60,24 @@ def compute_stats_per_admin(country,adm_level=1,use_cache=True):
     country_data_processed_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, config.PROCESSED_DIR, country_iso3)
     adm_boundaries_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
 
+    #read the forecasts
     ds = get_ecmwf_forecast_by_leadtime()
+
+    if interpolate:
+        #read observed data to get resolution to interpolate to
+        ds_chirps = read_chirps_data(config,country_iso3)
+        # interpolate forecast data such that it has the same resolution as the observed values
+        # not sure if nearest or linear is most suitable here..
+        ds = ds.interp(latitude=ds_chirps["y"], longitude=ds_chirps["x"], method="nearest")
+
     #loop over dates
     for date in ds.time.values:
         date_dt = pd.to_datetime(date)
-        output_path=os.path.join(country_data_processed_dir,"ecmwf",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv")
+        if interpolate:
+            output_filename = f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_interp_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"
+        else:
+            output_filename = f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"
+        output_path=os.path.join(country_data_processed_dir,"ecmwf",output_filename)
         # If caching is on and file already exists, don't download again
         if use_cache and Path(output_path).exists():
             logger.debug(
@@ -194,3 +207,10 @@ def convert_dict_to_da(da_dict):
             latitude=list(da_lead_dict.values())[0].latitude
         ),
     )
+
+def read_chirps_data(config,country_iso3):
+    chirps_country_data_exploration_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, "exploration", country_iso3,
+                                                       'chirps')
+    chirps_monthly_country_path = os.path.join(chirps_country_data_exploration_dir, f"chirps_{country_iso3.lower()}_monthly.nc")
+    ds_chirps = rioxarray.open_rasterio(chirps_monthly_country_path, masked=True)
+    return ds_chirps
