@@ -20,12 +20,14 @@ link-citations: true
 ### To do
 <!-- - Remove occurrences of dry spells where <=3 adm2's within Southern region experienced a dry spell -->
 - Look at each month separately
-- heat map with co-occurence dry spells instead of below monthly precip
+- Compute co-occurrence of forecast and observed dry spells instead of observed monthly precip
+- For these compute misses/false alarms with current approach. Plus compute the 50% of members threshold and make a misses/false alarms plot with that. 
+- Remove times when there were <=3 admin2's within the admin1 experiencing a dry spell
 
 ## Background
-This document explores the skill of ECMWF's seasonal forecast, to predict dry spells. Bladiebla
-Have leadtime 1 to 6, where 1 is the month the forecast was released. However, forecast only released on 13th of the month. 
+This document explores the skill of ECMWF's seasonal forecast, to predict dry spells. ECMWF releases a forecast each month. This forecast includes projected total precipitation per month for 1 to 6 months ahead. The 1 month ahead is the month the forecast was released, and the release date is always the 13th of the month. I.e. the 1 month leadtime only becomes available when we are alread two weeks into that month. 
 
+ECMWF's forecast is a probabilistic forecast, meaning it consists of several members (=models) each having their projected precipitation. This is what in this document is referred to as *% of members*, and can be interpreted as a probability of the event occurring. 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("historical_dry_spells_description_setup.R")
@@ -57,9 +59,9 @@ The figure below shows for how many months the % of ensemble members was below 1
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_percmembers_below_180.png')`)
 
 
-We can see that the number of months lowers as the percentage increases, which is expected. While patterns differ slightly between lead times, the pattern is rather similair. 
+We can see that the number of months lowers as the percentage increases, which is expected. While there are slight differences between lead times, the pattern is comparable. 
 
-To set the threshold of % of members, we look at the observed data and count how many months had <=180mm. This were 21 months. We then choose the % for each leadtime which has closest to 21 months forecasted <= 180mm
+To set the threshold of % of members, we look at the observed data and count how many months had <=180mm. This were 21 months. We then choose the % of members for each leadtime which has closest to 21 months forecasted <= 180mm
 
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_percmembers_threshold.png')`)
 
