@@ -18,6 +18,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from scipy.stats import norm, pearsonr
+from scipy import stats
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -27,6 +28,7 @@ import os
 from pathlib import Path
 import sys
 import seaborn as sns
+from functools import reduce
 
 import read_in_data as rd
 from importlib import reload
@@ -41,6 +43,7 @@ config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
+EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 ADM2_SEL = ['Chikwawa', 'Nsanje']
@@ -71,45 +74,83 @@ for station in STATIONS:
 ### Explore Floodscan data
 
 ```python
-df_floodscan = rd.get_floodscan_processed()
-df_floodscan = df_floodscan[df_floodscan['ADM2_EN'].isin(ADM2_SEL)]
-df_floodscan = df_floodscan[['ADM2_EN','date', 'mean_cell', 'max_cell', 'min_cell']]
+df_floodscan_path = Path(os.environ['AA_DATA_DIR'])/'private'/'processed'/'mwi'/'floodscan'/'mwi_floodscan_stats_shire_5km_buffer.csv'
+df_floodscan = pd.read_csv(df_floodscan_path)
+df_floodscan = df_floodscan[['name','date', 'mean_cell', 'max_cell', 'min_cell']]
 df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
 ```
 
 ```python
-df_floodscan
-```
-
-```python
 # Get rolling average to smooth out potential noise
-df_floodscan['mean_cell_rolling'] = df_floodscan.groupby('ADM2_EN')['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
+df_floodscan['mean_cell_rolling'] = df_floodscan['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
 ```
 
 ```python
-for district in ADM2_SEL:
-    fig, ax = plt.subplots()
-    sns.lineplot(data=df_floodscan[df_floodscan['ADM2_EN']==district], x="date", y="mean_cell", lw=0.25, label='Original')
-    sns.lineplot(data=df_floodscan[df_floodscan['ADM2_EN']==district], x="date", y="mean_cell_rolling", lw=0.25, label='5-day moving\navg')   
-    ax.set_ylabel('Mean flooded fraction')
-    ax.set_xlabel('Date')
-    ax.set_title(f'Flooding in {district}, 1998-2020')
-    ax.legend()
-    plt.savefig(PLOT_DIR / f'{district}_floodscan_adm2.png')
+fig, ax = plt.subplots()
+sns.lineplot(data=df_floodscan, x="date", y="mean_cell", lw=0.25, label='Original')
+sns.lineplot(data=df_floodscan, x="date", y="mean_cell_rolling", lw=0.25, label='5-day moving\navg')   
+ax.set_ylabel('Mean flooded fraction')
+ax.set_xlabel('Date')
+ax.set_title(f'Flooding within 5km of Shire River\nin Chikwawa and Nsanje, 1998-2020')
+ax.legend()
+plt.savefig(PLOT_DIR / f'{district}_floodscan_shire_5km_buffer.png')
+```
+
+### Get 'ground-truth' flood events
+
+```python
+def get_groups_above_threshold(observations, threshold):
+    return np.where(np.diff(np.hstack(([False],
+                                           observations > threshold,
+                                           [False]))))[0].reshape(-1, 2)
+
+# Assign an eventID to each flood 
+# ie. consecutive dates in a dataframe filtered to keep only outliers in flood fraction
+def get_groups_consec_dates(df):
+    dt = df['date']
+    day = pd.Timedelta('1d')
+    breaks = dt.diff() != day
+    groups = breaks.cumsum()
+    groups = groups.reset_index()
+    groups.columns = ['index', 'eventID']
+    df_out = df.merge(groups, left_index=True, right_on='index')
+    return df_out
+
+# Get basic summary statistics for each flood event
+def get_flood_summary(df):
+    s1 = df_floodscan_zscore.groupby('eventID')['date'].min().reset_index().rename(columns={'date': 'start_date'})
+    s2 = df_floodscan_zscore.groupby('eventID')['date'].max().reset_index().rename(columns={'date': 'end_date'})
+    s3 = df_floodscan_zscore.groupby('eventID')['date'].count().reset_index().rename(columns={'date': 'num_days'})
+    s4 = df_floodscan_zscore.groupby('eventID')['mean_cell_rolling'].max().reset_index().rename(columns={'mean_cell_rolling': 'max_flood_frac'})
+    dfs = [s1, s2, s3, s4]
+    df_merged = reduce(lambda  left,right: pd.merge(left,right,on=['eventID'],
+                                            how='outer'), dfs)
+    return df_merged
+```
+
+```python
+# What dates have values that are significant outliers?
+df_floods_summary = df_floodscan[(np.abs(stats.zscore(df_floodscan['mean_cell_rolling'])) >= 3)]
+df_floods_summary = get_groups_consec_dates(df_floods_summary)
+df_floods_summary = get_flood_summary(df_floods_summary)
+df_floods_summary.to_csv(EXPLORE_DIR / 'floodscan_event_summary.csv')
+```
+
+```python
+df_floods_summary
 ```
 
 ### Understand relationship between GloFAS (streamflow) and Floodscan (% flooding in adm2)
 
 ```python
-for key,value in stations_adm2.items():
-    df_floodscan_sel = df_floodscan[df_floodscan['ADM2_EN']==value]
-    df_glofas_sel = da_glofas_reanalysis[key].to_dataframe().reset_index()
-    df_merged = pd.merge(df_floodscan_sel, df_glofas_sel, how='right', left_on='date', right_on='time').dropna()
+for station in STATIONS:
+    df_glofas_sel = da_glofas_reanalysis[station].to_dataframe().reset_index()
+    df_merged = pd.merge(df_floodscan, df_glofas_sel, how='right', left_on='date', right_on='time').dropna()
     
     fig, ax = plt.subplots()
-    ax.scatter(x=df_merged[key], y=df_merged["mean_cell_rolling"], alpha=0.2, s=1.5)
+    ax.scatter(x=df_merged[station], y=df_merged["mean_cell_rolling"], alpha=0.2, s=1.5)
     ax.set_ylabel('Flooded fraction')
     ax.set_xlabel('Discharge [m$^3$ s$^{-1}$]')
-    ax.set_title(f'Daily water discharge vs max\nflooded fraction in {value}')
-    plt.savefig(PLOT_DIR / f'{value}_floodscan_mean_rolling_vs_glofas.png')
+    ax.set_title(f'Daily water discharge vs mean\nflooded fraction in {station}')
+    plt.savefig(PLOT_DIR / f'{station}_floodscan_mean_rolling_vs_glofas.png')
 ```
