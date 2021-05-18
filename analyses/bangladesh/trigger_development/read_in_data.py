@@ -13,16 +13,21 @@ sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
 from src.bangladesh import get_glofas_data as ggd
 
+pd.options.mode.chained_assignment = None
+
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-GLOFAS_DIR = DATA_DIR / "processed/bangladesh/GLOFAS_Data"
 STATION = "Bahadurabad_glofas"
-ffwc_dir = DATA_DIR / "exploration/bangladesh/FFWC_Data"
+ffwc_dir = DATA_DIR / "public/exploration/bgd/FFWC_Data"
+
+# Event definition
+EVENT_WATER_THRESH = 19.5 + 0.85
+EVENT_NDAYS_THRESH = 3
 
 
 def get_glofas_reanalysis(version: int = 3):
     glofas_reanalysis = glofas.GlofasReanalysis()
     da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
-        country_name=ggd.COUNTRY_NAME, country_iso3=ggd.COUNTRY_ISO3, version=version
+        country_iso3=ggd.COUNTRY_ISO3, version=version
     )[STATION]
     return da_glofas_reanalysis
 
@@ -31,10 +36,7 @@ def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
     glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME,
-            country_iso3=ggd.COUNTRY_ISO3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
         )[STATION]
         for leadtime in leadtimes
     }
@@ -48,10 +50,7 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_name=ggd.COUNTRY_NAME,
-            country_iso3=ggd.COUNTRY_ISO3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
         )[STATION]
         for leadtime in leadtimes
     }
@@ -116,7 +115,6 @@ def get_da_glofas_summary(da_glofas):
         var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
         for var_name, percentile_value in percentile_dict.items()
     }
-
     return xr.Dataset(
         data_vars=data_vars_dict,
         coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime),
@@ -130,16 +128,21 @@ def read_in_ffwc():
 
     # Need to combine the three sheets
     df_ffwc_wl_dict = pd.read_excel(
-        ffwc_dir / ffwc_wl_filename,
-        sheet_name=None,
-        header=[1], index_col='Date')
-    df_ffwc_wl = (df_ffwc_wl_dict['2017']
-        .append(df_ffwc_wl_dict['2018'])
-        .append(df_ffwc_wl_dict['2019'])
-        .rename(columns={
-        f'{leadtime*24} hrs': f'ffwc_{leadtime}day'
-        for leadtime in ffwc_leadtimes
-    })).drop(columns=['Observed WL'])  # drop observed because we will use the mean later
+        ffwc_dir / ffwc_wl_filename, sheet_name=None, header=[1], index_col="Date"
+    )
+    df_ffwc_wl = (
+        df_ffwc_wl_dict["2017"]
+        .append(df_ffwc_wl_dict["2018"])
+        .append(df_ffwc_wl_dict["2019"])
+        .rename(
+            columns={
+                f"{leadtime*24} hrs": f"ffwc_{leadtime}day"
+                for leadtime in ffwc_leadtimes
+            }
+        )
+    ).drop(
+        columns=["Observed WL"]
+    )  # drop observed because we will use the mean later
     # Convert date time to just date
     df_ffwc_wl.index = df_ffwc_wl.index.floor("d")
 
@@ -182,3 +185,25 @@ def read_in_ffwc():
     df_ffwc_wl.update(df_ffwc_wl_full, overwrite=False)
 
     return df_ffwc_wl
+
+
+def get_events(df_ffwc_wl):
+    groups = get_groups_above_threshold(df_ffwc_wl["observed"], EVENT_WATER_THRESH)
+
+    # Only take those that are 3 consecutive days
+    groups = [group for group in groups if group[1] - group[0] >= EVENT_NDAYS_THRESH]
+
+    # Mark the first date in each series as TP
+    events = [group[0] + EVENT_NDAYS_THRESH - 1 for group in groups]
+
+    df_ffwc_wl["event"] = False
+    df_ffwc_wl["event"][events] = True
+
+    return df_ffwc_wl
+
+
+def get_groups_above_threshold(observations, threshold):
+    return np.where(np.diff(np.hstack(([False], observations > threshold, [False]))))[
+        0
+    ].reshape(-1, 2)
+

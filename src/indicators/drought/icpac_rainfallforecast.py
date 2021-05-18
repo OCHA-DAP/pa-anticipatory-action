@@ -20,13 +20,13 @@ def download_icpac(config):
     #TODO: would like to download directly from the ftp server instead of uploading to GDrive and downloading from there.
     # But with ftplib getting error 522 Data connections must be encrypted
     gclient = auth_googleapi()
-    gzip_output_file=os.path.join(config.DROUGHTDATA_DIR, f'{config.ICPAC_DIR}.zip')
-    if os.path.exists(os.path.join(config.DROUGHTDATA_DIR, config.ICPAC_DIR)):
-        shutil.rmtree(os.path.join(config.DROUGHTDATA_DIR, config.ICPAC_DIR))
+    gzip_output_file=os.path.join(config.GLOBAL_DIR, f'{config.ICPAC_DIR}.zip')
+    if os.path.exists(os.path.join(config.GLOBAL_DIR, config.ICPAC_DIR)):
+        shutil.rmtree(os.path.join(config.GLOBAL_DIR, config.ICPAC_DIR))
     download_gdrive(gclient, config.ICPAC_GDRIVE_ZIPID, gzip_output_file)
-    unzip(gzip_output_file,config.DROUGHTDATA_DIR)
+    unzip(gzip_output_file,config.GLOBAL_DIR)
     os.remove(gzip_output_file)
-    for path in Path(os.path.join(config.DROUGHTDATA_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_RAW):
+    for path in Path(os.path.join(config.GLOBAL_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_RAW):
         #opening with rioxarray better than xarray, with xarray gets some lat lon inversion
         icpac_ds = rioxarray.open_rasterio(path)
         #selection of below is needed to save crs correctly, apparently cannot handle several variables
@@ -54,7 +54,7 @@ def get_icpac_data(config,pubyear,pubmonth,download=False):
         download_icpac(config)
     #TODO: check if better way to find the file
     try:
-        for path in Path(os.path.join(config.DROUGHTDATA_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)):
+        for path in Path(os.path.join(config.GLOBAL_DIR,config.ICPAC_DIR)).rglob(config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)):
 
             #rioxarray reads the icpac data correctly while xarray somehow messes up stuff but still not sure what exactly goes wrong there
             #only has one time entry so squeeze the time dimension

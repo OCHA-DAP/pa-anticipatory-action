@@ -17,9 +17,11 @@ from src.indicators.flooding.config import Config
 
 config = Config()
 
-DATA_DIR = config.DATA_DIR
-DATA_PRIVATE_DIR = config.DATA_PRIVATE_DIR
+DATA_DIR = Path(config.DATA_DIR)
+PRIVATE_DATA_DIR = config.PRIVATE_DIR
+PUBLIC_DATA_DIR = config.PUBLIC_DIR
 RAW_DATA_DIR = config.RAW_DIR
+GLOBAL_DIR = "glb"
 SHAPEFILE_DIR = config.SHAPEFILE_DIR
 PROCESSED_DATA_DIR = config.PROCESSED_DIR
 FLOODSCAN_DIR = Path("floodscan")
@@ -53,15 +55,16 @@ class Floodscan:
         """
         config = Config()
         parameters = config.parameters(country_name)
+        country_iso3 = parameters["iso3_code"]
         adm_boundaries_path = os.path.join(
             DATA_DIR,
+            PUBLIC_DATA_DIR,
             RAW_DATA_DIR,
-            country_name,
+            country_iso3,
             config.SHAPEFILE_DIR,
             parameters[f"path_admin{adm_level}_shp"],
         )
         ds = self.read_raw_dataset()
-
         # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
         coords_transform = (
             ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
@@ -75,9 +78,7 @@ class Floodscan:
             adm_boundaries_path,
             parameters[f"shp_adm{adm_level}c"],
         )
-        self._write_to_processed_file(
-            country_name, parameters["iso3_code"], adm_level, df
-        )
+        self._write_to_processed_file(country_iso3, adm_level, df)
 
     def compute_stats_per_area(
         self,
@@ -137,18 +138,18 @@ class Floodscan:
         return df_hist
 
     def read_processed_dataset(
-        self, country_name: str, country_iso3: str, adm_level: int,
+        self, country_iso3: str, adm_level: int,
     ):
         filepath = self._get_processed_filepath(
-            country_name=country_name, country_iso3=country_iso3, adm_level=adm_level,
+            country_iso3=country_iso3, adm_level=adm_level,
         )
         return pd.read_csv(filepath, index_col=False)
 
     def _write_to_processed_file(
-        self, country_name: str, country_iso3: str, adm_level: int, df: pd.DataFrame,
+        self, country_iso3: str, adm_level: int, df: pd.DataFrame,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_name=country_name, country_iso3=country_iso3, adm_level=adm_level,
+            country_iso3=country_iso3, adm_level=adm_level,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         filepath.unlink(missing_ok=True)
@@ -157,19 +158,19 @@ class Floodscan:
         return filepath
 
     def _get_raw_filepath(self,):
-        directory = DATA_PRIVATE_DIR / RAW_DATA_DIR / FLOODSCAN_DIR
+        directory = (
+            DATA_DIR / PRIVATE_DATA_DIR / RAW_DATA_DIR / GLOBAL_DIR / FLOODSCAN_DIR
+        )
 
         return directory / Path(FLOODSCAN_FILENAME)
 
-    def _get_processed_filepath(
-        self, country_name: str, country_iso3: str, adm_level: int,
-    ) -> Path:
+    def _get_processed_filepath(self, country_iso3: str, adm_level: int,) -> Path:
         filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
         return (
-            DATA_PRIVATE_DIR
+            DATA_DIR
+            / PRIVATE_DATA_DIR
             / PROCESSED_DATA_DIR
             / country_iso3
             / FLOODSCAN_DIR
             / filename
         )
-
