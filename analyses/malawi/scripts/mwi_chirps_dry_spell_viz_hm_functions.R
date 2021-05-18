@@ -60,10 +60,10 @@ plot_heatmap <- function(df_dry_spells,df_rainy_season, match_values,match_label
       axis.ticks.y=element_blank(),
       legend.position = 'bottom',
       strip.text = element_text(size=16,angle=0),
-      axis.text.x = element_text(size=16),
-      legend.text = element_text(size=16),
-      axis.title.x = element_text(size=16),
-      axis.title.y = element_text(size=16),
+      axis.text.x = element_text(size=20),
+      legend.text = element_text(size=24),
+      axis.title.x = element_text(size=20),
+      axis.title.y = element_text(size=20),
       plot.title = element_text(size=32)
     )
   
@@ -105,11 +105,11 @@ plot_heatmap_without_rainy <- function(df_dry_spells,df_rainy_season, match_valu
       axis.text.x=element_blank(),
       legend.position = 'bottom',
       strip.text = element_text(size=16,angle=0),
-      legend.text = element_text(size=16),
-      axis.title.x = element_text(size=16),
-      axis.title.y = element_text(size=16),
+      legend.text = element_text(size=24),
+      axis.title.x = element_text(size=20),
+      axis.title.y = element_text(size=20),
       plot.title = element_text(size=32),
-      plot.subtitle = element_text(size=20)
+      plot.subtitle = element_text(size=24)
     )
   
   df_ds$monthf<-factor(df_ds$month,levels=c(10,11,12,1,2,3,4,5,6,7,8,9),labels=c("Oct","Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep"),ordered=TRUE)
