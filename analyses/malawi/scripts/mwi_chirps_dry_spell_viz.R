@@ -94,7 +94,7 @@ data_mean_long <- readRDS(paste0(data_dir, "/public/processed/mwi/dry_spells/dat
 # 
 
 # ### only southern in decjanfeb: Below threshold monthly precipitation and occurrence of dry spells
-# #kind of ugly way of doing this, cause using a file where dry spell is compared with monthly precipitaiton.
+# #kind of ugly way of doing this, cause using a file where dry spell is compared with monthly precipitation.
 # #but it was the quickest method..
 # #Set general variables for heatmap
 # 
@@ -112,7 +112,7 @@ data_mean_long <- readRDS(paste0(data_dir, "/public/processed/mwi/dry_spells/dat
 # output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_mean_adm2_southern_decjanfeb.png'))
 # hm_monthly_southern_sel <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,output_path_hm,ds_flatdata=TRUE,sub_title=sub_title)
 # hm_monthly_southern_sel
-# ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=20,height=15)
+# # ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=20,height=15)
 
 # ### Detect dry spell based on daily maximum precipitation instead of cumulative
 # #Set general variables for heatmap
@@ -227,45 +227,49 @@ data_mean_long <- readRDS(paste0(data_dir, "/public/processed/mwi/dry_spells/dat
   
 
 
-### Only southern and Dec, Jan, Feb: Below threshold monthly precipitation and occurrence of dry spells on ADM1
-#Set general variables for heatmap
-threshold<- 180
-#classify match dry spell and below threshold precip during dry season as dry season (occurred once on 16-03-2020)
-dry_spell_match_values=c(3,0,2,1)
-match_values_labels=c(glue("Observed dry spell and <={threshold} monthly precipitation"), glue("No observed dry spell and >{threshold} monthly precipitation"),"Observed dry spell",glue('<={threshold} mm monthly precipitation'))
-color_scale=c('#0063B3','#b3e7ff','#F2645A',"#78D9D1")# ,) #,'#fff2d6'
-y_label=""
-df_dry_spells <- read.csv(paste0(dry_spell_dir,'seasonal/',glue('monthly_dryspellobs_adm1_th{threshold}_southern_decjanfeb.csv')))
-df_rainy_season <- read.csv(paste0(dry_spell_dir, "rainy_seasons_detail_2000_2020_mean_back.csv"))
-#only  the southern region
-df_rainy_season_southern <- df_rainy_season %>% mutate(region = substr(pcode, 3, 3)) %>%  filter(region==3)
-# flextable(df_rainy_season_southern)
-plot_title=glue("Overlap observed dry spells and <={threshold} mm monthly precipitation for the Southern region")
-sub_title="The year corresponds to the start of the rainy season"
-output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_monthly_precip_mean_th{threshold}_adm1_southern_decjanfeb.png'))
-hm_monthly_southern_sel <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,output_path_hm,ds_flatdata=TRUE,sub_title=sub_title)
-hm_monthly_southern_sel
-ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=25,height=15)
-# 
-# ### dryspell=<=4mm/day ADM1 monthly precipitation and dry spells. Only southern and dec,jan, feb
+# ### Only southern and Dec, Jan, Feb: Below threshold monthly precipitation and occurrence of dry spells on ADM1
 # #Set general variables for heatmap
-# threshold<- 180
+# threshold<- 170
+# min_ds_days_month <- 7
+# min_adm_ds_month <- 3
 # #classify match dry spell and below threshold precip during dry season as dry season (occurred once on 16-03-2020)
 # dry_spell_match_values=c(3,0,2,1)
-# match_values_labels=c(glue("Observed dry spell of <=4mm/day and <={threshold} monthly precipitation"), glue("No observed dry spell of <=4mm/day and >{threshold} monthly precipitation"),"Observed dry spell of <=4mm/day",glue('<={threshold} mm monthly precipitation'))
-# color_scale=c('#0063B3','#b3e7ff','#F2645A',"#78D9D1")
+# match_values_labels=c(glue("Observed dry spell and <={threshold} monthly precipitation"), glue("No observed dry spell and >{threshold} monthly precipitation"),"Observed dry spell",glue('<={threshold} mm monthly precipitation'))
+# color_scale=c('#0063B3','#b3e7ff','#F2645A',"#78D9D1")# ,) #,'#fff2d6'
 # y_label=""
-# df_dry_spells <- read.csv(paste0(dry_spell_dir,'seasonal/',glue('monthly_dryspellobs_4mm_adm1_th{threshold}_southern_decjanfeb.csv')))
+# df_dry_spells <- read.csv(paste0(dry_spell_dir,'seasonal/',glue('monthly_dryspellobs_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold}_southern_decjanfeb.csv')))
 # df_rainy_season <- read.csv(paste0(dry_spell_dir, "rainy_seasons_detail_2000_2020_mean_back.csv"))
 # #only  the southern region
 # df_rainy_season_southern <- df_rainy_season %>% mutate(region = substr(pcode, 3, 3)) %>%  filter(region==3)
-# plot_title=glue("Overlap observed dry spells with <=4mm/day and <={threshold} mm monthly precipitation for the Southern region")
+# plot_title=glue("Overlap observed dry spells and <={threshold} mm monthly precipitation for the Southern region")
 # sub_title="The year corresponds to the start of the rainy season"
-# output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_monthly_precip_mean_4mm_th{threshold}_adm1_southern_decjanfeb.png'))
+# output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_monthly_precip_mean_ds{min_ds_days_month}{min_adm_ds_month}_th{threshold}_adm1_southern_decjanfeb.png'))
 # 
 # hm_monthly_southern_sel <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,output_path_hm,ds_flatdata=TRUE,sub_title=sub_title)
 # hm_monthly_southern_sel
 # ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=25,height=15)
+
+### dryspell=<=4mm/day ADM1 monthly precipitation and dry spells. Only southern and dec,jan, feb
+#Set general variables for heatmap
+threshold<- 170
+min_ds_days_month <- 7
+min_adm_ds_month <- 3
+#classify match dry spell and below threshold precip during dry season as dry season (occurred once on 16-03-2020)
+dry_spell_match_values=c(3,0,2,1)
+match_values_labels=c(glue("Observed dry spell of <=4mm/day and <={threshold} monthly precipitation"), glue("No observed dry spell of <=4mm/day and >{threshold} monthly precipitation"),"Observed dry spell of <=4mm/day",glue('<={threshold} mm monthly precipitation'))
+color_scale=c('#0063B3','#b3e7ff','#F2645A',"#78D9D1")
+y_label=""
+df_dry_spells <- read.csv(paste0(dry_spell_dir,'seasonal/',glue('monthly_dryspellobs_4mm_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold}_southern_decjanfeb.csv')))
+df_rainy_season <- read.csv(paste0(dry_spell_dir, "rainy_seasons_detail_2000_2020_mean_back.csv"))
+#only  the southern region
+df_rainy_season_southern <- df_rainy_season %>% mutate(region = substr(pcode, 3, 3)) %>%  filter(region==3)
+plot_title=glue("Overlap observed dry spells with <=4mm/day and <={threshold} mm monthly precipitation for the Southern region")
+sub_title="The year corresponds to the start of the rainy season"
+output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_monthly_precip_mean_4mm_ds{min_ds_days_month}{min_adm_ds_month}_th{threshold}_adm1_southern_decjanfeb.png'))
+
+hm_monthly_southern_sel <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,output_path_hm,ds_flatdata=TRUE,sub_title=sub_title)
+hm_monthly_southern_sel
+ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=25,height=15)
 
 
 # ### Only southern and Dec, Jan, Feb: Below threshold monthly observed and forecasted precipitation on ADM1
