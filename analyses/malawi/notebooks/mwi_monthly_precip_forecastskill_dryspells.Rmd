@@ -14,23 +14,15 @@ bibliography: ["mwi_bibliography.bib"]
 biblio-style: "apalike"
 link-citations: true
 ---
-## Questions
-- is it okay to use the mean value across the admin1? 
-
-### To do
-<!-- - Remove occurrences of dry spells where <=3 adm2's within Southern region experienced a dry spell -->
-- Look at each month separately
-- Compute co-occurrence of forecast and observed dry spells instead of observed monthly precip
-- For these compute misses/false alarms with current approach. Plus compute the 50% of members threshold and make a misses/false alarms plot with that. 
-- Remove times when there were <=3 admin2's within the admin1 experiencing a dry spell
 
 ## Background
-This document explores the skill of ECMWF's seasonal forecast, to predict dry spells. ECMWF releases a forecast each month. This forecast includes projected total precipitation per month for 1 to 6 months ahead. The 1 month ahead is the month the forecast was released, and the release date is always the 13th of the month. I.e. the 1 month leadtime only becomes available when we are alread two weeks into that month. 
+This document explores the skill of ECMWF's seasonal forecast, to predict dry spells. ECMWF releases a forecast each month. This forecast includes projected total precipitation per month for 1 to 6 months ahead. **The 1 month ahead is the month the forecast was released, and the release date is always the 13th of the month. I.e. the 1 month leadtime only becomes available when we are alread two weeks into that month. **
 
 ECMWF's forecast is a probabilistic forecast, meaning it consists of several members (=models) each having their projected precipitation. This is what in this document is referred to as *% of members*, and can be interpreted as a probability of the event occurring. 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("historical_dry_spells_description_setup.R")
+library(glue)
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
@@ -41,6 +33,10 @@ plot_dir <-paste0(data_dir,'/public/processed/mwi/plots/dry_spells')
 exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/')
 ```
 
+```{r}
+threshold <- 170
+months_below_th <- 18
+```
 ## Definitions
 This analysis
 
@@ -48,32 +44,41 @@ This analysis
 - Only looks at the months of December, January, February since these months the crops are most sensitive to dry spells
 <!-- - Defines a dry spell as at least 14 consecutive days with less than 2mm cumulative precipitation. The second part of the analysis compares this with a definition of at least 14 consecutive dry days, where a dry day is defined as receiving less than 4mm on one day. -->
 <!-- - Includes all dry spells, regardless of whether they occurred during the rainy season or not (only relevant for December) -->
-<!-- - Classifies a month as having experienced a dry spell, if at least **7** days of that month were within a dry spell -->
+- Classifies a month as having experienced a dry spell, if at least **7** days of that month were within a dry spell and at least **3** adm2's within the southern region experienced a dry spell
 <!-- - Aggregates historical dry spells and monthly precipitation to admin1 (Southern region), since precipitation forecasts have too much spatial uncertainty to forecast ad the admin2 level -->
 - Computes the monthly precipitation as the mean value of all cells within the admin1
 <!-- - Firstly computes the occurrence of a dry spell as the mean value of all cells within an admin2. Therafter, this is aggregated to admin1 by identifying it as a dry spell if at least one admin2 within the admin1 experienced a dry spell at that time. -->
 <!-- - Classifies a match between monthly precipitation and a dry spell, if they occurred during the same month **and** in the same admin1. -->
 
 ## What is the percentage of ensemble members forecasted below a certain threshold? 
-The figure below shows for how many months the % of ensemble members was below 180 mm. The 180 mm was the threshold set based on overlap of dry spells and monthly precipitation analysis. 
-![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_percmembers_below_180.png')`)
+The figure below shows for how many months the % of ensemble members was below `r {threshold}` mm. The `r {threshold}` mm was the threshold set based on overlap of dry spells and monthly precipitation analysis. 
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_forecast_percmembers_below_{threshold}.png'))`)
 
 
 We can see that the number of months lowers as the percentage increases, which is expected. While there are slight differences between lead times, the pattern is comparable. 
 
-To set the threshold of % of members, we look at the observed data and count how many months had <=180mm. This were 21 months. We then choose the % of members for each leadtime which has closest to 21 months forecasted <= 180mm
+To set the threshold of % of members, we look at the observed data and count how many months had <=`r {threshold}`mm. This were `r {months_below_th}` months. We then choose the % of members for each leadtime which has closest to `r {months_below_th}` months forecasted <= `r {threshold}`mm
 
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_percmembers_threshold.png')`)
 
 
-## What is the miss and false alarm rate per leadtime? 
-After setting the % of members, we get a list of forecasted months for which we would have triggered. Now we can compare these with the observed months with less than 180 mm of precipitation. 
+## What is the miss and false alarm rate per leadtime to forecast below `r {threshold}` mm monthly precipitation? 
+After setting the % of members, we get a list of forecasted months for which we would have triggered. Now we can compare these with the observed months with less than `r {threshold}` mm of precipitation. 
+
+NOTE: false alarms is  FP/(FP+TP)! i.e. the percentage of times the trigger was met but the monthly precipitation was not below `r {threshold}`
 
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_miss_falsealarms.png')`)
 
 ![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_contigencymatrices.png')`)
 
-## Heatmaps (ugly)
+## What is the miss and false alarm rate per leadtime to forecast dry spells? 
+NOTE: false alarms is  FP/(FP+TP)! i.e. the percentage of times the trigger was met but there was no dry spell
+
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_ds_miss_falsealarms.png')`)
+
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_forecast_ds_contigencymatrices.png')`)
+
+## Heatmaps (outdated with 180mm)
 ![](`r paste0(exploration_dry_spell_dir,'monthly_precipitation/mwi_viz_hm_monthly_precip_obsfor_mean_th180_perc_45_lt1_adm1_southern_decjanfeb.png')`)
 
 ![](`r paste0(exploration_dry_spell_dir,'monthly_precipitation/mwi_viz_hm_monthly_precip_obsfor_mean_th180_perc_40_lt2_adm1_southern_decjanfeb.png')`)
