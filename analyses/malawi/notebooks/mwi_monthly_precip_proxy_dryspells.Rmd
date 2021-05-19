@@ -68,6 +68,8 @@ In order to use the monthly precipitation as a proxy for the occurrence of a dry
 
 One method to get a sense for this, is by investigating a range of thresholds, and for each of them looking at the percentage of months with a dry spell that are below the threshold, and the percentage of months without a dry spell that are above the threshold. This is shown in the figure below. The figure shows that the trade-off between sensitivity and specificity depends on the month. Moreover, there is better separability during January and February than during December.    
 
+NOTE: false alarms is here FP/(FP+TN)! So not FP/(FP+TP)! 
+
 ![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_days_ds}{min_adm_ds}_adm1_permonth.png'))`)
 
 
