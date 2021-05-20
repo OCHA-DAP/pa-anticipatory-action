@@ -12,6 +12,7 @@ from scipy.interpolate import interp1d
 import os
 from pathlib import Path
 import sys
+from datetime import timedelta
 
 import read_in_data as rd
 from importlib import reload
@@ -53,6 +54,16 @@ for station in STATIONS:
 ```python
 df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'mwi', 'mvac_dodma_flood_ta.csv'))
 df_floodscan_event = pd.read_csv(EXPLORE_DIR / 'floodscan_event_summary.csv')
+```
+
+```python
+# Add buffer around floodscan dates to account for some uncertainty
+df_floodscan_event['start_date_buffer'] = pd.to_datetime(df_floodscan_event["start_date"]) - timedelta(days=30)
+df_floodscan_event['end_date_buffer'] = pd.to_datetime(df_floodscan_event["end_date"]) + timedelta(days=30)
+```
+
+```python
+df_floodscan_event
 ```
 
 ### Calculate the return period
@@ -118,50 +129,38 @@ for station in STATIONS:
 ### Identifying glofas events
 
 ```python
-# Glofas event detection
-GLOFAS_DETECTION_WINDOW = 7
-NDAYS_THRESH = 3
-
 def get_groups_above_threshold(observations, threshold):
     return np.where(np.diff(np.hstack(([False],
                                            observations > threshold,
                                            [False]))))[0].reshape(-1, 2)
 
-def get_glofas_detections(glofas_var, thresh):
-    groups = get_groups_above_threshold(glofas_var, thresh)
+def get_detection_stats(df_glofas, df_impact, buffer=True):
+    TP = 0 
+    FP = 0
+    tot_events = len(df_impact.index)
+    tot_activations = len(df_glofas.index)
 
-    # Only take those that are 3 consecutive days
-    groups = [group for group in groups 
-                  if group[1] - group[0] >= NDAYS_THRESH]
+    for index, row in df_glofas.iterrows():
+
+        TP_ = False
+        act_dates = np.array(pd.date_range(row['start_date'], row['end_date']))
+
+        for index,row in df_impact.iterrows():
+            if buffer:
+                event_dates = np.array(pd.date_range(row['start_date_buffer'], row['end_date_buffer']))
+            else:
+                event_dates = np.array(pd.date_range(row['start_date'], row['end_date']))
+            if (set(act_dates) & set(event_dates)):
+                TP+=1
+                TP_ = True
+                df_impact = df_impact.drop([index,])
+                
+
+        if not TP_:
+            FP+=1
+
+    FN = tot_events - TP 
     
-    return [group[0] for group in groups]
-
-def get_detection_stats(glofas_var_name, thresh_array):
-    nthresh = len(thresh_array)
-    TP = np.empty(nthresh)
-    FN = np.empty(nthresh)
-    FP = np.zeros(nthresh)
-    # Drop any NAs in the glofas columns
-    df = df_final[['observed', 'event', glofas_var_name]]
-    df = df[df[glofas_var_name].notna()]
-    for ithresh, thresh in enumerate(thresh_array):
-        detections = get_glofas_detections(df[glofas_var_name], thresh)
-        detection_window_min = 0
-        detection_window_max = 7
-        detected_event_dates = []
-        for detection in detections:
-            detected_events = df['event'][detection:
-                                    detection+GLOFAS_DETECTION_WINDOW]
-            detected_event_dates += (
-                list(detected_events[detected_events==True].index))
-            if sum(detected_events) == 0:
-                FP[ithresh] += 1
-        # Get the unique event dates
-        detected_event_dates = list(set(detected_event_dates))
-        event_dates = df.index[df['event']]
-        events_are_detected = [event_date in detected_event_dates for event_date in event_dates]
-        TP[ithresh] = sum(events_are_detected)
-        FN[ithresh] = sum([not event_detected for event_detected in events_are_detected])
     return TP, FP, FN
 
 def get_more_stats(TP, FP, FN):
@@ -172,20 +171,58 @@ def get_more_stats(TP, FP, FN):
 ```
 
 ```python
-vals = pd.Series(da_glofas_reanalysis['glofas_1'].values)
-thresh = df_rps['glofas_1']
-```
+# Select the station and desired return period
 
-```python
-get_glofas_detections(vals, 3470)
-```
+for station in STATIONS:
+    
+    dur = 3
+    detection_stats = {}
 
-```python
-get_groups_above_threshold(vals, 3470)
-```
+    for rp in df_rps.index:
 
-```python
-da_glofas_reanalysis['glofas_1'].time[14632]
+        rp_stats = {}
+
+        # Get the indices from where the threshold would have been met
+        vals = da_glofas_reanalysis[station].values
+        groups = get_groups_above_threshold(vals, df_rps.at[rp, station])
+        groups = [group for group in groups if group[1] - group[0] >= dur]
+        groups_fill = [np.arange(group[0], group[1], 1) for group in groups]
+
+        # Convert to more readable format
+        df_glofas_act = pd.DataFrame(groups, columns=['start_index', 'end_index'])
+        df_glofas_act['num_days'] = df_glofas_act['end_index'] - df_glofas_act['start_index']
+        df_glofas_act['start_date'] = df_glofas_act['start_index'].apply(lambda x: da_glofas_reanalysis[station].time[x].values)
+        df_glofas_act['end_date'] = df_glofas_act['end_index'].apply(lambda x: da_glofas_reanalysis[station].time[x].values)
+
+        # Get the output statistics of hits vs misses
+        TP, FP, FN =  get_detection_stats(df_glofas_act, df_floodscan_event, True)
+        precision, recall, f1 = get_more_stats(TP, FP, FN)
+
+        rp_stats['TP'] = TP
+        rp_stats['FP'] = FP
+        rp_stats['FN'] = FN
+        rp_stats['precision'] = precision
+        rp_stats['recall'] = recall
+        rp_stats['f1'] = f1
+
+        detection_stats[rp] = rp_stats
+
+    # Convert dict to dataframe for plotting and accessibility
+    df_detection_stats = (pd.DataFrame
+                          .from_dict(detection_stats)
+                          .transpose()
+                          .reset_index()
+                          .rename(columns={'index':'return_period'}))
+
+    # Plot precision vs recall
+    fig, ax = plt.subplots()
+    plt.plot(df_detection_stats['return_period'], df_detection_stats['precision'], label='Precision')
+    plt.plot(df_detection_stats['return_period'], df_detection_stats['recall'], label='Recall')
+    ax.set_xlabel("Return Period (years)")
+    ax.set_ylabel("Percent")
+    ax.set_title(f'GloFAS reanalysis detection performance\nacross return period thresholds at {station}')
+    ax.legend()
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall.png')
 ```
 
 ### Checking out the skill
@@ -248,7 +285,7 @@ def plot_skill(df_crps, title, division_key=None, add_line_from_website=False,
             dkey = f'{division_key}_{subset}' if subset is not None else division_key
             y /= df[dkey]
         ax.plot(df['leadtime'], y, ls='-', c=f'C{i}')
-    #ax.plot([], [], ls=ls, c='k', label=f'version {version}')
+
     if add_line_from_website:
         ax.plot(df_skill[0], df_skill[1], ls='-', c='k', lw=0.5, label='from website')
     # Add colours to legend
@@ -257,8 +294,7 @@ def plot_skill(df_crps, title, division_key=None, add_line_from_website=False,
     ax.set_title(title)
     ax.set_xlabel("Lead time (days)")
     ax.set_ylabel(ylabel)
-    ax.legend()
-    
+    ax.legend()   
 ```
 
 ```python
@@ -272,10 +308,4 @@ for station in STATIONS:
     plt.savefig(PLOT_DIR / f'{station}_rcrps.png')
     plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='mean', ylabel="NCRPS (CRPS / mean)")
     plt.savefig(PLOT_DIR / f'{station}_ncrps.png')
-```
-
-### Check out the historical forecasts
-
-```python
-
 ```

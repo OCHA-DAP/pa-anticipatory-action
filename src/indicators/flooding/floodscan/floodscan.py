@@ -18,8 +18,8 @@ from src.indicators.flooding.config import Config
 config = Config()
 
 DATA_DIR = Path(config.DATA_DIR)
-PRIVATE_DATA_DIR = config.PRIVATE_DIR
-PUBLIC_DATA_DIR = config.PUBLIC_DIR
+PRIVATE_DATA_DIR = config.DATA_PRIVATE_DIR
+PUBLIC_DATA_DIR = config.DATA_DIR
 RAW_DATA_DIR = config.RAW_DIR
 GLOBAL_DIR = "glb"
 SHAPEFILE_DIR = config.SHAPEFILE_DIR

@@ -29,6 +29,7 @@ from pathlib import Path
 import sys
 import seaborn as sns
 from functools import reduce
+from datetime import timedelta
 
 import read_in_data as rd
 from importlib import reload
@@ -47,6 +48,7 @@ EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 ADM2_SEL = ['Chikwawa', 'Nsanje']
+SAVE_PLOT = True
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -80,8 +82,9 @@ df_floodscan = df_floodscan[['name','date', 'mean_cell', 'max_cell', 'min_cell']
 df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
 ```
 
+Calculate the 5-day rolling average to smooth out potential noise from the Floodscan data.
+
 ```python
-# Get rolling average to smooth out potential noise
 df_floodscan['mean_cell_rolling'] = df_floodscan['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
 ```
 
@@ -93,8 +96,14 @@ ax.set_ylabel('Mean flooded fraction')
 ax.set_xlabel('Date')
 ax.set_title(f'Flooding within 5km of Shire River\nin Chikwawa and Nsanje, 1998-2020')
 ax.legend()
-plt.savefig(PLOT_DIR / f'{district}_floodscan_shire_5km_buffer.png')
+if SAVE_PLOT: plt.savefig(PLOT_DIR / f'floodscan_shire_5km_buffer.png')
 ```
+
+### Clean data
+
+
+TODO: Remove long-term trend!
+
 
 ### Get 'ground-truth' flood events
 
@@ -118,21 +127,35 @@ def get_groups_consec_dates(df):
 
 # Get basic summary statistics for each flood event
 def get_flood_summary(df):
-    s1 = df_floodscan_zscore.groupby('eventID')['date'].min().reset_index().rename(columns={'date': 'start_date'})
-    s2 = df_floodscan_zscore.groupby('eventID')['date'].max().reset_index().rename(columns={'date': 'end_date'})
-    s3 = df_floodscan_zscore.groupby('eventID')['date'].count().reset_index().rename(columns={'date': 'num_days'})
-    s4 = df_floodscan_zscore.groupby('eventID')['mean_cell_rolling'].max().reset_index().rename(columns={'mean_cell_rolling': 'max_flood_frac'})
+    s1 = df.groupby('eventID')['date'].min().reset_index().rename(columns={'date': 'start_date'})
+    s2 = df.groupby('eventID')['date'].max().reset_index().rename(columns={'date': 'end_date'})
+    s3 = df.groupby('eventID')['date'].count().reset_index().rename(columns={'date': 'num_days'})
+    s4 = df.groupby('eventID')['mean_cell_rolling'].max().reset_index().rename(columns={'mean_cell_rolling': 'max_flood_frac'})
     dfs = [s1, s2, s3, s4]
     df_merged = reduce(lambda  left,right: pd.merge(left,right,on=['eventID'],
                                             how='outer'), dfs)
     return df_merged
 ```
 
+Find the dates that are significant outliers (std>3) in mean flooding fraction across all pixels in the area of interest. We'll consider each group of consecutive dates to be a significant flooding event.
+
 ```python
-# What dates have values that are significant outliers?
 df_floods_summary = df_floodscan[(np.abs(stats.zscore(df_floodscan['mean_cell_rolling'])) >= 3)]
 df_floods_summary = get_groups_consec_dates(df_floods_summary)
 df_floods_summary = get_flood_summary(df_floods_summary)
+```
+
+In the cases where two flood events are separated by less than 1 month, we'll merge them together to be considered as a single event. 
+
+```python
+for i in range(1, len(df_floods_summary.index)-1):
+    start_buffer = pd.to_datetime(df_floods_summary['start_date'].iloc[i,]) - timedelta(days=30)
+    end_buffer = pd.to_datetime(df_floods_summary['end_date'].iloc[i-1,]) + timedelta(days=30)                             
+    if start_buffer < end_buffer:
+        df_floods_summary['end_date'].iloc[i-1,] = df_floods_summary['end_date'].iloc[i,]
+        df_floods_summary['num_days'].iloc[i-1] = (df_floods_summary['end_date'][i-1] - df_floods_summary['start_date'][i-1]).days
+        df_floods_summary = df_floods_summary.drop([i,])
+
 df_floods_summary.to_csv(EXPLORE_DIR / 'floodscan_event_summary.csv')
 ```
 
@@ -152,5 +175,5 @@ for station in STATIONS:
     ax.set_ylabel('Flooded fraction')
     ax.set_xlabel('Discharge [m$^3$ s$^{-1}$]')
     ax.set_title(f'Daily water discharge vs mean\nflooded fraction in {station}')
-    plt.savefig(PLOT_DIR / f'{station}_floodscan_mean_rolling_vs_glofas.png')
+    if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_floodscan_mean_rolling_vs_glofas.png')
 ```
