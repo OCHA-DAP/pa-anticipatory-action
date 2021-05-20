@@ -14,7 +14,8 @@ import cdsapi
 from src.indicators.flooding.glofas.area import Area, Station
 
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"
+DATA_DIR = Path(os.environ["AA_DATA_DIR"])
+PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
 GLOFAS_DIR = Path("glofas")
@@ -109,6 +110,7 @@ class Glofas:
     ):
         directory = (
             DATA_DIR
+            / PUBLIC_DATA_DIR
             / RAW_DATA_DIR
             / country_iso3
             / GLOFAS_DIR
@@ -136,10 +138,12 @@ class Glofas:
             "format": "grib",
             self.dataset_variable_name: self.dataset,
             f"{self.date_variable_prefix}year": str(year),
-            f"{self.date_variable_prefix}month": [str(x).zfill(2) for x in range(1, 13)]
+            f"{self.date_variable_prefix}month": [
+                str(x + 1).zfill(2) for x in range(12)
+            ]
             if month is None
             else str(month).zfill(2),
-            f"{self.date_variable_prefix}day": [str(x).zfill(2) for x in range(1, 32)],
+            f"{self.date_variable_prefix}day": [str(x + 1).zfill(2) for x in range(31)],
             "area": area.list_for_api(),
             "system_version": f"version_{version}_{self.system_version_minor[version]}",
             "hydrological_model": HYDROLOGICAL_MODELS[version],
@@ -238,11 +242,15 @@ class GlofasReanalysis(Glofas):
         country_iso3: str,
         area: Area,
         version: int = DEFAULT_VERSION,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reanalysis v{version} for years {self.year_min} - {self.year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {year_min} - {year_max}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             super()._download(
                 country_iso3=country_iso3,
@@ -303,11 +311,15 @@ class GlofasForecast(Glofas):
         area: Area,
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min[version] if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS forecast v{version} for years {self.year_min[version]} - {self.year_max} and leadtime hours {leadtimes}"
+            f"Downloading GloFAS forecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
         )
-        for year in range(self.year_min[version], self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             for leadtime in leadtimes:
                 super()._download(
@@ -374,11 +386,15 @@ class GlofasReforecast(Glofas):
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
         split_by_month: bool = False,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reforecast v{version} for years {self.year_min} - {self.year_max} and leadtime hours {leadtimes}"
+            f"Downloading GloFAS reforecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             month_range = range(1, 13) if split_by_month else [None]
             for month in month_range:
