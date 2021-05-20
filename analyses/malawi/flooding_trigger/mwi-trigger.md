@@ -62,10 +62,6 @@ df_floodscan_event['start_date_buffer'] = pd.to_datetime(df_floodscan_event["sta
 df_floodscan_event['end_date_buffer'] = pd.to_datetime(df_floodscan_event["end_date"]) + timedelta(days=30)
 ```
 
-```python
-df_floodscan_event
-```
-
 ### Calculate the return period
 
 ```python
@@ -223,89 +219,4 @@ for station in STATIONS:
     ax.set_title(f'GloFAS reanalysis detection performance\nacross return period thresholds at {station}')
     ax.legend()
     plt.savefig(PLOT_DIR / f'{station}_precision_recall.png')
-```
-
-### Checking out the skill
-
-```python
-def is_rainy_season(month):
-    # Oct to April
-    return (month >= 10) | (month <= 4)
-
-def is_dry_season(month):
-    # May to Sept
-    return (month < 10) & (month > 4)
-
-def get_skill(da_glofas_reforecast, da_glofas_reanalysis):
-    
-    df_crps = pd.DataFrame(columns=['leadtime', 'crps'])
-
-    for leadtime in da_glofas_reforecast.leadtime:
-        forecast = da_glofas_reforecast.sel(
-            leadtime=leadtime.values).dropna(dim='time')
-        observations = da_glofas_reanalysis.reindex({'time': forecast.time})
-        # For all dates
-        crps = xs.crps_ensemble(observations, forecast,member_dim='number')
-        # For rainy season only
-        observations_rainy = observations.sel(time=is_rainy_season(observations['time.month']))
-        crps_rainy = xs.crps_ensemble(
-            observations_rainy,
-            forecast.sel(time=is_rainy_season(forecast['time.month'])),
-            member_dim='number')
-        # Dry season only
-        observations_dry = observations.sel(time=is_dry_season(observations['time.month']))
-        crps_dry = xs.crps_ensemble(
-            observations_dry,
-            forecast.sel(time=is_dry_season(forecast['time.month'])),
-            member_dim='number')
-        # Total summary
-        df_crps = df_crps.append([{'leadtime': leadtime.values,
-                                  'crps': crps.values,
-                                   'std': observations.std().values,
-                                   'mean': observations.mean().values,
-                                  'crps_rainy': crps_rainy.values,
-                                   'std_rainy': observations_rainy.std().values,
-                                   'mean_rainy': observations_rainy.mean().values,
-                                    'crps_dry': crps_dry.values,
-                                   'std_dry': observations_dry.std().values,
-                                   'mean_dry': observations_dry.mean().values
-                                  }], ignore_index=True)
-    return df_crps
-```
-
-```python
-def plot_skill(df_crps, title, division_key=None, add_line_from_website=False,
-              ylabel="CRPS [m$^3$ s$^{-1}$]"):
-    fig, ax = plt.subplots()
-    df = df_crps.copy()
-    for i, subset in enumerate([None, 'rainy', 'dry']):
-        ykey = f'crps_{subset}' if subset is not None else 'crps'
-        y = df[ykey]
-        if division_key is not None:
-            dkey = f'{division_key}_{subset}' if subset is not None else division_key
-            y /= df[dkey]
-        ax.plot(df['leadtime'], y, ls='-', c=f'C{i}')
-
-    if add_line_from_website:
-        ax.plot(df_skill[0], df_skill[1], ls='-', c='k', lw=0.5, label='from website')
-    # Add colours to legend
-    for i, subset in enumerate(['full year', 'rainy', 'dry']):
-        ax.plot([], [], c=f'C{i}', label=subset)
-    ax.set_title(title)
-    ax.set_xlabel("Lead time (days)")
-    ax.set_ylabel(ylabel)
-    ax.legend()   
-```
-
-```python
-df_crps = dict()
-
-for station in STATIONS:
-    df_crps[station] = get_skill(da_glofas_reforecast[station], da_glofas_reanalysis[station])
-    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast")
-    plt.savefig(PLOT_DIR / f'{station}_crps.png')
-    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='std', ylabel="RCRPS")
-    plt.savefig(PLOT_DIR / f'{station}_rcrps.png')
-    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='mean', ylabel="NCRPS (CRPS / mean)")
-    plt.savefig(PLOT_DIR / f'{station}_ncrps.png')
 ```
