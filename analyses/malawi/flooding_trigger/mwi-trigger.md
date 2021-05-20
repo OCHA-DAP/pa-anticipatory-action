@@ -130,6 +130,15 @@ def get_groups_above_threshold(observations, threshold):
                                            observations > threshold,
                                            [False]))))[0].reshape(-1, 2)
 
+def get_glofas_activations(glofas_vals, thresh, ndays):
+    groups = get_groups_above_threshold(glofas_vals, thresh)
+    groups = [group for group in groups if group[1] - group[0] >= ndays]
+    df_glofas_act = pd.DataFrame(groups, columns=['start_index', 'end_index'])
+    df_glofas_act['num_days'] = df_glofas_act['end_index'] - df_glofas_act['start_index']
+    df_glofas_act['start_date'] = df_glofas_act['start_index'].apply(lambda x: da_glofas_reanalysis[station].time[x].values)
+    df_glofas_act['end_date'] = df_glofas_act['end_index'].apply(lambda x: da_glofas_reanalysis[station].time[x].values)
+    return df_glofas_act
+
 def get_detection_stats(df_glofas, df_impact, buffer=True):
     TP = 0 
     FP = 0
@@ -164,43 +173,35 @@ def get_more_stats(TP, FP, FN):
     recall = TP / (TP + FN)
     f1 = 2 / ((1/recall) + (1/precision))
     return precision, recall, f1
+
+def get_clean_stats_dict(df_glofas, df_impact):
+    stats = {}
+    TP, FP, FN =  get_detection_stats(df_glofas, df_impact, True)
+    precision, recall, f1 = get_more_stats(TP, FP, FN)
+    stats['TP'] = TP
+    stats['FP'] = FP
+    stats['FN'] = FN
+    stats['precision'] = precision
+    stats['recall'] = recall
+    stats['f1'] = f1
+
+    return stats 
 ```
+
+Compare against the GloFAS reanalysis
 
 ```python
 # Select the station and desired return period
+THRESH_DAYS = 3
 
 for station in STATIONS:
     
-    dur = 3
     detection_stats = {}
-
-    for rp in df_rps.index:
-
-        rp_stats = {}
-
-        # Get the indices from where the threshold would have been met
+    
+    for rp, thresh in rp_dict[station].items():
         vals = da_glofas_reanalysis[station].values
-        groups = get_groups_above_threshold(vals, df_rps.at[rp, station])
-        groups = [group for group in groups if group[1] - group[0] >= dur]
-        groups_fill = [np.arange(group[0], group[1], 1) for group in groups]
-
-        # Convert to more readable format
-        df_glofas_act = pd.DataFrame(groups, columns=['start_index', 'end_index'])
-        df_glofas_act['num_days'] = df_glofas_act['end_index'] - df_glofas_act['start_index']
-        df_glofas_act['start_date'] = df_glofas_act['start_index'].apply(lambda x: da_glofas_reanalysis[station].time[x].values)
-        df_glofas_act['end_date'] = df_glofas_act['end_index'].apply(lambda x: da_glofas_reanalysis[station].time[x].values)
-
-        # Get the output statistics of hits vs misses
-        TP, FP, FN =  get_detection_stats(df_glofas_act, df_floodscan_event, True)
-        precision, recall, f1 = get_more_stats(TP, FP, FN)
-
-        rp_stats['TP'] = TP
-        rp_stats['FP'] = FP
-        rp_stats['FN'] = FN
-        rp_stats['precision'] = precision
-        rp_stats['recall'] = recall
-        rp_stats['f1'] = f1
-
+        df_glofas_act = get_glofas_activations(vals, thresh, THRESH_DAYS)
+        rp_stats = get_clean_stats_dict(df_glofas_act, df_floodscan_event)
         detection_stats[rp] = rp_stats
 
     # Convert dict to dataframe for plotting and accessibility
