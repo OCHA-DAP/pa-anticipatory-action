@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import requests
+import yaml
 
 import tabula
 import fiona
@@ -29,6 +30,10 @@ GOV_BASIN_SHAPEFILE = GOV_DIR / 'Nepal_Basin_final.kml'
 # Another station list    
 DHM_BASE_URL = "http://www.dhm.gov.np/hydrological-station/"
 DHM_STATION_FILENAME = GOV_DIR / 'npl_dhm_stations.gpkg'
+
+# Station list to share
+STATION_OUTPUT = GOV_DIR / 'station_list_glofas_final.xlsx'
+STATION_OUTPUT_YAML = GOV_DIR / 'station_list_glofas_final.yml'
 ```
 
 ## Read in Nepal GloFAS stations
@@ -131,12 +136,9 @@ else:
     basin_station_list = pd.read_csv(GOV_BASIN_FILENAME, header=None)[0].to_list()
 ```
 
-### Connect government stations with basin
-
-
 ### Count stations requested by partners
 
-Ragindra suggested using all stations in the Koshi basin south of Chautara, and all from Karnali.
+Ragindra suggested using all stations in the Koshi basin south of Chatara, and all from Karnali. There is no station called Chatara but there is Chautara; however, I think it's wrong.
 
 ```python
 # Get all Koshi stations
@@ -154,7 +156,7 @@ n_karnali = len(df_karnali)
 print(f"Number of stations:\n{n_koshi} Koshi\n{n_koshi_chautara} Koshi south of Chautara\n{n_karnali} Karnali")
 ```
 
-## Get DHM stations
+## Scrape DHM stations
 
 ```python
 page = requests.get(DHM_BASE_URL)
@@ -233,11 +235,36 @@ basin_shape_dict = {
 
 ```python
 # Get GloFAS and DHM stations for both basins
-output_file = 'tmp.xlsx'
-with pd.ExcelWriter(output_file) as writer:
+with pd.ExcelWriter(STATION_OUTPUT) as writer:
     for basin in basin_list:
         df = df_dhm[df_dhm.geometry.within(basin_shape_dict[basin])]
         df.to_excel(writer, sheet_name=basin, index=False)
+```
+
+## Get final list of stations to put into config file
+
+```python
+# Based on email exchange with Ragindra
+# Using GloFAS ID since two stations in Koshi have exactly the same name
+stations_final = {
+    'koshi': [4475, 4619, 4425],
+    'karnali': [4385, 915, 4469, 4393],
+    'rapti': [4456],
+    'bagmati': [4399],
+    'babai': [4416]
+}
+stations_final_yaml = {}
+for basin in stations_final.values():
+    for glofas_id in basin:
+        row = df_dhm.loc[df_dhm['id_glofas'] == f'G{str(glofas_id).zfill(4)}'].iloc[0]
+        stations_final_yaml[row['name_glofas']] = {
+            'lat': row['lat_glofas'],
+            'lon': row['lon_glofas']
+        }
+
+        
+with open(STATION_OUTPUT_YAML, 'w') as f:
+    yaml.dump(stations_final_yaml, f)
 ```
 
 # Appendix
@@ -246,13 +273,10 @@ with pd.ExcelWriter(output_file) as writer:
 ### Try to connect gov with dhm 
 
 ```python
-df_dhm
-```
-
-```python
 # Match it to the gov hydrology stations
 # It would be more proper to do a merge but it's hard with two possible columns
 
+df_dhm = df_dhm.dropna(subset=['river_dhm'])
 df_dhm['gov_name'] = ''
 for i, row in df_dhm.iterrows():
     gov_name_1 = row['river_dhm'].split('River')[0].strip() + ' at ' + row['name_dhm']
