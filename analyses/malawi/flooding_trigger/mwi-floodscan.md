@@ -7,9 +7,9 @@ jupyter:
       format_version: '1.3'
       jupytext_version: 1.11.1
   kernelspec:
-    display_name: Python [conda env:anact] *
+    display_name: pa-anticipatory-action
     language: python
-    name: conda-env-anact-py
+    name: pa-anticipatory-action
 ---
 
 ```python
@@ -80,6 +80,10 @@ df_floodscan_path = Path(os.environ['AA_DATA_DIR'])/'private'/'processed'/'mwi'/
 df_floodscan = pd.read_csv(df_floodscan_path)
 df_floodscan = df_floodscan[['name','date', 'mean_cell', 'max_cell', 'min_cell']]
 df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
+```
+
+```python
+df_floodscan
 ```
 
 Calculate the 5-day rolling average to smooth out potential noise from the Floodscan data.

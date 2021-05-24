@@ -192,14 +192,12 @@ def get_clean_stats_dict(df_glofas, df_impact):
     return stats 
 ```
 
-Compare against the GloFAS reanalysis
-
 ```python
 # Select the station and desired return period
-THRESH_DAYS = 3
 
 for station in STATIONS:
     
+    dur = 3
     detection_stats = {}
     
     for rp, thresh in rp_dict[station].items():        
