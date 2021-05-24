@@ -48,12 +48,7 @@ Create a virtual environment and install the requirements with
    ```
 If an error occurs you might have to install spatialindex, on MacOS this can be done with `brew install spatialindex`
 
-Sync [this](https://drive.google.com/drive/u/3/folders/1RVpnCUpxHQ-jokV_27xLRqOs6qR_8mqQ)
-directory from Google drive to your local machine. Create an environment variable called
-`AA_DATA_DIR` that points to this directory.
-
 The indicators and analyses folders contain more specific information on the data, processing and how to run the scripts. 
-
 
 ## Repository structure
 ```
@@ -67,5 +62,29 @@ The indicators and analyses folders contain more specific information on the dat
 ├── requirements.txt
 ├── README
 └── LICENSE
-
 ```
+
+## Data directory
+
+Sync [this](https://drive.google.com/drive/u/3/folders/1RVpnCUpxHQ-jokV_27xLRqOs6qR_8mqQ)
+directory from Google drive to your local machine. Create an environment variable called
+`AA_DATA_DIR` that points to this directory.
+
+The structure of the directory is as follows:
+```
+├── AA_DATA_DIR 
+     ├── public
+     |    ├── exploration <-- data used for notebook analyses, same structure as in raw
+     |    ├── processed <-- data taken from raw and processed by scripts in src, 
+     |    |                 same substructure as raw
+     |    └── raw <-- raw data
+     |         ├── [all country iso3s]
+     |         |    ├── glofas <-- example data source name
+     |         |    └── etc. (all country data sources)
+     |         └── glb <-- all global-level data
+     |              ├── chirps <-- data source name
+     |              └── etc (all global data sources)
+     └── private <-- same substructure as public
+```
+The naming conventions for the data source directories are available in 
+[this spreadsheet](https://docs.google.com/spreadsheets/d/155buqH6hcox2IG54NSRkdIjiLcPDmrs6JcjwjdFFA8g/edit?usp=sharing)
