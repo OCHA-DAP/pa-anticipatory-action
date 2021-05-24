@@ -52,7 +52,7 @@ da_glofas_reforecast_interp = {
 ### Calculate return periods
 
 ```python
-def get_return_period_function(observations):
+def get_return_period(observations):
     df_rp = (observations.to_dataframe()[[rd.STATION]]
                  .rename(columns={rd.STATION: 'discharge'})
                  .resample(rule='A', kind='period')
