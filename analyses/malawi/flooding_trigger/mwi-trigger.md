@@ -62,10 +62,6 @@ df_floodscan_event['start_date_buffer'] = pd.to_datetime(df_floodscan_event["sta
 df_floodscan_event['end_date_buffer'] = pd.to_datetime(df_floodscan_event["end_date"]) + timedelta(days=30)
 ```
 
-```python
-df_floodscan_event
-```
-
 ### Calculate the return period
 
 ```python
