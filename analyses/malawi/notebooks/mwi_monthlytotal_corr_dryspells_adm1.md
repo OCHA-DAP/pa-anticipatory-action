@@ -80,7 +80,6 @@ Merge the two, classifying a month as having experienced a dry spell if at least
 ```python
 def load_monthly_dryspell_precip(ds_path,precip_path,min_ds_days_month=7,min_adm_ds_month=3,include_seas=range(2000,2020),ds_adm_col="pcode",precip_adm_col="ADM1_EN",ds_date_cols=["dry_spell_first_date","dry_spell_last_date"]):
     df_ds_all=pd.read_csv(ds_path,parse_dates=ds_date_cols)
-    
     #get list of all dates that were part of a dry spell
     df_ds_res=df_ds_all.reset_index(drop=True)
     a = [pd.date_range(*r, freq='D') for r in df_ds_res[['dry_spell_first_date', 'dry_spell_last_date']].values]
@@ -101,8 +100,7 @@ def load_monthly_dryspell_precip(ds_path,precip_path,min_ds_days_month=7,min_adm
         df_adm2=gpd.read_file(adm2_bound_path)
         df_ds_month=df_ds_month.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
         
-    df_ds_month_adm1=df_ds_month.groupby([precip_adm_col,"date_month"]).count()
-    
+    df_ds_month_adm1=df_ds_month.groupby([precip_adm_col,"date_month"],as_index=False).count()
     #load the monthly precipitation data
     df_total_month=pd.read_csv(precip_path)
     #remove day part of date (day doesnt indicate anything with this data and easier for merge)
@@ -661,6 +659,72 @@ df_daterange_comb_4mm_southern_decjanfeb.to_csv(os.path.join(country_data_proces
 
 ## Archive
 
+```python
+def load_monthly_dryspell_precip_count(ds_path,precip_path,min_ds_days_month=7,min_adm_ds_month=3,include_seas=range(2000,2020),ds_adm_col="pcode",precip_adm_col="ADM1_EN",ds_date_cols=["dry_spell_first_date","dry_spell_last_date"],print_numds=True):
+    df_ds_all=pd.read_csv(ds_path,parse_dates=ds_date_cols)
+    if print_numds:
+        df_adm2=gpd.read_file(adm2_bound_path)
+        df_ds_all_nums=df_ds_all.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
+        df_ds_all_nums=df_ds_all_nums[(df_ds_all_nums.ADM1_EN=="Southern")&((df_ds_all_nums.dry_spell_first_date.dt.month.isin([12,1,2]))|(df_ds_all_nums.dry_spell_first_date.dt.month.isin([12,1,2])))]
+        print("num adm2-date combs with dry spell:",len(df_ds_all_nums))
+    #get list of all dates that were part of a dry spell
+    df_ds_res=df_ds_all.reset_index(drop=True)
+    a = [pd.date_range(*r, freq='D') for r in df_ds_res[['dry_spell_first_date', 'dry_spell_last_date']].values]
+    #join the daterange with the adm2, which create a column per date, then stack to have each adm2-date combination
+    df_ds_daterange=df_ds_res[[ds_adm_col]].join(pd.DataFrame(a)).set_index([ds_adm_col]).stack().droplevel(-1).reset_index()
+    df_ds_daterange.rename(columns={0:"date"},inplace=True)
+    #all dates in this dataframe had an observed dry spell, so add that information
+    df_ds_daterange["dryspell_obs"]=1
+    df_ds_daterange["date_month"]=df_ds_daterange.date.dt.to_period("M")
+    
+    #count the number of days within a year-month combination that had were part of a dry spell
+    df_ds_countmonth=df_ds_daterange.groupby([ds_adm_col,"date_month"],as_index=False).sum()
+    
+    df_ds_month=df_ds_countmonth[df_ds_countmonth.dryspell_obs>=min_ds_days_month]
+    df_ds_month=df_ds_month.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
+    print("num adm2-month combs with dry spell:",len(df_ds_month[(df_ds_month.ADM1_EN=="Southern")&(df_ds_month.date_month.dt.month.isin([12,1,2]))].groupby(["date_month","pcode"],as_index=False).count()))
+    
+    #TODO: this is not really generalizable
+    if precip_adm_col not in df_ds_month.columns:
+        df_adm2=gpd.read_file(adm2_bound_path)
+        df_ds_month=df_ds_month.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
+        
+    df_ds_month_adm1=df_ds_month.groupby([precip_adm_col,"date_month"],as_index=False).count()
+    print("num ds at adm1:", len(df_ds_month_adm1[(df_ds_month_adm1.ADM1_EN=="Southern")&(df_ds_month_adm1.date_month.dt.month.isin([12,1,2]))]))
+    
+    #load the monthly precipitation data
+    df_total_month=pd.read_csv(precip_path)
+    #remove day part of date (day doesnt indicate anything with this data and easier for merge)
+    df_total_month.date_month=pd.to_datetime(df_total_month.date_month).dt.to_period("M")
+    
+    #include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
+    df_comb_countmonth=df_ds_month_adm1.merge(df_total_month,how="outer",on=[precip_adm_col,"date_month"])
+    
+    #dryspell_obs is number of adm2s in which a dry spell is observed in the given date_month
+    #select all date_months with at least min_adm_ds_month adm2 having a dry spell
+    df_comb_countmonth["dry_spell"]=np.where(df_comb_countmonth.dryspell_obs>=min_adm_ds_month,1,0)
+    print(f"num ds adm1 >={min_adm_ds_month}adm2s:",len(df_comb_countmonth[(df_comb_countmonth.dry_spell==1)&(df_comb_countmonth.ADM1_EN=="Southern")&(df_comb_countmonth.date_month.dt.month.isin([12,1,2]))]))
+    
+    df_comb_countmonth["month"]=df_comb_countmonth.date_month.dt.month
+    df_comb_countmonth["season_approx"]=np.where(df_comb_countmonth.month>=10,df_comb_countmonth.date_month.dt.year,df_comb_countmonth.date_month.dt.year-1)
+    
+    #only select the seasons for which dry spells were computed! 
+    df_comb_countmonth=df_comb_countmonth[df_comb_countmonth.season_approx.isin(include_seas)]
+    
+    return df_comb_countmonth
+```
+
+```python
+min_ds_days_month=7
+min_adm_ds_month=3
+df_comb_countmonth=load_monthly_dryspell_precip_count(all_dry_spells_list_path,monthly_precip_path,min_ds_days_month=min_ds_days_month,min_adm_ds_month=min_adm_ds_month)
+```
+
+```python
+min_ds_days_month=7
+min_adm_ds_month=3
+df_comb_countmonth=load_monthly_dryspell_precip_count(all_dry_spells_4mm_list_path,monthly_precip_path,min_ds_days_month=min_ds_days_month,min_adm_ds_month=min_adm_ds_month)
+```
 
 ### ADMIN2
 
