@@ -89,7 +89,8 @@ for station in STATIONS:
         val = 10*np.round(f_rp(year) / 10)
         rp_dict[station][year] = val
 
-df_rps = pd.DataFrame(rp_dict)
+df_rps = pd.DataFrame(rp_dict).reset_index().rename(columns={'index': 'rp'})
+df_rps.to_csv(EXPLORE_DIR / 'glofas_rps.csv')
 ```
 
 ### Overview of historical discharge
@@ -119,7 +120,7 @@ for station in STATIONS:
         
     ax.legend()
     
-    plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas_overview_rps.png')
+    #plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas_overview_rps.png')
 ```
 
 ### Identifying glofas events
@@ -192,12 +193,14 @@ def get_clean_stats_dict(df_glofas, df_impact):
     return stats 
 ```
 
+Compare against the GloFAS reanalysis
+
 ```python
 # Select the station and desired return period
+THRESH_DAYS = 3
 
 for station in STATIONS:
     
-    dur = 3
     detection_stats = {}
     
     for rp, thresh in rp_dict[station].items():        
@@ -220,7 +223,7 @@ for station in STATIONS:
     ax.set_ylabel("Percent")
     ax.set_title(f'GloFAS reanalysis detection performance\nacross return period thresholds at {station}')
     ax.legend()
-    plt.savefig(PLOT_DIR / f'{station}_precision_recall.png')
+    #plt.savefig(PLOT_DIR / f'{station}_precision_recall.png')
 ```
 
 Compare against GloFAS reforecast

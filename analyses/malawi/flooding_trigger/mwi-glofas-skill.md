@@ -9,6 +9,7 @@ import pandas as pd
 import xarray as xr
 import xskillscore as xs
 from scipy.interpolate import interp1d
+from scipy.stats import rankdata
 import os
 from pathlib import Path
 import sys
@@ -30,6 +31,7 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
+SAVE_FIG = True
 ```
 
 ### Read in the GloFAS data
@@ -49,6 +51,16 @@ for station in STATIONS:
     da_glofas_reforecast_summary[station] = rd.get_da_glofas_summary(da_glofas_reforecast[station])
 ```
 
+### Read in the return period thresholds
+
+```python
+df_rps = pd.read_csv(EXPLORE_DIR / 'glofas_rps.csv')
+rp_thresh = [2, 3, 5] # The rp thresholds that we're concerned about checking
+skill_thresh_vals = {}
+for station in STATIONS:
+    skill_thresh_vals[station] = [df_rps[df_rps['rp']==thresh][station].iloc[0] for thresh in rp_thresh]
+```
+
 ### Calculate the skill across lead times
 
 ```python
@@ -60,76 +72,160 @@ def is_dry_season(month):
     # May to Sept
     return (month < 10) & (month > 4)
 
-def get_skill(da_glofas_reforecast, da_glofas_reanalysis):
-    
-    df_crps = pd.DataFrame(columns=['leadtime', 'crps'])
-
-    for leadtime in da_glofas_reforecast.leadtime:
-        forecast = da_glofas_reforecast.sel(
-            leadtime=leadtime.values).dropna(dim='time')
-        observations = da_glofas_reanalysis.reindex({'time': forecast.time})
-        # For all dates
-        crps = xs.crps_ensemble(observations, forecast,member_dim='number')
-        # For rainy season only
-        observations_rainy = observations.sel(time=is_rainy_season(observations['time.month']))
-        crps_rainy = xs.crps_ensemble(
-            observations_rainy,
-            forecast.sel(time=is_rainy_season(forecast['time.month'])),
-            member_dim='number')
-        # Dry season only
-        observations_dry = observations.sel(time=is_dry_season(observations['time.month']))
-        crps_dry = xs.crps_ensemble(
-            observations_dry,
-            forecast.sel(time=is_dry_season(forecast['time.month'])),
-            member_dim='number')
-        # Total summary
-        df_crps = df_crps.append([{'leadtime': leadtime.values,
-                                  'crps': crps.values,
-                                   'std': observations.std().values,
-                                   'mean': observations.mean().values,
-                                  'crps_rainy': crps_rainy.values,
-                                   'std_rainy': observations_rainy.std().values,
-                                   'mean_rainy': observations_rainy.mean().values,
-                                    'crps_dry': crps_dry.values,
-                                   'std_dry': observations_dry.std().values,
-                                   'mean_dry': observations_dry.mean().values
-                                  }], ignore_index=True)
-    return df_crps
-```
-
-```python
-def plot_skill(df_crps, title, division_key=None, add_line_from_website=False,
+def plot_skill(df_crps, division_key=None, add_line_from_website=False,
               ylabel="CRPS [m$^3$ s$^{-1}$]"):
     fig, ax = plt.subplots()
-    df = df_crps.copy()
-    for i, subset in enumerate([None, 'rainy', 'dry']):
-        ykey = f'crps_{subset}' if subset is not None else 'crps'
-        y = df[ykey]
-        if division_key is not None:
-            dkey = f'{division_key}_{subset}' if subset is not None else division_key
-            y /= df[dkey]
-        ax.plot(df['leadtime'], y, ls='-', c=f'C{i}')
-
+    for station, ls in zip(STATIONS, [':', '--']):
+        df = df_crps[station].copy()
+        for i, subset in enumerate([None] + skill_thresh_vals[station]):
+            ykey = f'crps_{subset}' if subset is not None else 'crps'
+            y = df[ykey]
+            if division_key is not None:
+                dkey = f'{division_key}_{subset}' if subset is not None else division_key
+                y /= df[dkey]
+            ax.plot(df['leadtime'], y, ls=ls, c=f'C{i}')
+        ax.plot([], [], ls=ls, c='k', label=f'{station}')
     if add_line_from_website:
         ax.plot(df_skill[0], df_skill[1], ls='-', c='k', lw=0.5, label='from website')
     # Add colours to legend
-    for i, subset in enumerate(['full year', 'rainy', 'dry']):
+    for i, subset in enumerate(['full year'] + [f'{thresh}-year return period' for thresh in rp_thresh]):
         ax.plot([], [], c=f'C{i}', label=subset)
-    ax.set_title(title)
     ax.set_xlabel("Lead time (days)")
     ax.set_ylabel(ylabel)
-    ax.legend()   
+    ax.legend()
 ```
 
 ```python
-df_crps = dict()
+df_crps = {
+    STATIONS[0]: pd.DataFrame(columns=['leadtime', 'crps']),
+    STATIONS[1]: pd.DataFrame(columns=['leadtime', 'crps'])
+}
 
 for station in STATIONS:
-    df_crps[station] = get_skill(da_glofas_reforecast[station], da_glofas_reanalysis[station])
-    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast")
-    plt.savefig(PLOT_DIR / f'{station}_crps.png')
-    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='std', ylabel="RCRPS")
-    plt.savefig(PLOT_DIR / f'{station}_rcrps.png')
-    plot_skill(df_crps[station], f"GloFAS forecast skill at {station}:\n 1999-2019 reforecast", division_key='mean', ylabel="NCRPS (CRPS / mean)")
-    plt.savefig(PLOT_DIR / f'{station}_ncrps.png')
+    for leadtime in da_glofas_reforecast[station].leadtime:
+        forecast = da_glofas_reforecast[station].sel(
+            leadtime=leadtime.values).dropna(dim='time')
+        observations = da_glofas_reanalysis[station].reindex({'time': forecast.time})
+        # For all dates
+        crps = xs.crps_ensemble(observations, forecast,member_dim='number')
+        append_dict = {'leadtime': leadtime.values,
+                                  'crps': crps.values,
+                                   'std': observations.std().values,
+                                   'mean': observations.mean().values,
+                      }
+        # For high values only
+        for thresh in skill_thresh_vals[station]:
+            idx = observations > thresh
+            crps = xs.crps_ensemble(observations[idx], forecast[:, idx], member_dim='number')
+            append_dict.update({
+                f'crps_{thresh}': crps.values,
+                f'std_{thresh}': observations[idx].std().values,
+                f'mean_{thresh}': observations[idx].mean().values
+            })
+        df_crps[station] = df_crps[station].append([append_dict], ignore_index=True)
+```
+
+```python
+plot_skill(df_crps)
+if SAVE_FIG: plt.savefig(PLOT_DIR / 'skill.png')
+plot_skill(df_crps, division_key='mean', ylabel="NCRPS (CRPS / mean)")
+if SAVE_FIG: plt.savefig(PLOT_DIR / 'skill_ncrps.png')
+```
+
+### Investigate bias
+
+```python
+def get_rank(observations, forecast):
+    # Create array of both obs and forecast
+    rank_array = np.concatenate(([observations], forecast))
+    # Calculate rank and take 0th array, which should be the obs
+    rank = rankdata(rank_array, axis=0)[0]
+    return rank
+
+def plot_hist(da_forecast, da_reanalysis):
+    fig, ax = plt.subplots()
+    for leadtime in da_forecast.leadtime:
+        forecast = da_forecast.sel(
+            leadtime=leadtime.values).dropna(dim='time')
+        observations = da_reanalysis.reindex({'time': forecast.time}).dropna(dim='time')
+        forecast = forecast.reindex({'time': observations.time})
+        rank = get_rank(observations.values, forecast.values)
+        ax.hist(rank, histtype='step', label=int(leadtime),
+               bins=np.arange(0.5, max(rank)+1.5, 1), alpha=0.8)
+    ax.legend(loc=9, title="Lead time (days)")
+    ax.set_xlabel('Rank')
+    ax.set_ylabel('Number')
+    
+for station in STATIONS:
+    forecast_list = [da_glofas_reforecast[station]]
+    for da_forecast in forecast_list:
+        observations =  da_glofas_reanalysis[station]
+        plot_hist(da_forecast, observations)
+        if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_glofas_bias.png')
+        # Select observations based on a 3-year return period threshold
+        thresh = df_rps[df_rps['rp']==3][station].iloc[0]
+        o = observations[observations > thresh]
+        plot_hist(da_forecast, o)
+        if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_glofas_bias_3rp.png')
+```
+
+```python
+def calc_mae(observations, forecast):
+    return np.abs(observations - forecast.mean(axis=0)).sum() \
+        / len(observations.time)
+
+# mean error
+def calc_me(observations, forecast):
+    return (forecast.mean(axis=0) - observations).sum() \
+        / len(observations.time)
+
+def calc_mpe(observations, forecast):
+    mean_forecast = forecast.mean(axis=0)
+    return ((mean_forecast - observations) / mean_forecast).sum() \
+        / len(observations.time) * 100
+
+df_bias = {
+    STATIONS[0]: pd.DataFrame(columns=['leadtime']),
+    STATIONS[1]: pd.DataFrame(columns=['leadtime']),
+}   
+
+
+for station in STATIONS: 
+    da_forecast = da_glofas_reforecast[station]
+    da_reanalysis = da_glofas_reanalysis[station]
+    for leadtime in da_forecast.leadtime:
+        forecast = da_forecast.sel(
+            leadtime=leadtime.values).dropna(dim='time')
+        observations = da_reanalysis.reindex({'time': forecast.time})
+        diff = (forecast - observations).values.flatten()
+        append_dict =  {'leadtime': leadtime.values,  
+                        'me': calc_me(observations, forecast),
+                        'mpe': calc_mpe(observations, forecast)}
+        for thresh in skill_thresh_vals[station]:
+            idx = observations > thresh
+            append_dict.update({
+                f'me_{thresh}': calc_me(observations[idx], forecast[:,idx]),
+                f'mpe_{thresh}': calc_mpe(observations[idx], forecast[:,idx])
+            })
+        df_bias[station] = df_bias[station].append([
+                               append_dict], ignore_index=True)
+```
+
+```python
+fig, ax = plt.subplots()
+for station, ls in zip(STATIONS, [':', '--']):    
+    df = df_bias[station]
+    for i, cname in enumerate(['mpe'] + [f'mpe_{thresh}' for thresh in skill_thresh_vals[station]]):
+        ax.plot(df['leadtime'], df[cname], ls=ls, c=f'C{i}')
+    ax.plot([], [], ls=ls, c='k', label=f'{station}')
+# Add colours to legend
+for i, subset in enumerate(['full year'] + [f'{thresh}-year return period' for thresh in rp_thresh]):
+    ax.plot([], [], c=f'C{i}', label=subset)
+
+    
+ax.set_xlabel("Lead time (days)")
+ax.set_ylabel("Mean error (%)")
+
+ax.legend()
+if SAVE_FIG: plt.savefig(PLOT_DIR / 'mpe.png')
 ```
