@@ -155,7 +155,9 @@ def get_crps(
                 norm = observations.std().values
             elif normalization is None:
                 norm = 1
+            # TODO: Add error for other normalization values
             if thresh is not None:
+                # Thresh can either be dict of floats, or float
                 try:
                     thresh_to_use = thresh[station]
                 except TypeError:
@@ -169,3 +171,10 @@ def get_crps(
             df_crps.loc[leadtime, station] = crps
 
     return df_crps
+
+
+def get_groups_above_threshold(observations, threshold, min_duration=1):
+    groups = np.where(np.diff(observations > threshold, prepend=False, append=False))[
+        0
+    ].reshape(-1, 2)
+    return [group for group in groups if group[1] - group[0] > min_duration]
