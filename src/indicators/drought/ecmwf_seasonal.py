@@ -8,7 +8,6 @@ import time
 import datetime
 import os
 from typing import List
-import numpy as np
 import xarray as xr
 import cdsapi
 
@@ -21,6 +20,9 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 ECMWF_SEASONAL_DIR = Path("ecmwf")
 CDSAPI_CLIENT = cdsapi.Client()
 DEFAULT_VERSION = 5
+#monthly forecasts are produced with 1 to 6 months leadtime
+#now always downloading all the lead times, might want to have one file per leadtime in the future
+DEFAULT_LEADTIMES = list(range(1,7))
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +56,8 @@ class EcmwfSeasonal:
         area: Area,
         version: int,
         year: int,
+        leadtimes: List[int],
         month: int = None,
-        leadtime: int = None,
         use_cache: bool = True,
     ):
         filepath = self._get_raw_filepath(
@@ -72,7 +74,7 @@ class EcmwfSeasonal:
             return filepath
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.debug(f"Querying for {filepath}...")
-        logger.debug(f"{self._get_query(area=area,version=version,year=year,month=month,leadtime=leadtime, )}")
+        logger.debug(f"{self._get_query(area=area,version=version,year=year,month=month,leadtimes=leadtimes, )}")
         CDSAPI_CLIENT.retrieve(
             name=self.cds_name,
             request=self._get_query(
@@ -80,7 +82,7 @@ class EcmwfSeasonal:
                 version=version,
                 year=year,
                 month=month,
-                leadtime=leadtime,
+                leadtimes=leadtimes,
             ),
             target=filepath,
         )
@@ -95,7 +97,6 @@ class EcmwfSeasonal:
         version: int,
         year: int,
         month: int = None,
-        leadtime: int = None,
     ):
         directory = (
             RAW_DATA_DIR
@@ -106,8 +107,6 @@ class EcmwfSeasonal:
         filename = f"{country_iso3}_{self.cds_name}_v{version}_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
-        if leadtime is not None:
-            filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".grib"
         return directory / Path(filename)
 
@@ -116,8 +115,8 @@ class EcmwfSeasonal:
         area: Area,
         version: int,
         year: int,
+        leadtimes: List[int],
         month: int = None,
-        leadtime: int = None,
     ) -> dict:
         query = {
             "variable": "total_precipitation",
@@ -129,33 +128,34 @@ class EcmwfSeasonal:
             "month": [str(x).zfill(2) for x in range(1, 13)]
             if month is None
             else str(month).zfill(2),
-            "leadtime_month":[str(x) for x in range(1,7)]
-            if leadtime is None
-            else str(leadtime),
+            "leadtime_month":[str(x) for x in leadtimes],
             "area": area.list_for_api(),
         }
         logger.debug(f"Query: {query}")
         return query
 
     @staticmethod
-    def _read_in_monthly_mean_dataset(filepath_list: List[Path]):
+    def _read_in_monthly_mean_dataset(
+            filepath_list: List[Path],
+            leadtimes: List[int],
+    ):
         """
         Read in the dataset for each date and combine them
         """
 
-        def _preprocess_monthly_mean_dataset(ds):
+        def _preprocess_monthly_mean_dataset(ds,leadtimes):
             # step is in timedelta (in nanoseconds), where the timedelta is the end of the valid time of the forecast
             # since the nanoseconds depends on the length of the month, convert this to the leadtime in months instead to be able to compare across months
             #other option could be to convert it to the forecasted time, but gets difficult to concat all different publication dates afterwards
-            ds["step"] = range(1,7)
-            # dsnew["step"] = dsnew["time"] + dsnew["step"]
+            ds["step"] = leadtimes
+            # ds["step"] = ds["time"] + ds["step"]
             # time is the publication month of the forecast, add this to the dimensions to be able to merge different times
             ds = ds.expand_dims("time")
 
             return ds
 
         with xr.open_mfdataset(
-                filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}, preprocess=_preprocess_monthly_mean_dataset,
+                filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}, preprocess=lambda d:_preprocess_monthly_mean_dataset(d,leadtimes),
         ) as ds:
             return ds
 
@@ -164,12 +164,10 @@ class EcmwfSeasonal:
         country_iso3: str,
         version: int,
         ds: xr.Dataset,
-        leadtime: int = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
             country_iso3=country_iso3,
             version=version,
-            leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.info(f"Writing to {filepath}")
@@ -177,11 +175,9 @@ class EcmwfSeasonal:
         return filepath
 
     def _get_processed_filepath(
-        self, country_iso3: str, version: int, leadtime: int = None
+        self, country_iso3: str, version: int
     ) -> Path:
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
-        if leadtime is not None:
-            filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
         return PROCESSED_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / filename
 
@@ -189,12 +185,10 @@ class EcmwfSeasonal:
         self,
         country_iso3: str,
         version: int = DEFAULT_VERSION,
-        leadtime: int = None,
     ):
         filepath = self._get_processed_filepath(
             country_iso3=country_iso3,
-            version=version,
-            leadtime=leadtime,
+            version=version
         )
         return xr.load_dataset(filepath)
 
@@ -213,7 +207,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         self,
         country_iso3: str,
         area: Area,
-        # leadtimes: List[int],
+        leadtimes: List[int] = DEFAULT_LEADTIMES,
         version: int = DEFAULT_VERSION,
         split_by_month: bool = True,
     ):
@@ -243,12 +237,13 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                     year=year,
                     month=month,
                     version=version,
+                    leadtimes=leadtimes,
                 )
 
     def process(
         self,
         country_iso3: str,
-        # leadtimes: List[int],
+        leadtimes: List[int] = DEFAULT_LEADTIMES,
         version: int = DEFAULT_VERSION,
     ):
         logger.info(f"Processing ECMWF Forecast v{version}")
@@ -268,7 +263,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
 
         # Read in all forecasts and combine into one file
         logger.info(f"Reading in {len(filepath_list)} files")
-        ds = self._read_in_monthly_mean_dataset(filepath_list)
+        ds = self._read_in_monthly_mean_dataset(filepath_list,leadtimes)
 
         # Write out the new dataset to a file
         self._write_to_processed_file(
