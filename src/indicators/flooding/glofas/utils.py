@@ -68,6 +68,12 @@ def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
 
 
 def _interp_dates(ds_dict) -> Dict[int, xr.Dataset]:
+    # Sort the ensemble members to preserve the properties throughout the interpolation
+    for leadtime, ds in ds_dict.items():
+        for station in ds.keys():
+            ds[station].values = np.sort(ds[station].values, axis=0)
+        ds_dict[leadtime] = ds
+    # Interpolate
     return {
         leadtime: ds.interp(
             time=pd.date_range(ds.time.min().values, ds.time.max().values),
