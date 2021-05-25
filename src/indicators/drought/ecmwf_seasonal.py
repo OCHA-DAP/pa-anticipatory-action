@@ -5,6 +5,7 @@ and combines all dates into one dataframe
 from pathlib import Path
 import logging
 import time
+import datetime
 import os
 from typing import List
 import numpy as np
@@ -85,7 +86,6 @@ class EcmwfSeasonal:
         )
         logger.debug(f"...successfully downloaded {filepath}")
         # Wait 2 seconds between requests or else API hangs
-        # TODO make sure this actually works
         time.sleep(2)
         return filepath
 
@@ -135,7 +135,6 @@ class EcmwfSeasonal:
             "area": area.list_for_api(),
         }
         logger.debug(f"Query: {query}")
-        print(query)
         return query
 
     @staticmethod
@@ -145,18 +144,15 @@ class EcmwfSeasonal:
         """
 
         def _preprocess_monthly_mean_dataset(ds):
-            dsnew = ds.copy()
             # step is in timedelta (in nanoseconds), where the timedelta is the end of the valid time of the forecast
             # since the nanoseconds depends on the length of the month, convert this to the leadtime in months instead to be able to compare across months
             #other option could be to convert it to the forecasted time, but gets difficult to concat all different publication dates afterwards
-
-            #todo: make this an input variable!
-            dsnew["step"] = range(1,7)
+            ds["step"] = range(1,7)
             # dsnew["step"] = dsnew["time"] + dsnew["step"]
             # time is the publication month of the forecast, add this to the dimensions to be able to merge different times
-            dsnew = dsnew.expand_dims("time")
+            ds = ds.expand_dims("time")
 
-            return dsnew
+            return ds
 
         with xr.open_mfdataset(
                 filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}, preprocess=_preprocess_monthly_mean_dataset,
@@ -207,9 +203,9 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         super().__init__(
             year_min=2000,
             #TODO: include way to not make it crash with current year (2021)
-            year_max=2020,
+            year_max=2021,
             cds_name="seasonal-monthly-single-levels",
-            dataset="monthly_mean",
+            dataset=["monthly_mean"],
             dataset_variable_name="product_type",
         )
 
@@ -224,9 +220,21 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         logger.info(
             f"Downloading ECMWF seasonal forecast v{version} for years {self.year_min} - {self.year_max}"
         )
+        current_date=datetime.datetime.now()
         month_range = range(1, 13) if split_by_month else [None]
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
+            if split_by_month:
+                if year<current_date.year:
+                    month_range = range(1, 13)
+                elif year == current_date.year:
+                    #forecast becomes available on the 13th of the month
+                    max_month=current_date.month if current_date.day>=13 else current_date.month-1
+                    month_range = range(1,max_month+1)
+                elif year> current_date.year:
+                    logger.info(f"Cannot download data for {year}, because it is in the future")
+            else:
+                month_range = [None]
 
             for month in month_range:
                 super()._download(
@@ -255,6 +263,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             for year in range(self.year_min, self.year_max + 1)
             for month in range(1,13)
         ]
+        #only include files that exist, e.g. if year_max=current year then there might not be forecasts for all months
+        filepath_list = [f for f in filepath_list if os.path.isfile(f)]
 
         # Read in all forecasts and combine into one file
         logger.info(f"Reading in {len(filepath_list)} files")
