@@ -44,7 +44,7 @@ def download_chirps(config,year,resolution="25",write_crs=False):
             year (str or int): year for which the data should be downloaded in YYYY format
             resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         """
-    chirps_dir = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR)
+    chirps_dir = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
     chirps_filepath = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_RAW.format(year=year,resolution=resolution))
     # TODO: decide if only download if file doesn't exist. Not sure if ever gets updated
@@ -85,7 +85,7 @@ def get_chirps_data(config, year, resolution="25", download=False):
     if download:
         download_chirps(config,year,resolution)
 
-    chirps_filepath_crs = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR,config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution))
+    chirps_filepath_crs = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR,config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution))
     #TODO: would prefer rioxarray but crashes when clipping
     ds = xr.open_dataset(chirps_filepath_crs)
     # ds = rioxarray.open_rasterio(chirps_filepath_crs)
