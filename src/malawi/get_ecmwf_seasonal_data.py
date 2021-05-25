@@ -40,7 +40,7 @@ def main(download=True, process=True):
 
     if process:
         ecmwf_forecast.process(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3)
+            country_iso3=COUNTRY_ISO3)
 
 
 if __name__ == "__main__":
