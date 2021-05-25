@@ -97,10 +97,9 @@ def compute_miss_false_leadtime(df,target_var,predict_var):
 ```
 
 ```python
-def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel):
+def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None):
     #number of dates with observed dry spell overlapping with forecasted per month
     num_plots = len(df.leadtime.unique())
-    colp_num=3
     if num_plots==1:
         colp_num=1
     rows = math.ceil(num_plots / colp_num)
@@ -117,6 +116,8 @@ def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel):
         ax.set_ylabel(ylabel)
         ax.set_xlabel(xlabel)
         ax.set_title(f"Leadtime={m}")
+    if title is not None:
+        fig.suptitle(title)
     fig.tight_layout()
     return fig
 ```
@@ -238,7 +239,7 @@ df_for["season_approx"]=np.where(df_for.date.dt.month>=10,df_for.date.dt.year,df
 
 ```python
 sel_adm=["Southern"]
-sel_months=[1,2] #12
+sel_months=[12,1,2]
 sel_leadtime=[1,2,3,4,5,6]
 seas_years=range(2000,2020)
 
@@ -459,13 +460,13 @@ for i, m in enumerate(df_pr_sep_lt.leadtime.unique()):
 handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='upper center')
 fig.tight_layout(rect=(0,0,1,0.9))
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_missfalse_perlt_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_missfalse_perlt_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
 ```python
 threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
 #for easily testing different thresholds
-threshold_perc=190
+# threshold_perc=180
 ```
 
 ```python
@@ -482,12 +483,17 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 
 ```python
 fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}")
+# fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
 ```python
-fig_cm=compute_confusionmatrix_leadtime(df_ds_for[df_ds_for.leadtime.isin([2,4])],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}")
-lt_str=24
-fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
+#focus on leadtimes of interest
+lt_sub=[2,4]
+lt_sub_str=lt_str="".join([str(l) for l in lt_sub])
+#cm per month
+for m in sel_months:
+    fig_cm=compute_confusionmatrix_leadtime(df_ds_for[(df_ds_for.leadtime.isin(lt_sub))&(df_ds_for.date_month.dt.month==m)],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}",title=f"Month = {calendar.month_name[m]}",colp_num=2)
+#     fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_sub_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{calendar.month_abbr[m].lower()}.png"))
 ```
 
 ```python
@@ -497,7 +503,7 @@ for l in [2,4]:#df_ds_for.leadtime.unique():
     df_hm_daterange_lt=refactor_data_hm(df_ds_for_lt,"dry_spell","for_below_th")
 
     lt_str_sel=str(l)
-    df_hm_daterange_lt.to_csv(os.path.join(monthly_precip_exploration_dir,f"monthly_precip_dsobs_formonth_lt{lt_str_sel}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"))
+#     df_hm_daterange_lt.to_csv(os.path.join(monthly_precip_exploration_dir,f"monthly_precip_dsobs_formonth_lt{lt_str_sel}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"))
 ```
 
 ### Determine skill based on set threshold, with varying probability
@@ -543,7 +549,7 @@ for i, m in enumerate(df_sel_date.leadtime.unique()):
 
 fig.suptitle(f"Number of months for which x% of the members forecasts below {threshold} mm",size=20)
 fig.tight_layout()
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_forecast_percmembers_below_{threshold}.png"))
+fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_percmembers_th{threshold}_{adm_str}_{month_str}.png"))
 ```
 
 ```python
@@ -590,7 +596,6 @@ for ax in g.axes.flatten():
     ax.set_xlabel(f"Probability <={threshold} mm")
 g.fig.suptitle(f"Probability <={threshold} mm separated by dry spell occurred")
 g.fig.tight_layout()
-# g.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecasted_distr_dryspell.png"))
 ```
 
 ```python
@@ -604,7 +609,6 @@ for ax in g.axes.flatten():
     ax.set_xlabel(f"Probability <={threshold} mm")
 g.fig.suptitle(f"Probability <={threshold} mm separated by observed <={threshold} mm")
 g.fig.tight_layout()
-# g.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecasted_distr_obsmonthly.png"))
 ```
 
 ```python
@@ -652,7 +656,7 @@ ax.set_ylabel(f"Percentage of members", labelpad=20, weight='bold', size=12)
 sns.despine(left=True,bottom=True)
 
 plt.title(f"Threshold of percentage of members forecasting below {threshold} mm per leadtime")
-# plt.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_forecast_percmembers_threshold.png"))
+plt.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_percth_th{threshold}_{adm_str}_{month_str}.png"))
 ```
 
 ```python
@@ -689,7 +693,7 @@ for tick in vals:
     ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
 
 plt.title(f"Percentage of misses and false alarms compared to observed monthly precipitation per leadtime")
-# fig.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_miss_falsealarms.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_obsmonth_missfalse_th{threshold}_percvar_{adm_str}_{month_str}.png"))
 ```
 
 ```python
@@ -713,17 +717,17 @@ for tick in vals:
     ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
 
 plt.title(f"Percentage of misses and false alarms compared to observed dry spells per leadtime")
-# fig.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_ds_miss_falsealarms.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_ds_missfalse_th{threshold}_percvar_{adm_str}_{month_str}.png"))
 ```
 
 ```python
 fig_cm=compute_confusionmatrix_leadtime(df_obs_for,"obs_below_th","for_below_th",ylabel=f"Observed precipitation <={threshold}",xlabel=f">=x% ensemble members <={threshold}")
-# fig_cm.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_contigencymatrices.png"))
+# fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_cm_formonth_obsmonth_th{threshold}_percvar_{adm_str}_{month_str}.png"))
 ```
 
 ```python
 fig_cm_ds=compute_confusionmatrix_leadtime(df_obs_for,"dry_spell","for_below_th",ylabel="Observed dry spell",xlabel=f">=x% ensemble members <={threshold}")
-# fig_cm_ds.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_ds_contigencymatrices.png"))
+# fig_cm_ds.savefig(os.path.join(plots_seasonal_dir,f"mwi_cm_formonth_ds_th{threshold}_percvar_{adm_str}_{month_str}.png"))
 ```
 
 ### Compute based on set percentage and set threshold
