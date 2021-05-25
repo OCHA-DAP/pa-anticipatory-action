@@ -7,9 +7,9 @@ jupyter:
       format_version: '1.3'
       jupytext_version: 1.11.1
   kernelspec:
-    display_name: pa-anticipatory-action
+    display_name: Python [conda env:anact] *
     language: python
-    name: pa-anticipatory-action
+    name: conda-env-anact-py
 ---
 
 ```python
@@ -39,6 +39,7 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
+from src.indicators.flooding.floodscan import floodscan
 
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
@@ -48,12 +49,22 @@ EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 ADM2_SEL = ['Chikwawa', 'Nsanje']
-SAVE_PLOT = True
+SAVE_PLOT = False
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
     'glofas_2': 'Chikwawa'
 }
+```
+
+### Process Floodscan data
+
+```python
+fs = floodscan.Floodscan()
+```
+
+```python
+fs.process()
 ```
 
 ### Read in GloFAS data

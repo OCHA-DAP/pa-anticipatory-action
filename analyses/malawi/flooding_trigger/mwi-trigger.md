@@ -56,12 +56,6 @@ df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed'
 df_floodscan_event = pd.read_csv(EXPLORE_DIR / 'floodscan_event_summary.csv')
 ```
 
-```python
-# Add buffer around floodscan dates to account for some uncertainty
-df_floodscan_event['start_date_buffer'] = pd.to_datetime(df_floodscan_event["start_date"]) - timedelta(days=30)
-df_floodscan_event['end_date_buffer'] = pd.to_datetime(df_floodscan_event["end_date"]) + timedelta(days=30)
-```
-
 ### Calculate the return period
 
 ```python
@@ -141,21 +135,23 @@ def get_glofas_activations(da_glofas, thresh, ndays):
     df_glofas_act['end_date'] = df_glofas_act['end_index'].apply(lambda x: da_glofas.time[x].values)
     return df_glofas_act
 
-def get_detection_stats(df_glofas, df_impact, buffer=True):
+def get_detection_stats(df_glofas, df_impact, buffer):
     TP = 0 
     FP = 0
     tot_events = len(df_impact.index)
     tot_activations = len(df_glofas.index)
+    
+    # Add buffer around the flood event dates to account for some uncertainty if desired
+    df_impact['start_date_buffer'] = pd.to_datetime(df_impact["start_date"]) - timedelta(days=buffer)
+    df_impact['end_date_buffer'] = pd.to_datetime(df_impact["end_date"]) + timedelta(days=buffer)
 
     for index, row in df_glofas.iterrows():
         TP_ = False
         act_dates = np.array(pd.date_range(row['start_date'], row['end_date']))
 
         for index,row in df_impact.iterrows():
-            if buffer:
-                event_dates = np.array(pd.date_range(row['start_date_buffer'], row['end_date_buffer']))
-            else:
-                event_dates = np.array(pd.date_range(row['start_date'], row['end_date']))
+            event_dates = np.array(pd.date_range(row['start_date_buffer'], row['end_date_buffer']))
+            
             if (set(act_dates) & set(event_dates)):
                 TP+=1
                 TP_ = True
@@ -178,9 +174,9 @@ def get_more_stats(TP, FP, FN):
         f1 = None
     return precision, recall, f1
 
-def get_clean_stats_dict(df_glofas, df_impact):
+def get_clean_stats_dict(df_glofas, df_impact, buffer):
     stats = {}
-    TP, FP, FN =  get_detection_stats(df_glofas, df_impact, True)
+    TP, FP, FN =  get_detection_stats(df_glofas, df_impact, buffer)
     precision, recall, f1 = get_more_stats(TP, FP, FN)
     
     stats['TP'] = TP
@@ -198,6 +194,7 @@ Compare against the GloFAS reanalysis
 ```python
 # Select the station and desired return period
 THRESH_DAYS = 3
+BUFFER = 30
 
 for station in STATIONS:
     
@@ -205,7 +202,7 @@ for station in STATIONS:
     
     for rp, thresh in rp_dict[station].items():        
         df_glofas_act = get_glofas_activations(da_glofas_reanalysis[station], thresh, THRESH_DAYS)
-        rp_stats = get_clean_stats_dict(df_glofas_act, df_floodscan_event)
+        rp_stats = get_clean_stats_dict(df_glofas_act, df_floodscan_event, BUFFER)
         detection_stats[rp] = rp_stats
 
     # Convert dict to dataframe for plotting and accessibility
@@ -221,50 +218,99 @@ for station in STATIONS:
     plt.plot(df_detection_stats['return_period'], df_detection_stats['recall'], label='Recall')
     ax.set_xlabel("Return Period (years)")
     ax.set_ylabel("Percent")
-    ax.set_title(f'GloFAS reanalysis detection performance\nacross return period thresholds at {station}')
     ax.legend()
-    #plt.savefig(PLOT_DIR / f'{station}_precision_recall.png')
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reanalysis_b30.png')
 ```
 
-Compare against GloFAS reforecast
+Compare GloFAS reforecast against Floodscan
 
 ```python
 THRESH_DAYS = 3
-RP_ARR = [2, 3, 5]
+RP_ARR = [3, 5]
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 
+df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
+
 for station in STATIONS:
-    
-    station= 'glofas_2'
-    detection_stats_reforecast = {}
-    
-    for lt in LEADTIMES:        
-        
+
+    # Calculate the detection performance
+    for lt in LEADTIMES: 
+
         for rp in RP_ARR:
-            
+
             thresh = rp_dict[station][rp] 
             da_glofas = da_glofas_reforecast_summary[station].sel(leadtime=lt)[['median']].to_array()[0]
 
             detection_stats = {}
             df_glofas_act = get_glofas_activations(da_glofas, thresh, THRESH_DAYS)
-            stats = get_clean_stats_dict(df_glofas_act, df_floodscan_event)
-            stats['rp'] = rp
-            detection_stats_reforecast[lt] = stats
+            stats = get_clean_stats_dict(df_glofas_act, df_floodscan_event, BUFFER)
+            stats['station'] = station
+            stats['lead_time'] = lt
+            stats['return_period'] = rp
+            df_detect_stats = df_detect_stats.append(stats, ignore_index=True)
+            
+    df_sel = df_detect_stats[df_detect_stats['station']==station]
 
-    # Convert dict to dataframe for plotting and accessibility
-    df_detection_stats = (pd.DataFrame
-                          .from_dict(detection_stats_reforecast)
-                          .transpose()
-                          .reset_index()
-                          .rename(columns={'index':'lead_time'}))        
+    # Visualize detection performance
+    fig, ax = plt.subplots()
+    for rp, ls in zip(RP_ARR, [':', '--']):
+        df = df_sel[df_sel['return_period']==rp]
+        for i, cname in enumerate(['precision', 'recall']):
+            ax.plot(df['lead_time'], df[cname], ls=ls, c=f'C{i}')
+        ax.plot([], [], ls=ls, c='k', label=f'{rp}-year RP')
+        
+    for i, cname in enumerate(['precision', 'recall']):
+        ax.plot([], [], c=f'C{i}', label=cname)
+        
+    ax.set_xlabel("Lead time (days)")
+    ax.set_ylabel("Percent")
+    ax.legend()
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reforecast_b30.png')
+```
 
-    # Plot precision vs recall
-    #fig, ax = plt.subplots()
-    #plt.plot(df_detection_stats['lead_time'], df_detection_stats['precision'], label='Precision')
-    #plt.plot(df_detection_stats['lead_time'], df_detection_stats['recall'], label='Recall')
-    #ax.set_xlabel("Lead time (days)")
-    #ax.set_ylabel("Percent")
-    #ax.set_title(f'GloFAS reanalysis detection performance\nacross leadtimes at {station}')
-    #ax.legend()
-    #plt.savefig(PLOT_DIR / f'{station}_precision_recall.png')
+Compare GloFAS reanalysis against reforecast
+
+```python
+THRESH_DAYS = 3
+RP_ARR = [3, 5]
+LEADTIMES = [5, 10, 15, 20, 25, 30]
+
+df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
+
+for station in STATIONS:
+
+    # Calculate the detection performance
+    for lt in LEADTIMES: 
+
+        for rp in RP_ARR:
+
+            thresh = rp_dict[station][rp] 
+            da_glofas = da_glofas_reforecast_summary[station].sel(leadtime=lt)[['median']].to_array()[0]
+            
+            detection_stats = {}
+            df_glofas_act = get_glofas_activations(da_glofas, thresh, THRESH_DAYS)
+            df_event = get_glofas_activations(da_glofas_reanalysis[station], thresh, THRESH_DAYS)
+            stats = get_clean_stats_dict(df_glofas_act, df_event, 0)
+            stats['station'] = station
+            stats['lead_time'] = lt
+            stats['return_period'] = rp
+            df_detect_stats = df_detect_stats.append(stats, ignore_index=True)
+            
+    df_sel = df_detect_stats[df_detect_stats['station']==station]
+
+    # Visualize detection performance
+    fig, ax = plt.subplots()
+    for rp, ls in zip(RP_ARR, [':', '--']):
+        df = df_sel[df_sel['return_period']==rp]
+        for i, cname in enumerate(['precision', 'recall']):
+            ax.plot(df['lead_time'], df[cname], ls=ls, c=f'C{i}')
+        ax.plot([], [], ls=ls, c='k', label=f'{rp}-year RP')
+        
+    for i, cname in enumerate(['precision', 'recall']):
+        ax.plot([], [], c=f'C{i}', label=cname)
+        
+    ax.set_xlabel("Lead time (days)")
+    ax.set_ylabel("Percent")
+    ax.legend()
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall_reanalysis_reforecast_b0.png')
 ```
