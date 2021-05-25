@@ -196,7 +196,6 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
     def __init__(self):
         super().__init__(
             year_min=2000,
-            #TODO: include way to not make it crash with current year (2021)
             year_max=2021,
             cds_name="seasonal-monthly-single-levels",
             dataset=["monthly_mean"],
