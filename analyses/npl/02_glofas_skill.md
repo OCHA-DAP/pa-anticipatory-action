@@ -2,12 +2,17 @@
 from pathlib import Path
 import os
 from importlib import reload
+from collections import Counter
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.ticker import MaxNLocator
+import numpy as np
 
-#path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-#os.chdir(path_mod)
+path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
+# chdir because otherwise can't import get_glofas_data
+# should only run this once
+os.chdir(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
 import src.nepal.get_glofas_data as ggd
@@ -36,10 +41,10 @@ ds_glofas_reforecast = utils.get_glofas_reforecast(
 )
 ```
 
+## Return period
+
 ```python
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
-
-
 ```
 
 ```python
@@ -56,6 +61,8 @@ for basin, stations in STATIONS.items():
     ax.legend()
 ```
 
+## Skill
+
 ```python
 def plot_crps(df_crps, title_suffix=None):
     for basin, stations in STATIONS.items():
@@ -70,6 +77,8 @@ def plot_crps(df_crps, title_suffix=None):
         ax.set_title(title)
         ax.set_xlabel("Lead time [days]")
         ax.set_ylabel("Normalized CRPS [% error]")
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
 ```
 
 ```python
@@ -91,11 +100,21 @@ plot_crps(df_crps * 100, title_suffix=f" -- values > RP 1 in {rp} y")
 ## When do activations occur
 
 ```python
-for basin in ['Koshi', 'Karnali']:
+rp_list = [1.5, 2, 5, 10, 20]
+cmap = mpl.cm.get_cmap('plasma_r')
+clist = cmap(np.linspace(0, 1, len(rp_list)))
+cdict = {rp: c for rp, c in zip(rp_list, clist)}
+legend_title = 'RP'
+```
 
+### Plot river discharge vs time for all stations
+
+```python
+for basin in ['Koshi', 'Karnali']:
     stations = STATIONS[basin]
     fig, axs = plt.subplots(len(stations), figsize=(10,2*len(stations)))
-
+    fig.suptitle(basin)
+    fig.supylabel('Discharge [m$^3$ s$^{-1}$]')
     for istation, station in enumerate(stations):
         observations = ds_glofas_reanalysis[station].values
         x = ds_glofas_reanalysis.time
@@ -103,22 +122,26 @@ for basin in ['Koshi', 'Karnali']:
         ax = axs[istation]
         ax.plot(x, observations, c='k', lw=0.5, alpha=0.5)
 
-        for irp, rp in enumerate([1.5, 2, 5, 10, 20]):
+        for rp in rp_list:
             rp_val=df_return_period.loc[rp, station]
             groups = utils.get_groups_above_threshold(observations, rp_val)
             for group in groups:
                 idx = range(group[0], group[1])
-                ax.plot(x[idx], observations[idx], ls='-', lw=0.7, c=f'C{irp}')
-            ax.axhline(y=rp_val, c=f'C{irp}', lw=0.5, alpha=0.5)
+                ax.plot(x[idx], observations[idx], ls='-', 
+                        lw=0.7, c=cdict[rp])
+            ax.axhline(y=rp_val, c=cdict[rp], lw=0.5, alpha=0.5)
 
         ax.text(x[10], 300, station)
-        if i == 1:
-            ax.set_ylabel('Discharge [m$^3$ s$^{-1}$]')
+        if istation == 0:
+            for rp in rp_list:
+                ax.plot([], [], c=cdict[rp], label=rp)
+            ax.legend(title=legend_title)
 
 ```
 
+### Plot RP exceedance
+
 ```python
-mpl.rcParams['figure.dpi'] = 200
 year_ranges = [
     [1979, 1988],
     [1989, 1998],
@@ -127,13 +150,18 @@ year_ranges = [
 ]
 #year_ranges = [[x, x+1] for x in range(1979, 2020)]
 
-rp_list = [5, 10, 20]
+rp_list = [1.5, 2, 5, 10, 20]
+cmap = mpl.cm.get_cmap('plasma_r')
+clist = cmap(np.linspace(0, 1, len(rp_list)))
+
 for basin in ['Koshi', 'Karnali']:
 
     stations = STATIONS[basin]
     fig, axs = plt.subplots(len(year_ranges), figsize=(15, 10))
+    fig.suptitle(basin)
     for iyear, year_range in enumerate(year_ranges):
         ax = axs[iyear]
+        ax.axes.yaxis.set_ticks([])
         for istation, station in enumerate(stations):
             ds = (ds_glofas_reanalysis
                             .sel(time=slice(f'{year_range[0]}-01-01', 
@@ -141,49 +169,47 @@ for basin in ['Koshi', 'Karnali']:
             observations = ds[station].values
             x = ds.time
 
-            for irp, rp in enumerate(rp_list):
+            for rp in rp_list:
                 rp_val=df_return_period.loc[rp, station]
                 groups = utils.get_groups_above_threshold(observations, rp_val)
                 for group in groups:
                     idx = range(group[0], group[1])
-                    ax.fill_between(x=x[idx], y1=istation, y2=istation+1, fc=f'C{irp}', alpha=0.5)
+                    ax.fill_between(x=x[idx], y1=istation, y2=istation+1, 
+                                    fc=cdict[rp], alpha=1)
 
-            #ax.text(x[10], 300, station)
-            if i == 1:
-                ax.set_ylabel('Discharge [m$^3$ s$^{-1}$]')
+            ax.text(x[10], istation+0.5, station)
             ax.set_xlim(x[0], x[-1])
             ax.set_ylim(0, len(stations))
+        if iyear == 0:
+            for rp in rp_list:
+                ax.plot([], [], c=cdict[rp], label=rp)
+            ax.legend(title=legend_title)
 
 ```
 
-```python
-ds_glofas_reanalysis.sel(time=slice('1980-01-01', '2000-01-01'))
-ds_glofas_reanalysis.time
-```
+### Find events occuring at stations simultaneously
 
 ```python
 def get_distance_between_ranges(r1, r2):
-    # sort the two ranges such that the range with smaller first element
-    # is assigned to x and the bigger one is assigned to y
     if r1[0] < r2[0]:
         x, y = r1, r2
     else:
         x, y = r2, r1
-
-    #now if x[1] lies between x[0] and y[0](x[1] != y[0] but can be equal to x[0])
-    #then the ranges are not overlapping and return the differnce of y[0] and x[1]
-    #otherwise return 0 
     if x[0] <= x[1] < y[0] and all( y[0] <= y[1] for y in (r1,r2)):
         return y[0] - x[1]
     return 0
 
 
-x = ds_glofas_reanalysis.time.values
-rp_list = [1.5, 2, 5, 10, 20]
-rp_list = [5, 10, 20]
+days_buffer = 30
+time = ds_glofas_reanalysis.time.values
 
-
-days_buffer = 5
+# Algorithm: Take an event date range and save it as the key.
+# For each subsequent event, check if the distance beween the ranges
+# is < days_buffer days. If yes, add the name of the station
+# to the event, if not, make a new event in the dictionary.
+# Note that this is pretty crude because it only uses the 
+# date range of the initial event, and thus will depend on the order
+# of the event list.
 for basin in ['Koshi', 'Karnali']:
     event_dict = {}
     for rp in rp_list:
@@ -195,7 +221,7 @@ for basin in ['Koshi', 'Karnali']:
             groups = utils.get_groups_above_threshold(observations, rp_val)
             for group in groups:
                 if len(event_dict[rp]) == 0:
-                    event_dict[rp][tuple(group)] = [group]
+                    event_dict[rp][tuple(group)] = [station]
                 else:
                     # Get distance between the group and all known events
                     distances = {event_date: get_distance_between_ranges(event_date, group) 
@@ -205,24 +231,40 @@ for basin in ['Koshi', 'Karnali']:
                     
                     if min_distance < days_buffer:
                         matching_event = min(distances, key=distances.get)
-                        event_dict[rp][matching_event].append(group)
+                        event_dict[rp][matching_event].append(station)
                     else:
-                        event_dict[rp][tuple(group)] = [group]
+                        event_dict[rp][tuple(group)] = [station]
                     
                         
-        event_dict[rp] = {x[event_dates[0]]: len(events) for event_dates, events in event_dict[rp].items()}
+        event_dict[rp] = {time[event_dates[0]]: len(set(events)) for event_dates, events in event_dict[rp].items()}
     
+    # Plot number of simultaneous stations vs time
     fig, ax = plt.subplots()
-    for rp, offset in zip(rp_list, [0, 0.05, 0.1]):
+    for irp, rp in enumerate(rp_list):
+        offset = irp * 0.005
         ax.plot(event_dict[rp].keys(), np.array(list(event_dict[rp].values())) + offset, 
-                'o', label=rp, mfc='none', alpha=1)
-    ax.legend()
-```
+                'o', label=rp, mfc='none', alpha=0.5, c=cdict[rp])
+    ax.set_title(basin)
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Number of stations')
+    ax.legend(title='RP')
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
-```python
+    
+    # Plot number of events vs number of simultaneous stations
+    fig, ax = plt.subplots()
+    for rp in rp_list:
+        incidence = Counter(list(event_dict[rp].values()))
+        x, y = np.array(list(incidence.items())).T
+        y_sorted = [z for _,z in sorted(zip(x,y))]
+        x = np.sort(x)
+        ax.plot(x, y, '-o', c=cdict[rp], label=rp)
 
-```
-
-```python
-
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.legend(title='RP')
+    ax.set_title(basin)
+    ax.set_xlabel('Number of stations')
+    ax.set_ylabel('Number of events')
+        
 ```
