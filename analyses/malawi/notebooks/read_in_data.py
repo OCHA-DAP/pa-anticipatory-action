@@ -4,6 +4,7 @@ from pathlib import Path
 import geopandas as gpd
 from rasterstats import zonal_stats
 import rioxarray
+import logging
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,8 @@ from src.indicators.drought import ecmwf_seasonal
 from src.malawi import get_ecmwf_seasonal_data as gesd
 from src.indicators.drought.config import Config
 
+logger = logging.getLogger(__name__)
+
 #TODO: not sure which functions to include here and which in the ecmwf_seasonal file
 
 def get_ecmwf_forecast(version: int = 5):
@@ -26,7 +29,6 @@ def get_ecmwf_forecast(version: int = 5):
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
     ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
-            country_name=gesd.COUNTRY_NAME,
             country_iso3=gesd.COUNTRY_ISO3,
             version=version,
         )
@@ -49,23 +51,46 @@ def get_ecmwf_forecast_by_leadtime(version: int = 5):
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
 #TODO: not sure if this is the best structure, should it instead be inside a class?
-def compute_stats_per_admin(country,adm_level=1):
+def compute_stats_per_admin(country,adm_level=1,use_cache=True,interpolate=True):
     config = Config()
     parameters = config.parameters(country)
+    country_iso3=parameters["iso3_code"]
 
-    country_data_raw_dir = os.path.join(config.DATA_DIR, config.RAW_DIR, country)
-    country_data_processed_dir = os.path.join(config.DATA_DIR, config.PROCESSED_DIR, country)
+    country_data_raw_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, country_iso3)
+    country_data_processed_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, config.PROCESSED_DIR, country_iso3)
     adm_boundaries_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
 
+    #read the forecasts
     ds = get_ecmwf_forecast_by_leadtime()
+
+    if interpolate:
+        #read observed data to get resolution to interpolate to
+        ds_chirps = read_chirps_data(config,country_iso3)
+        # interpolate forecast data such that it has the same resolution as the observed values
+        # not sure if nearest or linear is most suitable here..
+        ds = ds.interp(latitude=ds_chirps["y"], longitude=ds_chirps["x"], method="nearest")
+
     #loop over dates
     for date in ds.time.values:
-        ds_sel=ds.sel(time=date)
-        df=compute_zonal_stats(ds_sel,ds_sel.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
-        date_dt=pd.to_datetime(date)
+        date_dt = pd.to_datetime(date)
+        if interpolate:
+            output_filename = f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_interp_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"
+        else:
+            output_filename = f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"
+        output_path=os.path.join(country_data_processed_dir,"ecmwf",output_filename)
+        # If caching is on and file already exists, don't download again
+        if use_cache and Path(output_path).exists():
+            logger.debug(
+                f"{output_path} already exists and cache is set to True, skipping"
+            )
+        else:
+            print(date)
+            ds_sel=ds.sel(time=date)
+            df=compute_zonal_stats(ds_sel,ds_sel.rio.transform(),adm_boundaries_path,parameters[f"shp_adm{adm_level}c"])
 
-        df["date"] = date_dt
-        df.to_csv(os.path.join(country_data_processed_dir,"ecmwf_seasonal_data",f"{parameters['iso3_code'].lower()}_seasonal-monthly-single-levels_v5_{date_dt.year}_{date_dt.month}_adm{adm_level}_stats.csv"))
+
+            df["date"] = date_dt
+            df.to_csv(output_path)
 
 #TODO: create function to retrieve the stats file
 
@@ -182,3 +207,10 @@ def convert_dict_to_da(da_dict):
             latitude=list(da_lead_dict.values())[0].latitude
         ),
     )
+
+def read_chirps_data(config,country_iso3):
+    chirps_country_data_exploration_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR, "exploration", country_iso3,
+                                                       'chirps')
+    chirps_monthly_country_path = os.path.join(chirps_country_data_exploration_dir, f"chirps_{country_iso3.lower()}_monthly.nc")
+    ds_chirps = rioxarray.open_rasterio(chirps_monthly_country_path, masked=True)
+    return ds_chirps
