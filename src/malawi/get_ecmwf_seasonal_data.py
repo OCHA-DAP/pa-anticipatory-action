@@ -16,22 +16,17 @@ from src.indicators.drought import ecmwf_seasonal
 from src.indicators.flooding.glofas.area import AreaFromShape
 from src.indicators.drought.config import Config
 
-# Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
-# Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-# Bahadurabad_glofas corresponds to the control point identified here:
-# https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
-COUNTRY_NAME = "malawi"
-COUNTRY_ISO3 = "mwi"
-
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
+COUNTRY_NAME = "malawi"
 config=Config()
 PARAMETERS = config.parameters(COUNTRY_NAME)
-COUNTRY_DIR = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, COUNTRY_NAME)
-COUNTRY_DATA_RAW_DIR = os.path.join(config.DATA_DIR,config.RAW_DIR,COUNTRY_NAME)
+COUNTRY_ISO3 = PARAMETERS["iso3_code"]
+COUNTRY_DIR = os.path.join(config.DIR_PATH, config.PUBLIC_DIR, config.ANALYSES_DIR, COUNTRY_ISO3)
+COUNTRY_DATA_RAW_DIR = os.path.join(config.DATA_DIR,config.PUBLIC_DIR, config.RAW_DIR,COUNTRY_ISO3)
 
-ADM0_BOUND_PATH=os.path.join(COUNTRY_DATA_RAW_DIR,config.SHAPEFILE_DIR,PARAMETERS["path_admin0_shp"])
+ADM0_BOUND_PATH=os.path.join(COUNTRY_DATA_RAW_DIR, config.SHAPEFILE_DIR,PARAMETERS["path_admin0_shp"])
 
 def main(download=True, process=True):
 
@@ -40,7 +35,7 @@ def main(download=True, process=True):
     if download:
         area = AreaFromShape(df_country_boundaries.iloc[0]["geometry"].buffer(3))
         ecmwf_forecast.download(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
+            country_iso3=COUNTRY_ISO3, area=area
         )
 
     if process:
