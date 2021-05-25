@@ -276,24 +276,3 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             ds=ds,
             version=version,
         )
-
-#TODO: understand if also the case for ecmwf (copied from glofas)
-def expand_dims(
-    ds: xr.Dataset, dataset_name: str, coord_names: list, expansion_dim: int
-):
-    """
-    Using expand_dims seems to cause a bug with Dask like the one described here:
-    https://github.com/pydata/xarray/issues/873 (it's supposed to be fixed though)
-    """
-    coords = {coord_name: ds[coord_name] for coord_name in coord_names}
-    coords[coord_names[expansion_dim]] = [coords[coord_names[expansion_dim]]]
-    ds = xr.Dataset(
-        data_vars={
-            dataset_name: (
-                coord_names,
-                np.expand_dims(ds[dataset_name].values, expansion_dim),
-            )
-        },
-        coords=coords,
-    )
-    return ds
