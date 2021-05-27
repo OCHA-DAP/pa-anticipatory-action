@@ -128,46 +128,46 @@ plt.show()
 We'll compute forecast skill using the ```xskillscore``` library and focus on the CRPS (continuous ranked probability score) value, which is similar to the mean absolute error but for probabilistic forecasts.
 
 ```python
-def is_rainy_season(month):
-    # June through October
-    return (month >= 12) | (month <= 2)
-
-def is_dry_season(month):
-    # June through October
-    return (month < 12) & (month > 2)
-
 df_crps=pd.DataFrame(columns=['leadtime', 'crps'])
+
+#rainy includes the months to select
+#thresh the thresholds
+subset_dict={"rainy":[12,1,2],"thresh":[170]}
 
 for leadtime in da_lt_interp.leadtime:
     forecast = da_lt_interp.sel(
     leadtime=leadtime.values).dropna(dim='time')
-    observations = da_obs.reindex({'time': forecast.time})
+    observations = da_obs.reindex({'time': forecast.time}).precip
     # For all dates
     crps = xs.crps_ensemble(observations, forecast,member_dim='number')
+    append_dict = {'leadtime': leadtime.values,
+                          'crps': crps.values,
+                           'std': observations.std().values,
+                           'mean': observations.mean().values,
+              }
 
-    # For rainy season only
-    observations_rainy = observations.sel(time=is_rainy_season(observations['time.month']))
-    crps_rainy = xs.crps_ensemble(
-        observations_rainy,
-        forecast.sel(time=is_rainy_season(forecast['time.month'])),
-        member_dim='number')
-    # Dry season only
-    observations_dry = observations.sel(time=is_dry_season(observations['time.month']))
-    crps_dry = xs.crps_ensemble(
-        observations_dry,
-        forecast.sel(time=is_dry_season(forecast['time.month'])),
-        member_dim='number')
-    df_crps = df_crps.append([{'leadtime': leadtime.values,
-                              'crps': crps.precip.values,
-                               'std': observations.precip.std().values,
-                               'mean': observations.precip.mean().values,
-                              'crps_decjanfeb': crps_rainy.precip.values,
-                               'std_decjanfeb': observations_rainy.precip.std().values,
-                               'mean_decjanfeb': observations_rainy.precip.mean().values,
-                                'crps_othermonths': crps_dry.precip.values,
-                               'std_othermonths': observations_dry.precip.std().values,
-                               'mean_othermonths': observations_dry.precip.mean().values
-                              }], ignore_index=True)
+    if "rainy" in subset_dict:
+        # For rainy season only
+        observations_rainy = observations.where(observations.time.dt.month.isin(subset_dict['rainy']), drop=True)
+        crps_rainy = xs.crps_ensemble(
+            observations_rainy,
+            forecast.where(forecast.time.dt.month.isin(subset_dict['rainy']), drop=True),
+            member_dim='number')
+        append_dict.update({
+                f'crps_rainy': crps_rainy.values,
+                f'std_rainy': observations_rainy.std().values,
+                f'mean_rainy': observations_rainy.mean().values
+            })
+    
+    if "thresh" in subset_dict:
+        for thresh in subset_dict["thresh"]:
+            crps_thresh = xs.crps_ensemble(observations.where(observations<=thresh), forecast.where(observations<=thresh), member_dim='number')
+            append_dict.update({
+                f'crps_{thresh}': crps_thresh.values,
+                f'std_{thresh}': observations.where(observations<=thresh).std().values,
+                f'mean_{thresh}': observations.where(observations<=thresh).mean().values
+            })
+        df_crps= df_crps.append([append_dict], ignore_index=True)
 ```
 
 ```python
@@ -175,16 +175,15 @@ def plot_skill(df_crps, division_key=None,
               ylabel="CRPS [mm]"):
     fig, ax = plt.subplots()
     df = df_crps.copy()
-    for i, subset in enumerate([None, 'decjanfeb', 'othermonths']):
-        ykey = f'crps_{subset}' if subset is not None else 'crps'
-        y = df[ykey]
+    for i, subset in enumerate([k for k in df_crps.keys() if "crps" in k]):
+        y = df[subset]
         if division_key is not None:
-            dkey = f'{division_key}_{subset}' if subset is not None else division_key
+            dkey = f'{division_key}_{subset.split("_")[-1]}' if subset!="crps" else division_key
             y /= df[dkey]
         ax.plot(df['leadtime'], y, ls="-", c=f'C{i}')
-    ax.plot([], [], ls="-", c='k')#, label=f'version {version}')
+    ax.plot([], [], ls="-", c='k')
     # Add colours to legend
-    for i, subset in enumerate(['full year', 'decjanfeb', 'othermonths']):
+    for i, subset in enumerate([k for k in append_dict.keys() if "crps" in k]):
         ax.plot([], [], c=f'C{i}', label=subset)
     ax.set_title("ECMWF forecast skill in Malawi:\n 2000-2020 forecast")
     ax.set_xlabel("Lead time (months)")
@@ -641,6 +640,12 @@ for l in [2,4]:#df_ds_for.leadtime.unique():
 
     lt_str_sel=str(l)
 #     df_hm_daterange_lt.to_csv(os.path.join(monthly_precip_exploration_dir,f"monthly_precip_dsobs_formonth_lt{lt_str_sel}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"))
+```
+
+```python
+#for the trigger now focussing on janfeb for leadtime 2,4, so print those numbers
+df_pr_sel=compute_miss_false_leadtime(df_ds_for[df_ds_for.date.dt.month.isin([1,2])],"dry_spell","for_below_th")
+df_pr_sel[df_pr_sel.leadtime.isin([2,4])]
 ```
 
 ### Determine skill based on set threshold, with varying probability
