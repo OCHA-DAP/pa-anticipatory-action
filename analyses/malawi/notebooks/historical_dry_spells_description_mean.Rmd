@@ -29,8 +29,9 @@ knitr::opts_chunk$set(include = FALSE) # do not print output by default
 
 ```{r data-load-formatting}
 data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
-rainy_seasons_detail <- read.csv(file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_mean_back.csv"))
-dry_spells_during_rainy_season_list <- read.csv(file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"))
+exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/')
+rainy_seasons_detail <- read.csv(file = paste0(data_dir, "/public/processed/mwi/dry_spells/rainy_seasons_detail_2000_2020_mean_back.csv"))
+dry_spells_during_rainy_season_list <- read.csv(file = paste0(data_dir, "/public/processed/mwi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"))
 
 rainy_seasons_detail$onset_date <- as.Date(rainy_seasons_detail$onset_date, format = "%Y-%m-%d")
 rainy_seasons_detail$cessation_date <- as.Date(rainy_seasons_detail$cessation_date, format = "%Y-%m-%d")
@@ -40,12 +41,12 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
 ```
 
 ### Data Source
-We chose to use CHIRPS as data source of historical precipitation. Different data sets exist, but among those that we had access to CHIRPS generally shows good accuracy in Malawi [@zhao2019evaluating]. We used the CHIRPS data between 1 Jan 2000 and 31 Dec 2020 at 0.05-degree resolution. 
+We chose to use CHIRPS as data source of historical precipitation. Different data sets exist, but among those that we had access to CHIRPS generally shows good accuracy in Malawi [@zhao2019evaluating]. A caveat of CHIRPS, and many other observational precipitation datasets is that they tend to overpedict precipitation below 1mm [@dinku2011challenges,@dembele2016evaluation]. We used the CHIRPS data between 1 Jan 2000 and 31 Dec 2020 at 0.05-degree resolution.
 
 ### Definitions
 Many different definitions of a dry spell, rainy day, rainy season onset, and rainy season cessation exist. The following definitions were used in the current analysis, based on literature and consultation with partners.
 
-**Dry spells:** At least 14 consecutive days with a total rainfall less than 2 mm during the rainy season in an ADMIN2 region.
+**Dry spells:** At least 14 consecutive days with a cumulative rainfall of no more than 2 mm during the rainy season in an ADMIN2 region.
 
 **Rainy day:** At least 4mm of rainfall on a calendar day (DCCMS 2008).
 
@@ -56,21 +57,17 @@ Many different definitions of a dry spell, rainy day, rainy season onset, and ra
 **Rainy season duration:** Rainy season cessation date minus rainy season onset (in days).
 
 ### Methodology
-[TODO: Do we also want to include the experimentation with different dry spell definitions? ]
-The CHIRPS data is released as raster data, so we aggregated this to district (admin2) level, by extracting the mean value of all raster cells whose centre lied within the district. 
-Different methodologies for aggregation from the raster cells to the admin areas were explored, which are further explained in [TODO: Add appendix]. It was chosen to compute the analysis on the district (admin2) level, since this gives a higher granularity for anticipatory actions than on region (admin1) level. Moreover, it was chosen to not go down to TA (admin3) level since the uncertainty of forecasts is too high to predict on such a small scale. 
-Besides the admin level, a methodology has to be chosen to aggregate the raster cells to the desired admin level. It was chosen to use the mean of the raster cells within a district, since it ... [TODO: add if we finalize decision to use mean or pixel based]. 
-Lastly, we also analyzed the detection of dry spells when allowing less than 2 mm per day instead of a total of 2mm over 14 days. This was done due to the tendency of CHIRPS, or satellite precipitation products in general, to overestimate low amounts (<0.1mm/day) of rainfall [dinku2011challenges]. Since we didn't see large differences in patterns, see appendix, we chose to stick to the original definition for this analysis. 
+The CHIRPS data is released as raster data, so we aggregated this to district (admin2) level, by extracting the mean value of all raster cells whose center lied within the district.
+It was chosen to compute the analysis on the district (admin2) level, since this gives a higher granularity for anticipatory actions than on region (admin1) level. Moreover, it was chosen to not go down to TA (admin3) level since the spatial uncertainty in the data is too high to predict on such a small scale.
+Besides the admin level, a methodology has to be chosen to aggregate the raster cells to the desired admin level. It was chosen to use the mean of the raster cells within a district, since this allows us to detect relatively widespread events without missing events due to a small part of the district receiving more precipitation. Different methods of aggregation were tested, such as looking at the percentage of cells in a dry spell. This data is available upon request.
 
-After we extracted the mean rain fallen within a district for every day over the last 20 years, we then computed the 10-day, 14-day, and 15-day rolling sums for each district. The earliest records in the dataset were assigned rolling sums of NA (non-applicable) until at least 10/14/15 records were available, respectively. Using these sums, the dry spells and rainy seasons were computed. 
+After we extracted the mean rain fallen within a district for every day over the last 20 years, we then computed the 10-day, 14-day, and 15-day rolling sums for each district. The earliest records in the dataset were assigned rolling sums of NA (non-applicable) until at least 10/14/15 records were available, respectively. Using these sums, the dry spells and rainy seasons were computed.
 
 "Total rainfall" was summed over the relevant period and rounded to the first decimal.
 
-
-
 ### Rainy Seasons
 
-We identified the onset and cessation date of every rainy season between 2000 and 2020 for each district (n = 32). Rainy seasons are labelled after the year in which they begin. Seasons that began in the Fall of 1999 and 2020 are not reported on since the dataset only had partial data for them (since the dataset did not include 1999 data and the 2020 season is ongoing). We also note that the 2020 season in certain districts had not started or met our onset definition by 31 Dec 2020. 
+We identified the onset and cessation date of every rainy season between 2000 and 2020 for each district (n = 32). Rainy seasons are labelled after the year in which they begin. Seasons that began in the Fall of 1999 and 2020 are not reported on since the dataset only had partial data for them (since the dataset did not include 1999 data and the 2020 season is ongoing). We also note that the 2020 season in certain districts had not met our onset definition by 31 Dec 2020.
 
 
 ``` {r rainy-seasons}
@@ -90,14 +87,14 @@ rainy_seasons_summary_per_region <- rainy_seasons_detail %>%
                                       summarise(min_rainy_season_onset_post1nov = min(onset_days_since_1nov, na.rm = T), # na.rm to remove incomplete seasons
                                                 max_rainy_season_onset_post1nov = max(onset_days_since_1nov, na.rm = T),
                                                 mean_rainy_season_onset_post1nov = round(mean(onset_days_since_1nov, na.rm = T),1), # average nbr of days since 1 Nov
-                                                min_rainy_season_cessation_post1nov = min(cessation_days_since_1nov, na.rm = T), 
+                                                min_rainy_season_cessation_post1nov = min(cessation_days_since_1nov, na.rm = T),
                                                 max_rainy_season_cessation_post1nov = max(cessation_days_since_1nov, na.rm = T),
                                                 mean_rainy_season_cessation_post1nov = round(mean(cessation_days_since_1nov, na.rm = T),1), # average nbr of days since 1 Nov
-                                                min_rainy_season_duration = min(rainy_season_duration, na.rm = T), 
+                                                min_rainy_season_duration = min(rainy_season_duration, na.rm = T),
                                                 max_rainy_season_duration = max(rainy_season_duration, na.rm = T),
                                                 mean_rainy_season_duration = round(mean(rainy_season_duration, na.rm = T),1),
                                                 nbr_125d_seasons = sum(rainy_season_at_least_125d, na.rm = T),
-                                                min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T), 
+                                                min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T),
                                                 max_rainy_season_rainfall = max(rainy_season_rainfall, na.rm = T),
                                                 mean_rainy_season_rainfall = round(mean(rainy_season_rainfall, na.rm = T),1)) %>%
                                       ungroup() %>%
@@ -109,15 +106,15 @@ rainy_seasons_summary_per_region <- rainy_seasons_detail %>%
 &nbsp;
 
 #### Onsets
-Based on our definition, rainy seasons started in Nov, Dec, Jan, or Feb.
+Based on our definition, rainy seasons started in Nov, Dec, Jan, or Feb. November and December were the most common onset months.
 
 ```{r, include = T}
 
 regions <- rainy_seasons_detail[,c('ADM2_EN', 'region')] %>% unique()
-                     
+
 as.data.frame(round(prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month), 1)*100, 1)) %>%
   pivot_wider(names_from = Var2, values_from = Freq) %>%
-  left_join(regions, by = c('Var1' = 'ADM2_EN')) %>% # bring back regions 
+  left_join(regions, by = c('Var1' = 'ADM2_EN')) %>% # bring back regions
   rename(Region = region, District = Var1, Jan = `1`, Feb = `2`, Nov = `11`, Dec = `12`) %>%
   dplyr::select(Region, District, Nov, Dec, Jan, Feb) %>%
   arrange(Region, District) %>%
@@ -132,12 +129,9 @@ as.data.frame(round(prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons
 &nbsp;
 &nbsp;
 
+We note significant variability in the typical onset of the rainy season by location. For instance Zomba City's onsets have been 23.4 days post 1 Nov on average while Likoma's have averaged 39.2 days post 1 Nov. The majority of districts (n = 18) had at least 1 rainy season start before the 5th of Nov (specifically, met the definition of rainy onset before 5 Nov). All districts experienced late onset rainy seasons that started 52 - 107 days after 1 Nov.
 
-```{r}
-# [TODO: Description of results on onset of rainy season. What is the variability across adm regions?]
-```
-
-```{r rainy-onset-table, include = T} 
+```{r rainy-onset-table, include = T}
 
 rainy_seasons_summary_per_region %>%
   dplyr::select(region, ADM2_EN, min_rainy_season_onset_post1nov, max_rainy_season_onset_post1nov, mean_rainy_season_onset_post1nov) %>%
@@ -154,13 +148,9 @@ rainy_seasons_summary_per_region %>%
 &nbsp;
 
 #### Cessations
+Overall districts saw their rainy seasons end anywhere between `r min(rainy_seasons_summary_per_region$min_rainy_season_cessation_post1nov)` and `r max(rainy_seasons_summary_per_region$max_rainy_season_cessation_post1nov)` days post 1 Nov (around 15 March and 30 May, respectively). Similarly to the onset, districts varied in the typical end of their rainy season. Per district, averages ranged from `r min(rainy_seasons_summary_per_region$mean_rainy_season_cessation_post1nov)` to `r max(rainy_seasons_summary_per_region$mean_rainy_season_cessation_post1nov)` days post 1 Nov.
 
-
-```{r}
-#[TODO: Summary of cessation results.]
-```
-
-```{r rainy-cessation-table, include = T} 
+```{r rainy-cessation-table, include = T}
 rainy_seasons_summary_per_region %>%
   dplyr::select(region, ADM2_EN, min_rainy_season_cessation_post1nov, max_rainy_season_cessation_post1nov, mean_rainy_season_cessation_post1nov) %>%
   knitr::kable(caption = "Rainy Season Cessations (in Days Since 1 Nov)",
@@ -176,12 +166,21 @@ rainy_seasons_summary_per_region %>%
 &nbsp;
 
 #### Durations
-
-```{r}
-#[TODO: Summary of rainy season duration results. Add boxplot]
+```{r duration-stats}
+min_dur <-min(rainy_seasons_summary_per_region$min_rainy_season_duration)
+max_dur <-max(rainy_seasons_summary_per_region$max_rainy_season_duration)
+min_mean_dur <-min(rainy_seasons_summary_per_region$mean_rainy_season_duration)
+min_mean_dur_dist <-with(rainy_seasons_summary_per_region, ADM2_EN[mean_rainy_season_duration == min(mean_rainy_season_duration)])
+max_mean_dur <- max(rainy_seasons_summary_per_region$mean_rainy_season_duration)
+max_mean_dur_dist <-with(rainy_seasons_summary_per_region, ADM2_EN[mean_rainy_season_duration == max(mean_rainy_season_duration)])
+mean_125 <- sum(rainy_seasons_summary_per_region$mean_rainy_season_duration >= 125)
+mean_125_perc <- mean_125/length(unique(rainy_seasons_summary_per_region$ADM2_EN))*100
 ```
+Overall the shortest season stood at `r min_dur` days while the longest covered `r max_dur ` days. As for onset and cessation dates, the duration of the rainy season varied significantly per
+district as well. The shortest and longest averages were observed in `r min_mean_dur_dist` (`r min_mean_dur` days) and `r max_mean_dur_dist ` (`r max_mean_dur` days). We note that only `r mean_125` (`r mean_125_perc`%) districts experienced rainy seasons lasting at least as long as the growing season for maize (125 days) every year in the period examined. 
 
-```{r rainy-duration-table, include = T} 
+
+```{r rainy-duration-table, include = T}
 rainy_seasons_summary_per_region %>%
   dplyr::select(region, ADM2_EN, min_rainy_season_duration, max_rainy_season_duration, mean_rainy_season_duration, nbr_125d_seasons) %>%
   knitr::kable(caption = "Rainy Season Durations (in Days)",
@@ -197,20 +196,33 @@ rainy_seasons_summary_per_region %>%
 
 &nbsp;
 
-#### Total rainfall
-[TODO: add boxplot total rainfall per season]
+The boxplot below shows the duration across districts per rainy season. We can see clear differences in average rainy season duration across districts between the year. Moreover, some years very different patterns were observed across districts, indicated by a longer bar.
+```{r duration-boxplot, include = T,fig.height=3} 
+ggplot(rainy_seasons_detail %>% filter(season_approx %in% 2000:2019), aes(x=factor(season_approx), y=rainy_season_duration)) + 
+  geom_boxplot()+
+  labs(title="The variability of rainy season duration across districts per rainy season",x='Start year of rainy season', y="Rainy season length (days)", fill='')
+```
 
+#### Total rainfall
+The total rainfall during each rainy season was also computed per district, and can be seen in the boxplot below. Similarly to the boxplot on rainy season length, we can see differences across years as well as districts.
+
+```{r total-rainfall-boxplot, include = T,fig.height=3}
+ggplot(rainy_seasons_detail %>% filter(season_approx %in% 2000:2019), aes(x=factor(season_approx), y=rainy_season_rainfall)) +
+  geom_boxplot()+
+  labs(title="The variability of total rainfall across districts per rainy season",x='Start year of rainy season', y="Total rainfall (mm)", fill='')
+```
 ### Dry Spells
 
-A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. The graph presents frequency over the years by region. A summary per district follows in table format.
-[TODO: add heatmap]
+A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. The graph presents the occurences of dry spells over time. Each line indicates a district, i.e. the more red lines at the same time the wider the dry spell was.
 &nbsp;
+![](`r paste0(exploration_dry_spell_dir, 'mwi_viz_hm_dry_spell_mean_adm2.png')`)
+
 
 ```{r dry-spells}
 
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
-rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>% 
+rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>%
                                                 group_by(region, pcode, ADM2_EN) %>%
                                                 summarise(nbr_dry_spells = n(),
                                                           mean_ds_duration = round(mean(dry_spell_duration),1),
@@ -239,32 +251,6 @@ table(z$rainy_season_at_least_125d, z$n)
 
 ```
 
-```{r ds-freq-plot, include = T, warning = F, error = F, message = F}
-
-# country-wide trends
-
-year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'year')))
-list_adm2_EN_region <- rainy_seasons_detail[,c('region', 'pcode', 'ADM2_EN')] %>% unique()
-year_by_adm2_EN_region <- crossing(list_adm2_EN_region, year_list) # full list of adm2 * year along with region and ADM2_EN
-
-trends <- dry_spells_during_rainy_season_list %>%
-          mutate(season_approx = as.numeric(season_approx)) %>%
-          right_join(year_by_adm2_EN_region,  by = c('region' = 'region', 'pcode' = 'pcode', 'ADM2_EN' = 'ADM2_EN', 'season_approx' = 'year')) %>%
-          #left_join(dry_spells_during_rainy_season_list, by = c('region' = 'region', 'pcode' = 'pcode', 'ADM2_EN' = 'ADM2_EN', 'year' = 'season_approx')) %>% 
-          dplyr::select(season_approx, region, ADM2_EN, dry_spell_first_date) %>%
-          rename('Year' = 'season_approx', 'Region' = 'region') %>%
-          group_by(Region, Year) %>%
-          summarise(Count = sum(!is.na(dry_spell_first_date)))
-
-ggplot(trends, aes(x=Year, y=Count, fill=Region)) + 
-        geom_bar(stat="identity", width=0.7, position=position_dodge(width=0.8)) +
-        scale_x_continuous(breaks= seq(min(trends$Year), max(trends$Year), by=1)) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-        ggtitle("Dry Spells Over the Past 20 Years")
-
-# p + ggthemes::theme_economist()
-```
-
 ```{r ds-stats-summary, include = T}
 
 rainy_season_dry_spells_summary_per_region %>%
@@ -282,16 +268,13 @@ rainy_season_dry_spells_summary_per_region %>%
 
 ```
 
-&nbsp; 
+&nbsp;
 
 #### Frequency
 
+Over the 20-year span, districts experienced an average of **X** rainy-season dry spells. Only **X** districts (**X,Y,Z**) experienced none, and **X** experienced a dry spell every other year on average (total: 10 or 11 dry spells). Most (75%) districts experienced between **X**-**Y** dry spells.
 
-[TODO: Summary on frequency of dry spells]
-
-[TODO: Adjust below comparison]
-
-
+**[TODO: Adjust WFP comparison below]**
 We note a convergence between these results and the Analysis of Predictable Food Crises in Malawi carried out in January 2020 by WFP. The analysis reported on the location, frequency and impact of dry spells at the Traditional Authority (TA; adm3) level in 2011-2019. Similar findings include:
 
 * A single district has never experienced a dry spell while 5% (n = 15) of TAs did not. That is, some areas are unaffected or rarely affected by dry spells.
@@ -327,7 +310,7 @@ timing_counts <- prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, l
 
 as.data.frame(round(timing_counts, 1)) %>%
   pivot_wider(names_from = Var2, values_from = Freq) %>%
-  left_join(regions, by = c('Var1' = 'ADM2_EN')) %>% # bring back regions 
+  left_join(regions, by = c('Var1' = 'ADM2_EN')) %>% # bring back regions
   rename(Region = region, District = Var1, Jan = `1`, Feb = `2`, Mar = `3`) %>%
   dplyr::select(Region, District, Jan, Feb, Mar) %>%
   arrange(Region, District) %>%
@@ -339,15 +322,15 @@ as.data.frame(round(timing_counts, 1)) %>%
         scroll_box(width = "100%", height = "500px")
 
 ```
-Month in which a dry spell started is a good proxy for when in the growing cycle it occurred. However it would be appropriate considering the frequent late rainy (and likely planting) season onsets to examine instead how many days in the planting season the dry spell started. 
+Month in which a dry spell started is a good proxy for when in the growing cycle it occurred. However it would be appropriate considering the frequent late rainy (and likely planting) season onsets to examine instead how many days in the planting season the dry spell started.
 
 Such an analysis would require a definition of Effective Planting Start such as WFP's (two consecutive 10-day periods with at least 20mm of rain each after 1 Nov) as well as definitions of the periods when crops are most vulnerable, likely within days of planting and during flowering (how many days after Day 1 of Effective Planting Start?)
 
-&nbsp; 
+&nbsp;
 
 ### Addendum
 
-#### Rainy Seasons 
+#### Rainy Seasons
 
 Duration is reported in days and rainfall, in mm.
 
@@ -366,7 +349,7 @@ rainy_seasons_detail %>%
 
 &nbsp;
 
-#### Dry Spells 
+#### Dry Spells
 
 The complete list of dry spells is displayed below. Only dry spells that overlapped with the rainy season are included. Duration is reported in days and rainfall, in mm.
 
@@ -382,6 +365,7 @@ dry_spells_during_rainy_season_list %>%
                         fixed_thead = T) %>%
           scroll_box(width = "100%", height = "500px") %>%
           footnote(general = "Duration reported in days and Total Rainfall in mm. ")
-        
+
 ```
 
+### References
