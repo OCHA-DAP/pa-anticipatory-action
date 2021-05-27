@@ -38,12 +38,11 @@ import itertools
 import math
 import geopandas as gpd
 
-import read_in_data as rd
-reload(rd)
-
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
+from src.indicators.drought.ecmwf_seasonal import processing
+reload(processing)
 
 mpl.rcParams['figure.dpi'] = 200
 pd.options.mode.chained_assignment = None
@@ -85,15 +84,17 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal",
 ### Read in forecast and observational data
 
 ```python
-da = rd.get_ecmwf_forecast()
+# #only needed if stats files haven't been computed before and are not on the gdrive
+# #takes several hours
+# processing.compute_stats_per_admin(country)
 ```
 
 ```python
-da_lt=rd.get_ecmwf_forecast_by_leadtime()
+da = processing.get_ecmwf_forecast()
 ```
 
 ```python
-# rd.compute_stats_per_admin("malawi")
+da_lt=processing.get_ecmwf_forecast_by_leadtime()
 ```
 
 ```python
@@ -104,8 +105,7 @@ da_obs=da_obs.sel(time=da_obs.time.dt.year.isin(range(2000,2021)))
 
 ```python
 #interpolate forecast data such that it has the same resolution as the observed values
-#not sure if nearest or linear is most suitable here..
-#TODO: add this to read_in_data?
+#using "nearest" as interpolation method and not "linear" because the forecasts are designed to have sharp edged and not be smoothed
 da_lt_interp=da_lt.interp(latitude=da_obs["y"],longitude=da_obs["x"],method="nearest")
 ```
 
