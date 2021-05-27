@@ -57,8 +57,6 @@ for station in STATIONS:
 ### Read in the baseline impact data
 
 ```python
-df_mvac_flood_ta = pd.read_csv(os.path.join(config.DATA_PRIVATE_DIR, 'processed', 'mwi', 'mvac_dodma_flood_ta.csv'))
-
 floodscan_events = {}
 for station in stations_adm2.values():
     floodscan_events[station] = pd.read_csv(EXPLORE_DIR / f'{station}_floodscan_event_summary.csv')
@@ -122,7 +120,7 @@ for code, station in stations_adm2.items():
         
     ax.legend()
     
-    #plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas_overview_rps.png')
+    plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas_overview_rps.png')
 ```
 
 ### Identifying glofas events
@@ -234,7 +232,7 @@ for code, station in stations_adm2.items():
     ax.set_ylabel("Percent")
     ax.set_title(f'Glofas detection performance at {station}\n(reanalysis against Floodscan)')
     ax.legend()
-    #plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reanalysis_b30.png')
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reanalysis_b30.png')
 ```
 
 Compare GloFAS reforecast against Floodscan
@@ -283,7 +281,7 @@ for code, station in stations_adm2.items():
     ax.set_ylabel("Percent")
     ax.set_title(f'Glofas detection performance at {station}\n(reforecast against Floodscan)')
     ax.legend()
-    #plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reforecast_b30.png')
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reforecast_b30.png')
 ```
 
 Compare GloFAS reanalysis against reforecast
@@ -333,7 +331,7 @@ for code, station in stations_adm2.items():
     ax.set_ylabel("Percent")
     ax.set_title(f'Glofas detection performance at {station}\n(reanalysis against reforecast)')
     ax.legend()
-    #plt.savefig(PLOT_DIR / f'{station}_precision_recall_reanalysis_reforecast_b0.png')
+    plt.savefig(PLOT_DIR / f'{station}_precision_recall_reanalysis_reforecast_b0.png')
 ```
 
 ### Summarizing potential trigger options
