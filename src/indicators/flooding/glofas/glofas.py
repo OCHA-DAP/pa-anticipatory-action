@@ -431,9 +431,44 @@ def expand_dims(
     return ds
 
 
+class CoordsOutOfBounds(Exception):
+    def __init__(
+        self,
+        station_name: str,
+        param_name: str,
+        coord_station: float,
+        coord_min: float,
+        coord_max: float,
+    ):
+        message = (
+            f"Station {station_name} has out-of-bounds {param_name} value of {coord_station} "
+            f"(GloFAS {param_name} ranges from {coord_min} to {coord_max})"
+        )
+        super().__init__(message)
+
+
 def _get_station_dataset(
     stations: Dict[str, Station], ds: xr.Dataset, coord_names: List[str]
 ) -> xr.Dataset:
+    # Check that lat and lon are in the bounds
+    for station_name, station in stations.items():
+        if not ds.longitude.min() < station.lon < ds.longitude.max():
+            raise CoordsOutOfBounds(
+                station_name=station_name,
+                param_name="longitude",
+                coord_station=station.lon,
+                coord_min=ds.longitude.min().values,
+                coord_max=ds.longitude.max().values,
+            )
+        if not ds.latitude.min() < station.lat < ds.latitude.max():
+            raise CoordsOutOfBounds(
+                station_name=station_name,
+                param_name="latitude",
+                coord_station=station.lat,
+                coord_min=ds.latitude.min().values,
+                coord_max=ds.latitude.max().values,
+            )
+    # If they are then return the correct pixel
     return xr.Dataset(
         data_vars={
             station_name: (

@@ -11,17 +11,15 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import AreaFromShape, Station
+from src.utils_general.utils import parse_yaml
 
 
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "npl"
-LEADTIMES = [5, 10, 15]
-# TODO: Read in the csv file from GDrive
-STATIONS = {
-    "Karnali": Station(lon=28.75, lat=81.25),
-    "Bimalnagar": Station(lon=28.15, lat=84.45),
-    "Jomsom": Station(lon=28.65, lat=83.55),
-}
+LEADTIMES = [x + 1 for x in range(20)]
+
+STATIONS = parse_yaml('src/nepal/config.yml')['glofas']['stations']
+
 SHAPEFILE_BASE_DIR = (
     Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
 )
@@ -30,13 +28,13 @@ SHAPEFILE = (
     / "npl_admbnda_ocha_20201117"
     / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
 )
-VERSION = 2
+VERSION = 3
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=True):
+def main(download=False, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
@@ -64,20 +62,21 @@ def main(download=True, process=True):
         )
 
     if process:
+        stations = {name: Station(lon=coords['lon'], lat=coords['lat']) for name, coords in STATIONS.items()}
         glofas_reanalysis.process(
             country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
+            stations=stations,
             version=VERSION,
         )
         glofas_forecast.process(
             country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
+            stations=stations,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.process(
             country_iso3=COUNTRY_ISO3,
-            stations=STATIONS,
+            stations=stations,
             leadtimes=LEADTIMES,
             version=VERSION,
         )

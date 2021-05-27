@@ -83,3 +83,24 @@ def test_expand_dims():
     assert 'z' not in ds.dims.keys()
     ds = glofas.expand_dims(ds=ds, dataset_name='var_a', coord_names=['z', 'x', 'y'], expansion_dim=0)
     assert 'z' in ds.dims.keys()
+
+
+def test_get_station_dataset():
+    coords = {
+        'longitude': np.arange(0, 5, 0.1),
+        'latitude': np.arange(-10, 0, 0.1),
+        'time': np.arange(10)
+    }
+    stations = {
+        "test_station": glofas.Station(lon=2.5, lat=-5)
+    }
+    rs = np.random.RandomState(12345)
+    dis24 = rs.random([len(coord) for coord in coords.values()])
+    ds = xr.Dataset(
+        data_vars=dict(
+           dis24=(coords.keys(), dis24)
+        ),
+        coords=coords
+    )
+    ds_new = glofas._get_station_dataset(stations=stations, ds=ds, coord_names=["time"])
+    assert np.array_equal(ds_new["test_station"], dis24[25, 50])

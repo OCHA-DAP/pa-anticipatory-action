@@ -1,0 +1,32 @@
+glofas:
+  stations:
+    Asaraghat:
+      lat: 29.15
+      lon: 81.55
+    Chatara:
+      lat: 26.95
+      lon: 87.15
+    Chepang:
+      lat: 28.25
+      lon: 81.85
+    Chisapani:
+      lat: 28.75
+      lon: 81.25
+    Dipayal:
+      lat: 29.25
+      lon: 80.95
+    Kusum:
+      lat: 27.85
+      lon: 82.35
+    Majhitar:
+      lat: 27.05
+      lon: 87.55
+    Rai_goan:
+      lat: 27.25
+      lon: 85.45
+    Samajhighat:
+      lat: 28.45
+      lon: 81.95
+    Simle:
+      lat: 27.05
+      lon: 87.15
