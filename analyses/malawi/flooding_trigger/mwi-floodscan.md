@@ -17,6 +17,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import geopandas as gpd
 from scipy.stats import norm, pearsonr
 from scipy import stats
 import numpy as np
@@ -47,8 +48,6 @@ mpl.rcParams['figure.dpi'] = 300
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
-STATIONS = ['glofas_1', 'glofas_2']
-ADM2_SEL = ['Chikwawa', 'Nsanje']
 SAVE_PLOT = False
 
 stations_adm2 = {
@@ -57,14 +56,37 @@ stations_adm2 = {
 }
 ```
 
-### Process Floodscan data
+### Visualize Floodscan data
+
+
+Take a look at an example of the Floodscan data. Here we're clipping it to a bounding box around the two districts of interest.
 
 ```python
 fs = floodscan.Floodscan()
-```
+fs_raw = fs.read_raw_dataset()
 
-```python
-fs.process()
+ds_sel = (
+    fs_raw.sel(time='2015-02-10')[['SFED_AREA']]
+    .to_array()
+    .rio.write_crs("EPSG:4326")
+    .rio.set_spatial_dims(x_dim="lon", y_dim="lat")
+)
+
+geometries = [
+    {
+        'type': 'Polygon',
+        'coordinates': [
+            [[34.1011082082,-17.12960312],
+             [35.4722024947,-17.12960312],
+             [35.4722024947,-15.5314191359],
+             [34.1011082082,-15.5314191359],
+             [34.1011082082,-17.12960312]
+            ]]
+    }
+]
+clipped = ds_sel.rio.clip(geometries)
+clipped.plot()
+if SAVE_FIG: plt.savefig(PLOT_DIR / ''.png')
 ```
 
 ### Read in GloFAS data
@@ -87,9 +109,10 @@ for station in STATIONS:
 ### Explore Floodscan data
 
 ```python
-df_floodscan_path = Path(os.environ['AA_DATA_DIR'])/'private'/'processed'/'mwi'/'floodscan'/'mwi_floodscan_stats_shire_5km_buffer.csv'
+df_floodscan_path = Path(os.environ['AA_DATA_DIR'])/'private'/'processed'/'mwi'/'floodscan'/'mwi_floodscan_stats_adm2.csv'
 df_floodscan = pd.read_csv(df_floodscan_path)
-df_floodscan = df_floodscan[['name','date', 'mean_cell', 'max_cell', 'min_cell']]
+df_floodscan = df_floodscan[['ADM2_EN','date', 'mean_cell', 'max_cell', 'min_cell']]
+df_floodscan = df_floodscan[df_floodscan['ADM2_EN'].isin(stations_adm2.values())]
 df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
 ```
 
@@ -100,18 +123,17 @@ df_floodscan
 Calculate the 5-day rolling average to smooth out potential noise from the Floodscan data.
 
 ```python
-df_floodscan['mean_cell_rolling'] = df_floodscan['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
-```
-
-```python
-fig, ax = plt.subplots()
-sns.lineplot(data=df_floodscan, x="date", y="mean_cell", lw=0.25, label='Original')
-sns.lineplot(data=df_floodscan, x="date", y="mean_cell_rolling", lw=0.25, label='5-day moving\navg')   
-ax.set_ylabel('Mean flooded fraction')
-ax.set_xlabel('Date')
-ax.set_title(f'Flooding within 5km of Shire River\nin Chikwawa and Nsanje, 1998-2020')
-ax.legend()
-if SAVE_PLOT: plt.savefig(PLOT_DIR / f'floodscan_shire_5km_buffer.png')
+for station in stations_adm2.values():
+    fig, ax = plt.subplots()
+    df_floodscan_sel = df_floodscan[df_floodscan['ADM2_EN']==station]
+    df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
+    sns.lineplot(data=df_floodscan_sel, x="date", y="mean_cell", lw=0.25, label='Original')
+    sns.lineplot(data=df_floodscan_sel, x="date", y="mean_cell_rolling", lw=0.25, label='5-day moving\navg')   
+    ax.set_ylabel('Mean flooded fraction')
+    ax.set_xlabel('Date')
+    ax.set_title(f'Flooding in {station}, 1998-2020')
+    ax.legend()
+    if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_flooding_fraction.png')
 ```
 
 ### Clean data
@@ -155,27 +177,47 @@ def get_flood_summary(df):
 Find the dates that are significant outliers (std>3) in mean flooding fraction across all pixels in the area of interest. We'll consider each group of consecutive dates to be a significant flooding event.
 
 ```python
-df_floods_summary = df_floodscan[(np.abs(stats.zscore(df_floodscan['mean_cell_rolling'])) >= 3)]
-df_floods_summary = get_groups_consec_dates(df_floods_summary)
-df_floods_summary = get_flood_summary(df_floods_summary)
+flooding = {}
+
+for station in stations_adm2.values():
+    df_floodscan_sel = df_floodscan[df_floodscan['ADM2_EN']==station]
+    df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
+    df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= 3)]
+    df_floods_summary = get_groups_consec_dates(df_floods_summary)
+    df_floods_summary = get_flood_summary(df_floods_summary)
+    
+    # In the cases where two flood events are separated by less than 1 month, 
+    # we'll merge them together to be considered as a single event. 
+    for i in range(1, len(df_floods_summary.index)-1):
+        start_buffer = pd.to_datetime(df_floods_summary['start_date'].iloc[i,]) - timedelta(days=30)
+        end_buffer = pd.to_datetime(df_floods_summary['end_date'].iloc[i-1,]) + timedelta(days=30)
+        
+        if start_buffer < end_buffer:
+            df_floods_summary['end_date'].iloc[i-1,] = df_floods_summary['end_date'].iloc[i,]
+            df_floods_summary['num_days'].iloc[i-1] = (df_floods_summary['end_date'][i-1] - df_floods_summary['start_date'][i-1]).days
+
+    # Now we need to drop the rows with the same end date 
+    # and keep the one with the longer duration
+    df_summary_clean = (
+        df_floods_summary
+        .sort_values('num_days')
+        .groupby('end_date')
+        .tail(1)
+        .sort_values('start_date')
+        .reset_index(drop=True)
+    )
+    
+    flooding[station] = df_summary_clean
+
+    df_summary_clean.to_csv(EXPLORE_DIR / f'{station}_floodscan_event_summary.csv')
 ```
 
-In the cases where two flood events are separated by less than 1 month, we'll merge them together to be considered as a single event. 
-
 ```python
-for i in range(1, len(df_floods_summary.index)-1):
-    start_buffer = pd.to_datetime(df_floods_summary['start_date'].iloc[i,]) - timedelta(days=30)
-    end_buffer = pd.to_datetime(df_floods_summary['end_date'].iloc[i-1,]) + timedelta(days=30)                             
-    if start_buffer < end_buffer:
-        df_floods_summary['end_date'].iloc[i-1,] = df_floods_summary['end_date'].iloc[i,]
-        df_floods_summary['num_days'].iloc[i-1] = (df_floods_summary['end_date'][i-1] - df_floods_summary['start_date'][i-1]).days
-        df_floods_summary = df_floods_summary.drop([i,])
-
-df_floods_summary.to_csv(EXPLORE_DIR / 'floodscan_event_summary.csv')
+flooding['Nsanje']
 ```
 
 ```python
-df_floods_summary
+flooding['Chikwawa']
 ```
 
 ### Understand relationship between GloFAS (streamflow) and Floodscan (% flooding in adm2)
