@@ -13,13 +13,11 @@ import xarray as xr
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
-from src.indicators.drought import ecmwf_seasonal
+from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.malawi import get_ecmwf_seasonal_data as gesd
 from src.indicators.drought.config import Config
 
 logger = logging.getLogger(__name__)
-
-#TODO: not sure which functions to include here and which in the ecmwf_seasonal file
 
 def get_ecmwf_forecast(version: int = 5):
     """
@@ -50,7 +48,6 @@ def get_ecmwf_forecast_by_leadtime(version: int = 5):
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
-#TODO: not sure if this is the best structure, should it instead be inside a class?
 def compute_stats_per_admin(country,adm_level=1,use_cache=True,interpolate=True):
     config = Config()
     parameters = config.parameters(country)
@@ -67,7 +64,7 @@ def compute_stats_per_admin(country,adm_level=1,use_cache=True,interpolate=True)
         #read observed data to get resolution to interpolate to
         ds_chirps = read_chirps_data(config,country_iso3)
         # interpolate forecast data such that it has the same resolution as the observed values
-        # not sure if nearest or linear is most suitable here..
+        #using "nearest" as interpolation method and not "linear" because the forecasts are designed to have sharp edged and not be smoothed
         ds = ds.interp(latitude=ds_chirps["y"], longitude=ds_chirps["x"], method="nearest")
 
     #loop over dates
