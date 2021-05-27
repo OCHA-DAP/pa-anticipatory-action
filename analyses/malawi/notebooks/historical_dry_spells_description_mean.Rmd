@@ -211,9 +211,11 @@ ggplot(rainy_seasons_detail %>% filter(season_approx %in% 2000:2019), aes(x=fact
   geom_boxplot()+
   labs(title="The variability of total rainfall across districts per rainy season",x='Start year of rainy season', y="Total rainfall (mm)", fill='')
 ```
+
 ### Dry Spells
 
 A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. The graph presents the occurences of dry spells over time. Each line indicates a district, i.e. the more red lines at the same time the wider the dry spell was.
+A summary per district follows in table format.
 &nbsp;
 ![](`r paste0(exploration_dry_spell_dir, 'mwi_viz_hm_dry_spell_mean_adm2.png')`)
 
@@ -272,18 +274,27 @@ rainy_season_dry_spells_summary_per_region %>%
 
 #### Frequency
 
-Over the 20-year span, districts experienced an average of **X** rainy-season dry spells. Only **X** districts (**X,Y,Z**) experienced none, and **X** experienced a dry spell every other year on average (total: 10 or 11 dry spells). Most (75%) districts experienced between **X**-**Y** dry spells.
+```{r ds-frequency-stats}
+nbr_distr <- length(unique(rainy_season_dry_spells_summary_per_region$ADM2_EN))
+nbr_ds <-sum(rainy_season_dry_spells_summary_per_region$nbr_dry_spells)
+nbr_distr_ds <- sum(rainy_season_dry_spells_summary_per_region$nbr_dry_spells>0)
+perc_distr_ds <- nbr_distr_ds/nbr_distr*100
+max_ds <-max(rainy_season_dry_spells_summary_per_region$nbr_dry_spells)
+max_ds_dist <-with(rainy_season_dry_spells_summary_per_region, ADM2_EN[nbr_dry_spells == max(nbr_dry_spells)])
+```
 
-**[TODO: Adjust WFP comparison below]**
-We note a convergence between these results and the Analysis of Predictable Food Crises in Malawi carried out in January 2020 by WFP. The analysis reported on the location, frequency and impact of dry spells at the Traditional Authority (TA; adm3) level in 2011-2019. Similar findings include:
+Over the 20-year span, `r nbr_ds` dry spells were observed. `r perc_distr_ds`% of districts experienced a dry spell (`r nbr_distr_ds`/`r nbr_distr`). Most dry spells (`r max_ds`) were observed in `r knitr::combine_words(max_ds_dist)`.
 
-* A single district has never experienced a dry spell while 5% (n = 15) of TAs did not. That is, some areas are unaffected or rarely affected by dry spells.
+<!-- **[TODO: Adjust WFP comparison below]** -->
+<!-- We note a convergence between these results and the Analysis of Predictable Food Crises in Malawi carried out in January 2020 by WFP. The analysis reported on the location, frequency and impact of dry spells at the Traditional Authority (TA; adm3) level in 2011-2019. Similar findings include: -->
 
-* Some districts have experienced dry spells regularly. While WFP's analysis reported yearly dry spells in certain TAs, our results indicate a recurrence of once every other year at the district level.
+<!-- * A single district has never experienced a dry spell while 5% (n = 15) of TAs did not. That is, some areas are unaffected or rarely affected by dry spells. -->
 
-* The two observations above indicate that districts are not homogeneously affected by dry spells. An implication is that an Anticipatory Action Trigger developed at the adm2 level should have a threshold that is sensitive to the non-uniform return period within the district not to miss shocks only happening in a subset of TAs.
+<!-- * Some districts have experienced dry spells regularly. While WFP's analysis reported yearly dry spells in certain TAs, our results indicate a recurrence of once every other year at the district level. -->
 
-* The districts in the Southern region experienced the highest number of dry spells in total (n = 86) compared to the Central (n = 56) and Northern (n = 22) regions. That is, the Southern region is more likely to experience dry spells.
+<!-- * The two observations above indicate that districts are not homogeneously affected by dry spells. An implication is that an Anticipatory Action Trigger developed at the adm2 level should have a threshold that is sensitive to the non-uniform return period within the district not to miss shocks only happening in a subset of TAs. -->
+
+<!-- * The districts in the Southern region experienced the highest number of dry spells in total (n = 86) compared to the Central (n = 56) and Northern (n = 22) regions. That is, the Southern region is more likely to experience dry spells. -->
 
 
 #### Duration
