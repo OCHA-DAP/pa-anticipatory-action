@@ -205,12 +205,12 @@ Compare against the GloFAS reanalysis
 THRESH_DAYS = 3
 BUFFER = 30
 
+detection_stats_all = {}
+
 for code, station in stations_adm2.items(): 
     
-    print(station)
-    print(code)
-    
     detection_stats = {}
+    df_floodscan_event = floodscan_events[station]
     
     for rp, thresh in rp_dict[station].items():        
         df_glofas_act = get_glofas_activations(da_glofas_reanalysis[code], thresh, THRESH_DAYS)
@@ -223,6 +223,8 @@ for code, station in stations_adm2.items():
                           .transpose()
                           .reset_index()
                           .rename(columns={'index':'return_period'}))
+    
+    detection_stats_all[station] = df_detection_stats
 
     # Plot precision vs recall
     fig, ax = plt.subplots()
@@ -244,7 +246,9 @@ LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
 
-for code, station in stations_adm2.items(): 
+for code, station in stations_adm2.items():
+    
+    df_floodscan_event = floodscan_events[station]
 
     # Calculate the detection performance
     for lt in LEADTIMES: 
@@ -292,6 +296,8 @@ LEADTIMES = [5, 10, 15, 20, 25, 30]
 df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
 
 for code, station in stations_adm2.items(): 
+    
+    df_floodscan_event = floodscan_events[station]
 
     # Calculate the detection performance
     for lt in LEADTIMES: 
@@ -342,5 +348,5 @@ def summarize_trigger(df_events, station, code, rp, leadtime, duration, buffer):
 ```
 
 ```python
-summarize_trigger(df_floodscan_event, 'Nsanje', 'glofas_1', 2, 10, 3, 30)
+summarize_trigger(floodscan_events['Nsanje'], 'Nsanje', 'glofas_1', 3, 10, 3, 30)
 ```

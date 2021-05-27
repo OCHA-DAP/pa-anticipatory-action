@@ -86,7 +86,7 @@ geometries = [
 ]
 clipped = ds_sel.rio.clip(geometries)
 clipped.plot()
-if SAVE_FIG: plt.savefig(PLOT_DIR / ''.png')
+if SAVE_PLOT: plt.savefig(PLOT_DIR / 'floodscan_overview.png')
 ```
 
 ### Read in GloFAS data
