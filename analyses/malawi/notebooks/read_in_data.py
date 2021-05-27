@@ -94,7 +94,7 @@ def compute_stats_per_admin(country,adm_level=1,use_cache=True,interpolate=True)
 
 #TODO: create function to retrieve the stats file
 
-def compute_zonal_stats(ds, raster_transform, adm_path,adm_col):
+def compute_zonal_stats(ds, raster_transform, adm_path,adm_col,percentile_list=np.arange(10,91,10)):
     # compute statistics on level in adm_path for all dates in ds
     df_list = []
     for leadtime in ds.leadtime.values:
@@ -106,19 +106,16 @@ def compute_zonal_stats(ds, raster_transform, adm_path,adm_col):
                 zonal_stats(vectors=df, raster=ds_date.values, affine=raster_transform, nodata=np.nan))[
                 ["mean", "max", "min"]]
 
-            percentile_list = [10, 20, 30, 40, 50, 60, 70, 80]
             df[[f"percentile_{str(p)}" for p in percentile_list]] = pd.DataFrame(
                 zonal_stats(vectors=df, raster=ds_date.values, affine=raster_transform, nodata=np.nan,
                             stats=" ".join([f"percentile_{str(p)}" for p in percentile_list])))[
                 [f"percentile_{str(p)}" for p in percentile_list]]
 
-            # df["date"] = pd.to_datetime(date)
             df["number"] = number
             df["leadtime"] = leadtime
 
             df_list.append(df)
         df_hist = pd.concat(df_list)
-        # df_hist = df_hist.sort_values(by="date")
         #drop the geometry column, else csv becomes huge
         df_hist=df_hist.drop("geometry",axis=1)
 
