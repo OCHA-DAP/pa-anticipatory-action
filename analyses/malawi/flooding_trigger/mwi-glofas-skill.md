@@ -23,6 +23,7 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
+from src.indicators.flooding.glofas import utils
 
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
@@ -32,6 +33,11 @@ EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 SAVE_FIG = True
+LEADTIMES = [5, 10, 15, 20, 25, 30]
+stations_adm2 = {
+    'glofas_1': 'Nsanje',
+    'glofas_2': 'Chikwawa'
+}
 ```
 
 ### Read in the GloFAS data
@@ -39,16 +45,18 @@ SAVE_FIG = True
 ```python
 da_glofas_reanalysis = {}
 da_glofas_reforecast = {}
+da_glofas_reforecast_interp = {}
 da_glofas_forecast = {}
 da_glofas_forecast_summary = {}
 da_glofas_reforecast_summary = {}
 
 for station in STATIONS: 
-    da_glofas_reanalysis[station] = rd.get_glofas_reanalysis(version=GLOFAS_VERSION, station=station)
-    da_glofas_reforecast[station] = rd.get_glofas_reforecast(version=GLOFAS_VERSION, station=station)
-    da_glofas_forecast[station] = rd.get_glofas_forecast(version=GLOFAS_VERSION, station=station)
-    da_glofas_forecast_summary[station] = rd.get_da_glofas_summary(da_glofas_forecast[station])
-    da_glofas_reforecast_summary[station] = rd.get_da_glofas_summary(da_glofas_reforecast[station])
+    da_glofas_reanalysis[station] = utils.get_glofas_reanalysis('mwi', version=GLOFAS_VERSION)[station]
+    da_glofas_reforecast[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=False, version=GLOFAS_VERSION)[station]
+    da_glofas_reforecast_interp[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=True, version=GLOFAS_VERSION)[station]
+    da_glofas_forecast[station] = utils.get_glofas_forecast('mwi', LEADTIMES, version=GLOFAS_VERSION)[station]
+    da_glofas_forecast_summary[station] = utils.get_da_glofas_summary(da_glofas_forecast[station])
+    da_glofas_reforecast_summary[station] = utils.get_da_glofas_summary(da_glofas_reforecast_interp[station])
 ```
 
 ### Read in the return period thresholds
@@ -57,25 +65,17 @@ for station in STATIONS:
 df_rps = pd.read_csv(EXPLORE_DIR / 'glofas_rps.csv')
 rp_thresh = [2, 3, 5] # The rp thresholds that we're concerned about checking
 skill_thresh_vals = {}
-for station in STATIONS:
+for station in stations_adm2.values():
     skill_thresh_vals[station] = [df_rps[df_rps['rp']==thresh][station].iloc[0] for thresh in rp_thresh]
 ```
 
 ### Calculate the skill across lead times
 
 ```python
-def is_rainy_season(month):
-    # Oct to April
-    return (month >= 10) | (month <= 4)
-
-def is_dry_season(month):
-    # May to Sept
-    return (month < 10) & (month > 4)
-
 def plot_skill(df_crps, division_key=None, add_line_from_website=False,
               ylabel="CRPS [m$^3$ s$^{-1}$]"):
     fig, ax = plt.subplots()
-    for station, ls in zip(STATIONS, [':', '--']):
+    for station, ls in zip(stations_adm2.values(), [':', '--']):
         df = df_crps[station].copy()
         for i, subset in enumerate([None] + skill_thresh_vals[station]):
             ykey = f'crps_{subset}' if subset is not None else 'crps'
@@ -97,15 +97,15 @@ def plot_skill(df_crps, division_key=None, add_line_from_website=False,
 
 ```python
 df_crps = {
-    STATIONS[0]: pd.DataFrame(columns=['leadtime', 'crps']),
-    STATIONS[1]: pd.DataFrame(columns=['leadtime', 'crps'])
+    'Nsanje': pd.DataFrame(columns=['leadtime', 'crps']),
+    'Chikwawa': pd.DataFrame(columns=['leadtime', 'crps'])
 }
 
-for station in STATIONS:
-    for leadtime in da_glofas_reforecast[station].leadtime:
-        forecast = da_glofas_reforecast[station].sel(
+for code, station in stations_adm2.items(): 
+    for leadtime in da_glofas_reforecast_interp[code].leadtime:
+        forecast = da_glofas_reforecast_interp[code].sel(
             leadtime=leadtime.values).dropna(dim='time')
-        observations = da_glofas_reanalysis[station].reindex({'time': forecast.time})
+        observations = da_glofas_reanalysis[code].reindex({'time': forecast.time})
         # For all dates
         crps = xs.crps_ensemble(observations, forecast,member_dim='number')
         append_dict = {'leadtime': leadtime.values,
@@ -156,10 +156,10 @@ def plot_hist(da_forecast, da_reanalysis):
     ax.set_xlabel('Rank')
     ax.set_ylabel('Number')
     
-for station in STATIONS:
-    forecast_list = [da_glofas_reforecast[station]]
+for code, station in stations_adm2.items():
+    forecast_list = [da_glofas_reforecast_interp[code]]
     for da_forecast in forecast_list:
-        observations =  da_glofas_reanalysis[station]
+        observations =  da_glofas_reanalysis[code]
         plot_hist(da_forecast, observations)
         if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_glofas_bias.png')
         # Select observations based on a 3-year return period threshold
@@ -185,14 +185,14 @@ def calc_mpe(observations, forecast):
         / len(observations.time) * 100
 
 df_bias = {
-    STATIONS[0]: pd.DataFrame(columns=['leadtime']),
-    STATIONS[1]: pd.DataFrame(columns=['leadtime']),
+    'Nsanje': pd.DataFrame(columns=['leadtime']),
+    'Chikwawa': pd.DataFrame(columns=['leadtime']),
 }   
 
 
-for station in STATIONS: 
-    da_forecast = da_glofas_reforecast[station]
-    da_reanalysis = da_glofas_reanalysis[station]
+for code, station in stations_adm2.items():
+    da_forecast = da_glofas_reforecast_interp[code]
+    da_reanalysis = da_glofas_reanalysis[code]
     for leadtime in da_forecast.leadtime:
         forecast = da_forecast.sel(
             leadtime=leadtime.values).dropna(dim='time')
@@ -213,7 +213,7 @@ for station in STATIONS:
 
 ```python
 fig, ax = plt.subplots()
-for station, ls in zip(STATIONS, [':', '--']):    
+for station, ls in zip(stations_adm2.values(), [':', '--']):    
     df = df_bias[station]
     for i, cname in enumerate(['mpe'] + [f'mpe_{thresh}' for thresh in skill_thresh_vals[station]]):
         ax.plot(df['leadtime'], df[cname], ls=ls, c=f'C{i}')

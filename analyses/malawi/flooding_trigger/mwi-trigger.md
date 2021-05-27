@@ -16,13 +16,15 @@ from datetime import timedelta
 
 import read_in_data as rd
 from importlib import reload
-reload(rd)
+reload(utils)
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
+from src.indicators.flooding.glofas import utils
 
+reload(utils)
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
@@ -30,6 +32,7 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
+LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -42,16 +45,18 @@ stations_adm2 = {
 ```python
 da_glofas_reanalysis = {}
 da_glofas_reforecast = {}
+da_glofas_reforecast_interp = {}
 da_glofas_forecast = {}
 da_glofas_forecast_summary = {}
 da_glofas_reforecast_summary = {}
 
 for station in STATIONS: 
-    da_glofas_reanalysis[station] = rd.get_glofas_reanalysis(version=GLOFAS_VERSION, station=station)
-    da_glofas_reforecast[station] = rd.get_glofas_reforecast(version=GLOFAS_VERSION, station=station)
-    da_glofas_forecast[station] = rd.get_glofas_forecast(version=GLOFAS_VERSION, station=station)
-    da_glofas_forecast_summary[station] = rd.get_da_glofas_summary(da_glofas_forecast[station])
-    da_glofas_reforecast_summary[station] = rd.get_da_glofas_summary(da_glofas_reforecast[station])
+    da_glofas_reanalysis[station] = utils.get_glofas_reanalysis('mwi', version=GLOFAS_VERSION)[station]
+    da_glofas_reforecast[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=False, version=GLOFAS_VERSION)[station]
+    da_glofas_reforecast_interp[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=True, version=GLOFAS_VERSION)[station]
+    da_glofas_forecast[station] = utils.get_glofas_forecast('mwi', LEADTIMES, version=GLOFAS_VERSION)[station]
+    da_glofas_forecast_summary[station] = utils.get_da_glofas_summary(da_glofas_forecast[station])
+    da_glofas_reforecast_summary[station] = utils.get_da_glofas_summary(da_glofas_reforecast_interp[station])
 ```
 
 ### Read in the baseline impact data
@@ -239,7 +244,7 @@ Compare GloFAS reforecast against Floodscan
 
 ```python
 THRESH_DAYS = 3
-RP_ARR = [2,3]
+RP_ARR = [2,3, 5]
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
@@ -268,14 +273,14 @@ for code, station in stations_adm2.items():
 
     # Visualize detection performance
     fig, ax = plt.subplots()
-    for rp, ls in zip(RP_ARR, [':', '--']):
+    for i, rp in enumerate(RP_ARR):
         df = df_sel[df_sel['return_period']==rp]
-        for i, cname in enumerate(['precision', 'recall']):
+        for cname, ls in zip(['precision', 'recall'], [':', '--']):
             ax.plot(df['lead_time'], df[cname], ls=ls, c=f'C{i}')
-        ax.plot([], [], ls=ls, c='k', label=f'{rp}-year RP')
-        
-    for i, cname in enumerate(['precision', 'recall']):
-        ax.plot([], [], c=f'C{i}', label=cname)
+        ax.plot([], [], c=f'C{i}', label=f'{rp}-year RP')
+    
+    for cname, ls in zip(['precision', 'recall'], [':', '--']):
+           ax.plot([], [], ls=ls, c='k', label=cname)
         
     ax.set_xlabel("Lead time (days)")
     ax.set_ylabel("Percent")
@@ -288,7 +293,7 @@ Compare GloFAS reanalysis against reforecast
 
 ```python
 THRESH_DAYS = 3
-RP_ARR = [3, 5]
+RP_ARR = [2, 3, 5]
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
@@ -318,14 +323,14 @@ for code, station in stations_adm2.items():
 
     # Visualize detection performance
     fig, ax = plt.subplots()
-    for rp, ls in zip(RP_ARR, [':', '--']):
+    for i, rp in enumerate(RP_ARR):
         df = df_sel[df_sel['return_period']==rp]
-        for i, cname in enumerate(['precision', 'recall']):
+        for cname, ls in zip(['precision', 'recall'], [':', '--']):
             ax.plot(df['lead_time'], df[cname], ls=ls, c=f'C{i}')
-        ax.plot([], [], ls=ls, c='k', label=f'{rp}-year RP')
-        
-    for i, cname in enumerate(['precision', 'recall']):
-        ax.plot([], [], c=f'C{i}', label=cname)
+        ax.plot([], [], c=f'C{i}', label=f'{rp}-year RP')
+    
+    for cname, ls in zip(['precision', 'recall'], [':', '--']):
+           ax.plot([], [], ls=ls, c='k', label=cname)
         
     ax.set_xlabel("Lead time (days)")
     ax.set_ylabel("Percent")
@@ -346,5 +351,13 @@ def summarize_trigger(df_events, station, code, rp, leadtime, duration, buffer):
 ```
 
 ```python
-summarize_trigger(floodscan_events['Nsanje'], 'Nsanje', 'glofas_1', 3, 10, 3, 30)
+STATION = 'Nsanje'
+CODE = 'glofas_1'
+RP = 2
+LT = 5
+DUR = 3
+```
+
+```python
+summarize_trigger(floodscan_events[STATION], STATION, CODE, RP, LT, DUR, 30)
 ```

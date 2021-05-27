@@ -41,14 +41,16 @@ sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
 from src.indicators.flooding.floodscan import floodscan
+from src.indicators.flooding.glofas import utils
 
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
-GLOFAS_VERSION = 3
 SAVE_PLOT = False
+GLOFAS_VERSION = 3
+STATIONS = ['glofas_1', 'glofas_2']
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -94,16 +96,18 @@ if SAVE_PLOT: plt.savefig(PLOT_DIR / 'floodscan_overview.png')
 ```python
 da_glofas_reanalysis = {}
 da_glofas_reforecast = {}
+da_glofas_reforecast_interp = {}
 da_glofas_forecast = {}
 da_glofas_forecast_summary = {}
 da_glofas_reforecast_summary = {}
 
 for station in STATIONS: 
-    da_glofas_reanalysis[station] = rd.get_glofas_reanalysis(version=GLOFAS_VERSION, station=station)
-    da_glofas_reforecast[station] = rd.get_glofas_reforecast(version=GLOFAS_VERSION, station=station)
-    da_glofas_forecast[station] = rd.get_glofas_forecast(version=GLOFAS_VERSION, station=station)
-    da_glofas_forecast_summary[station] = rd.get_da_glofas_summary(da_glofas_forecast[station])
-    da_glofas_reforecast_summary[station] = rd.get_da_glofas_summary(da_glofas_reforecast[station])
+    da_glofas_reanalysis[station] = utils.get_glofas_reanalysis('mwi', version=GLOFAS_VERSION)[station]
+    da_glofas_reforecast[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=False, version=GLOFAS_VERSION)[station]
+    da_glofas_reforecast_interp[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=True, version=GLOFAS_VERSION)[station]
+    da_glofas_forecast[station] = utils.get_glofas_forecast('mwi', LEADTIMES, version=GLOFAS_VERSION)[station]
+    da_glofas_forecast_summary[station] = utils.get_da_glofas_summary(da_glofas_forecast[station])
+    da_glofas_reforecast_summary[station] = utils.get_da_glofas_summary(da_glofas_reforecast_interp[station])
 ```
 
 ### Explore Floodscan data
@@ -134,6 +138,13 @@ for station in stations_adm2.values():
     ax.set_title(f'Flooding in {station}, 1998-2020')
     ax.legend()
     if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_flooding_fraction.png')
+```
+
+Remove dates outside of the rainy season
+
+```python
+df_floodscan['month'] = pd.DatetimeIndex(df_floodscan['date']).month
+df_floodscan_rainy = df_floodscan.loc[(df_floodscan['month'] >= 10) | (df_floodscan['month'] <= 4)]
 ```
 
 ### Clean data
@@ -180,7 +191,7 @@ Find the dates that are significant outliers (std>3) in mean flooding fraction a
 flooding = {}
 
 for station in stations_adm2.values():
-    df_floodscan_sel = df_floodscan[df_floodscan['ADM2_EN']==station]
+    df_floodscan_sel = df_floodscan_rainy[df_floodscan_rainy['ADM2_EN']==station]
     df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
     df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= 3)]
     df_floods_summary = get_groups_consec_dates(df_floods_summary)

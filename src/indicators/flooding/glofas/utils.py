@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
+from scipy.stats import norm
 import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
@@ -29,9 +30,7 @@ def get_glofas_forecast(
     glofas_forecast = glofas.GlofasForecast()
     ds_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=country_iso3,
-            leadtime=leadtime,
-            version=version,
+            country_iso3=country_iso3, leadtime=leadtime, version=version,
         )
         for leadtime in leadtimes
     }
@@ -48,9 +47,7 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     ds_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=country_iso3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=country_iso3, version=version, leadtime=leadtime,
         )
         for leadtime in leadtimes
     }
@@ -58,6 +55,25 @@ def get_glofas_reforecast(
         ds_glofas_reforecast_dict = _interp_dates(ds_glofas_reforecast_dict)
     ds_glofas_reforecast_dict = _shift_dates(ds_glofas_reforecast_dict)
     return _convert_dict_to_ds(ds_glofas_reforecast_dict)
+
+
+def get_da_glofas_summary(da_glofas):
+    nsig_max = 3
+    percentile_dict = {
+        **{"median": 50.0},
+        **{f"{n}sig+": norm.cdf(n) * 100 for n in range(1, nsig_max + 1)},
+        **{f"{n}sig-": (1 - norm.cdf(n)) * 100 for n in range(1, nsig_max + 1)},
+    }
+    coord_names = ["leadtime", "time"]
+    data_vars_dict = {
+        var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
+        for var_name, percentile_value in percentile_dict.items()
+    }
+
+    return xr.Dataset(
+        data_vars=data_vars_dict,
+        coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime),
+    )
 
 
 def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
