@@ -6,15 +6,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-import utils
+from utils import utils
 
 # from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview 
 GLOFAS_DS_ENSEMBLE_FILENAME='10daysleadtime_19972018_allensemble.xls'
-GLOFAS_DS_FOLDER = Path(os.environ['AA_DATA_DIR']) / 'exploration/bangladesh/GLOFAS_Data'
 
 
 def get_glofas_ensemble_df():
-    glofas_ens_df=pd.read_excel('{}/{}'.format(GLOFAS_DS_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
+    glofas_ens_df=pd.read_excel('{}/{}'.format(utils.GLOFAS_EXPLORATION_FOLDER,GLOFAS_DS_ENSEMBLE_FILENAME),
                                     index_col=0)
     glofas_ens_df.index=pd.to_datetime(glofas_ens_df.index,format='%Y-%m-%d')
     # shift 10 days

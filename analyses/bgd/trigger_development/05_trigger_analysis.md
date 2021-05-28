@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import read_in_data as rd
+from utils import utils
 from importlib import reload
-reload(rd)
+reload(utils)
 
 mpl.rcParams['figure.dpi'] = 300
 
@@ -21,18 +21,18 @@ LEADTIMES_V2 = [5, 10, 15, 20, 25, 30]
 ### Create GloFAS objects
 
 ```python
-da_glofas_reanalysis = rd.get_glofas_reanalysis(version=GLOFAS_VERSION)
-da_glofas_forecast = rd.get_glofas_forecast(version=GLOFAS_VERSION, leadtimes=LEADTIMES_V2)
-da_glofas_forecast_summary = rd.get_da_glofas_summary(da_glofas_forecast)
-da_glofas_reforecast = rd.get_glofas_reforecast(version=GLOFAS_VERSION, leadtimes=LEADTIMES_V2)
-da_glofas_reforecast_summary = rd.get_da_glofas_summary(da_glofas_reforecast)
+da_glofas_reanalysis =utils.get_glofas_reanalysis(version=GLOFAS_VERSION)
+da_glofas_forecast =utils.get_glofas_forecast(version=GLOFAS_VERSION, leadtimes=LEADTIMES_V2)
+da_glofas_forecast_summary =utils.get_da_glofas_summary(da_glofas_forecast)
+da_glofas_reforecast =utils.get_glofas_reforecast(version=GLOFAS_VERSION, leadtimes=LEADTIMES_V2)
+da_glofas_reforecast_summary =utils.get_da_glofas_summary(da_glofas_reforecast)
 
 ```
 
  ### Read in FFWC data
 
 ```python
-df_ffwc_wl = rd.read_in_ffwc()
+df_ffwc_wl =utils.read_in_ffwc()
 ```
 
 ### Find the true positive events -- three days in a row above threshold
@@ -74,7 +74,7 @@ df_ffwc_wl['event'][events] = True
 df_final = df_ffwc_wl.copy()
 
 # Add glofas obs
-df_glofas = da_glofas_reanalysis.to_dataframe()[[rd.STATION]].rename(columns={rd.STATION: 'glofas_observed'})
+df_glofas = da_glofas_reanalysis.to_dataframe()[[utils.STATION]].rename(columns={utils.STATION: 'glofas_observed'})
 df_final = pd.merge(df_final, df_glofas, how='outer', left_index=True, right_index=True)
 
 # Add glofas forecasts
@@ -389,7 +389,7 @@ for data in da_glofas_forecast.sel(leadtime=5).values.T[:10]:
 - Has forecast (when available) for same date for lead time hours 24, 48, 72, 96, 120
 
 ```python
-ffwc_dir = rd.DATA_DIR / 'exploration/bangladesh/FFWC_Data'
+ffwc_dir =utils.FFWC_DIR
 ffwc_discharge_filename = 'Bahadurabad_bsereved_discharge.xlsx'
 ffwc_wl_filename = 'Bahadurabad_WL_forecast20172019.xlsx'
 df_ffwc_discharge = pd.read_excel(ffwc_dir / ffwc_discharge_filename, 
@@ -577,8 +577,4 @@ y = df['observed']
 idx = df['event'] == True
 plt.plot(x,y, '.')
 plt.plot(x[idx], y[idx], 'ro')
-```
-
-```python
-
 ```
