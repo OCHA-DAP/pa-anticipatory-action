@@ -7,12 +7,15 @@ import sys
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
+
+pd.options.mode.chained_assignment = None 
 
 COUNTRY_ISO3 = 'npl'
 STATIONS = {
@@ -36,6 +39,14 @@ ADMIN_SHAPEFILE = SHAPEFILE_DIR / 'npl_admbnda_ocha_20201117/npl_admbnda_nd_2020
 ADMIN2_SHAPEFILE = 'npl_admbnda_adm2_nd_20201117.shp'
 ```
 
+### Read in data and clean slightly
+
+```python
+ds_glofas_reanalysis = utils.get_glofas_reanalysis(
+    country_iso3=COUNTRY_ISO3)
+df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
+```
+
 ```python
 # Read in events and admin, 
 # make pcode column names match for simplicity
@@ -43,12 +54,18 @@ df_events = (pd.read_excel(PAST_EVENTS_FILENAME)
              .rename(columns={'DIST_CODE_ETHOS': 'pcode'}))
 df_admin = (gpd.read_file(f'zip://{ADMIN_SHAPEFILE}!{ADMIN2_SHAPEFILE}')
             .rename(columns={'DIST_PCODE': 'pcode'}))
+```
 
+```python
+# Cleaning events data
 # Drop events with no date and convert date column
 df_events = df_events.loc[df_events['Year'] > 0]
 # For days that are 0, assume they mean the middle of the month
 df_events['Day'] = np.where(df_events['Day'] == 0, 15, df_events['Day'])
 df_events['Incident Date'] = pd.to_datetime(df_events[['Year', 'Month', 'Day']])
+
+# Only select events in the time range of GloFAS
+df_events = df_events.loc[df_events['Incident Date'] > ds_glofas_reanalysis.time[0].data]
 ```
 
 ```python
@@ -56,6 +73,8 @@ df_events['Incident Date'] = pd.to_datetime(df_events[['Year', 'Month', 'Day']])
 df_basins = gpd.read_file(BASINS_SHAPEFILE)
 df_watershed = gpd.read_file(WATERSHED_SHAPEFILE)
 ```
+
+### Get sub-set of events based on basin pcodes
 
 ```python
 # Create the target region file 
@@ -107,12 +126,22 @@ for basin, df in df_events_dict.items():
     df_events_dict[basin] = df
 ```
 
-## Compare historical events to GloFAS
+### Compare historical events to GloFAS
 
 ```python
-ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
-df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
+# Since there are two many events, need to convert event data into rolling sum
+for basin, df in df_events_dict.items():
+    #tmin, tmax = ds_glofas_reanalysis.time[0].data, ds_glofas_reanalysis.time[-1].data
+    df = df.reindex(ds_glofas_reanalysis.time.data, fill_value=0)
+
+    df = df.rolling(30, center=True).sum()
+    thresh = 5 * df['Total Death'].std()
+    # Either Affected Family, Missing People, or Total Death is a good estimate
+
+    # Define an event as where > 1 std
+    groups = utils.get_groups_above_threshold(df['Total Death'], thresh)
+    print(len(groups))
+
 ```
 
 ```python
@@ -125,9 +154,13 @@ days_after_buffer = 30
 df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN'])
 
 for basin, station_list in STATIONS.items():
-    df_events = df_events_dict[basin]
+    df_events_basin = df_events_dict[basin]
+    # Only select events in the time range of GloFAS
+    df_events_basin = df_events_basin.loc[df_events_basin.index > ds_glofas_reanalysis.time[0].data]
+    # Only select events with deaths
+    df_events_basin = df_events_basin.loc[df_events_basin['Total Death'] > 0]
     for station in station_list:
-        df_events['detections'] = 0
+        df_events_basin['detections'] = 0
         TP = 0
         FP = 0
         rp_val = df_return_period.loc[rp, station]
@@ -136,12 +169,11 @@ for basin, station_list in STATIONS.items():
         for group in groups:
             # The GlofAS event takes place on the Nth day (since for an event)
             # you require N days in a row
-            glofas_event_date = ds_glofas_reanalysis.time[group[0] + ndays - 1]
+            glofas_event_date = ds_glofas_reanalysis.time[group[0] + ndays - 1].data
             # Check if any events are around that date
-            #x = df_events.index - glofas_event_date
-            days_offset = (glofas_event_date.data - df_events.index).days
+            days_offset = (df_events_basin.index - glofas_event_date).days
             detected = (days_offset > -1 * days_before_buffer) & (days_offset < days_after_buffer)
-            df_events.loc[detected, 'detections'] += 1
+            df_events_basin.loc[detected, 'detections'] += 1
             # If there were any detections, it's  a TP. Otherwise a FP
             if sum(detected):
                 TP += 1
@@ -151,11 +183,31 @@ for basin, station_list in STATIONS.items():
             'station': station,
             'TP': TP,
             'FP': FP,
-            'FN': len(df_events[df_events['detections'] == 0])
+            'FN': len(df_events_basin[df_events_basin['detections'] == 0])
         }, ignore_index=True)
         
 ```
 
 ```python
 df_station_stats
+```
+
+```python
+for basin, station_list in STATIONS.items():
+    df_events_basin = df_events_dict[basin]
+    # Only select events in the time range of GloFAS
+    df_events_basin = df_events_basin.loc[df_events_basin.index > ds_glofas_reanalysis.time[0].data]
+    # Only select events with deaths
+    df_events_basin = df_events_basin.loc[df_events_basin['Total Death'] > 0]
+    for station in station_list:
+        observations = ds_glofas_reanalysis[station].values
+        x = ds_glofas_reanalysis.time
+        fig, ax = plt.subplots(figsize=(15,4))
+        ax.plot(x, observations)
+        for i, row in df_events_basin.iterrows():
+            ax.axvline(x=i, c='r', alpha=0.1)
+```
+
+```python
+
 ```
