@@ -15,6 +15,7 @@ shapefile_path <- paste0(data_dir, "/public/raw/eth/cod_ab/ET_Admin_OCHA_2020")
 fn_path <-paste0(data_dir, "/public/processed/eth/fewsnet/cod_ps/ethiopia_fewsnet_admin1.csv")
 gipc_path <- paste0(data_dir, "/public/processed/eth/ipc_global/ethiopia_globalipc_admin1.csv")
 eth_adm1 <- st_read(paste0(shapefile_path, "/eth_admbnda_adm1_csa_bofed_20201008.shp"))
+plot_dir <- paste0(data_dir, "/public/processed/eth/plots/")
 
 # set source variable
 source <- "gipc" #fn"
@@ -61,7 +62,7 @@ summary(df_fisel) # note the absence of population in IPC4+
 ### IPC3+
 
 #set colorscale limit
-li = c(0, max(df_fisel %>% select(perc_CS_3p,perc_ML1_3p), na.rm = TRUE)+5)
+li = c(0, max(df_fisel %>% dplyr::select(perc_CS_3p,perc_ML1_3p), na.rm = TRUE)+5)
 # li = c(0,100)
 br = c(0, 20, 40, 60, 80, 100)
 
@@ -161,8 +162,8 @@ fi_ml2_3p_plot <- eth_adm1[, c('ADM1_EN', 'geometry')] %>%
 #########
 
 # dec 2020 food insecurity
-png(file = glue("blog_post_food_insecurity_graph_{source}.png"),
-   width=1820, height=750)
+# png(file = paste0(plot_dir,glue("ipc_global/eth_blog_post_food_insecurity_graph_{source}.png")),
+#    width=1820, height=750)
 if (source =="fn"){
   layout_3p <- fi_cs_3p_plot | fi_ml1_3p_plot | fi_ml2_3p_plot
   caption = 'Data source: FewsNet'
@@ -188,7 +189,7 @@ if (source=="fn"){
   hist_cs <- df_fi %>%
                   filter(date %in% c('2009-10-01', '2010-10-01', '2011-10-01', '2012-10-01', '2013-10-01', '2014-10-01', '2015-10-01', '2016-10-01', '2017-10-01', '2018-10-01', '2019-10-01', '2020-10-01'),
                         ADM1_EN %in% c('Afar', 'Oromia', 'Somali', 'Tigray', 'SNNP', 'Amhara')) %>%
-                  select(date, ADM1_EN, pop_CS, CS_1, CS_2, CS_3, CS_4, CS_5, perc_CS_3p, perc_CS_4p) %>%
+                  dplyr::select(date, ADM1_EN, pop_CS, CS_1, CS_2, CS_3, CS_4, CS_5, perc_CS_3p, perc_CS_4p) %>%
                   mutate(perc_CS_3 = round(100 * CS_3 / pop_CS, 1),
                          perc_CS_4 = round(100 * CS_4 / pop_CS, 1))
 
@@ -199,7 +200,7 @@ if (source=="fn"){
                       gather(key = "ipc_phase" , value = "perc", -date, -ADM1_EN)
 
 
-  #png(file = "blog_post_historical_food_insecurity_graph.png",
+  #png(file = paste0(plot_dir"fewsnet/blog_post_historical_food_insecurity_graph.png",
   #    width=1051, height=578)
 
   ggplot(data = hist_cs.long[order(hist_cs.long$ipc_phase, decreasing = T),], # orders to plot IPC4 on top of IPC3
@@ -222,7 +223,7 @@ if (source=="fn"){
 } else{ print(glue("Historical food insecurity not implemented for {source}"))}
 ## triggered areas (taken from POC dashboard)
 
-ipc_indices_data <- read.csv("../../dashboard/data/foodinsecurity/ethiopia_foodinsec_trigger.csv")
+ipc_indices_data <- read.csv("../../../dashboard/data/foodinsecurity/ethiopia_foodinsec_trigger.csv")
 
 # convert date string as a Date format
 ipc_indices_data$date <- as.Date(ipc_indices_data$date, format = "%Y-%m-%d")
@@ -232,7 +233,7 @@ latest_report_per_source <- ipc_indices_data %>%
                                  group_by(source) %>%
                                  slice(which.max(date)) %>% # keep only latest records for each source
                                  ungroup() %>%
-                                 select(source, date) %>%
+                                 dplyr::select(source, date) %>%
                                  unique()
 
 ipc_indices_data_latest <- ipc_indices_data %>%
@@ -248,7 +249,7 @@ fs_trigger_list <- latest_fs %>%
   group_by(ADM1_EN) %>%
   mutate(threshold_reached_H1_2021 = ifelse(sum(threshold_reached_H1_2021) > 0, 1, 0)) %>% # assigns 1 to threshold_reached_H1_2021 if either source met threshold
   ungroup() %>%
-  select(Shape_Leng, Shape_Area, ADM1_EN, threshold_reached_H1_2021, geometry) %>%
+  dplyr::select(Shape_Leng, Shape_Area, ADM1_EN, threshold_reached_H1_2021, geometry) %>%
   unique()
 
 # produce  map of triggered regions across sources
