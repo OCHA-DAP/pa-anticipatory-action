@@ -1,24 +1,14 @@
-library(dplyr) 
 library(tidyverse)
 library(ggplot2)
 library(flextable)
-#library(metR)
-library(lubridate)
-library(zoo)
-library(plotly)
-library(scales)
-library(viridis)
-library(hrbrthemes)
-gc()
-# Set current working directory.
+
+# Set data directories.
 data_dir <- Sys.getenv("AA_DATA_DIR")
-dry_spell_dir <- paste0(data_dir, '/processed/malawi/dry_spells/')
-enso_dir <- paste0(data_dir,'/raw/drought/ENSO/')
-exploration_dry_spell_dir <- paste0(data_dir,'/exploration/malawi/dryspells/')
+dry_spell_dir <- paste0(data_dir, '/public/processed/mwi/dry_spells/')
+enso_dir <- paste0(data_dir,'/public/raw/glb/enso/')
 # filenames depend on aggregation methodology of dry spells from raster to admin/
-plot_dir <-paste0(data_dir, '/processed/malawi/plots/dry_spells/enso/mean_back/')
+plot_dir <-paste0(data_dir, '/public/processed/malawi/plots/dry_spells/enso/mean_back/')
 dry_spells_list_path <- paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean_back.csv')
-rainy_season_list_path <- paste0(dry_spell_dir, 'rainy_seasons_detail_2000_2020_mean_back.csv')
 
 ############################# Definitions ##############################################
 #3 month periods within rainy season were set as [SON, OND, NDJ, DJF, JFM, FMA, MAM].
@@ -33,13 +23,14 @@ mon_season <- data.frame(
   season = c ("DJF","JFM","FMA","MAM","AMJ","MJJ","JJA","JAS","ASO","SON","OND","NDJ"),
   month = c(1:12))
 
+#for plotting
 season_order <- c("SON", "OND", "NDJ", "DJF", "JFM", "FMA", "MAM")
+enso_fill=c("#b52722", "#cccccc","#0063b3")
 ########################################################################################
 ############################# Preparing ENSO Data ######################################
 ########################################################################################
 #getting enso data.
 enso_oni <- read_csv(file=paste0(enso_dir,"ENSO_ONI_2000_2020.csv"))
-
 enso_oni <- unite(enso_oni, enso_state, c(la_nina,neutral,el_nino))
 
 #assigning labels of the corresponding enso states
@@ -48,6 +39,7 @@ enso_oni$enso_state[enso_oni$enso_state == '0_1_0'] <- 'Neutral'
 enso_oni$enso_state[enso_oni$enso_state == '0_0_1'] <- 'El Nino'
 
 #add a column with the middle-month of the season to the enso data
+#this is later used to match dry spells
 enso_oni <-merge(enso_oni, mon_season, by = c("season"), all.x = TRUE)
 
 #get the dominant enso state per season_approx, where the dominant state is defined as the state occuring the majority of seasons
@@ -60,7 +52,7 @@ enso_oni<-enso_oni[,-which(names(enso_oni) == "month")]
 ft <- flextable(enso_oni)
 ft
 
-#count year season combinations per enso state
+#count occurrences of each enso state (one occurrence=year-season combination)
 #this includes all data from 2000 till 2020, some of this data is not included in the dry spell list (i.e. first half of 2000 and second half 2020)
 enso_years <- enso_oni %>%
   group_by(enso_state) %>%
@@ -71,24 +63,14 @@ ft
 
 
 # Graphs
-#number of year-season combinations per ENSO state
-print(ggplot(data = enso_years, aes(x = enso_state, y =year_season, fill=enso_state )) +
-  geom_bar(width=0.5, stat = "identity")+
-  theme_minimal()+
-  scale_fill_manual(values=c("#E69F00", "#56B4E9", "#999999"))+
-  labs(title = "",
-       x = "Enso State",
-       y = "Number of year_season commbiations"))
-
 #plot the ONI value per year per season
-#TODO: plot ONI value not grouped by season (and include dry spells)
-print(ggplot(enso_oni, aes(fill=enso_state, y=anom, x=year)) +
+plt_oniseas <- ggplot(enso_oni, aes(fill=enso_state, y=anom, x=year)) +
     geom_bar(position="dodge", stat="identity") +
-    scale_fill_manual(values=c("#E69F00", "#56B4E9", "#999999"))+
+    scale_fill_manual(values=enso_fill)+
     facet_wrap(~season) +
-    theme_ipsum() +
     theme(legend.position="none") +
-    xlab(""))
+    xlab("")
+plt_oniseas
 
 ########################################################################################
 ############################# Preparing Dry Spells Data ################################
@@ -101,7 +83,7 @@ dry_spells <- read_csv(dry_spells_list_path)
 dry_spells$month <- format(as.Date(dry_spells$dry_spell_first_date, format="%Y-%m-%d"),"%m")
 dry_spells$month <- sub("^0+", "", dry_spells$month)
 #assign the dry spell to the season for which the month of the start date of the dry spell is the middle month of the season
-#e.g. dry spell starting on 15-03-2005 is assigned to the FMA season.
+#e.g. dry spell starting on 13-03-2005 is assigned to the FMA season.
 dry_spells <- merge(mon_season, dry_spells, by = c("month"), all = TRUE)
 
 #considering each record in the ground truth data as individual dry spell observation
@@ -146,13 +128,13 @@ m_enso_dryspell_sel <- merged_enso_dryspell %>% filter(merged_enso_dryspell$seas
 #if there is no dry spell in season_approx-season, set avg dry spell duration to 0
 m_enso_dryspell_sel$avg_duration[is.na(m_enso_dryspell_sel$avg_duration)] <- 0
 
-#order the occurence of column values
+#order the occurrence of column values
 #used later for creating plots
 m_enso_dryspell_sel$season <- factor(m_enso_dryspell_sel$season, levels = season_order)
 m_enso_dryspell_sel$observed <- factor(m_enso_dryspell_sel$observed, levels = c("yes","no"))
 m_enso_dryspell_sel$enso_state <- factor(m_enso_dryspell_sel$enso_state, levels = c("El Nino","Neutral","La Nina"))
 
-#compute the number of season_approx - season combinations per enso state
+#compute the number of season_approx - season combinations per enso state (season=3months period)
 enso_season_approx_season <- m_enso_dryspell_sel %>%
   group_by(enso_state) %>%
   summarise(no_season_approx_season_enso = n())
@@ -164,7 +146,7 @@ ft
 #only select the season_approx-seasons with a dry spell
 m_enso_dryspell_sel_subset  <- m_enso_dryspell_sel %>% filter(!is.na(no_adm2))
 
-#the number of unique season_approx-season combinations during which a dry spell occured by enso state
+#the number of unique season_approx-season combinations during which a dry spell occurred by enso state
 dryspell_season_approx_season <- m_enso_dryspell_sel_subset %>%
   group_by(enso_state) %>%
   summarise(no_season_approx_season_dryspell = n())
@@ -186,7 +168,6 @@ enso_season_ds_occured <- filter(m_enso_dryspell_sel, season %in% unique(m_enso_
 #compute the confusion matrix on whether a dry spell was observed and an enso state was observed, grouped by 3month period
 enso_season_dryspell <- enso_season_ds_occured %>%
   group_by(enso_state,season) %>%
-  #ds_enso=tp, #no_ds_enso=fp
   summarise(num_season_enso = n(), ds_enso = sum(observed=="yes"),no_ds_enso = sum(observed=="no"))
 enso_season_dryspell$sum_ds_seas <- ave(enso_season_dryspell$ds_enso, enso_season_dryspell$season, FUN=sum)
 enso_season_dryspell$sum_no_ds_seas <- ave(enso_season_dryspell$no_ds_enso, enso_season_dryspell$season, FUN=sum)
@@ -210,9 +191,9 @@ ggplot(data = enso_season_dryspell, aes(y = perc_enso_ds, x =enso_state, fill=en
         theme_minimal()+
         #order by rainy season occurrence
         facet_wrap(~factor(season, levels=c("NDJ","DJF","JFM","FMA","MAM"))) +
-        scale_fill_manual(values=c("#b52722", "#cccccc","#0063b3"))+
+        scale_fill_manual(values=enso_fill)+
         ylim(0,100)+
-        labs(title = "Percentage of rainy seasons during which a dry spell occurred", subtitle="by ENSO state per 3month period",
+        labs(title = "Percentage of rainy seasons with a dry spell", subtitle="by ENSO state per 3month period",
              x = "ENSO State",
              y = "Percentage of rainy seasons (%)")
 
@@ -222,7 +203,7 @@ ggplot(data = enso_season_dryspell, aes(y = perc_enso_no_ds, x =enso_state, fill
   theme_minimal()+
   #order by rainy season occurrence
   facet_wrap(~factor(season, levels=c("NDJ","DJF","JFM","FMA","MAM"))) +
-  scale_fill_manual(values=c("#b52722", "#cccccc","#0063b3"))+
+  scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
   labs(title = "Percentage of rainy seasons without a dry spell", subtitle="by ENSO state per 3 month period",
        x = "ENSO State",
@@ -234,7 +215,7 @@ ggplot(data = enso_season_dryspell, aes(y = perc_ds_per_enso, x =enso_state, fil
   theme_minimal()+
   #order by rainy season occurrence
   facet_wrap(~factor(season, levels=c("NDJ","DJF","JFM","FMA","MAM"))) +
-  scale_fill_manual(values=c("#b52722", "#cccccc","#0063b3"))+
+  scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
   labs(title = "The ENSO state during rainy seasons with a dry spell", subtitle="per 3 month period",
        x = "ENSO State",
@@ -243,7 +224,7 @@ ggplot(data = enso_season_dryspell, aes(y = perc_ds_per_enso, x =enso_state, fil
 # 2: ratio of dry spells by rainy season for the dominant ENSO state
 #same as 1 but aggregated to year instead of 3month period
 ########################################################################################
-#only using the 3month periods (seasons) during which a dry spell ever occured
+#only using the 3month periods (seasons) during which a dry spell ever occurred
 #however, using the whole rainy season (SON - MAM) returns the same result
 enso_year <- enso_season_ds_occured%>% group_by(season_approx) %>% summarize (enso_state =names(which.max(table(enso_state))),num_ds = sum(observed=="yes"))
 flextable(enso_year)
@@ -269,9 +250,9 @@ flextable(enso_year_dryspell)
 ggplot(data = enso_year_dryspell, aes(y = perc_enso_ds, x =enso_state, fill=enso_state )) +
   geom_bar(width=0.5, stat = "identity")+
   theme_minimal()+
-  scale_fill_manual(values=c("#b52722", "#cccccc","#0063b3"))+
+  scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
-  labs(title = "Percentage of rainy seasons during which a dry spell occurred", subtitle="by ENSO state per 3month period",
+  labs(title = "Percentage of rainy seasons with a dry spell", subtitle="by ENSO state per 3month period",
        x = "ENSO State",
        y = "Percentage of rainy seasons (%)")
 
@@ -279,7 +260,7 @@ ggplot(data = enso_year_dryspell, aes(y = perc_enso_ds, x =enso_state, fill=enso
 ggplot(data = enso_year_dryspell, aes(y = perc_enso_no_ds, x =enso_state, fill=enso_state )) +
   geom_bar(width=0.5, stat = "identity")+
   theme_minimal()+
-  scale_fill_manual(values=c("#b52722", "#cccccc","#0063b3"))+
+  scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
   labs(title = "Percentage of rainy seasons without a dry spell", subtitle="by ENSO state per 3 month period",
        x = "ENSO State",
@@ -289,7 +270,7 @@ ggplot(data = enso_year_dryspell, aes(y = perc_enso_no_ds, x =enso_state, fill=e
 ggplot(data = enso_year_dryspell, aes(y = perc_ds_per_enso, x =enso_state, fill=enso_state )) +
   geom_bar(width=0.5, stat = "identity")+
   theme_minimal()+
-  scale_fill_manual(values=c("#b52722", "#cccccc","#0063b3"))+
+  scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
   labs(title = "The ENSO state during rainy seasons with a dry spell", caption="The ENSO state is the state that had the most occurences during the rainy season",
        x = "ENSO State",
@@ -307,65 +288,24 @@ plt_anom <- ggplot(m_enso_dryspell_sel, aes(x=season, y=anom,fill=observed)) +
   scale_fill_manual(values=c("#F2645A", "#cccccc"))+
   theme(legend.position = 'bottom',
         axis.text.x = element_text(angle = 90,margin=margin(5,0,0,0)))
-  # scale_x_date(date_labels = "%b")+
-  # annotate("rect", xmin = as.Date('1800-07-01'), xmax = as.Date('1800-10-01'), ymin = 0, ymax = 100,
-           # alpha = .25)
 plt_anom
 # ggsave(paste0(plot_dir, 'mwi_plot_oni_year_dryspell.png'))
 
-
-##attempt to color based on num of adm2's with dry spell, but not working properly
-# plt_anom <- ggplot(m_enso_dryspell_sel, aes(x=season, y=anom)) +
-#   geom_bar(width=0.5, stat = "identity",aes(fill=factor(no_adm2)))+
-#   facet_wrap(~season_approx)+
-#   labs(y='ONI', x='3-month period')+
-#   # theme_bw()+
-#   labs(title="ONI values per rainy season", subtitle="The year indicates the start of the rainy season",fill="Dry spell observed")+
-#   # scale_fill_manual(values=c("#F2645A", "#cccccc"))+
-#   #arghh doesnt work
-#   scale_fill_brewer(palette="YlOrRd")+
-#   theme(legend.position = 'bottom',
-#         axis.text.x = element_text(angle = 90,margin=margin(5,0,0,0)))
-# # scale_x_date(date_labels = "%b")+
-# # alpha = .25)
-# plt_anom
-
-m_enso_dryspell_sel_zero <- enso_season_ds_occured #%>%
+#investigate if more dry spells occurred during more extreme ONI values
+#this is not the case
+m_enso_dryspell_sel_zero <- enso_season_ds_occured
 m_enso_dryspell_sel_zero[is.na(m_enso_dryspell_sel_zero)] <-0
 flextable(m_enso_dryspell_sel_zero)
-  # mutate(no_adm2 = if_else(is.na(no_adm2), 0, no_adm2))
-p <- ggplot(m_enso_dryspell_sel_zero, aes(x=factor(no_adm2), y=anom)) + 
-  geom_violin()+
-p
 
-# # #2: coverage of dryspell(number of admin2s) over enso season_approx_season combinations
-# # ########################################################################################
-# #
-# # #compute the number of adm2s having experienced a dry spell per enso state
-# # #no_adm2 indicates the unique adms per season, can happen same adm has several dry spells during one season
-# # dryspell_admin2s <- m_enso_dryspell_sel %>%
-# #   group_by(enso_state) %>%
-# #   summarise(no_adm2 = sum(no_adm2,na.rm = TRUE))
-# #
-# # ft <- flextable(dryspell_admin2s)
-# # print(ft)
-# #
-# # #this computation doesn't make sense.. what does it mean to divide the no of adm2s by the no of seasons..
-# # #TODO: look at distribution of noadm2s per enso state (boxplot?)
-# # # dryspell_coverage_enso <-merge(dryspell_admin2s, enso_season_approx_season, by = c("enso_state"), all = TRUE)
-# # # dryspell_coverage_enso$coverage <- dryspell_coverage_enso$no_adm2/dryspell_coverage_enso$no_season_approx_season_enso
-# # #
-# # # #output table
-# # # ft <- flextable(dryspell_coverage_enso)
-# # # print(ft)
-# # #
-# # # print(ggplot(data = dryspell_coverage_enso, aes(y = coverage, x =enso_state, fill=enso_state )) +
-# # #   #geom_line(size = 2) +
-# # #   geom_bar(width=0.5, stat = "identity")+
-# # #   theme_minimal()+
-# # #   scale_fill_manual(values=c("#E69F00", "#56B4E9", "#999999"))+
-# # #  # ylim(0,1)+
-# # #   labs(title = "",
-# # #        x = "Enso State",
-# # #        y = "ratio(no_adm2/no_season_approx_season_enso)"))
-# #
+plt_anomadm <- ggplot(m_enso_dryspell_sel_zero, aes(x=factor(no_adm2), y=anom)) + 
+  geom_violin()+
+  labs(title="Distribution of ONI values grouped by the number of dry spells",x="Number of admin2's with a dry spell",y="ONI value")
+plt_anomadm
+
+#4: Geographical spread of dry spells (number of admin2s) per ENSO state
+########################################################################################
+plt_ensoadm <- ggplot(m_enso_dryspell_sel_zero, aes(x=factor(enso_state), y=no_adm2)) + 
+  geom_violin()+
+  labs(title="Distribution of number of simeltaneous dry spells per ENSO state",x="ENSO state",y="Number of admin2's")
+plt_ensoadm
+
