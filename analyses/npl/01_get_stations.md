@@ -34,6 +34,12 @@ DHM_STATION_FILENAME = GOV_DIR / 'npl_dhm_stations.gpkg'
 # Station list to share
 STATION_OUTPUT = GOV_DIR / 'station_list_glofas_final.xlsx'
 STATION_OUTPUT_YAML = GOV_DIR / 'station_list_glofas_final.yml'
+
+# Final stations file
+STATIONS_FINAL = {
+    'glofas': DATA_DIR / 'npl/glofas/npl_glofas_stations_final.gpkg',
+    'dhm': GOV_DIR / 'npl_dhm_stations_final.gpkg'
+}
 ```
 
 ## Read in Nepal GloFAS stations
@@ -265,6 +271,26 @@ for basin in stations_final.values():
         
 with open(STATION_OUTPUT_YAML, 'w') as f:
     yaml.dump(stations_final_yaml, f)
+```
+
+### Create final points shapefile for making map visuals
+
+```python
+sheet_id = "1I3vszdCDDxFnlhieywY2C9MbU-0TmGVn"
+url = "https://docs.google.com/spreadsheets/d/{0}/gviz/tq?tqx=out:csv&sheet={1}"
+
+
+  
+for source in ['glofas', 'dhm']:
+    df_final = gpd.GeoDataFrame()
+    for sheet_name in ['Koshi', 'Karnali']:
+        df = pd.read_csv(url.format(sheet_id, sheet_name)).dropna(subset=['name_glofas'])
+        df = gpd.GeoDataFrame(df[[f'name_{source}', f'lat_{source}', f'lon_{source}']])
+        df_final = df_final.append(df, ignore_index=True)
+    df_final['geometry'] = gpd.points_from_xy(df_final[f'lon_{source}'], df_final[f'lat_{source}'])
+    df_final = df_final.set_crs("EPSG:4326")
+    df_final.to_file(STATIONS_FINAL[source], driver="GPKG", index=False)
+
 ```
 
 # Appendix
