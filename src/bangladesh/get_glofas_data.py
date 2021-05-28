@@ -16,8 +16,8 @@ from src.indicators.flooding.glofas.area import AreaFromStations, Station
 
 # Location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
 # Some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
-# Bahadurabad_glofas corresponds to the control point identified here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
-COUNTRY_NAME = "bangladesh"
+# Bahadurabad_glofas corresponds to the control point identified here:
+# https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "bgd"
 FFWC_STATIONS = {
     "Noonkhawa": Station(lon=89.9509, lat=25.9496),
@@ -29,12 +29,12 @@ FFWC_STATIONS = {
     "Aricha": Station(lon=89.6550, lat=23.9032),
     "Bahadurabad_glofas": Station(lon=89.65, lat=25.15),
 }
-LEADTIMES = [5, 10, 11, 12, 13, 14, 15]
+LEADTIMES = [5, 10, 11, 12, 13, 14, 15, 20, 25, 30]
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=False):
+def main(download=True, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
@@ -44,34 +44,26 @@ def main(download=True, process=False):
         # Remove the GloFAS station as it was not used originally
         ffwc_stations_for_download = FFWC_STATIONS.copy()
         area = AreaFromStations(stations=ffwc_stations_for_download)
-        glofas_reanalysis.download(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, area=area
-        )
+        glofas_reanalysis.download(country_iso3=COUNTRY_ISO3, area=area)
         glofas_forecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
         )
         glofas_reforecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
         )
 
     if process:
-        glofas_reanalysis.process(
-            country_name=COUNTRY_NAME, country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS
-        )
+        glofas_reanalysis.process(country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS)
         glofas_forecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,
         )
         glofas_reforecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,
             leadtimes=LEADTIMES,

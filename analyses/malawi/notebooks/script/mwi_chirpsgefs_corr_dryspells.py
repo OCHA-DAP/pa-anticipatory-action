@@ -192,7 +192,31 @@ plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so c
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
+
+
+bins = np.arange(0,df_histformerg.rollsum_15d.max()+20,10)
+group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_15d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+
+
+#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
+g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_histformerg.rollsum_15d.max()+20,10)
+group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_15d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
 
 
 #plot the observed vs forecast-observed for obs<=2mm
@@ -846,6 +870,165 @@ for i,a in enumerate(df_numadm1.ADM1_EN.unique()):
     g=sns.regplot(data = df_numadm1[df_numadm1.ADM1_EN==a], x = 'dryspell_obs', y = 'dryspell_forec', fit_reg = False,
             scatter_kws = {'alpha' : 1/3},ax=ax)#,x_jitter = 0.2, y_jitter = 0.2)
     g.axes.set_title(a)
+
+
+# ### 5 day forecast
+
+chirpsgefs_5day_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back_adm2_5day.csv")
+
+
+#ccontains several statistics per adm2-date combination since 2000
+df_cg_fd=pd.read_csv(chirpsgefs_5day_path)
+df_cg_fd["date"]=pd.to_datetime(df_cg_fd["date"])
+df_cg_fd["date_forec_end"]=pd.to_datetime(df_cg_fd["date_forec_end"])
+
+
+df_bound_adm2=gpd.read_file(adm2_bound_path)
+
+
+chirps_rolling_sum_path_5day=os.path.join(dry_spells_processed_dir,"data_mean_values_long_5day.csv")
+
+
+#read historically observed 15 day rolling sum for all dates (so not only those with dry spells), derived from CHIRPS
+#this sometimes gives a not permitted error --> move the chirps_rolling_sum_path file out of the folder and back in to get it to work (dont ask me why)
+df_histobs=pd.read_csv(chirps_rolling_sum_path_5day)
+df_histobs.date=pd.to_datetime(df_histobs.date)
+
+#add start of the rolling sum 
+df_histobs["date_start"]=df_histobs.date-timedelta(days=5)
+
+#add adm2 and adm1 name
+df_histobs=df_histobs.merge(df_bound_adm2[["ADM1_EN","ADM2_EN","ADM2_PCODE"]],left_on="pcode",right_on="ADM2_PCODE")
+
+
+df_histobs.columns
+
+
+#merge forecast and observed
+#only include dates that have a forecast, i.e. merge on right
+#date in df_chirpsgefs is the first date of the forecast
+#so the values are the rolling sum for the date+timedelta(t=days_ahead) #where days_aheas is 5 in this case
+df_histformerg=df_histobs.merge(df_cg_fd,how="right",left_on=["date_start","ADM2_EN"],right_on=["date","ADM2_EN"],suffixes=("obs","forec"))
+
+
+df_histformerg["diff_forecobs"]=df_histformerg["mean_cell"]-df_histformerg["rollsum_5d"]
+
+
+df_histformerg.columns
+
+
+#date_forec_end is not correct!! didn't adjust correctly in computation script
+df_histformerg[["dateforec","dateobs","diff_forecobs","mean_cell","rollsum_5d","rollsum_15d"]]
+
+
+#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
+g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_5d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_histformerg.rollsum_5d.max()+20,10)
+group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_5d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 5 day sum (mm)", "Forecasted 5 day sum - Observed 5 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+
+
+#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
+g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_5d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_histformerg.rollsum_5d.max()+20,10)
+group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_5d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 5 day sum (mm)", "Forecasted 5 day sum - Observed 5 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+
+
+#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
+g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_histformerg.rollsum_15d.max()+20,10)
+group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_15d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+
+
+#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
+g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_histformerg.rollsum_15d.max()+20,10)
+group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_15d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+
+
+#plot the observed vs forecast-observed for obs<=2mm
+df_sel=df_histformerg[df_histformerg.rollsum_15d<=2].sort_values("rollsum_15d")
+g=sns.jointplot(data=df_sel,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_sel.rollsum_15d.max()+2,0.2)
+group = df_sel.groupby(pd.cut(df_sel.rollsum_15d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+
+
+#plot the observed vs forecast-observed for obs<=2mm
+df_sel=df_histformerg[df_histformerg.rollsum_15d<=30].sort_values("rollsum_15d")
+g=sns.jointplot(data=df_sel,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_sel.rollsum_15d.max()+2,1)
+group = df_sel.groupby(pd.cut(df_sel.rollsum_15d, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.diff_forecobs.mean()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
+g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
 
 
 # #### Archive

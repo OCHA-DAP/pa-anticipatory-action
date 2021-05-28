@@ -1,0 +1,119 @@
+---
+title: "Monthly precipitation as a proxy for dry spells in Malawi"
+author: "By Centre for Humanitarian Data"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 4
+editor_options:
+  chunk_output_type: inline
+bibliography: ["mwi_bibliography.bib"]
+biblio-style: "apalike"
+link-citations: true
+---
+## Background
+Since previous work showed that it is difficult to forecast dry spells in Malawi, this document explores the option of using monthly precipitation as a proxy for the occurrence of dry spells and the forecasting skill for monthly precipitation. 
+The precipitation patterns differ per region in Malawi. Since 41 out of 44 month-admin2 combinations with a dry spell occurred in the Southern region, this analysis solely focuses on this region to prevent weakening of signals due to the differences in climates between the regions.
+All the code used to produce this analysis is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action).
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+library(glue)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+```{r data-load-formatting}
+data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
+plot_dir <-paste0(data_dir,'/public/processed/mwi/plots/dry_spells')
+exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/')
+```
+```{r}
+min_days_ds <- 7
+min_adm_ds <- 3
+threshold <- 170
+threshold_4mm <- 170
+```
+
+## Definitions
+This analysis
+
+- Only looks at the Southern region since almost all historical dry spells occurred in that region
+- Only looks at the months of December, January, February since these months the crops are most sensitive to dry spells
+- Defines a dry spell as at least 14 consecutive days with less than 2mm cumulative precipitation. The second part of the analysis compares this with a definition of at least 14 consecutive dry days, where a dry day is defined as receiving less than 4mm on one day. 
+- Includes all dry spells, regardless of whether they occurred during the rainy season or not (only relevant for December)
+- Classifies a month as having experienced a dry spell, if at least **`r min_days_ds`** days of that month were within a dry spell
+- Aggregates historical dry spells and monthly precipitation to admin1 (Southern region), since precipitation forecasts have too much spatial uncertainty to forecast ad the admin2 level
+- Computes the monthly precipitation as the mean value of all cells within the admin1
+- Firstly computes the occurrence of a dry spell as the mean value of all cells within an admin2. Therafter, this is aggregated to admin1 by identifying it as a dry spell if at least **`r min_adm_ds`** admin2's within the admin1 experienced a dry spell at that time.
+- Classifies a match between monthly precipitation and a dry spell, if they occurred during the same month **and** in the same admin1.
+
+## What is the monthly precipitation in months during which a dry spell occurred? 
+The figure below shows the monthly precipitation, colored by whether a dry spell started during that month. 
+From this figure we can see that 
+
+1) Months with a dry spell do on average have less precipitation than the months during which no dry spell occurred
+2) Nevertheless, some months with no dry spell also have precipitation in the same range as those months with a dry spell. 
+NOTE: when only one dry spell in a month this is not showing up in the plot.. 
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_distribution_facet_decjanfeb_southern_ds{min_days_ds}{min_adm_ds}_adm1.png'))`)
+
+We can see that precipitation patterns clearly differ by month, which is expected. Moreover, the figures show that the separability of the occurrence of a dry spell differs by month. This becomes more clear when looking at a boxplot
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds{min_days_ds}{min_adm_ds}_adm1.png'))`){width=50%}
+
+## What is a sensible threshold for the amount of monthly precipitation? 
+In order to use the monthly precipitation as a proxy for the occurrence of a dry spell, we need to set a threshold on the amount of monthly precipitation. I.e. if the precipitation is forecasted to be lower than X, we trigger and else we don't. 
+
+One method to get a sense for this, is by investigating a range of thresholds, and for each of them looking at the percentage of months with a dry spell that are below the threshold, and the percentage of months without a dry spell that are above the threshold. This is shown in the figure below. The figure shows that the trade-off between sensitivity and specificity depends on the month. Moreover, there is better separability during January and February than during December.    
+
+NOTE: false alarms is here FP/(FP+TN)! So not FP/(FP+TP)! 
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_days_ds}{min_adm_ds}_adm1_permonth.png'))`)
+
+
+
+Since a trigger becomes too complex when setting a threshold for each month separately, we decide to set one threshold for all months. This is chosen by choosing the intersection of the two lines computed over all months, which is at `r threshold`mm. The graph below illustrates this. 
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_days_ds}{min_adm_ds}_adm1.png'))`)
+
+## What is the co-occurrence of <=`r threshold` mm monthly precipitation and dry spells? 
+To further understand the co-occurrence of low amounts of monthly precipitation and dry spells, it is important to look at the temporal distribution. To do so, the below figure shows a heatmap indicating the months with less than `r threshold` mm of precipitation and the occurrence of dry spells. 
+From this figure we can conclude that 6 out of the 7 dry spells co-occurr with <=`r threshold` mm monthly precipitation. It also becomes clear that <=`r threshold` mm monthly precipitation occurs in years that no dry spell was identified. Thus, with this threshold one would trigger more often than the occurrences of dry spells. 
+
+![](`r paste0(exploration_dry_spell_dir,glue('mwi_viz_hm_dry_spell_monthly_precip_mean_ds{min_days_ds}{min_adm_ds}_th{threshold}_adm1_southern_decjanfeb.png'))`)
+
+To conclude, the confusion matrix with a threshold of `r threshold` mm is as follows. Thus 86% of the dry spells would be identified, and in 33% of the months with less than `r threshold` mm of precipitation, a dry spell occurred. 
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_confusionmatrix_ds{min_days_ds}{min_adm_ds}_th{threshold}_adm1.png'))`)
+
+
+## Does a change in definition of a dry spell produce different results?
+Within this pilot, the accepted definition of a dry spell is that of <=2mm cumulative precipitation during 14 consecutive days. However, observational and forecast products often have trouble detecting such small amounts of rainfall and therefore many practitioners before us have defined dry spells based on dry days. Meaning that a dry spell consists of at least 14 consecutive dry days. The definition of a dry day differs between projects, but we take a commonly used definition of 4mm/day.
+
+NOTE: these numbers are missing the dry spells outside the rainy season, which causes two dry spells in December to not be included!
+
+We compute the same analysis with this different definition, and find that the optimal threshold is also at `r threshold_4mm`mm. As shown below.
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_days_ds}{min_adm_ds}_4mm_adm1.png'))`)
+
+From the heatmap we can conclude that due to the change of definition there is one more occurrence of a dry spell during February. During this month the precipitation was not lower than `r threshold_4mm`. However, we cannot properly compare the two definitions since the dry spells outside the rainy season are missing.
+
+
+![](`r paste0(exploration_dry_spell_dir,glue('mwi_viz_hm_dry_spell_monthly_precip_mean_4mm_ds{min_days_ds}{min_adm_ds}_th{threshold}_adm1_southern_decjanfeb.png'))`)
+
+When looking at the confusion matrix, we can see a similair pattern. Due to the missed dry spell in February, 83% of the dry spells would have been identified, and in `r round(5/18*100)`% of the months with less than `r threshold_4mm` mm of precipitation, a dry spell occurred.
+
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_confusionmatrix_ds{min_days_ds}{min_adm_ds}_th{threshold_4mm}_4mm_adm1.png'))`)
+
+## How does the severity of dry spells differ? 
+To support our discussion on severity, here is the heatmap on admin2 with <=2mm cumulative rainfall. This also includes the dry spells that have less than `r min_days_ds` days within the given month.
+
+![](`r paste0(exploration_dry_spell_dir,'mwi_viz_hm_dry_spell_mean_adm2_southern_decjanfeb.png')`)
+
+## Forecasts
+This image shows the resolution of ECMWF's forecast. Due to the low resolution combined with the high uncertainy of long-term forecasts, we should look at admin1 and not admin2
+
+![](`r paste0(exploration_dry_spell_dir,'ecmwf_forecast_resolution_mwi.png')`)

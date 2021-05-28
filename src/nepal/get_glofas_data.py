@@ -14,7 +14,6 @@ from src.indicators.flooding.glofas.area import AreaFromShape, Station
 
 
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
-COUNTRY_NAME = "nepal"
 COUNTRY_ISO3 = "npl"
 LEADTIMES = [5, 10, 15]
 # TODO: Read in the csv file from GDrive
@@ -24,7 +23,7 @@ STATIONS = {
     "Jomsom": Station(lon=28.65, lat=83.55),
 }
 SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "raw" / COUNTRY_NAME / "Shapefiles"
+    Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
 )
 SHAPEFILE = (
     SHAPEFILE_BASE_DIR
@@ -47,20 +46,17 @@ def main(download=True, process=True):
         df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
         area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
         glofas_reanalysis.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             version=VERSION,
         )
         glofas_forecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.download(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             area=area,
             leadtimes=LEADTIMES,
@@ -69,20 +65,17 @@ def main(download=True, process=True):
 
     if process:
         glofas_reanalysis.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
             version=VERSION,
         )
         glofas_forecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
             leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.process(
-            country_name=COUNTRY_NAME,
             country_iso3=COUNTRY_ISO3,
             stations=STATIONS,
             leadtimes=LEADTIMES,

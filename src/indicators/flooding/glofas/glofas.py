@@ -15,10 +15,10 @@ from src.indicators.flooding.glofas.area import Area, Station
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-RAW_DATA_DIR = DATA_DIR / "raw"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
-GLOFAS_DIR = Path("GLOFAS_Data")
-CDSAPI_CLIENT = cdsapi.Client()
+PUBLIC_DATA_DIR = "public"
+RAW_DATA_DIR = "raw"
+PROCESSED_DATA_DIR = "processed"
+GLOFAS_DIR = Path("glofas")
 DEFAULT_VERSION = 3
 HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
@@ -60,7 +60,6 @@ class Glofas:
 
     def _download(
         self,
-        country_name: str,
         country_iso3: str,
         area: Area,
         version: int,
@@ -70,7 +69,6 @@ class Glofas:
         use_cache: bool = True,
     ):
         filepath = self._get_raw_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             year=year,
@@ -85,7 +83,7 @@ class Glofas:
             return filepath
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.debug(f"Querying for {filepath}...")
-        CDSAPI_CLIENT.retrieve(
+        cdsapi.Client().retrieve(
             name=self.cds_name,
             request=self._get_query(
                 area=area,
@@ -104,7 +102,6 @@ class Glofas:
 
     def _get_raw_filepath(
         self,
-        country_name: str,
         country_iso3: str,
         version: int,
         year: int,
@@ -112,8 +109,10 @@ class Glofas:
         leadtime: int = None,
     ):
         directory = (
-            RAW_DATA_DIR
-            / country_name
+            DATA_DIR
+            / PUBLIC_DATA_DIR
+            / RAW_DATA_DIR
+            / country_iso3
             / GLOFAS_DIR
             / f"version_{version}"
             / self.cds_name
@@ -139,10 +138,12 @@ class Glofas:
             "format": "grib",
             self.dataset_variable_name: self.dataset,
             f"{self.date_variable_prefix}year": str(year),
-            f"{self.date_variable_prefix}month": [str(x).zfill(2) for x in range(1, 13)]
+            f"{self.date_variable_prefix}month": [
+                str(x + 1).zfill(2) for x in range(12)
+            ]
             if month is None
             else str(month).zfill(2),
-            f"{self.date_variable_prefix}day": [str(x).zfill(2) for x in range(1, 32)],
+            f"{self.date_variable_prefix}day": [str(x + 1).zfill(2) for x in range(31)],
             "area": area.list_for_api(),
             "system_version": f"version_{version}_{self.system_version_minor[version]}",
             "hydrological_model": HYDROLOGICAL_MODELS[version],
@@ -160,66 +161,68 @@ class Glofas:
         """
         ds_list = []
         for data_type in ["cf", "pf"]:
-            ds = xr.open_mfdataset(
+            with xr.open_mfdataset(
                 filepath_list,
                 engine="cfgrib",
                 backend_kwargs={
                     "indexpath": "",
                     "filter_by_keys": {"dataType": data_type},
                 },
-            )
-            # Delete history attribute in order to merge
-            del ds.attrs["history"]
-            # Extra processing require for control forecast
-            if data_type == "cf":
-                ds = expand_dims(
-                    ds=ds,
-                    dataset_name="dis24",
-                    coord_names=["number", "time", "latitude", "longitude"],
-                    expansion_dim=0,
-                )
-            ds_list.append(ds)
+            ) as ds:
+                # Delete history attribute in order to merge
+                del ds.attrs["history"]
+                # Extra processing require for control forecast
+                if data_type == "cf":
+                    ds = expand_dims(
+                        ds=ds,
+                        dataset_name="dis24",
+                        coord_names=["number", "time", "latitude", "longitude"],
+                        expansion_dim=0,
+                    )
+                ds_list.append(ds)
         ds = xr.combine_by_coords(ds_list)
         return ds
 
     def _write_to_processed_file(
         self,
-        country_name: str,
         country_iso3: str,
         version: int,
         ds: xr.Dataset,
         leadtime: int = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
+        # Netcdf seems to have problems overwriting; delete the file if it exists
+        filepath.unlink(missing_ok=True)
         logger.info(f"Writing to {filepath}")
         ds.to_netcdf(filepath)
         return filepath
 
     def _get_processed_filepath(
-        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
+        self, country_iso3: str, version: int, leadtime: int = None
     ) -> Path:
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return PROCESSED_DATA_DIR / country_name / GLOFAS_DIR / filename
+        return DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / GLOFAS_DIR / filename
 
     def read_processed_dataset(
-        self, country_name: str, country_iso3: str, version: int, leadtime: int = None
+        self,
+        country_iso3: str,
+        version: int = DEFAULT_VERSION,
+        leadtime: int = None,
     ):
         filepath = self._get_processed_filepath(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             leadtime=leadtime,
         )
-        return xr.open_dataset(filepath)
+        return xr.load_dataset(filepath)
 
 
 class GlofasReanalysis(Glofas):
@@ -236,18 +239,20 @@ class GlofasReanalysis(Glofas):
 
     def download(
         self,
-        country_name: str,
         country_iso3: str,
         area: Area,
         version: int = DEFAULT_VERSION,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reanalysis v{version} for years {self.year_min} - {self.year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {year_min} - {year_max}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             super()._download(
-                country_name=country_name,
                 country_iso3=country_iso3,
                 area=area,
                 year=year,
@@ -256,7 +261,6 @@ class GlofasReanalysis(Glofas):
 
     def process(
         self,
-        country_name: str,
         country_iso3: str,
         stations: Dict[str, Station],
         version: int = DEFAULT_VERSION,
@@ -265,7 +269,6 @@ class GlofasReanalysis(Glofas):
         logger.info(f"Processing GloFAS Reanalysis v{version}")
         filepath_list = [
             self._get_raw_filepath(
-                country_name=country_name,
                 country_iso3=country_iso3,
                 version=version,
                 year=year,
@@ -274,15 +277,17 @@ class GlofasReanalysis(Glofas):
         ]
         # Read in the dataset
         logger.info(f"Reading in {len(filepath_list)} files")
-        ds = xr.open_mfdataset(
+
+        with xr.open_mfdataset(
             filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}
-        )
-        # Create a new dataset with just the station pixels
-        logger.info("Looping through stations, this takes some time")
-        ds_new = _get_station_dataset(stations=stations, ds=ds, coord_names=["time"])
+        ) as ds:
+            # Create a new dataset with just the station pixels
+            logger.info("Looping through stations, this takes some time")
+            ds_new = _get_station_dataset(
+                stations=stations, ds=ds, coord_names=["time"]
+            )
         # Write out the new dataset to a file
         self._write_to_processed_file(
-            country_name=country_name,
             country_iso3=country_iso3,
             version=version,
             ds=ds_new,
@@ -293,7 +298,7 @@ class GlofasForecast(Glofas):
     def __init__(self):
         super().__init__(
             year_min={2: 2019, 3: 2020},
-            year_max=2021,
+            year_max=2020,
             cds_name="cems-glofas-forecast",
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
             system_version_minor={2: 1, 3: 1},
@@ -302,20 +307,22 @@ class GlofasForecast(Glofas):
 
     def download(
         self,
-        country_name: str,
         country_iso3: str,
         area: Area,
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min[version] if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS forecast v{version} for years {self.year_min[version]} - {self.year_max} and leadtime hours {leadtimes}"
+            f"Downloading GloFAS forecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
         )
-        for year in range(self.year_min[version], self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             for leadtime in leadtimes:
                 super()._download(
-                    country_name=country_name,
                     country_iso3=country_iso3,
                     area=area,
                     year=year,
@@ -325,7 +332,6 @@ class GlofasForecast(Glofas):
 
     def process(
         self,
-        country_name: str,
         country_iso3: str,
         stations: Dict[str, Station],
         leadtimes: List[int],
@@ -337,7 +343,6 @@ class GlofasForecast(Glofas):
             # Get list of files to open
             filepath_list = [
                 self._get_raw_filepath(
-                    country_name=country_name,
                     country_iso3=country_iso3,
                     version=version,
                     year=year,
@@ -355,7 +360,6 @@ class GlofasForecast(Glofas):
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(
-                country_name=country_name,
                 country_iso3=country_iso3,
                 ds=ds_new,
                 leadtime=leadtime,
@@ -377,23 +381,25 @@ class GlofasReforecast(Glofas):
 
     def download(
         self,
-        country_name: str,
         country_iso3: str,
         area: Area,
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
         split_by_month: bool = False,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reforecast v{version} for years {self.year_min} - {self.year_max} and leadtime hours {leadtimes}"
+            f"Downloading GloFAS reforecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
         )
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             month_range = range(1, 13) if split_by_month else [None]
             for month in month_range:
                 for leadtime in leadtimes:
                     super()._download(
-                        country_name=country_name,
                         country_iso3=country_iso3,
                         area=area,
                         version=version,
@@ -404,7 +410,6 @@ class GlofasReforecast(Glofas):
 
     def process(
         self,
-        country_name: str,
         country_iso3: str,
         stations: Dict[str, Station],
         leadtimes: List[int],
@@ -418,7 +423,6 @@ class GlofasReforecast(Glofas):
             month_range = range(1, 13) if split_by_month else [None]
             filepath_list = [
                 self._get_raw_filepath(
-                    country_name=country_name,
                     country_iso3=country_iso3,
                     version=version,
                     year=year,
@@ -440,7 +444,6 @@ class GlofasReforecast(Glofas):
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(
-                country_name=country_name,
                 country_iso3=country_iso3,
                 version=version,
                 ds=ds_new,

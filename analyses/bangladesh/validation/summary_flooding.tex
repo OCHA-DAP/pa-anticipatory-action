@@ -1,0 +1,313 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+  \usepackage{amssymb}
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Spatio-temporal flood extent estimation in Bangladesh},
+  pdfauthor={By MapAction and the Centre for Humanitarian Data},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{longtable,booktabs}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Spatio-temporal flood extent estimation in Bangladesh}
+\author{By MapAction and the Centre for Humanitarian Data}
+\date{2021-03-20}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{4}
+\tableofcontents
+}
+\hypertarget{introduction}{%
+\subsection{Introduction}\label{introduction}}
+
+This report provides a summary of the results and validation of an
+analysis of Sentinel-1 satellite imagery to estimate flood extent over
+time in Bangladesh from June - August 2020. This analysis is focused on
+flooding within five selected districts: Bogra, Gaibandha, Jamalpur,
+Kurigram and Sirajganj.
+
+\hypertarget{processing-sentinel-1-data-to-derive-flood-extents}{%
+\subsection{Processing Sentinel-1 data to derive flood
+extents}\label{processing-sentinel-1-data-to-derive-flood-extents}}
+
+In collaboration with colleagues from MapAction we took freely available
+European Space Agency's
+\href{https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar}{Sentinel-1
+Synthetic Aperture Radar (SAR) imagery}, which provides images with 10m
+resolution, to estimate the flood extent over time. Sentinel-1 SAR data
+has been frequently applied to map flooding in past literature, even
+specifically in Bangladesh. In addition to being freely available, SAR
+imagery is particularly useful for flood mapping as it can be captured
+even in the presence of cloud cover, unlike imagery from optical sensors
+such as Landsat and MODIS. This is particularly relevant in areas such
+as Bangladesh which have significant cloud cover during flooding
+seasons. Water bodies can be identified from SAR imagery due to their
+dark appearance.
+
+The methodology used is adapted from the
+\href{http://www.un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/in-detail}{UN-SPIDER
+Knowledge portal} and applies a change detection and thresholding (CDAT)
+approach to identify flooded areas. A CDAT methodology for identifying
+flooded areas from Sentinel-1 data has been successfully applied in
+contexts such as Bangladesh, Namibia and the UK. We performed the
+analysis in Google Earth Engine, which provides easy access to
+Sentinel-1 data and allows for fast, cloud-based data processing. The
+image processing methodology described below is largely summarized from
+the UN-SPIDER guidance.
+
+The estimates of flood extent were then aggregated to a given admin unit
+(mauzas, in this case) by calculating the total flooded fraction within
+each unit for each point in time. Note that the area of permanent water
+bodies (as identified by the JRC Global Surface Water dataset) was
+removed from the area of each admin unit. The flooded fraction values
+thus represent the fraction of flooded area that is not normally covered
+by water.
+
+More details on satellite imagery processing
+
+\hypertarget{imagery-filtering-and-preprocessing}{%
+\paragraph{Imagery filtering and
+preprocessing}\label{imagery-filtering-and-preprocessing}}
+
+Available Sentinel-1 imagery for the time period of interest is filtered
+according to the instrument mode, polarization, and pass direction. This
+filtering is necessary to ensure that mosaicked images share the same
+characteristics. Table 1 below briefly outlines each of these
+parameters. The selected imagery has already undergone preprocessing
+steps to convert pixel values to their backscatter coefficient. These
+steps are detailed in
+\href{https://developers.google.com/earth-engine/guides/sentinel1}{this
+page} and include thermal noise removal, radiometric calibration, and
+terrain correction. In addition, this methodology applies a smoothing
+filter to the imagery to reduce the speckle effect of radar imagery.
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule
+\begin{minipage}[b]{(\columnwidth - 2\tabcolsep) * \real{0.05}}\raggedright
+Filtering parameter\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 2\tabcolsep) * \real{0.35}}\raggedright
+Possible values\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 2\tabcolsep) * \real{0.60}}\raggedright
+Description\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.05}}\raggedright
+Instrument mode\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.35}}\raggedright
+IW, EW, SM\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.60}}\raggedright
+\href{https://sentinel.esa.int/web/sentinel/user-guides/sentinel-1-sar/acquisition-modes}{Notes
+on acquisition modes}. We selected data from the `IW' acquisition mode,
+as it is cited as the main acquisition mode for monitoring land
+changes.\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.05}}\raggedright
+Polarization\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.35}}\raggedright
+HH+HV, VV+VH, VV, HH\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.60}}\raggedright
+Horizontal and vertical. We selected the `VH' mode as it is indicated by
+the UN-SPIDER guidance as the most optimal for flood mapping. However
+sources have also noted that the `VV' polarization may produce more
+accurate results in some instances\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.05}}\raggedright
+Pass direction\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.35}}\raggedright
+Ascending or descending\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.60}}\raggedright
+Direction of orbit. We performed the analysis using data from both pass
+directions (only comparing images from the same direction).\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.05}}\raggedright
+Relative orbit\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.35}}\raggedright
+This value is dependent on the location of the satellite orbit for the
+area of interest. Values can be derived
+\href{https://gis.stackexchange.com/questions/237116/sentinel-1-relative-orbit\#:~:text=You\%20actually\%20can\%20find\%20the,\%2D\%2073\%2C\%20175\%20\%2B\%201}{according
+to the imagery filename}.\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.60}}\raggedright
+Filtering by relative orbit ensures that one is comparing images with
+the same viewing geometry.\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{change-detection-and-thresholding-cdat-to-identify-flooding}{%
+\paragraph{Change detection and thresholding (CDAT) to identify
+flooding}\label{change-detection-and-thresholding-cdat-to-identify-flooding}}
+
+This methodology identifies flood extent by comparing between
+before-flooding and after-flooding imagery mosaics for the area of
+interest. In this case, we took the average of all images from December
+2019 to January 2020 from the area of interest to generate the baseline
+before-flooding mosaic. We also checked the EM-DAT database to ensure
+that there was not any recorded flooding during this period.
+
+The after-flood mosaic is divided by the before-flooding mosaic, with
+pixel intensity in the resulting image indicating the degree of change
+between the two images. A threshold of 1.25 is applied to generate a
+binary layer indicating the full estimated extent of flooding. This
+threshold level is taken directly from the UN-SPIDER guidance, where it
+was selected `through trial and error'. The appropriateness of this
+threshold level was also manually checked by comparing the derived flood
+extents with the after-flooding satellite imagery for selected dates.
+These parameters influencing this component of the analysis are
+summarized in the table below.
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule
+\begin{minipage}[b]{(\columnwidth - 2\tabcolsep) * \real{0.09}}\raggedright
+Parameter\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 2\tabcolsep) * \real{0.07}}\raggedright
+Value\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 2\tabcolsep) * \real{0.84}}\raggedright
+Description\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.09}}\raggedright
+Non-flooded reference period\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.07}}\raggedright
+01-12-2019 to 31-01-2020\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.84}}\raggedright
+Following
+\href{https://www.sciencedirect.com/science/article/abs/pii/S0924271620301702?}{past
+work in Bangladesh}, we took the median values of imagery from December
+2019 to January 2020 to generate two non-flooded reference image mosaics
+(one each for ascending and descending pass directions). Each reference
+mosaic was generated using 10 images for the area of interest.\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.09}}\raggedright
+Flood extent threshold\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.07}}\raggedright
+1.25\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 2\tabcolsep) * \real{0.84}}\raggedright
+From UN-SPIDER guidance, where it was selected through trial and
+error.\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+The flood extent output is further refined to mask the main water bodies
+and also remove regions where the average slope is greater than 10\%.
+Main water bodies are identified using the
+\href{https://global-surface-water.appspot.com/}{JRC Global Surface
+Water dataset}, using a threshold of areas covered by water for at least
+10 months in a year. Slope is calculated from the
+\href{https://developers.google.com/earth-engine/datasets/catalog/WWF_HydroSHEDS_03VFDEM}{WWF
+HydroSHEDS DEM}, based on SRTM data.
+
+To understand the evolution of flooding over time, we repeated this
+change detection process separately on all available Sentinel-1 data for
+the area of interest between June - August 2020. In this case, 17
+mosaicked images were available throughout this time period to cover our
+area of interest, generating a total of 17 output Shapefiles that
+delineate flood extent for dates between June - August 2020.
+
+\hypertarget{modelling-flooding-over-time-with-parametric-curve-fitting}{%
+\subsection{Modelling flooding over time with parametric curve
+fitting}\label{modelling-flooding-over-time-with-parametric-curve-fitting}}
+
+some test
+
+\end{document}
