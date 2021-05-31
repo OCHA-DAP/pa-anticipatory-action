@@ -16,7 +16,6 @@ from datetime import timedelta
 
 import read_in_data as rd
 from importlib import reload
-reload(utils)
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -33,6 +32,7 @@ EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 LEADTIMES = [5, 10, 15, 20, 25, 30]
+SAVE_PLOT = True
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -125,7 +125,7 @@ for code, station in stations_adm2.items():
         
     ax.legend()
     
-    plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas_overview_rps.png')
+    if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_historical_discharge_glofas_overview_rps.png')
 ```
 
 ### Identifying glofas events
@@ -214,7 +214,6 @@ for code, station in stations_adm2.items():
     
     detection_stats = {}
     df_floodscan_event = floodscan_events[station]
-    
     for rp, thresh in rp_dict[station].items():        
         df_glofas_act = get_glofas_activations(da_glofas_reanalysis[code], thresh, THRESH_DAYS)
         rp_stats = get_clean_stats_dict(df_glofas_act, df_floodscan_event, BUFFER)
@@ -237,7 +236,16 @@ for code, station in stations_adm2.items():
     ax.set_ylabel("Percent")
     ax.set_title(f'Glofas detection performance at {station}\n(reanalysis against Floodscan)')
     ax.legend()
-    plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reanalysis_b30.png')
+    if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reanalysis_b30_d3.png')
+```
+
+Remove events in the Floodscan dataset that are outside the end range of the reforecast data.
+
+```python
+for station in stations_adm2.values():
+    df_floodscan_event = floodscan_events[station]
+    end = da_glofas_reforecast_summary[code].time[-1].values
+    floodscan_events[station] = df_floodscan_event[df_floodscan_event['start_date_buffer']<str(end)]
 ```
 
 Compare GloFAS reforecast against Floodscan
@@ -286,7 +294,7 @@ for code, station in stations_adm2.items():
     ax.set_ylabel("Percent")
     ax.set_title(f'Glofas detection performance at {station}\n(reforecast against Floodscan)')
     ax.legend()
-    plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reforecast_b30.png')
+    if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_precision_recall_floodscan_reforecast_b30.png')
 ```
 
 Compare GloFAS reanalysis against reforecast
@@ -336,7 +344,7 @@ for code, station in stations_adm2.items():
     ax.set_ylabel("Percent")
     ax.set_title(f'Glofas detection performance at {station}\n(reanalysis against reforecast)')
     ax.legend()
-    plt.savefig(PLOT_DIR / f'{station}_precision_recall_reanalysis_reforecast_b0.png')
+    if SAVE_PLOT: plt.savefig(PLOT_DIR / f'{station}_precision_recall_reanalysis_reforecast_b0.png')
 ```
 
 ### Summarizing potential trigger options
@@ -351,10 +359,10 @@ def summarize_trigger(df_events, station, code, rp, leadtime, duration, buffer):
 ```
 
 ```python
-STATION = 'Nsanje'
-CODE = 'glofas_1'
-RP = 2
-LT = 5
+STATION = 'Chikwawa'
+CODE = 'glofas_2'
+RP = 3
+LT = 15
 DUR = 3
 ```
 
