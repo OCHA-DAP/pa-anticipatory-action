@@ -374,8 +374,6 @@ match_dict = {
     'Rasnalu': 'KhimtiKhola at Rasnalu',
     'Chatara': 'Saptakoshi at Chatara (old)'
 }
-is_null = df_dhm['gov_name'] == ''
-df_dhm['gov_name'][is_null] = df_dhm['name'][is_null].map(match_dict)
 ```
 
 I give up, will find another way to get the basin
