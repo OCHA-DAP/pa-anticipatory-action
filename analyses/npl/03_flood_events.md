@@ -11,11 +11,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
+```
 
+```python
 pd.options.mode.chained_assignment = None 
 mpl.rcParams['figure.dpi'] = 200
 
@@ -39,7 +41,7 @@ PAST_EVENTS_FILENAME = RCO_DIR / 'NepalHistoricalFlood1971-2020.xlsx'
 BASINS_SHAPEFILE = RCO_DIR / 'shapefiles/Major_River_Basins.shp'
 WATERSHED_SHAPEFILE = RCO_DIR / 'shapefiles/Major_watershed.shp'
 ADMIN_SHAPEFILE = SHAPEFILE_DIR / 'npl_admbnda_ocha_20201117/npl_admbnda_nd_20201117_shp.zip'
-ADMIN2_SHAPEFILE = 'npl_admbnda_adm2_nd_20201117.shp'
+ADMIN2_SHAPEFILE = 'npl_admbnda_districts_nd_20201117.shp'
 ```
 
 ### Read in data and clean slightly
@@ -72,12 +74,9 @@ df_events = df_events.loc[df_events['Incident Date'] > ds_glofas_reanalysis.time
 ```
 
 ```python
+# Plot the number of events per destrict
 x = df_events.rename(columns={'Year': 'num_events'}).groupby('pcode').count()['num_events']
-df_admin.join(x, on='pcode', how='left').plot(column='num_events')
-```
-
-```python
-df_events['Incident Date']
+df_admin.join(x, on='pcode', how='left').plot(column='num_events', legend=True)
 ```
 
 ```python
@@ -90,7 +89,7 @@ df_watershed = gpd.read_file(WATERSHED_SHAPEFILE)
 
 ```python
 # Create the target region file 
-df_target_regions = gpd.GeoDataFrame(columns=["name", "districts", "geometry"])
+df_target_regions = gpd.GeoDataFrame(columns=["name", "districts", "geometry"]).set_crs('EPSG:4326')
 for basin in ["Karnali", "Babai", "Bagmati", "West Rapti"]:
     df_target_regions = df_target_regions.append(
     {"name": basin, 
@@ -110,17 +109,21 @@ df_target_regions = df_target_regions.append(
 
 ```python
 # For each basin, get a list of affected regions
+# Must intersect 25%
+intersection_thresh = 0.25
 df_target_regions["districts"] = df_target_regions['geometry'].apply(lambda x:
                                                        [y['pcode']
                                                         for _, y in df_admin.iterrows()
-                                                        if x.intersects(y['geometry'])
+                                                        if x.intersection(y['geometry']).area > intersection_thresh * y['geometry'].area
                                                         ])
 ```
 
 ```python
 # Check that final list makes sense
 target_districts = list(set(np.concatenate(df_target_regions['districts'])))
-df_admin[df_admin['pcode'].isin(target_districts)].plot()
+fig, ax = plt.subplots()
+df_admin[df_admin['pcode'].isin(target_districts)].plot(ax=ax, fc='g', alpha=0.5, ec='g')
+df_target_regions.plot(ax=ax, fc='b', alpha=0.5, ec='b')
 ```
 
 ```python
@@ -257,7 +260,7 @@ for basin, station_list in STATIONS.items():
         for i, impact_parameter in enumerate(impact_parameters):
             df_events_sub = df_events_high_impact[
                 (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
-    a        ]
+            ]
             observations = ds_glofas_reanalysis[station].values
             x = ds_glofas_reanalysis.time
             ax = axs[i]
