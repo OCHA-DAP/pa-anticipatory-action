@@ -42,6 +42,8 @@ BASINS_SHAPEFILE = RCO_DIR / 'shapefiles/Major_River_Basins.shp'
 WATERSHED_SHAPEFILE = RCO_DIR / 'shapefiles/Major_watershed.shp'
 ADMIN_SHAPEFILE = SHAPEFILE_DIR / 'npl_admbnda_ocha_20201117/npl_admbnda_nd_20201117_shp.zip'
 ADMIN2_SHAPEFILE = 'npl_admbnda_districts_nd_20201117.shp'
+
+EVENTS_FOR_RAGINDRA = DATA_DIR_PUBLIC / 'exploration/npl/glofas/npl_glofas_events.xlsx'
 ```
 
 ### Read in data and clean slightly
@@ -278,6 +280,37 @@ for basin, station_list in STATIONS.items():
                 ax.axvline(x=row['date'], c='r')
             ax.set_title(impact_parameter)
                 
+```
+
+### Get GloFAS event list for Ragindra
+
+```python
+df_glofas_events = pd.DataFrame(columns=['basin', 'station', 'rp', 'date'])
+for basin, station_list in STATIONS.items():
+    for station in station_list:
+        observations = ds_glofas_reanalysis[station]
+        for rp in df_return_period.index:
+            rp_val=df_return_period.loc[rp, station]
+            groups = utils.get_groups_above_threshold(observations, rp_val, ndays)
+            for group in groups:
+                idx = group[0] + ndays - 1
+                row = {
+                    'date': observations.time.data[idx],
+                    'basin': basin,
+                    'station': station,
+                    'rp': rp
+                }
+                df_glofas_events = df_glofas_events.append(row, ignore_index=True)
+df_glofas_events = df_glofas_events.drop_duplicates(subset={'date', 'basin', 'station'}, keep='last')
+df_glofas_events.to_excel(EVENTS_FOR_RAGINDRA, index=False)
+```
+
+```python
+
+```
+
+```python
+
 ```
 
 # Appendix
