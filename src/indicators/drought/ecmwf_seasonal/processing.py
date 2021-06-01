@@ -14,12 +14,11 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
-from src.malawi import get_ecmwf_seasonal_data as gesd
 from src.indicators.drought.config import Config
 
 logger = logging.getLogger(__name__)
 
-def get_ecmwf_forecast(version: int = 5):
+def get_ecmwf_forecast(country_iso3, version: int = 5):
     """
     Retrieve the processed dataset with the forecast for each publication date and corresponding lead times
     Args:
@@ -27,7 +26,7 @@ def get_ecmwf_forecast(version: int = 5):
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
     ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
-            country_iso3=gesd.COUNTRY_ISO3,
+            country_iso3=country_iso3,
             version=version,
         )
     ds_ecmwf_forecast = convert_tprate_precipitation(ds_ecmwf_forecast)
