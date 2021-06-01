@@ -206,7 +206,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         self,
         country_iso3: str,
         area: Area,
-        leadtimes: List[int] = DEFAULT_LEADTIMES,
+        leadtimes: List[int] = None,
         version: int = DEFAULT_VERSION,
         split_by_month: bool = True,
     ):
@@ -215,6 +215,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         )
         current_date=datetime.datetime.now()
         month_range = range(1, 13) if split_by_month else [None]
+        if leadtimes is None:
+            leadtimes = DEFAULT_LEADTIMES
         for year in range(self.year_min, self.year_max + 1):
             logger.info(f"...{year}")
             if split_by_month:
@@ -242,7 +244,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
     def process(
         self,
         country_iso3: str,
-        leadtimes: List[int] = DEFAULT_LEADTIMES,
+        leadtimes: List[int] = None,
         version: int = DEFAULT_VERSION,
     ):
         logger.info(f"Processing ECMWF Forecast v{version}")
@@ -260,6 +262,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         #only include files that exist, e.g. if year_max=current year then there might not be forecasts for all months
         filepath_list = [f for f in filepath_list if os.path.isfile(f)]
 
+        if leadtimes is None:
+            leadtimes = DEFAULT_LEADTIMES
         # Read in all forecasts and combine into one file
         logger.info(f"Reading in {len(filepath_list)} files")
         ds = self._read_in_monthly_mean_dataset(filepath_list,leadtimes)
