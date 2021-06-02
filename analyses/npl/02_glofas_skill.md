@@ -18,17 +18,23 @@ from src.indicators.flooding.glofas import utils, glofas
 import src.nepal.get_glofas_data as ggd
 
 reload(utils)
+```
 
+```python
 mpl.rcParams['figure.dpi'] = 200
 
 
 COUNTRY_ISO3 = 'npl'
 STATIONS = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar'],
+    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
     'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat'],
     'Rapti': ['Kusum'],
     'Bagmati': ['Rai_goan'],
     'Babai': ['Chepang']
+}
+STATIONS_BY_MAJOR_BASIN = {
+    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan'],
+    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang'],
 }
 ```
 
@@ -97,174 +103,71 @@ df_crps = utils.get_crps(ds_glofas_reanalysis,
 plot_crps(df_crps * 100, title_suffix=f" -- values > RP 1 in {rp} y")
 ```
 
-## When do activations occur
+## Bias
 
 ```python
-rp_list = [1.5, 2, 5, 10, 20]
-cmap = mpl.cm.get_cmap('plasma_r')
-clist = cmap(np.linspace(0, 1, len(rp_list)))
-cdict = {rp: c for rp, c in zip(rp_list, clist)}
-legend_title = 'RP'
+# Rank histogram
+def plot_hist(da_observations, da_forecast, station_name, rp=None, leadtimes=None):
+    if leadtimes is None:
+        leadtime = da_forecast.leadtime.values
+    fig, ax = plt.subplots()
+    for leadtime in leadtimes:
+        observations, forecast = utils.get_same_obs_and_forecast(da_observations, da_forecast, leadtime)
+        rank = utils.get_rank(observations.values, forecast.values)
+        ax.hist(rank, histtype='step', label=int(leadtime),
+               bins=np.arange(0.5, max(rank)+1.5, 1), alpha=0.8)
+    ax.legend(loc=9, title="Lead time (days)")
+    ax.set_xlabel('Rank')
+    ax.set_ylabel('Number')
+    title = station_name
+    if rp is not None:
+        title += f': > 1 in {rp} y'
+    ax.set_title(title)
+    
+leadtimes = [5, 10, 15, 20]
+for stations in STATIONS.values():
+    for station in stations:
+        da_observations =  ds_glofas_reanalysis[station]
+        da_forecast = ds_glofas_reforecast[station]
+        plot_hist(da_observations, da_forecast, station, leadtimes=[5, 10, 15, 20])
+        for rp in df_return_period.index:
+            rp_val = df_return_period.loc[rp, station]
+            o = da_observations[da_observations > rp_val]
+            # Needs at least about 50 vals to work, not sure why
+            if len(o) > 50:
+                plot_hist(o, da_forecast, station, leadtimes=leadtimes, rp=rp)
+    
 ```
 
-### Plot river discharge vs time for all stations
+### Mean percent error
+
 
 ```python
-for basin in ['Koshi', 'Karnali']:
-    stations = STATIONS[basin]
-    fig, axs = plt.subplots(len(stations), figsize=(10,2*len(stations)))
-    fig.suptitle(basin)
-    fig.supylabel('Discharge [m$^3$ s$^{-1}$]')
+rp = 1.5
+for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+    fig, ax = plt.subplots()
     for istation, station in enumerate(stations):
-        observations = ds_glofas_reanalysis[station].values
-        x = ds_glofas_reanalysis.time
-
-        ax = axs[istation]
-        ax.plot(x, observations, c='k', lw=0.5, alpha=0.5)
-
-        for rp in rp_list:
-            rp_val=df_return_period.loc[rp, station]
-            groups = utils.get_groups_above_threshold(observations, rp_val)
-            for group in groups:
-                idx = range(group[0], group[1])
-                ax.plot(x[idx], observations[idx], ls='-', 
-                        lw=0.7, c=cdict[rp])
-            ax.axhline(y=rp_val, c=cdict[rp], lw=0.5, alpha=0.5)
-
-        ax.text(x[10], 300, station)
-        if istation == 0:
-            for rp in rp_list:
-                ax.plot([], [], c=cdict[rp], label=rp)
-            ax.legend(title=legend_title)
-
-```
-
-### Plot RP exceedance
-
-```python
-year_ranges = [
-    [1979, 1988],
-    [1989, 1998],
-    [1999, 2009],
-    [2010, 2021]
-]
-#year_ranges = [[x, x+1] for x in range(1979, 2020)]
-
-rp_list = [1.5, 2, 5, 10, 20]
-cmap = mpl.cm.get_cmap('plasma_r')
-clist = cmap(np.linspace(0, 1, len(rp_list)))
-
-for basin in ['Koshi', 'Karnali']:
-
-    stations = STATIONS[basin]
-    fig, axs = plt.subplots(len(year_ranges), figsize=(15, 10))
-    fig.suptitle(basin)
-    for iyear, year_range in enumerate(year_ranges):
-        ax = axs[iyear]
-        ax.axes.yaxis.set_ticks([])
-        for istation, station in enumerate(stations):
-            ds = (ds_glofas_reanalysis
-                            .sel(time=slice(f'{year_range[0]}-01-01', 
-                                            f'{year_range[1]}-01-01')))
-            observations = ds[station].values
-            x = ds.time
-
-            for rp in rp_list:
-                rp_val=df_return_period.loc[rp, station]
-                groups = utils.get_groups_above_threshold(observations, rp_val)
-                for group in groups:
-                    idx = range(group[0], group[1])
-                    ax.fill_between(x=x[idx], y1=istation, y2=istation+1, 
-                                    fc=cdict[rp], alpha=1)
-
-            ax.text(x[10], istation+0.5, station)
-            ax.set_xlim(x[0], x[-1])
-            ax.set_ylim(0, len(stations))
-        if iyear == 0:
-            for rp in rp_list:
-                ax.plot([], [], c=cdict[rp], label=rp)
-            ax.legend(title=legend_title)
-
-```
-
-### Find events occuring at stations simultaneously
-
-```python
-def get_distance_between_ranges(r1, r2):
-    if r1[0] < r2[0]:
-        x, y = r1, r2
-    else:
-        x, y = r2, r1
-    if x[0] <= x[1] < y[0] and all( y[0] <= y[1] for y in (r1,r2)):
-        return y[0] - x[1]
-    return 0
-
-
-days_buffer = 30
-time = ds_glofas_reanalysis.time.values
-
-# Algorithm: Take an event date range and save it as the key.
-# For each subsequent event, check if the distance beween the ranges
-# is < days_buffer days. If yes, add the name of the station
-# to the event, if not, make a new event in the dictionary.
-# Note that this is pretty crude because it only uses the 
-# date range of the initial event, and thus will depend on the order
-# of the event list.
-for basin in ['Koshi', 'Karnali']:
-    event_dict = {}
-    for rp in rp_list:
-        event_dict[rp] = {}
-        ievent = 0
-        for istation, station in enumerate(STATIONS[basin]):
-            observations = ds_glofas_reanalysis[station].values
-            rp_val=df_return_period.loc[rp, station]
-            groups = utils.get_groups_above_threshold(observations, rp_val)
-            for group in groups:
-                if len(event_dict[rp]) == 0:
-                    event_dict[rp][tuple(group)] = [station]
-                else:
-                    # Get distance between the group and all known events
-                    distances = {event_date: get_distance_between_ranges(event_date, group) 
-                                for event_date in event_dict[rp].keys()}
-                    # Get minimum distance
-                    min_distance = distances[min(distances, key=distances.get)]
-                    
-                    if min_distance < days_buffer:
-                        matching_event = min(distances, key=distances.get)
-                        event_dict[rp][matching_event].append(station)
-                    else:
-                        event_dict[rp][tuple(group)] = [station]
-                    
-                        
-        event_dict[rp] = {time[event_dates[0]]: len(set(events)) for event_dates, events in event_dict[rp].items()}
-    
-    # Plot number of simultaneous stations vs time
-    fig, ax = plt.subplots()
-    for irp, rp in enumerate(rp_list):
-        offset = irp * 0.005
-        ax.plot(event_dict[rp].keys(), np.array(list(event_dict[rp].values())) + offset, 
-                'o', label=rp, mfc='none', alpha=0.5, c=cdict[rp])
+        da_observations =  ds_glofas_reanalysis[station]
+        rp_val = df_return_period.loc[rp, station]
+        da_observations_ev = da_observations[da_observations > rp_val]
+        da_forecast = ds_glofas_reforecast[station]
+        mpe = np.empty(len(da_forecast.leadtime))
+        mpe_ev = np.empty(len(da_forecast.leadtime))
+        for ilt, leadtime in enumerate(da_forecast.leadtime):
+            observations, forecast = utils.get_same_obs_and_forecast(da_observations, da_forecast, leadtime)
+            mpe[ilt] = utils.calc_mpe(observations, forecast)
+            observations_ev, forecast_ev = utils.get_same_obs_and_forecast(da_observations_ev, da_forecast, leadtime)
+            mpe_ev[ilt] = utils.calc_mpe(observations_ev, forecast_ev)
+        ax.plot(da_forecast.leadtime, mpe, label=station, c=f'C{istation}')
+        ax.plot(da_forecast.leadtime, mpe_ev, '--', c=f'C{istation}')
+    ax.plot([], [], 'k-', label='All values')
+    ax.plot([], [], 'k--', label=f'RP > 1 in {rp} y')
+    ax.set_ylim(-50, 10)
+    ax.axhline(y=0, c='k', ls=':')
+    ax.legend()
+    ax.grid()
     ax.set_title(basin)
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Number of stations')
-    ax.legend(title='RP')
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-
-    
-    # Plot number of events vs number of simultaneous stations
-    fig, ax = plt.subplots()
-    for rp in rp_list:
-        incidence = Counter(list(event_dict[rp].values()))
-        x, y = np.array(list(incidence.items())).T
-        y_sorted = [z for _,z in sorted(zip(x,y))]
-        x = np.sort(x)
-        ax.plot(x, y, '-o', c=cdict[rp], label=rp)
-
+    ax.set_xlabel('Leadtime [y]')
+    ax.set_ylabel('% bias')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.legend(title='RP')
-    ax.set_title(basin)
-    ax.set_xlabel('Number of stations')
-    ax.set_ylabel('Number of events')
-        
 ```

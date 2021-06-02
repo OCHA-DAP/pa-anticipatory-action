@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
+from scipy.stats import rankdata
 import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
@@ -184,3 +185,38 @@ def get_groups_above_threshold(observations, threshold, min_duration=1):
         0
     ].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] > min_duration]
+
+
+def get_rank(observations: np.array, forecast: np.array) -> np.array:
+    # Create array of both obs and forecast
+    rank_array = np.concatenate(([observations], forecast))
+    # Calculate rank and take 0th array, which should be the obs
+    rank = rankdata(rank_array, axis=0)[0]
+    return rank
+
+
+def calc_mpe(observations: np.array, forecast: np.array) -> float:
+    mean_forecast = forecast.mean(axis=0)
+    denominator = observations
+    return (
+        ((mean_forecast - observations) / denominator).sum()
+        / len(observations.time)
+        * 100
+    )
+
+
+def get_same_obs_and_forecast(
+    da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
+) -> (xr.DataArray, xr.DataArray):
+    """
+    For the GloFAS reanalysis and reforecast at a particular station, get matching data
+    ranges for the two datasets
+    :param da_observations: GloFAS reanalysis at a particular station
+    :param da_forecast: GloFAS reforecast at a particular station
+    :param leadtime: Leadtime
+    :return: Observations and forecast with overlapping values only
+    """
+    forecast = da_forecast.sel(leadtime=leadtime).dropna(dim="time")
+    observations = da_observations.reindex({"time": forecast.time}).dropna(dim="time")
+    forecast = forecast.reindex({"time": observations.time})
+    return observations, forecast
