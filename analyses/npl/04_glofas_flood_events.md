@@ -71,11 +71,13 @@ forecast_prob = 50
 days_before_buffer = 5
 days_after_buffer = 25
 
+rp_list = [1.5, 2]
+
 df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'TP', 'FP', 'FN'])
 
 for station in df_return_period.columns:
-    for rp in df_return_period.index:
-    #for rp in [1.5]:    
+    #for rp in df_return_period.index:
+    for rp in rp_list:
         rp_val = df_return_period.loc[rp, station]
         observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station].values
         forecast = get_da_glofas_summary(ds_glofas_reforecast[station])[forecast_prob]
@@ -106,17 +108,8 @@ for station in df_return_period.columns:
                 else:
                     FN += 1
                 forecast_detections[detected] += 1
-                if station == 'Chatara' and leadtime == 5:
-                    print(days_offset)
-                    print(detected)
-                    print(TP, FN)
-
+                
             FP = sum(forecast_detections == 0)
-            if station == 'Chatara' and leadtime == 5:
-                #print(leadtime)
-                print(forecast_detections)
-
-                print(FN)
             df_station_stats = df_station_stats.append({
                 'station': station,
                 'leadtime': leadtime,
@@ -129,40 +122,39 @@ for station in df_return_period.columns:
 ```
 
 ```python
-
-```
-
-```python
 df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
 df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
 ```
 
 ```python
 rp = 2
-for station in ['Chatara', 'Asaraghat']:
-    fig, ax = plt.subplots()
-    data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
-    ax.plot(data['leadtime'], data['TP'], label='TP')
-    ax.plot(data['leadtime'], data['FP'], label='FP')
-    ax.plot(data['leadtime'], data['FN'], label='FN')
-    ax.set_title(station)
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel('Leadtime [days]')
-    ax.set_ylabel('Number')
-    ax.legend()
+plot_numbers = False
+plot_precision_recall = True
+for station in ['Chatara', 'Kampughat', 'Asaraghat', 'Samajhighat', 'Chepang']:
+    if plot_numbers:
+        fig, ax = plt.subplots()
+        data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+        ax.plot(data['leadtime'], data['TP'], label='TP')
+        ax.plot(data['leadtime'], data['FP'], label='FP')
+        ax.plot(data['leadtime'], data['FN'], label='FN')
+        ax.set_title(station)
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_xlabel('Leadtime [days]')
+        ax.set_ylabel('Number')
+        ax.legend()
     
-    
-    fig, ax = plt.subplots()
-    data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
-    ax.plot(data['leadtime'], data['precision'], label='precision')
-    ax.plot(data['leadtime'], data['recall'], label='recall')
-    ax.set_title(station)
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel('Leadtime [days]')
-    ax.set_ylabel('Fraction')
-    ax.set_ylim(-0.1, 1.1)
-    ax.legend()
+    if plot_precision_recall:
+        fig, ax = plt.subplots()
+        data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+        ax.plot(data['leadtime'], data['precision'], label='precision')
+        ax.plot(data['leadtime'], data['recall'], label='recall')
+        ax.set_title(station)
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_xlabel('Leadtime [days]')
+        ax.set_ylabel('Fraction')
+        ax.set_ylim(-0.1, 1.1)
+        ax.legend()
 ```
 
 ```python
@@ -178,6 +170,9 @@ observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[stat
 forecast = get_da_glofas_summary(ds_glofas_reforecast[station])[forecast_prob]
 forecast_1 = forecast.sel(leadtime=5)
 forecast_2 = forecast.sel(leadtime=10)
+fig.supylabel('River dischange [m$^3$ s${-1}$]')
+fig.supxlabel('Year')
+fig.suptitle(station)
 for i, q in enumerate([forecast_2, forecast_1, observations]):
     if i == 2:
         c1 = 'k'
@@ -193,9 +188,7 @@ for i, q in enumerate([forecast_2, forecast_1, observations]):
     #ax.set_xlim(0, 120000)
     ax.minorticks_on()
     ax.axhline(thresh, c='r', lw=0.5)
-    print(i)
     for detection in utils.get_groups_above_threshold(y, thresh, ndays):
-        print(detection)
         a = detection[0] - GLOFAS_DETECTION_WINDOW_BEHIND
         b = detection[0] + GLOFAS_DETECTION_WINDOW_AHEAD
         #ax.plot(x[a:b], y[a:b], '-r', lw=1, alpha=0.5)
