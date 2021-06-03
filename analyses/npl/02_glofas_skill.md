@@ -6,7 +6,8 @@ from collections import Counter
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
+
 import numpy as np
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
@@ -70,8 +71,8 @@ for basin, stations in STATIONS.items():
 ## Skill
 
 ```python
-def plot_crps(df_crps, title_suffix=None):
-    for basin, stations in STATIONS.items():
+def plot_crps(df_crps, title_suffix=None, ylog=False):
+    for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
         fig, ax = plt.subplots()
         for station in stations:
             crps = df_crps[station]
@@ -84,6 +85,10 @@ def plot_crps(df_crps, title_suffix=None):
         ax.set_xlabel("Lead time [days]")
         ax.set_ylabel("Normalized CRPS [% error]")
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.grid()
+        if ylog:
+            ax.set_yscale('log')
+            ax.yaxis.set_major_formatter(ScalarFormatter())
 
 ```
 
@@ -100,7 +105,11 @@ df_crps = utils.get_crps(ds_glofas_reanalysis,
                          ds_glofas_reforecast,
                          normalization="mean", 
                          thresh=df_return_period.loc[rp].to_dict())
-plot_crps(df_crps * 100, title_suffix=f" -- values > RP 1 in {rp} y")
+plot_crps(df_crps * 100, title_suffix=f" -- values > RP 1 in {rp} y", ylog=True)
+```
+
+```python
+
 ```
 
 ## Bias
@@ -123,20 +132,20 @@ def plot_hist(da_observations, da_forecast, station_name, rp=None, leadtimes=Non
     if rp is not None:
         title += f': > 1 in {rp} y'
     ax.set_title(title)
-    
+
+rp = 1.5
 leadtimes = [5, 10, 15, 20]
 for stations in STATIONS.values():
     for station in stations:
         da_observations =  ds_glofas_reanalysis[station]
         da_forecast = ds_glofas_reforecast[station]
         plot_hist(da_observations, da_forecast, station, leadtimes=[5, 10, 15, 20])
-        for rp in df_return_period.index:
-            rp_val = df_return_period.loc[rp, station]
-            o = da_observations[da_observations > rp_val]
-            # Needs at least about 50 vals to work, not sure why
-            if len(o) > 50:
-                plot_hist(o, da_forecast, station, leadtimes=leadtimes, rp=rp)
-    
+        rp_val = df_return_period.loc[rp, station]
+        o = da_observations[da_observations > rp_val]
+        # Needs at least about 50 vals to work, not sure why
+        if len(o) > 50:
+            plot_hist(o, da_forecast, station, leadtimes=leadtimes, rp=rp)
+
 ```
 
 ### Mean percent error
