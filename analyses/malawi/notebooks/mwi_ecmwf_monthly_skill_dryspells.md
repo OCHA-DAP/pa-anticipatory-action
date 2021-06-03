@@ -1,4 +1,4 @@
-### Evaluating the forecast skill of ECMWF seasonal forecast for dry spells in Malawi
+### Evaluating the forecast skill of ECMWF seasonal forecast for dry spells in Malawi 
 This notebook is assesses the forecast skill of ECMWF's seasonal forecast for dry spells at various lead times. We use the monthly total precipitation that is forecasted by this forecast.    
 The goal of this analysis is to determine the suitability of the monthly forecast to be used as a trigger for dry spells.    
 
