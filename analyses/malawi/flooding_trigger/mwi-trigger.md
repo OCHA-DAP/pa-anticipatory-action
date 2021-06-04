@@ -32,7 +32,7 @@ EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 LEADTIMES = [5, 10, 15, 20, 25, 30]
-SAVE_PLOT = True
+SAVE_PLOT = False
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -96,6 +96,10 @@ for code, station in stations_adm2.items():
 
 df_rps = pd.DataFrame(rp_dict).reset_index().rename(columns={'index': 'rp'})
 df_rps.to_csv(EXPLORE_DIR / 'glofas_rps.csv')
+```
+
+```python
+df_rps
 ```
 
 ### Overview of historical discharge
@@ -362,7 +366,7 @@ def summarize_trigger(df_events, station, code, rp, leadtime, duration, buffer):
 STATION = 'Chikwawa'
 CODE = 'glofas_2'
 RP = 3
-LT = 15
+LT = 5
 DUR = 3
 ```
 
