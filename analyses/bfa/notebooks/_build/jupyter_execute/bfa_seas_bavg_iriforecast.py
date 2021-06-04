@@ -46,6 +46,8 @@ from src.indicators.drought.config import Config
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
 
 
+# ## Inspect forecasts
+
 # In[3]:
 
 
@@ -271,6 +273,8 @@ stats_region_bavg_l1=stats_region[(stats_region.C==0)&(stats_region.L==1)]
 stats_region[(stats_region.C==0)&(stats_region.L==1)&(stats_region.F.dt.month==3)]
 
 
+# ## Analyze statistics probability below average
+
 # Below the distribution of probability values is shown per month. \
 # This only includes the values for the below-average tercile, with a leadtime of 1. \
 # It should be noted that since we only have data from Mar 2017, these distributions contain maximum 5 values. \
@@ -416,51 +420,65 @@ g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["month"]==3,"40perct
 g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>0,"40percth_cell"],color="#007CE0",binwidth=3)
 
 
+# ### Examine dominant tercile
+
+# Besides knowing if the below average tercile reaches a certain threshold, it is also important to understand if the below average tercile is the dominant tercile. Where dominant indicates the tercile with the highes probability. Else, it wouldn't be logical to anticipate based on the likelihood of below average rainfall. 
+# 
+# Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation. For this analysis we set this value,x, such that 10% of the area has a probability of at least x% for the given tercile.
+
 # In[34]:
 
 
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-g=sns.displot(stats_region_bavg_l1.loc[:,"40percth_cell"],color="#007CE0",binwidth=3)
+stats_region["publication_month"]=stats_region["F"].dt.to_period("M")
+stats_region_10perc=stats_region.pivot(index=['publication_month','L'], columns='C', values='10quant_cell').reset_index().rename(columns={0:"bel_avg",1:"normal",2:"abv_avg"})
 
 
 # In[35]:
 
 
-#TODO: remove nan cells
-#perc for with at least 1% >40% prob
-sum(np.where(stats_region_bavg_l1["40percth_cell"]>=1,1,0))/len(stats_region_bavg_l1)*100
-#at least 10%
-sum(np.where(stats_region_bavg_l1["40percth_cell"]>=10,1,0))/len(stats_region_bavg_l1)*100
-# np.nanpercentile(stats_region_bavg_l1["40percth_cell"], 90)
+stats_region_10perc_l1=stats_region_10perc[stats_region_10perc.L==1]
 
+
+# Below the publication months, where the forecast indicated at least 10% of the area to have a >=40% probability of the tercile are shown. We can see that for only 3 months this occurred for the below average tercile. For the above average tercile this is a more common phenomenon. 
+# 
+# For all three occurrences of the below average tercile having >=40% probability, this was also the dominant tercile. However the differences are not very large with the above average tercile in March 2018 and March 2021. 
+# 
+# Especially around March 2021 we can see an interesting pattern, where in February and April the forecast indicates a higher probability of above average instead of below average precipitation. Note however that these are forecasting different periods. I.e. the forecast of March is projecting for AMJ while the one in April is projecting for MJJ.
+
+# Questions
+# 
+# - should there be a minimum gap in probabilities between the terciles? 
+# - should we somehow check that the forecast is consistent across leadtimes?
+#      - currently only displaying values for leadtime=1 month!
 
 # In[36]:
 
 
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_region_bavg_l1,x="month",y="40percth_cell",ax=ax,color="#007CE0",showfliers=False)
-ax.set_ylabel("Probability")
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.set_xlabel("Publication month")
+stats_region_10perc_40th_l1=stats_region_10perc_l1[(stats_region_10perc_l1.select_dtypes(include=np.number) >= 40).any(1)]
 
 
 # In[37]:
 
 
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="40percth_cell",ax=ax,color="#007CE0")
-ax.set_ylabel("Probability")
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.set_xlabel("Publication month")
+def highlight_max(s):
+    '''
+    highlight the maximum in a Series yellow.
+    '''
+    is_max = s == s.max()
+    return ['color: red' if v else 'black' for v in is_max]
+
+stats_region_10perc_40th_l1.drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1)
+
+
+# In[38]:
+
+
+stats_region_10perc_l1[stats_region_10perc.bel_avg>=40]
 
 
 # ## Test different method of computing stats
 
-# In[38]:
+# In[39]:
 
 
 def compute_zonal_stats(ds, raster_transform, adm_path,adm_col,percentile_list=np.arange(10,91,10)):
@@ -489,7 +507,7 @@ def compute_zonal_stats(ds, raster_transform, adm_path,adm_col,percentile_list=n
     return df_hist
 
 
-# In[39]:
+# In[40]:
 
 
 #this was the old method
@@ -501,7 +519,7 @@ df_stats["date"]=pd.to_datetime(df_stats["date"])
 df_stats[(df_stats.ADM1_FR.isin(adm_sel))&(df_stats.date.dt.month==3)]
 
 
-# In[40]:
+# In[41]:
 
 
 #geocube is the suggested method by rioxarray
@@ -542,10 +560,58 @@ stats_region=zonal_stats_xr.to_dataframe()
 stats_region.reset_index().merge(gdf_adm1,on="mukey")[["ADM1_FR","iri_mean"]]
 
 
+# #### Archive
+
+# In[42]:
+
+
+#compute the dominant tercile based on >=40perc prob
+stats_region_dominant=stats_region.sort_values('40percth_cell', ascending=False).drop_duplicates(['F','L']).sort_values(["F","L"])
+stats_region_dominant.loc[stats_region_dominant["40percth_cell"]==0,"C"]=np.nan
+stats_region_dominant.loc[stats_region_dominant["40percth_cell"].isnull(),"C"]=np.nan
+stats_region_dominant[(stats_region_dominant.L==1)&(~stats_region_dominant.C.isnull())]
+
+
 # In[ ]:
 
 
+#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+g=sns.displot(stats_region_bavg_l1.loc[:,"40percth_cell"],color="#007CE0",binwidth=3)
 
+
+# In[ ]:
+
+
+#TODO: remove nan cells
+#perc for with at least 1% >40% prob
+sum(np.where(stats_region_bavg_l1["40percth_cell"]>=1,1,0))/len(stats_region_bavg_l1)*100
+#at least 10%
+sum(np.where(stats_region_bavg_l1["40percth_cell"]>=10,1,0))/len(stats_region_bavg_l1)*100
+# np.nanpercentile(stats_region_bavg_l1["40percth_cell"], 90)
+
+
+# In[ ]:
+
+
+#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+fig,ax=plt.subplots(figsize=(10,5))
+g=sns.boxplot(data=stats_region_bavg_l1,x="month",y="40percth_cell",ax=ax,color="#007CE0",showfliers=False)
+ax.set_ylabel("Probability")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_xlabel("Publication month")
+
+
+# In[ ]:
+
+
+#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+fig,ax=plt.subplots(figsize=(10,5))
+g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="40percth_cell",ax=ax,color="#007CE0")
+ax.set_ylabel("Probability")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_xlabel("Publication month")
 
 
 # ```{toctree}

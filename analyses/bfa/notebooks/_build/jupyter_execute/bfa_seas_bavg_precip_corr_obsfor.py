@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Correlation of forecasted and observed lower tercile precipitation in Burkina Faso
+# # Correlation of forecasted and observed lower tercile precipitation
 # This notebook explores the occurrence of below average precipitation in Burkina Faso. This is thereafter used to assess the skill of below average forecasts. 
 # The area of interest for the pilot are 4 admin1 areas: Boucle de Mounhoun, Centre Nord, Sahel, and Nord. Therefore this analysis is mainly focussed on those areas
 # 
