@@ -1,7 +1,0 @@
-library(tidyverse)
-library(kableExtra)
-library(tmap)
-library(sf)
-library(knitr)
-library(ggplot2)
-library(leaflet)
