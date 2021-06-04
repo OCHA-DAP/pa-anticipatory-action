@@ -6,7 +6,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.10.3
+    jupytext_version: 1.11.2
 kernelspec:
   display_name: antact
   language: python
@@ -27,15 +27,11 @@ This notebook explores if and when these triggers would be reached. Moreover, an
 **TODO: look at distribution of normal and above average when high prob below avg**
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 %load_ext autoreload
 %autoreload 2
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 import matplotlib as mpl
 import geopandas as gpd
 from shapely.geometry import mapping
@@ -60,17 +56,15 @@ from src.indicators.drought.config import Config
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
 ```
 
-```{code-cell} ipython3
-:tags: [remove_cell]
+## Inspect forecasts
 
+```{code-cell} ipython3
 adm_sel=["Boucle du Mouhoun","Nord","Centre-Nord","Sahel"]
 threshold_mar=40
 threshold_jul=50
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 country="bfa"
 config=Config()
 parameters = config.parameters(country)
@@ -84,8 +78,6 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 iri_ds, iri_transform = get_iri_data(config, download=False)
 ```
 
@@ -97,14 +89,10 @@ iri_ds
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 iri_ds.sel(L=1).prob
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 gdf_adm1=gpd.read_file(adm1_bound_path)
 iri_clip=iri_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(gdf_adm1.geometry.apply(mapping), iri_ds.rio.crs, all_touched=True)
 ```
@@ -112,8 +100,6 @@ iri_clip=iri_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(gdf_adm1.
 Below the raw forecast data of below-average rainfall with 1 month leadtime, published in March and July is shown.
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
 g=iri_clip.where(iri_clip.F.dt.month.isin([3]), drop=True).sel(L=1,C=0).prob.plot(
     col="F",
     col_wrap=3,
@@ -134,8 +120,6 @@ for ax in g.axes.flat:
 ```
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
 g=iri_clip.where(iri_clip.F.dt.month.isin([7]), drop=True).sel(L=1,C=0).prob.plot(
     col="F",
     col_wrap=3,
@@ -155,8 +139,6 @@ for ax in g.axes.flat:
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 def interpolate_ds(ds,transform,upscale_factor):
     # Interpolated data
     new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims["lon"] * upscale_factor)
@@ -170,26 +152,18 @@ def interpolate_ds(ds,transform,upscale_factor):
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 iri_clip_interp=interpolate_ds(iri_clip,iri_clip.rio.transform(),8)
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 iri_clip_interp
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 iri_clip_interp.rio.transform(recalc=True)
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 #check that interpolated values look fine
 g=iri_clip_interp.where(iri_clip_interp.F.dt.month.isin([7]), drop=True).sel(L=1,C=0).prob.plot(
     col="F",
@@ -212,14 +186,10 @@ for ax in g.axes.flat:
 we select the region of interest, shown below
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 gdf_reg=gdf_adm1[gdf_adm1.ADM1_FR.isin(adm_sel)]
 ```
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
 #testing if correct area
 iri_interp_reg=iri_clip_interp.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(gdf_reg.geometry.apply(mapping), iri_clip_interp.rio.crs, all_touched=False)
 g=iri_interp_reg.sel(L=1,C=0,F="2018-03").prob.plot(
@@ -238,8 +208,6 @@ ax.axis("off")
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 def compute_zonal_stats_xarray(raster,shapefile,lon_coord="lon",lat_coord="lat",var_name="prob"):
     raster_clip=raster.rio.set_spatial_dims(x_dim=lon_coord,y_dim=lat_coord).rio.clip(shapefile.geometry.apply(mapping),raster.rio.crs,all_touched=False)
     grid_mean = raster_clip.mean(dim=[lon_coord,lat_coord]).rename({var_name: "mean_cell"})
@@ -256,22 +224,16 @@ def compute_zonal_stats_xarray(raster,shapefile,lon_coord="lon",lat_coord="lat",
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 stats_region=compute_zonal_stats_xarray(iri_clip_interp,gdf_reg)
 stats_region["F"]=pd.to_datetime(stats_region["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
 stats_region["month"]=stats_region.F.dt.month
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 # stats_region.to_csv(stats_reg_path,index=False)
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 stats_region_bavg_l1=stats_region[(stats_region.C==0)&(stats_region.L==1)]
 ```
 
@@ -281,21 +243,21 @@ And compute the statistics over this region, see a subset below
 stats_region[(stats_region.C==0)&(stats_region.L==1)&(stats_region.F.dt.month==3)]
 ```
 
+## Analyze statistics probability below average
+
++++
+
 Below the distribution of probability values is shown per month. \
 This only includes the values for the below-average tercile, with a leadtime of 1. \
 It should be noted that since we only have data from Mar 2017, these distributions contain maximum 5 values. \
 From the distribution, it can be seen that a probability of 50% has never been reached since Mar 2017.
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 stats_mar=stats_region_bavg_l1.loc[stats_region_bavg_l1.F.dt.month==3]
 stats_jul=stats_region_bavg_l1.loc[stats_region_bavg_l1.F.dt.month==7]
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 def comb_list_string(str_list):
     if len(str_list)>0:
         return " in "+", ".join(str_list)
@@ -312,8 +274,6 @@ max_prob_jul=stats_region_bavg_l1.loc[stats_region_bavg_l1.F.dt.month==7,'max_ce
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 glue("max_prob_mar", max_prob_mar)
 glue("max_prob_jul", max_prob_jul)
 glue("num_trig_mar", num_trig_mar)
@@ -324,16 +284,12 @@ glue("threshold_mar", threshold_mar)
 glue("threshold_jul", threshold_jul)
 ```
 
-+++ {"tags": []}
-
 More specifically we are interested in March and July. 
 The maximum values across all cells for the March forecasts has been {glue:text}`max_prob_mar:.2f`%, and for the July forecasts {glue:text}`max_prob_jul:.2f`% 
 This would mean that if we would take the max cell as aggregation method, the threshold of {glue:text}`threshold_mar` for March would have been reached {glue:text}`num_trig_mar` times {glue:text}`year_trig_mar`. 
 For July the threshold of {glue:text}`threshold_jul` would have been reached {glue:text}`num_trig_jul` times{glue:text}`year_trig_jul`."
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
 #plot distribution for forecasts with C=0 (=below average) and L=1, for all months
 fig,ax=plt.subplots(figsize=(10,5))
 g=sns.boxplot(data=stats_region_bavg_l1,x="month",y="max_cell",ax=ax,color="#007CE0")
@@ -344,8 +300,6 @@ ax.set_xlabel("Publication month");
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 stats_country=compute_zonal_stats_xarray(iri_clip_interp,gdf_adm1)
 stats_country["F"]=pd.to_datetime(stats_country["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
 stats_country["month"]=stats_country.F.dt.month
@@ -362,8 +316,6 @@ The maximum value for the March forecast in the whole country was {glue:text}`ma
 For July this was {glue:text}`max_prob_jul_country:.2f`%"
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 perc_for_40th=stats_country.loc[(stats_country.C==0)&(stats_country.L==1),'max_cell'].ge(40).value_counts(True)[True]*100
 glue("perc_for_maxcell_40th",perc_for_40th)
 ```
@@ -376,8 +328,6 @@ glue("perc_for_maxcell_40th",perc_for_40th)
 Across all months, {glue:text}`perc_for_maxcell_40th:.2f`% of the forecasts with 1 month leadtime had a >=40% probability of below average rainfall in at least one cell across the **whole** country
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 #plot distribution for forecasts with C=0 (=below average) and L=1, for all months
 fig,ax=plt.subplots(figsize=(10,5))
 g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="max_cell",ax=ax,color="#007CE0")
@@ -388,8 +338,6 @@ ax.set_xlabel("Publication month")
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 max_prob_mar=stats_region_bavg_l1.loc[stats_region_bavg_l1.F.dt.month==3,'max_cell'].max()
 num_trig_mar_mean=len(stats_mar.loc[stats_mar['mean_cell']>=threshold_mar])
 year_trig_mar_mean=comb_list_string([str(y) for y in stats_mar.loc[stats_mar['mean_cell']>=threshold_mar].F.dt.year.unique()])
@@ -413,8 +361,6 @@ We look at the distribution of the percentage of the area with >=40% probability
 When requiring 10% of cells to be above 40% this would be met {glue:text}`num_trig_mar_perc10:.2f` times{glue:text}`year_trig_mar_perc10:.2f`.
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
 #plot distribution for forecasts with C=0 (=below average) and L=1, for all months
 g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["month"]==3,"40percth_cell"],color="#007CE0",binwidth=1)
 ```
@@ -424,61 +370,63 @@ g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["month"]==3,"40perct
 ```
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
 #plot distribution for forecasts with C=0 (=below average) and L=1, for all months
 g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>0,"40percth_cell"],color="#007CE0",binwidth=3)
 ```
 
-```{code-cell} ipython3
-:tags: [hide_input]
+### Examine dominant tercile
 
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-g=sns.displot(stats_region_bavg_l1.loc[:,"40percth_cell"],color="#007CE0",binwidth=3)
++++
+
+Besides knowing if the below average tercile reaches a certain threshold, it is also important to understand if the below average tercile is the dominant tercile. Where dominant indicates the tercile with the highes probability. Else, it wouldn't be logical to anticipate based on the likelihood of below average rainfall. 
+
+Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation. For this analysis we set this value,x, such that 10% of the area has a probability of at least x% for the given tercile. 
+
+```{code-cell} ipython3
+stats_region["publication_month"]=stats_region["F"].dt.to_period("M")
+stats_region_10perc=stats_region.pivot(index=['publication_month','L'], columns='C', values='10quant_cell').reset_index().rename(columns={0:"bel_avg",1:"normal",2:"abv_avg"})
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
+stats_region_10perc_l1=stats_region_10perc[stats_region_10perc.L==1]
+```
 
-#TODO: remove nan cells
-#perc for with at least 1% >40% prob
-sum(np.where(stats_region_bavg_l1["40percth_cell"]>=1,1,0))/len(stats_region_bavg_l1)*100
-#at least 10%
-sum(np.where(stats_region_bavg_l1["40percth_cell"]>=10,1,0))/len(stats_region_bavg_l1)*100
-# np.nanpercentile(stats_region_bavg_l1["40percth_cell"], 90)
+Below the publication months, where the forecast indicated at least 10% of the area to have a >=40% probability of the tercile are shown. We can see that for only 3 months this occurred for the below average tercile. For the above average tercile this is a more common phenomenon. 
+
+For all three occurrences of the below average tercile having >=40% probability, this was also the dominant tercile. However the differences are not very large with the above average tercile in March 2018 and March 2021. 
+
+Especially around March 2021 we can see an interesting pattern, where in February and April the forecast indicates a higher probability of above average instead of below average precipitation. Note however that these are forecasting different periods. I.e. the forecast of March is projecting for AMJ while the one in April is projecting for MJJ. 
+
++++
+
+Questions
+
+- should there be a minimum gap in probabilities between the terciles? 
+- should we somehow check that the forecast is consistent across leadtimes?
+     - currently only displaying values for leadtime=1 month! 
+
+```{code-cell} ipython3
+stats_region_10perc_40th_l1=stats_region_10perc_l1[(stats_region_10perc_l1.select_dtypes(include=np.number) >= 40).any(1)]
 ```
 
 ```{code-cell} ipython3
-:tags: [hide_input]
+def highlight_max(s):
+    '''
+    highlight the maximum in a Series yellow.
+    '''
+    is_max = s == s.max()
+    return ['color: red' if v else 'black' for v in is_max]
 
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_region_bavg_l1,x="month",y="40percth_cell",ax=ax,color="#007CE0",showfliers=False)
-ax.set_ylabel("Probability")
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.set_xlabel("Publication month")
+stats_region_10perc_40th_l1.drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1)
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="40percth_cell",ax=ax,color="#007CE0")
-ax.set_ylabel("Probability")
-ax.spines['right'].set_visible(False)
-ax.spines['top'].set_visible(False)
-ax.set_xlabel("Publication month")
+stats_region_10perc_l1[stats_region_10perc.bel_avg>=40]
 ```
-
-+++ {"tags": ["remove_cell"]}
 
 ## Test different method of computing stats
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 def compute_zonal_stats(ds, raster_transform, adm_path,adm_col,percentile_list=np.arange(10,91,10)):
     # compute statistics on level in adm_path for all dates in ds
     df_list = []
@@ -506,8 +454,6 @@ def compute_zonal_stats(ds, raster_transform, adm_path,adm_col,percentile_list=n
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 #this was the old method
 iri_date=iri_clip_interp.sel(L=1,C=0,F="2018-03").prob
 #add recalc=True such that transform is recalculated after the interpolation, instead of using the cached version!!
@@ -518,8 +464,6 @@ df_stats[(df_stats.ADM1_FR.isin(adm_sel))&(df_stats.date.dt.month==3)]
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
 #geocube is the suggested method by rioxarray
 #results are slightly different than current method, and don't understand why
 #with geocube you can directly compute different regions, but think you have to compute separability per other variable (L,F,C)
@@ -558,8 +502,46 @@ stats_region=zonal_stats_xr.to_dataframe()
 stats_region.reset_index().merge(gdf_adm1,on="mukey")[["ADM1_FR","iri_mean"]]
 ```
 
+#### Archive
+
 ```{code-cell} ipython3
-:tags: []
+#compute the dominant tercile based on >=40perc prob
+stats_region_dominant=stats_region.sort_values('40percth_cell', ascending=False).drop_duplicates(['F','L']).sort_values(["F","L"])
+stats_region_dominant.loc[stats_region_dominant["40percth_cell"]==0,"C"]=np.nan
+stats_region_dominant.loc[stats_region_dominant["40percth_cell"].isnull(),"C"]=np.nan
+stats_region_dominant[(stats_region_dominant.L==1)&(~stats_region_dominant.C.isnull())]
+```
 
+```{code-cell} ipython3
+#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+g=sns.displot(stats_region_bavg_l1.loc[:,"40percth_cell"],color="#007CE0",binwidth=3)
+```
 
+```{code-cell} ipython3
+#TODO: remove nan cells
+#perc for with at least 1% >40% prob
+sum(np.where(stats_region_bavg_l1["40percth_cell"]>=1,1,0))/len(stats_region_bavg_l1)*100
+#at least 10%
+sum(np.where(stats_region_bavg_l1["40percth_cell"]>=10,1,0))/len(stats_region_bavg_l1)*100
+# np.nanpercentile(stats_region_bavg_l1["40percth_cell"], 90)
+```
+
+```{code-cell} ipython3
+#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+fig,ax=plt.subplots(figsize=(10,5))
+g=sns.boxplot(data=stats_region_bavg_l1,x="month",y="40percth_cell",ax=ax,color="#007CE0",showfliers=False)
+ax.set_ylabel("Probability")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_xlabel("Publication month")
+```
+
+```{code-cell} ipython3
+#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+fig,ax=plt.subplots(figsize=(10,5))
+g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="40percth_cell",ax=ax,color="#007CE0")
+ax.set_ylabel("Probability")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_xlabel("Publication month")
 ```
