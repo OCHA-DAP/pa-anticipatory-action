@@ -176,7 +176,28 @@ for ax in g.axes.flatten():
     ax.tick_params(labelbottom=True)
     ax.set_ylabel("Number of months")
     ax.set_xlabel("Total monthly precipitation (mm)")
-g.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_distribution_facet_decjanfeb_southern_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+# g.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_distribution_facet_decjanfeb_southern_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+```
+
+```python
+# #plot observed values with threshold line, to know where the threshold falls in the distribution
+# #this threshold was set with later work on the correlation with forecasts
+# df_comb_janfeb=df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin([1,2])]
+# perc_210=sum(np.where(df_comb_janfeb.mean_cell<=210,1,0))/len(df_comb_janfeb)*100
+# print(f"{perc_210:.0f}% of the months had no more than 210 mm observed rainfall")
+# fig, ax = plt.subplots(figsize=(16,8))
+# g=sns.histplot(df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin([1,2])],x="mean_cell",ax=ax,kde=True,color="#CCCCCC",binwidth=5)
+# plt.axvline(210,color="#18998F",label="threshold")
+# perc=np.percentile(df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin([1,2])].mean_cell, 33)
+# plt.axvline(perc,color="#C25048",label="below average")
+# plt.legend()
+# sns.despine()
+# g.set(xlabel="Monthly precipitation (mm)")
+# plt.title("Distribution of monthly precipitation in Jan+Feb in the Southern region from 2000-2020");
+```
+
+```python
+
 ```
 
 ```python
@@ -188,7 +209,7 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.set_xlabel("Total monthly precipitation (mm)")
 ax.get_legend().set_title("Dry spell occurred")
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
 ```
 
 ```python
@@ -233,7 +254,7 @@ ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Percentage of months that are correctly categorized for the given threshold")
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_categorized_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_categorized_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
 ```
 
 ```python
@@ -256,7 +277,7 @@ ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Percentage of months that are correctly categorized for the given threshold")
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
 ```
 
 ```python
@@ -280,7 +301,7 @@ ax.set_ylabel("Dry spell in ADMIN1 during month")
 ax.set_xlabel(f"<={int(t_intersection)} mm precipitation during month")
 plt.show()
 fig.tight_layout()
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_confusionmatrix_ds{min_ds_days_month}{min_adm_ds_month}_th{int(t_intersection)}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_confusionmatrix_ds{min_ds_days_month}{min_adm_ds_month}_th{int(t_intersection)}_adm1.png"))
 ```
 
 ##### Compute misses/false alarms per month
@@ -347,7 +368,7 @@ plt.gcf().set_size_inches(15,5)
 handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='upper center')
 fig.tight_layout(rect=(0,0,1,0.9))
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_adm1_permonth.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_adm1_permonth.png"))
 ```
 
 ```python
@@ -577,7 +598,7 @@ ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Percentage of months that are correctly categorized for the given threshold")
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_4mm_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_4mm_adm1.png"))
 ```
 
 ```python
@@ -601,7 +622,7 @@ ax.set_ylabel("Dry spell in ADMIN1 during month")
 ax.set_xlabel(f"<={int(t_intersection)} mm precipitation during month")
 plt.show()
 fig.tight_layout()
-fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_confusionmatrix_ds{min_ds_days_month}{min_adm_ds_month}_th{int(t_intersection)}_4mm_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_confusionmatrix_ds{min_ds_days_month}{min_adm_ds_month}_th{int(t_intersection)}_4mm_adm1.png"))
 ```
 
 ##### Compute per month
