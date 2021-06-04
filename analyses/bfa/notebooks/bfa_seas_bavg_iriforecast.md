@@ -22,10 +22,6 @@ From the country team the proposed trigger is:
 
 This notebook explores if and when these triggers would be reached. Moreover, an exploration is done on how the raster data can be combined to come to one value for all 4 admin1s.
 
-+++
-
-**TODO: look at distribution of normal and above average when high prob below avg**
-
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
@@ -436,13 +432,13 @@ g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["month"]==3,"40perct
 g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>0,"40percth_cell"],color="#007CE0",binwidth=3)
 ```
 
-### Examine dominant tercile
+## Examine dominant tercile
 
 +++
 
 Besides knowing if the below average tercile reaches a certain threshold, it is also important to understand if the below average tercile is the dominant tercile. Where dominant indicates the tercile with the highes probability. Else, it wouldn't be logical to anticipate based on the likelihood of below average rainfall. 
 
-Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation. For this analysis we set this value,x, such that 10% of the area has a probability of at least x% for the given tercile. 
+Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation. For this analysis we set this value,x, such that 10% of the area has a probability of at least x% for the given tercile.
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
@@ -461,7 +457,7 @@ Below the publication months, where the forecast indicated at least 10% of the a
 
 For all three occurrences of the below average tercile having >=40% probability, this was also the dominant tercile. However the differences are not very large with the above average tercile in March 2018 and March 2021. 
 
-Especially around March 2021 we can see an interesting pattern, where in February and April the forecast indicates a higher probability of above average instead of below average precipitation. Note however that these are forecasting different periods. I.e. the forecast of March is projecting for AMJ while the one in April is projecting for MJJ. 
+Especially around March 2021 we can see an interesting pattern, where in February and April the forecast indicates a higher probability of above average instead of below average precipitation. Note however that these are forecasting different periods. I.e. the forecast of March is projecting for AMJ while the one in April is projecting for MJJ.
 
 +++
 
@@ -469,7 +465,7 @@ Questions
 
 - should there be a minimum gap in probabilities between the terciles? 
 - should we somehow check that the forecast is consistent across leadtimes?
-     - currently only displaying values for leadtime=1 month! 
+     - currently only displaying values for leadtime=1 month!
 
 ```{code-cell} ipython3
 :tags: [remove_cell]

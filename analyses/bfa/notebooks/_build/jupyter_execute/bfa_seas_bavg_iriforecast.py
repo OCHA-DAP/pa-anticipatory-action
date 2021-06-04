@@ -10,8 +10,6 @@
 # 
 # This notebook explores if and when these triggers would be reached. Moreover, an exploration is done on how the raster data can be combined to come to one value for all 4 admin1s.
 
-# **TODO: look at distribution of normal and above average when high prob below avg**
-
 # In[1]:
 
 
@@ -420,7 +418,7 @@ g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["month"]==3,"40perct
 g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>0,"40percth_cell"],color="#007CE0",binwidth=3)
 
 
-# ### Examine dominant tercile
+# ## Examine dominant tercile
 
 # Besides knowing if the below average tercile reaches a certain threshold, it is also important to understand if the below average tercile is the dominant tercile. Where dominant indicates the tercile with the highes probability. Else, it wouldn't be logical to anticipate based on the likelihood of below average rainfall. 
 # 
