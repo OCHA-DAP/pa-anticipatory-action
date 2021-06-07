@@ -119,4 +119,8 @@ class Config:
     CHIRPS_LAT = "latitude" #"y" #
     CHIRPS_VARNAME = "precip"
 
-
+    ### CHIRPS-GEFS
+    CHIRPSGEFS_DIR = "chirpsgefs"
+    CHIRPSGEFS_FTP_URL_AFRICA = "https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/{days_ahead}day/Africa/precip_mean/data.{year}.{start_day}.tif"
+    CHIRPSGEFS_RAW_DIR = Path(DATA_DIR) / PUBLIC_DIR / RAW_DIR / GLOBAL_ISO3 / CHIRPSGEFS_DIR
+    CHIRPSGEFS_RAW_PATH = CHIRPSGEFS_RAW_DIR / f"chirpsgefs_africa_{days_ahead}days_{date}.tif"
