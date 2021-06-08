@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.2
+      jupytext_version: 1.10.3
   kernelspec:
     display_name: antact
     language: python
@@ -48,25 +48,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import geopandas as gpd
-from rasterstats import zonal_stats
-import rasterio
-from rasterio.enums import Resampling
-import matplotlib
-import matplotlib.colors as mcolors
-import xarray as xr
-import cftime
-import math
-import rioxarray
-from shapely.geometry import mapping
-import cartopy.crs as ccrs
-import matplotlib as mpl
-import datetime
+import math 
 from datetime import timedelta
-import re
 import seaborn as sns
 import calendar
 from mlxtend.evaluate import confusion_matrix
 from mlxtend.plotting import plot_confusion_matrix
+import glob
 ```
 
 ```python
@@ -75,12 +63,8 @@ import sys
 import os
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
-# print(path_mod)
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
-from src.utils_general.utils import download_ftp,download_url
-from src.utils_general.raster_manipulation import fix_calendar, invert_latlon, change_longitude_range
-from src.utils_general.plotting import plot_raster_boundaries_clip,plot_spatial_columns
 ```
 
 #### Set config values
@@ -89,19 +73,20 @@ from src.utils_general.plotting import plot_raster_boundaries_clip,plot_spatial_
 country="malawi"
 config=Config()
 parameters = config.parameters(country)
-country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
-country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country)
-country_data_exploration_dir = os.path.join(config.DATA_DIR,"exploration",country)
+country_iso3=parameters["iso3_code"]
+data_public_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR)
+country_data_raw_dir = os.path.join(data_public_dir,config.RAW_DIR,country_iso3)
+country_data_processed_dir = os.path.join(data_public_dir,config.PROCESSED_DIR,country_iso3)
+country_data_exploration_dir = os.path.join(data_public_dir,"exploration",country_iso3)
 dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
-chirpsgefs_processed_dir = os.path.join(dry_spells_processed_dir,"chirpsgefs")
+chirpsgefs_processed_dir=os.path.join(country_data_processed_dir,"chirpsgefs")
 
 #we have different methodologies of computing dryspells and rainy season
 #this notebook chooses one, which is indicated by the files being used
 chirpsgefs_stats_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
+rainy_season_path = os.path.join(dry_spells_processed_dir, "rainy_seasons_detail_2000_2020_mean_back.csv")
 chirps_rolling_sum_path=os.path.join(dry_spells_processed_dir,"data_mean_values_long.csv")
 
-adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 ```
 
@@ -109,10 +94,6 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 ds_meth="mean_2mm"
 # ds_meth="consecutive_days_2mm"
 # ds_meth="consecutive_days_4mm"
-```
-
-```python
-chirpsgefs_stats_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
 ```
 
 ```python
@@ -129,10 +110,65 @@ elif ds_meth=="consecutive_days_4mm":
 #### Load CHIRPS-GEFS data
 
 ```python
-#ccontains several statistics per adm2-date combination since 2000
-df_chirpsgefs=pd.read_csv(chirpsgefs_stats_path)
-df_chirpsgefs["date"]=pd.to_datetime(df_chirpsgefs["date"])
-df_chirpsgefs["date_forec_end"]=pd.to_datetime(df_chirpsgefs["date_forec_end"])
+all_files=glob.glob(os.path.join(chirpsgefs_processed_dir, "mwi_chirpsgefs_stats_*.csv"))
+```
+
+```python
+#combine files of all dates into one
+#takes a minute
+df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
+df_chirpsgefs_all = pd.concat(df_from_each_file, ignore_index=True)
+```
+
+```python
+#filter out dates that are outside the rainy season for each admin
+onset_col="onset_date"
+cessation_col="cessation_date"
+rainy_adm_col="ADM2_EN"
+
+df_rain = pd.read_csv(rainy_season_path, parse_dates=[onset_col, cessation_col])
+ #remove entries where there is no onset and no cessation date, i.e. no rainy season
+df_rain=df_rain[(df_rain.onset_date.notnull())|(df_rain.cessation_date.notnull())]
+#if onset date or cessation date is missing, set it to Nov 1/Jul1 to make sure all data of that year is downloaded. This happens if e.g. the rainy season hasn't ended yet
+df_rain[df_rain.onset_date.isnull()]=df_rain[df_rain.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
+df_rain[df_rain.cessation_date.isnull()]=df_rain[df_rain.cessation_date.isnull()].assign(cessation_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]+1}-07-01"))
+
+df_rain_adm = df_rain.groupby([rainy_adm_col, "season_approx"], as_index=False).agg({onset_col: np.min, cessation_col: np.max})
+    
+list_hist_rain_adm = []
+for a in df_chirpsgefs_all[adm_col].unique():
+    dates_adm = pd.Index([])
+    df_rain_seladm = df_rain_adm[df_rain_adm[rainy_adm_col] == a]
+    for i in df_rain_seladm.season_approx.unique():
+        df_rain_seladm_seas = df_rain_seladm[df_rain_seladm.season_approx == i]
+        seas_range = pd.date_range(df_rain_seladm_seas.onset_date.values[0],df_rain_seladm_seas.cessation_date.values[0])
+        dates_adm = dates_adm.union(seas_range)
+    list_hist_rain_adm.append(df_chirpsgefs[(df_chirpsgefs_all[adm_col] == a) & (df_chirpsgefs_all.date.isin(dates_adm))])
+df_chirpsgefs = pd.concat(list_hist_rain_adm)
+```
+
+```python
+#when initial analysis was done, 12-03 was the last date, so selecting those to keep the numbers the same
+df_chirpsgefs=df_chirpsgefs[df_chirpsgefs.date<="2021-03-12"]
+```
+
+```python
+# #ccontains several statistics per adm2-date combination since 2000
+# df_chirpsgefs=pd.read_csv(chirpsgefs_stats_path)
+# df_chirpsgefs["date"]=pd.to_datetime(df_chirpsgefs["date"])
+# df_chirpsgefs["date_forec_end"]=pd.to_datetime(df_chirpsgefs["date_forec_end"])
+```
+
+```python
+df_chirpsgefs[(df_chirpsgefs.date=="2019-01-01")&(df_chirpsgefs.ADM2_EN=="Balaka")]
+```
+
+```python
+len(df_chirpsgefs)
+```
+
+```python
+df_chirpsgefs.tail()
 ```
 
 ```python
@@ -566,7 +602,6 @@ for i, m in enumerate(df_dates_comb.sort_values(by="month").month.unique()):
     ax.set_ylabel("Day within observed dry spell")
     ax.set_xlabel("Day within forecasted dry spell")
     ax.set_title(f"contigency matrix for {calendar.month_name[m]}")
-# plt.show()
 ```
 
 ```python
@@ -776,10 +811,6 @@ df_forid
 df_fordm=df_forid.groupby("date_month").agg(count=('ID_forec', 'count'),obs_ds=("observed","sum"))
 ```
 
-```python
-
-```
-
 ### Transform data for heatmap
 We got a R script that creates a real nice heatmap showing the dry spells per adm2 for each year. Since we also use this code to analyze observed dry spells, it is nice to keep the layout the same for comparing observed and forecasted.    
 Thus, transform the data such that it can be given as input to the R script
@@ -880,37 +911,37 @@ df_comb["dryspell_obs"]=np.where(df_comb.dry_spell_first_date.notna(),1,0)
 ```
 
 ```python
-#plot the rasters. Plot per adm2
-ds_drys_clip = ds_drys.rio.clip(df_bound_adm2.geometry.apply(mapping), df_bound_adm2.crs, all_touched=True)
-bins=np.arange(0,101,10)
+# #plot the rasters. Plot per adm2
+# ds_drys_clip = ds_drys.rio.clip(df_bound_adm2.geometry.apply(mapping), df_bound_adm2.crs, all_touched=True)
+# bins=np.arange(0,101,10)
 
-df_comb_ds=df_comb[df_comb.dryspell_obs==1]
-for a in df_comb_ds.ADM2_EN.unique():
-    df_bound_sel_adm=df_bound_adm2[df_bound_adm2.ADM2_EN==a]
-    ds_drys_clip_adm = ds_drys.rio.clip(df_bound_sel_adm.geometry.apply(mapping), df_bound_sel_adm.crs, all_touched=True)
-    ds_drys_clip_adm_dates=ds_drys_clip_adm.sel(time=ds_drys_clip_adm.time.isin(df_comb_ds[df_comb_ds.ADM2_EN==a].date.unique()))
-    #cannot make the facetgrid if only one occurence. For now leave them out since just exploration, but for completeness should somehow include them
-    if len(ds_drys_clip_adm_dates.time)>1:
-        g=ds_drys_clip_adm_dates.plot(
-        col="time",
-        col_wrap=6,
-        levels=bins,
-        cbar_kwargs={
-            "orientation": "horizontal",
-            "shrink": 0.8,
-            "aspect": 40,
-            "pad": 0.1,
-            "label":"Precipitation (mm)",
-            "ticks": bins
-        },
-        cmap="YlOrRd",
-    )
+# df_comb_ds=df_comb[df_comb.dryspell_obs==1]
+# for a in df_comb_ds.ADM2_EN.unique():
+#     df_bound_sel_adm=df_bound_adm2[df_bound_adm2.ADM2_EN==a]
+#     ds_drys_clip_adm = ds_drys.rio.clip(df_bound_sel_adm.geometry.apply(mapping), df_bound_sel_adm.crs, all_touched=True)
+#     ds_drys_clip_adm_dates=ds_drys_clip_adm.sel(time=ds_drys_clip_adm.time.isin(df_comb_ds[df_comb_ds.ADM2_EN==a].date.unique()))
+#     #cannot make the facetgrid if only one occurence. For now leave them out since just exploration, but for completeness should somehow include them
+#     if len(ds_drys_clip_adm_dates.time)>1:
+#         g=ds_drys_clip_adm_dates.plot(
+#         col="time",
+#         col_wrap=6,
+#         levels=bins,
+#         cbar_kwargs={
+#             "orientation": "horizontal",
+#             "shrink": 0.8,
+#             "aspect": 40,
+#             "pad": 0.1,
+#             "label":"Precipitation (mm)",
+#             "ticks": bins
+#         },
+#         cmap="YlOrRd",
+#     )
 
-        for ax in g.axes.flat:
-            df_bound_sel_adm.boundary.plot(linewidth=1, ax=ax, color="red")
-            ax.axis("off")
-        df_comb_ds_adm=df_comb_ds.sort_values(by=['ADM2_EN','date'])[df_comb_ds.ADM2_EN==a]
-        g.fig.suptitle(f"{a} {df_comb_ds_adm.mean_cell.values}")
+#         for ax in g.axes.flat:
+#             df_bound_sel_adm.boundary.plot(linewidth=1, ax=ax, color="red")
+#             ax.axis("off")
+#         df_comb_ds_adm=df_comb_ds.sort_values(by=['ADM2_EN','date'])[df_comb_ds.ADM2_EN==a]
+#         g.fig.suptitle(f"{a} {df_comb_ds_adm.mean_cell.values}")
 ```
 
 ### Detecting start of a dry spell
@@ -1002,20 +1033,16 @@ chirps_rolling_sum_path_5day=os.path.join(dry_spells_processed_dir,"data_mean_va
 ```
 
 ```python
-#read historically observed 15 day rolling sum for all dates (so not only those with dry spells), derived from CHIRPS
+#read historically observed 5 day rolling sum for all dates (so not only those with dry spells), derived from CHIRPS
 #this sometimes gives a not permitted error --> move the chirps_rolling_sum_path file out of the folder and back in to get it to work (dont ask me why)
 df_histobs=pd.read_csv(chirps_rolling_sum_path_5day)
 df_histobs.date=pd.to_datetime(df_histobs.date)
 
 #add start of the rolling sum 
-df_histobs["date_start"]=df_histobs.date-timedelta(days=5)
+df_histobs["date_start"]=df_histobs.date-timedelta(days=4)
 
 #add adm2 and adm1 name
 df_histobs=df_histobs.merge(df_bound_adm2[["ADM1_EN","ADM2_EN","ADM2_PCODE"]],left_on="pcode",right_on="ADM2_PCODE")
-```
-
-```python
-df_histobs.columns
 ```
 
 ```python
@@ -1031,15 +1058,11 @@ df_histformerg["diff_forecobs"]=df_histformerg["mean_cell"]-df_histformerg["roll
 ```
 
 ```python
-df_histformerg.columns
-```
-
-```python
 #date_forec_end is not correct!! didn't adjust correctly in computation script
 df_histformerg[["dateforec","dateobs","diff_forecobs","mean_cell","rollsum_5d","rollsum_15d"]]
 ```
 
-```python jupyter={"outputs_hidden": true} tags=[]
+```python tags=[]
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
 g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_5d", kind="hex",height=16,joint_kws={ 'bins':'log'})
 #compute the average value of the difference between the forecasted and observed values
@@ -1047,7 +1070,7 @@ g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_5d", kind="hex"
 bins = np.arange(0,df_histformerg.rollsum_5d.max()+20,10)
 group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_5d, bins))
 plot_centers = (bins [:-1] + bins [1:])/2
-plot_values = group.diff_forecobs.mean()
+plot_values = group.diff_forecobs.median()
 g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
 g.set_axis_labels("Observed 5 day sum (mm)", "Forecasted 5 day sum - Observed 5 day sum", fontsize=12)
 plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
@@ -1055,351 +1078,4 @@ plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so c
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
-```
-
-```python
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_5d", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-bins = np.arange(0,df_histformerg.rollsum_5d.max()+20,10)
-group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_5d, bins))
-plot_centers = (bins [:-1] + bins [1:])/2
-plot_values = group.diff_forecobs.mean()
-g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
-g.set_axis_labels("Observed 5 day sum (mm)", "Forecasted 5 day sum - Observed 5 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
-```
-
-```python
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-bins = np.arange(0,df_histformerg.rollsum_15d.max()+20,10)
-group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_15d, bins))
-plot_centers = (bins [:-1] + bins [1:])/2
-plot_values = group.diff_forecobs.mean()
-g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
-g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
-```
-
-```python
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_histformerg,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-bins = np.arange(0,df_histformerg.rollsum_15d.max()+20,10)
-group = df_histformerg.groupby(pd.cut(df_histformerg.rollsum_15d, bins))
-plot_centers = (bins [:-1] + bins [1:])/2
-plot_values = group.diff_forecobs.mean()
-g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
-g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
-```
-
-```python
-#plot the observed vs forecast-observed for obs<=2mm
-df_sel=df_histformerg[df_histformerg.rollsum_15d<=2].sort_values("rollsum_15d")
-g=sns.jointplot(data=df_sel,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-bins = np.arange(0,df_sel.rollsum_15d.max()+2,0.2)
-group = df_sel.groupby(pd.cut(df_sel.rollsum_15d, bins))
-plot_centers = (bins [:-1] + bins [1:])/2
-plot_values = group.diff_forecobs.mean()
-g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
-g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
-```
-
-```python
-#plot the observed vs forecast-observed for obs<=2mm
-df_sel=df_histformerg[df_histformerg.rollsum_15d<=30].sort_values("rollsum_15d")
-g=sns.jointplot(data=df_sel,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-bins = np.arange(0,df_sel.rollsum_15d.max()+2,1)
-group = df_sel.groupby(pd.cut(df_sel.rollsum_15d, bins))
-plot_centers = (bins [:-1] + bins [1:])/2
-plot_values = group.diff_forecobs.mean()
-g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="mean")
-g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
-```
-
-#### Archive
-
-```python
-#plots how much observation and forecast overlap, but don't make much sense with this low recall
-# sns.histplot(df_obsid[df_obsid.dryspell_forec>0],bins=np.arange(df_obsid.days_late.min(),df_obsid.days_late.max()+2),x="days_late",stat="count",kde=True)
-# sns.histplot(df_obsid[df_obsid.dryspell_forec>0],x="dryspell_forec",stat="count",kde=True)
-```
-
-```python
-#THIS IS NOT  A CORRECT WAY OF DOING IT
-#since only  looking at start of a dry spell, while a forecast can also continue forecasting a dry spell while the dry spell has alrady started..
-```
-
-```python
-# #combine chirpsgefs and observed dryspells data
-# #merge on right to include all adm2-dates present in chirpsgefs
-# #df_chirpsgefs, only includes the dates per adm2 that were in a rainy season
-# df_comb=df_ds.merge(df_chirpsgefs[["ADM2_EN","date","date_forec_end"]+cg_stats],how="right",left_on=["dry_spell_first_date","ADM2_EN"],right_on=["date","ADM2_EN"])
-```
-
-```python
-# #nan = there was a forecast but no observed dry spell--> set occurence of dry spell to zero
-# #again, only looking at if any dry spell started on that date, not whether it persisted
-# df_comb["dryspell_obs"]=np.where(df_comb.dry_spell_first_date.notna(),1,0)
-```
-
-```python
-# num_plots = len(cg_stats)
-# colp_num=3
-# if num_plots==1:
-#     colp_num=1
-# rows = math.ceil(num_plots / colp_num)
-# position = range(1, num_plots + 1)
-# fig=plt.figure(figsize=(30,20))
-# for i, s in enumerate(cg_stats):
-#     ax = fig.add_subplot(rows,colp_num,i+1)
-#     sns.histplot(df_comb,x=s,ax=ax,stat="density",common_norm=False,kde=True,hue="dryspell_obs")
-#     ax.set_title(s)
-#     ax.spines['right'].set_visible(False)
-#     ax.spines['top'].set_visible(False)
-```
-
-```python
-# #inspect forecasted values around the time a dryspell was observed for one adm2
-# df_ds_mul=df_ds[df_ds.ADM2_EN=="Mulanje"].reset_index()
-# num_plots = len(df_ds_mul)
-# colp_num=2
-# if num_plots==1:
-#     colp_num=1
-# rows = math.ceil(num_plots / colp_num)
-# position = range(1, num_plots + 1)
-# fig=plt.figure(figsize=(30,20))
-# for index, row in df_ds_mul.iterrows():
-#     #assuming index is range 0..len(df)
-# #     print(index)
-#     ax = fig.add_subplot(rows,colp_num,index+1)
-#     df_chirpsgefs_sel=df_chirpsgefs[(df_chirpsgefs.date>=row.dry_spell_first_date-timedelta(days=15))&(df_chirpsgefs.date<=row.dry_spell_first_date+timedelta(days=30))]
-#     print(row.dry_spell_first_date)
-#     df_chirpsgefs_sel.sort_values(by="date").plot(x="date",y="mean_cell",figsize=(16, 8), color='red',legend=True,ax=ax)
-#     ax.spines['right'].set_visible(False)
-#     ax.spines['top'].set_visible(False)
-#     ax.spines['left'].set_visible(False)
-#     ax.spines['bottom'].set_visible(False)
-```
-
-```python
-# #inspect difference min and max cell touched
-# #plot data of Balaka for 2011
-# fig,ax=plt.subplots()
-# df_comb[(df_comb.date.dt.year==2010)&(df_comb.ADM2_EN=="Mulanje")].sort_values(by="date").plot(x="date",y="max_cell" ,figsize=(16, 8), color='red',legend=True,ax=ax)
-# df_comb[(df_comb.date.dt.year==2010)&(df_comb.ADM2_EN=="Mulanje")].sort_values(by="date").plot(x="date",y="mean_cell" ,figsize=(16, 8), color='green',legend=True,ax=ax)
-
-# # Set x-axis label
-# ax.set_xlabel("Start date", labelpad=20, weight='bold', size=12)
-
-# # Set y-axis label
-# ax.set_ylabel("mm of rain", labelpad=20, weight='bold', size=12)
-
-# # Despine
-# ax.spines['right'].set_visible(False)
-# ax.spines['top'].set_visible(False)
-# ax.spines['left'].set_visible(False)
-# ax.spines['bottom'].set_visible(False)
-
-# plt.title(f"Forecasted rainfall Mulanje 2010")
-```
-
-```python
-# #inspect dates that are present in observed dry spells but not in chirps-gefs
-# df_dates=df_dates.merge(df_ds_daterange,how="outer",on=["date","ADM2_EN"])
-# df_dates.dryspell_obs=df_dates.dryspell_obs.replace(np.nan,0)
-# df_dates[df_dates.mean_cell.isnull()]
-```
-
-```python
-#plot scatter obserrved vs forecasted
-#gets cluttered--> density plot better
-# g=sns.regplot(data=df_histformerg,y="diff_forecobs",x="rollsum_15d",scatter_kws = {'alpha' : 1/3},fit_reg=False)
-# ax=g.axes
-# ax.set_xlabel("Observed 15 day sum (mm)")
-# ax.set_ylabel("Forecasted 15 day sum - Observed 15 day sum")
-# ax.set_title("Discrepancy observed and forecasted values in Malawi per admin2")
-# ax.axhline(0, ls='--',color="red",label="obs=forec")
-# ax.spines['right'].set_visible(False)
-# ax.spines['top'].set_visible(False)
-# ax.set_xlim(0,ax.get_xlim()[1])
-# # ax.plot(np.linspace(ax.get_xlim()[0],ax.get_xlim()[1],50),np.linspace(-ax.get_xlim()[0],-ax.get_xlim()[1],50),ls="--",label="forec=0")
-# plt.legend()
-# # plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_CHIRPSGEFS_CHIRPS.png"))
-```
-
-```python
-# ### Visualizing rasters 5 days
-# #load rasters
-# ds_list=[]
-# for d in df_ds.dry_spell_first_date.unique():
-#     d_str=pd.to_datetime(d).strftime("%Y%m%d")
-#     filename=f"chirpsgefs_5day_africa_{d_str}.tif"
-#     try:
-#         rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
-#         rds=rds.assign_coords({"time":pd.to_datetime(d)})
-#         rds=rds.sel(band=1)
-#         ds_list.append(rds)
-#     except:
-#         print(d_str)
-
-
-# ds_drys=xr.concat(ds_list,dim="time")
-
-# #split to separate cell
-
-# ds_drys=ds_drys.sortby("time")
-
-# df_comb_ds=df_comb[df_comb.dryspell_obs==1]
-# for a in df_comb_ds.ADM2_EN.unique():
-#     print(a)
-#     df_bound_sel_adm=df_bound_adm2[df_bound_adm2.ADM2_EN==a]
-#     ds_drys_clip_adm = ds_drys.rio.clip(df_bound_sel_adm.geometry.apply(mapping), df_bound_sel_adm.crs, all_touched=True)
-#     ds_drys_clip_adm_dates=ds_drys_clip_adm.sel(time=ds_drys_clip_adm.time.isin(df_comb_ds[df_comb_ds.ADM2_EN==a].date.unique()))
-#     #cannot make the facetgrid if only one occurence. For now leave them out since just exploration, but for completeness should somehow include them
-#     if len(ds_drys_clip_adm_dates.time)>1:
-#         g=ds_drys_clip_adm_dates.plot(
-#         col="time",
-#         col_wrap=6,
-#         levels=bins,
-#         cbar_kwargs={
-#             "orientation": "horizontal",
-#             "shrink": 0.8,
-#             "aspect": 40,
-#             "pad": 0.1,
-#             "label":"Precipitation (mm)",
-#             "ticks": bins
-#         },
-#         cmap="YlOrRd",
-#     )
-
-#         # df_bound = gpd.read_file(adm1_bound_path)
-#         for ax in g.axes.flat:
-#             df_bound_sel_adm.boundary.plot(linewidth=1, ax=ax, color="red")
-#             ax.axis("off")
-#         g.fig.suptitle(f"{a} {df_comb_ds[df_comb_ds.ADM2_EN==a].sort_values(by='date').dryspell_forec.values}")
-```
-
-```python
-# # ### Old experiments
-
-# #inspect difference min and max cell touched
-# #plot data of Balaka for 2011
-# fig,ax=plt.subplots()
-# df_comb[(df_comb.date.dt.year==2011)&(df_comb.ADM2_EN=="Balaka")].sort_values(by="date").plot(x="date",y="max_cell_touched" ,figsize=(16, 8), color='red',legend=True,ax=ax)
-# df_comb[(df_comb.date.dt.year==2011)&(df_comb.ADM2_EN=="Balaka")].sort_values(by="date").plot(x="date",y="min_cell_touched" ,figsize=(16, 8), color='green',legend=True,ax=ax)
-
-# # Set x-axis label
-# ax.set_xlabel("Start date", labelpad=20, weight='bold', size=12)
-
-# # Set y-axis label
-# ax.set_ylabel("mm of rain", labelpad=20, weight='bold', size=12)
-
-# # Despine
-# ax.spines['right'].set_visible(False)
-# ax.spines['top'].set_visible(False)
-# ax.spines['left'].set_visible(False)
-# ax.spines['bottom'].set_visible(False)
-
-# plt.title(f"Forecasted rainfall Balaka 2011")
-
-
-# # ##### Test how many days should be included
-
-# # #path to data start and end rainy season
-# # df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020.csv"))
-# # df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
-# # df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
-
-
-# # #set the onset and cessation date for the seasons with them missing (meaning there was no dry spell data from start/till end of the season)
-# # df_rain_filled=df_rain.copy()
-# # df_rain_filled[df_rain_filled.onset_date.isnull()]=df_rain_filled[df_rain_filled.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
-# # df_rain_filled[df_rain_filled.cessation_date.isnull()]=df_rain_filled[df_rain_filled.cessation_date.isnull()].assign(cessation_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]+1}-07-01"))
-
-
-# # #remove the adm2-date entries outside the rainy season for that specific adm2
-# # #before we included all forecasts within the min start of the rainy season and max end across the whole country
-# # total_days=0
-# # list_hist_rain_adm2=[]
-# # for a in df_rain.ADM2_EN.unique():
-# #     dates_adm2=pd.Index([])
-# #     for i in df_rain_filled.season_approx.unique():
-# #         seas_range=pd.date_range(df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)].onset_date.values[0],df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)].cessation_date.values[0])
-# #         dates_adm2=dates_adm2.union(seas_range)
-# #         total_days+=len(dates_adm2)
-# # #     list_hist_rain_adm2.append(df_hist_all[(df_hist_all.ADM2_EN==a)&(df_hist_all.date.isin(dates_adm2))])
-# # # df_hist_rain_adm2=pd.concat(list_hist_rain_adm2)
-
-
-# # total_days/32
-
-
-
-```
-
-```python
-#most dates are already removed in prepocessing notebook, but this can be used if definition of rainy season changed in the mean time
-# you will have to change date to a #.dt.to_period("d")
-# #path to data start and end rainy season
-# df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean_back.csv"))
-# df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])#.dt.to_period('d')
-# df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])#.dt.to_period('d')
-# #set the onset and cessation date for the seasons where these are missing 
-# #(meaning there was no dry spell data from start/till end of the season)
-# df_rain_filled=df_rain.copy()
-# df_rain_filled=df_rain_filled[(df_rain_filled.onset_date.notnull())|(df_rain_filled.cessation_date.notnull())]
-# df_rain_filled[df_rain_filled.onset_date.isnull()]=df_rain_filled[df_rain_filled.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
-# df_rain_filled[df_rain_filled.cessation_date.isnull()]=df_rain_filled[df_rain_filled.cessation_date.isnull()].assign(cessation_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]+1}-07-01"))
-# #remove the adm2-date entries outside the rainy season for that specific adm2
-# #df_belowavg_seas only includes data from 2000, so the 1999 entries are not included
-# list_hist_rain_adm2=[]
-# for a in df_rain_filled.ADM2_EN.unique():
-#     dates_adm2=pd.Index([])
-#     for i in df_rain_filled[df_rain_filled.ADM2_EN==a].season_approx.unique():
-#         df_rain_adm2_seas=df_rain_filled[(df_rain_filled.ADM2_EN==a)&(df_rain_filled.season_approx==i)]
-#         seas_range=pd.period_range(df_rain_adm2_seas.onset_date.values[0],df_rain_adm2_seas.cessation_date.values[0],freq="D")
-#         dates_adm2=dates_adm2.union(seas_range)
-#     list_hist_rain_adm2.append(df_chirpsgefs[(df_chirpsgefs.ADM2_EN==a)&(df_chirpsgefs.date.isin(dates_adm2))])
-# df_chirpsgefs=pd.concat(list_hist_rain_adm2)
-# df_chirpsgefs.date=pd.to_datetime(df_chirpsgefs.date.astype(str))#, format='%Y-%m-%d')
-# df_chirpsgefs.date_forec_end=pd.to_datetime(df_chirpsgefs.date_forec_end.astype(str))
 ```
