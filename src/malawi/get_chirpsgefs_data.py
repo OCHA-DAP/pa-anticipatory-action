@@ -39,6 +39,7 @@ def main(download=False, process=True):
     if process:
         compute_stats_rainyseason(
             COUNTRY_ISO3,
+            CONFIG,
             ADM_LEVEL,
             DAYS_AHEAD,
             CHIRPSGEFS_PROCESSED_DIR,

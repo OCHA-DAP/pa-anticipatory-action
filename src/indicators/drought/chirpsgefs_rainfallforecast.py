@@ -1,3 +1,22 @@
+"""
+Download CHIRPSGEFS raster data and extract statistics per admin region
+
+[CHIRPS-GEFS](https://chc.ucsb.edu/data/chirps-gefs) is the bias-corrected version of GEFS.
+GEFS is the Global Ensemble Forecast System from NOAA.
+CHIRPS observational data is used for the bias-correction.
+The forecast is published each day for the whole world with a 0.05 resolution.
+It is relatively new, started in 2018, and while it seems a respected source, little research articles exist around it.
+However, GEFS is a well-established source. Forecasts are available starting from 2000
+
+Data limitations:
+- No CHIRPS-GEFS data is available from 01-01-2020 till 05-10-2020.
+This data is available from the [older version of the model](https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip/15day/Africa/precip_mean/),
+but our contact at CHC recommended to not use this
+
+Assumptions
+- The grid cell size is small enough to only look at cells with their centre within the region, not those touching
+"""
+
 import pandas as pd
 import numpy as np
 import geopandas as gpd
@@ -12,31 +31,9 @@ import os
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
-from src.indicators.drought.config import Config
 from src.utils_general.utils import download_ftp
 
 logger = logging.getLogger(__name__)
-
-# #### Set config values
-
-#adm level to aggregate the raster cells to 
-adm_level="adm2"#"adm2" #adm1
-days_ahead=5 #15
-if adm_level=="adm1":
-    adm_col="ADM1_EN"
-if adm_level=="adm2":
-    adm_col="ADM2_EN"
-
-
-country="malawi"
-config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
-data_public_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR
-country_data_raw_dir = data_public_dir / config.RAW_DIR / country_iso3
-country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR, config.PROCESSED_DIR,country_iso3)
-#TODO: this is the old dir, to be changed
-chirpsgefs_dir = data_public_dir / config.RAW_DIR / config.GLOBAL_ISO3 / "chirps_gefs"
 
 def compute_raster_stats(ds, raster_transform, gdf,gdf_id_col,ds_thresh_list=[2,4,5,10,15,20,25,30,35,40,45,50]):
     """
@@ -67,18 +64,18 @@ def compute_raster_stats(ds, raster_transform, gdf,gdf_id_col,ds_thresh_list=[2,
 
     return df
 
-
-def compute_stats_rainyseason(country_iso3, adm_level,days_ahead, output_dir, rainy_season_path,use_cache=True):
+def compute_stats_rainyseason(country_iso3, config, adm_level,days_ahead, output_dir, rainy_season_path,use_cache=True):
     # this takes some time to compute, couple of hours at max
     adm_col=parameters[f"shp_adm{adm_level}c"]
-    adm_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters[f"path_admin{adm_level}_shp"])
+    #TODO: find a more dynamic method to define this path
+    adm_bound_path=Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / country_iso3 / config.SHAPEFILE_DIR /parameters[f"path_admin{adm_level}_shp"]
     rainy_dates = get_rainy_season_dates(rainy_season_path)
     gdf_adm = gpd.read_file(adm_bound_path)
 
     # load the tif file for each date and compute the statistics
     for d in rainy_dates:
         date_str=pd.to_datetime(d).strftime("%Y%m%d")
-        output_path = output_dir / f"{country_iso3}_chirpsgefs_stats_{date_str}.csv"
+        output_path = output_dir / f"{country_iso3}_chirpsgefs_stats_adm{adm_level}_{days_ahead}days_{date_str}.csv"
 
         if use_cache and output_path.exists():
             logger.debug(
@@ -88,7 +85,7 @@ def compute_stats_rainyseason(country_iso3, adm_level,days_ahead, output_dir, ra
             Path(output_path.parent).mkdir(parents=True, exist_ok=True)
             chirpsgefs_raster_filepath = config.CHIRPSGEFS_RAW_DIR / config.CHIRPSGEFS_RAW_FILENAME.format(days_ahead=days_ahead, date=date_str)
             if not chirpsgefs_raster_filepath.exists():
-                logger.info(f'CHIRPS-GEFS data has not been downloaded for {date_str}')
+                logger.info(f'CHIRPS-GEFS data for {date_str} was not found, {chirpsgefs_raster_filepath}')
             else:
                 logger.debug(f"Retrieving stats for {date_str}")
                 rds=rioxarray.open_rasterio(chirpsgefs_raster_filepath)
@@ -96,56 +93,6 @@ def compute_stats_rainyseason(country_iso3, adm_level,days_ahead, output_dir, ra
                 df.loc[:,"date"] = d
                 df.loc[:,"date_forec_end"] = df.loc[:,"date"] + timedelta(days=days_ahead - 1)
                 df.drop("geometry", axis=1).to_csv(output_path, index=False)
-
-
-
-# def compute_stats_rainyseason(adm_level, days_ahead, rainy_season_path, rainy_adm_col, onset_col="onset_date",
-#                               cessation_col="cessation_date"):
-#     # this takes some time to compute, couple of hours at max
-#     adm_col = parameters[f"shp_adm{adm_level}c"]
-#     adm_bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
-#     rainy_dates = get_rainy_season_dates(rainy_season_path)
-#     gdf_adm = gpd.read_file(adm_bound_path)
-#
-#     df_list = []
-#     # load the tif file for each date and compute the statistics
-#     for d in rainy_dates:
-#         date_str = pd.to_datetime(d).strftime("%Y%m%d")
-#         chirpsgefs_filepath = config.CHIRPSGEFS_RAW_DIR / config.CHIRPSGEFS_RAW_FILENAME.format(days_ahead=days_ahead,
-#                                                                                                 date=date_str)
-#         try:
-#             logger.debug(f"Retrieving stats for {date_str}")
-#             rds = rioxarray.open_rasterio(chirpsgefs_filepath)
-#             df_date = compute_raster_stats(rds.sel(band=1), rds.rio.transform(), gdf_adm, adm_col)
-#             df_date["date"] = d
-#             df_date["date_forec_end"] = df_date["date"] + timedelta(days=days_ahead - 1)
-#             df_list.append(df_date)
-#         except Exception as e:
-#             logger.info(f'CHIRPS-GEFS data not available for {date_str}')
-#     df_hist_all = pd.concat(df_list)
-
-#TODO: add this to processing notebook
-#     df_rain = pd.read_csv(rainy_season_path, parse_dates=[onset_col, cessation_col])
-#     df_rain_adm = df_rain.groupby([rainy_adm_col, "season_approx"], as_index=False).agg(
-#         {onset_col: np.min, cessation_col: np.max})
-#     list_hist_rain_adm = []
-#     for a in df_hist_all[adm_col].unique():
-#         dates_adm = pd.Index([])
-#         df_rain_seladm = df_rain_adm[df_rain_adm[adm_col] == a]
-#         for i in df_rain_seladm.season_approx.unique():
-#             df_rain_seladm_seas = df_rain_seladm[df_rain_adm.season_approx == i]
-#             seas_range = pd.date_range(df_rain_seladm_seas.onset_date.values[0],
-#                                        df_rain_seladm_seas.cessation_date.values[0])
-#             dates_adm = dates_adm.union(seas_range)
-#         list_hist_rain_adm.append(df_hist_all[(df_hist_all[adm_col] == a) & (df_hist_all.date.isin(dates_adm))])
-#     df_hist_rain = pd.concat(list_hist_rain_adm)
-#
-#     output_path = country_data_processed_dir / "chirpsgefs" / f"{country_iso3}_chirpsgefs_stats_rainyseas.csv"
-#     # # #save file
-#     hist_path = os.path.join(country_data_processed_dir, "dry_spells", "chirpsgefs",
-#                              f"mwi_chirpsgefs_rainyseas_stats_mean_back_{adm_level}{days_string}.csv")
-#     df_hist_rain.drop("geometry", axis=1).to_csv(output_path, index=False)
-
 
 def get_rainy_season_dates(rainy_season_path,onset_col="onset_date",cessation_col="cessation_date"):
     """
