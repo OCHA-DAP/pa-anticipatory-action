@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.11.2
+    jupytext_version: 1.10.3
 kernelspec:
   display_name: antact
   language: python
@@ -47,7 +47,8 @@ reload(processing)
 
 mpl.rcParams['figure.dpi'] = 200
 pd.options.mode.chained_assignment = None
-font = {'family' : 'normal',
+font = {
+#         'family' : 'normal',
         'weight' : 'normal',
         'size'   : 16}
 
@@ -109,7 +110,7 @@ ds_ltseas=ds_ltsel.sum(dim="step",skipna=True,min_count=seas_len)
 
 ```{code-cell} ipython3
 #select the years on which we want to compute the climatological bounds
-ds_ltseas_climate=ds_ltseas.sel(time=ds_ltseas.time.dt.year.isin(range(1993,2017)))
+ds_ltseas_climate=ds_ltseas.sel(time=ds_ltseas.time.dt.year.isin(range(1993,2017))).dropna("number")
 ```
 
 ```{code-cell} ipython3
@@ -117,7 +118,11 @@ ds_ltseas_climate
 ```
 
 ```{code-cell} ipython3
-ds_ltseas_climate_quantile=ds_ltseas_climate.groupby(ds_ltseas_climate.time.dt.month).quantile(0.33)
+ds_ltseas_climate_quantile=ds_ltseas_climate.dropna("number").groupby(ds_ltseas_climate.time.dt.month).quantile(0.33,skipna=True,dim=["time","number"])
+```
+
+```{code-cell} ipython3
+ds_ltseas_climate_quantile
 ```
 
 ```{code-cell} ipython3
@@ -150,23 +155,99 @@ ds_ltseas_below_prob.prob_bavg.max()
 ```
 
 ```{code-cell} ipython3
-import xarray as xr 
-from matplotlib import pyplot as plt
-plt.ion()
-import cartopy.crs as ccrs
-# fnc='ed8f355c-5823-453c-bbdc-d4c64a038b61.nc'
-# ds=xr.open_dataset(fnc)
-plt.figure()
-ax=plt.axes(projection=ccrs.PlateCarree())
-ds_ltseas_below_prob.sel(time="2021-01-01").squeeze().prob_bavg.plot.contourf(ax=ax, levels=[0,10,20,40,50,60,70,100],colors=['#3054FF','#80FFFF','#FFFFFF','#FFF730','#FFAC00','#FF4701','#CD011E'])
+g=iri_clip.where(iri_clip.F.dt.month.isin([3]), drop=True).sel(L=1,C=0).prob.plot(
+    col="F",
+    col_wrap=3,
+    cmap=mpl.cm.YlOrRd,
+    cbar_kwargs={
+        "orientation": "horizontal",
+        "shrink": 0.8,
+        "aspect": 40,
+        "pad": 0.1,
+    },
+    figsize=(20,20)
+)
+df_bound = gpd.read_file(adm1_bound_path)
+for ax in g.axes.flat:
+    df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
+    ax.axis("off")
+```
+
+```{code-cell} ipython3
+# import xarray as xr 
+# from matplotlib import pyplot as plt
+# plt.ion()
+# import cartopy.crs as ccrs
+# # fnc='ed8f355c-5823-453c-bbdc-d4c64a038b61.nc'
+# # ds=xr.open_dataset(fnc)
+# plt.figure()
+# ax=plt.axes(projection=ccrs.PlateCarree())
+g=ds_ltseas_below_prob.sel(time="2021-01-01").squeeze().prob_bavg.plot( levels=[0,10,20,40,50,60,70,100],colors=['#3054FF','#80FFFF','#FFFFFF','#FFF730','#FFAC00','#FF4701','#CD011E'])
 # ax.coastlines()
 df_bound = gpd.read_file(adm1_bound_path)
-df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
-ax.axis("off")
+df_bound.boundary.plot(linewidth=1, ax=g.axes, color="red")
+# ax.axis("off")
 ```
 
 ```{code-cell} ipython3
 ds_ltseas_below_prob.sel(time="2021-01-01")
+```
+
+```{code-cell} ipython3
+ds_web=xr.open_dataset("../../../Experiments/drought/data/ecmwf/ecmwf_seasonal_bavg_202101.nc")
+```
+
+```{code-cell} ipython3
+import rioxarray
+```
+
+```{code-cell} ipython3
+ds_web=rioxarray.open_rasterio("../../../Experiments/drought/data/ecmwf/ecmwf_seasonal_bavg_202101.nc")
+```
+
+```{code-cell} ipython3
+gdf_adm1=gpd.read_file(adm1_bound_path)
+```
+
+```{code-cell} ipython3
+ds_web_clip=ds_web.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.clip(gdf_adm1["geometry"], all_touched=True)
+```
+
+```{code-cell} ipython3
+ds_web_clip=ds_web.rio.write_crs("EPSG:4326").rio.clip(gdf_adm1["geometry"], all_touched=True)
+```
+
+```{code-cell} ipython3
+ds_web_clip
+```
+
+```{code-cell} ipython3
+ds_ltseas_below_prob_clip=ds_ltseas_below_prob.sel(time="2021-01-01").rio.set_spatial_dims(x_dim="longitude",y_dim="latitude").rio.write_crs("EPSG:4326").rio.clip(gdf_adm1["geometry"], all_touched=True)
+```
+
+```{code-cell} ipython3
+ds_ltseas_below_prob_clip
+```
+
+```{code-cell} ipython3
+g=ds_ltseas_below_prob_clip.squeeze().prob_bavg.plot( levels=[0,20,22,24,26,28,30,32,34,36,38,40])
+df_bound = gpd.read_file(adm1_bound_path)
+df_bound.boundary.plot(linewidth=1, ax=g.axes, color="red")
+# ax.axis("off")
+```
+
+```{code-cell} ipython3
+g=ds_web_clip.data.plot( levels=[0,20,22,24,26,28,30,32,34,36,38,40])
+df_bound = gpd.read_file(adm1_bound_path)
+df_bound.boundary.plot(linewidth=1, ax=g.axes, color="red")
+# ax.axis("off")
+```
+
+```{code-cell} ipython3
+g=ds_web_clip.data.plot( levels=[0,10,20,40,50,60,70,100],colors=['#3054FF','#80FFFF','#FFFFFF','#FFF730','#FFAC00','#FF4701','#CD011E'])
+df_bound = gpd.read_file(adm1_bound_path)
+df_bound.boundary.plot(linewidth=1, ax=g.axes, color="red")
+# ax.axis("off")
 ```
 
 ```{code-cell} ipython3
