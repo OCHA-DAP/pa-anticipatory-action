@@ -10,6 +10,9 @@
 # We solely experiment with the 40% threshold, as the 50% threshold was never met during the last 4 years. 
 # - Trigger #1 in March covering Apr-May-June. Threshold desired: 40%.
 # - Trigger #2 in July covering Aug-Sep-Oct. Threshold desired: 50%.
+# 
+# Resources
+# - CHC's Early Warning Explorer)[https://chc-ewx2.chc.ucsb.edu] is a nice resource to scroll through historically observed CHIRPS data
 
 # #TODO: change df_obsfor to df_obsfor_l1
 
@@ -231,7 +234,7 @@ perc_obs_bavg_1in3 = int(np.percentile(df_stats_reg.bavg_cell, 66)) #round cause
 glue("perc_obs_bavg_1in3", perc_obs_bavg_1in3)
 
 
-# If we would use a threshold on the percentage of the area that experiences below average rainfall such that it is a 1 in 3 year event, this threshold would be {glue:text}`perc_obs_bavg_1in3`%
+# If we would use a threshold on the percentage of the area that experiences below average rainfall such that it is a 1 in 3 occurence event, this threshold would be {glue:text}`perc_obs_bavg_1in3`%
 
 # In[14]:
 
@@ -287,26 +290,32 @@ df_obsfor["seas_year"]=df_obsfor.apply(lambda x: f"{x.season} {x.for_end_month.y
 # In[19]:
 
 
-df_obsfor.head()
+df_obsfor_l1=df_obsfor[df_obsfor.L==1].dropna()
+
+
+# In[20]:
+
+
+df_obsfor_l1.head()
 
 
 # As first comparison we can make a density plot of the area forecasted to have >=40% probability of below average precipitaiton, and the percentage of the area that observed below average precipitation.   
 # 
 # As the plot below shows, these results are not very promissing. Only in a few seasons there was a >=40% probability of below average precipitation, and in most of those seasons, the percentage of the area that also observed the below average precipitation was relatively low.
 
-# In[20]:
+# In[21]:
 
 
-glue("pears_corr", df_obsfor[(df_obsfor.C==0)&(df_obsfor.L==1)].corr().loc["bavg_cell","40percth_cell"])
+glue("pears_corr", df_obsfor_l1.corr().loc["bavg_cell","40percth_cell"])
 
 
 # We can also capture the relation between the two variables in one number by looking at the Pearson correlation. This is found to be {glue:text}`pears_corr:.2f`. This indicates a weak and even negative correlation, which is the opposite from what we would expect.
 
-# In[21]:
+# In[22]:
 
 
 #plot the observed vs forecast-observed for obs<=2mm
-g=sns.jointplot(data=df_obsfor[(df_obsfor.L==1)],x="bavg_cell",y=f"{threshold_for_prob}percth_cell", kind="hex",height=12,marginal_kws=dict(bins=100),joint_kws=dict(gridsize=30),xlim=(0,100))
+g=sns.jointplot(data=df_obsfor_l1,x="bavg_cell",y=f"{threshold_for_prob}percth_cell", kind="hex",height=12,marginal_kws=dict(bins=100),joint_kws=dict(gridsize=30),xlim=(0,100))
 g.set_axis_labels("Percentage of area observed below average precipitation", "% of area forecasted >=40% probability below average", fontsize=12)
 plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])
@@ -319,11 +328,11 @@ plt.colorbar(cax=cbar_ax);
 # 1) the forecasted percentage, is the percentage of the area where the probability of below average >=40
 # 2) some seasons are not included due to the dry mask defined by IRI
 
-# In[22]:
+# In[23]:
 
 
 fig, ax = plt.subplots(figsize=(12,6))
-tidy = df_obsfor.loc[df_obsfor.L==1,["seas_year","for_start","40percth_cell","bavg_cell"]].rename(columns={"40percth_cell":"forecasted","bavg_cell":"observed"}).melt(id_vars=['for_start','seas_year'],var_name="data_source").sort_values("for_start")
+tidy = df_obsfor_l1[["seas_year","for_start","40percth_cell","bavg_cell"]].rename(columns={"40percth_cell":"forecasted","bavg_cell":"observed"}).melt(id_vars=['for_start','seas_year'],var_name="data_source").sort_values("for_start")
 tidy.rename(columns={"40percth_cell":"forecasted","bavg_cell":"observed"},inplace=True)
 sns.barplot(x='seas_year', y='value', data=tidy, ax=ax,hue="data_source",palette={"observed":"#CCE5F9","forecasted":'#F2645A'})
 sns.despine(fig)
@@ -333,35 +342,37 @@ ax.set_ylabel("Percentage of area")
 ax.set_title("Percentage of area meeting criteria for observed and forecasted below average precipitation");
 
 
+# In[24]:
+
+
+for_thresh=10
+occ_num=len(df_obsfor_l1[df_obsfor_l1["40percth_cell"]>=for_thresh])
+occ_perc=occ_num/len(df_obsfor_l1)*100
+glue("for_thresh", for_thresh)
+glue("occ_num", occ_num)
+glue("occ_perc", occ_perc)
+
+
 # Despite the bad correlation, we do a bit further exploration to see if the geographical spread of the forecasted and observed below average area matters. 
-# Since it occurs so rarely that any part of the area is forecasted to have >=40% probability of below average rainfall, we define the forecast as meeting the criterium if at least 1% of the area meets the 40% threshold. This occurred 5 times during the last 4 years (=12% of the time).
+# Since it occurs so rarely that any part of the area is forecasted to have >=40% probability of below average rainfall, we define the forecast as meeting the criterium if at least {glue:text}`for_thresh`% of the area meets the 40% threshold. This occurred {glue:text}`occ_num` times between Apr 2017 and May 2021 (={glue:text}`occ_perc:.2f`% of the forecasts).
 # 
 # We then experiment with different thresholds of the area that had observed below average precipitation. As can be seen, with any threshold the miss and false alarm rate are really high, showing bad detection. 
 # 
 # Note: these numbers are not at all statistically significant!!
 
-# In[23]:
-
-
-df_obsfor[f"max_cell_{threshold_for_prob}"]=np.where(df_obsfor.max_cell_for>=threshold_for_prob,1,0)
-
-threshold_area_list=[1,50,20,35]
-for t in threshold_area_list:
-    df_obsfor[f"obs_bavg_{t}"]=np.where(df_obsfor.bavg_cell>=t,1,0)
-    df_obsfor[f"for_bavg_{t}"]=np.where(df_obsfor["40percth_cell"]>=t,1,0)
-
-
-# In[24]:
-
-
-df_obsfor_l1=df_obsfor[df_obsfor.L==1].dropna()
-
-
 # In[25]:
 
 
+threshold_area_list=[1,50,20,35,40,45,43,for_thresh]
+for t in threshold_area_list:
+    df_obsfor_l1[f"obs_bavg_{t}"]=np.where(df_obsfor_l1.bavg_cell>=t,1,0)
+    df_obsfor_l1[f"for_bavg_{t}"]=np.where(df_obsfor_l1["40percth_cell"]>=t,1,0)
+
+
+# In[26]:
+
+
 #compute tp,tn,fp,fn per threshold
-for_thresh=1
 y_predicted = np.where(df_obsfor_l1["40percth_cell"]>=for_thresh,1,0)
 threshold_list=np.arange(0,df_obsfor_l1.bavg_cell.max() +6,5)
 df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
@@ -376,7 +387,7 @@ for t in threshold_list:
 df_pr_th=df_pr_th.reset_index()
 
 
-# In[26]:
+# In[27]:
 
 
 fig,ax=plt.subplots()
@@ -400,13 +411,24 @@ fig.legend(handles, labels, loc='upper center')
 fig.tight_layout(rect=(0,0,1,0.9))
 
 
+# We can see that the forecasts never correspond with an occurrence of observed below average precipitation, regardless of the threshold that is set. To understand a bit better when extreme events of below average precipitation occur, we compute the confusion matrix per month as well as across all months. For this we set the threshold to 50% of the area having observed below average precipitaiton, such that we capture more extreme events. 
+# 
+# We can see that this event occurred 5 times and was never forecasted.
+# When looking at our seasons of interest, namely AMJ and ASO, we can see that this 50% of below average precipitation never occurred. There was one occurrence of a false alarm for AMJ. 
+# Due to the limited data we can however not conclude if the forecast is better during certain seasons.
+
+# In[28]:
+
+
+## Text for thresh_for=1
 # Since the error rates are relatively the smalles at 35% of the area having observed below average precipitaiton, we plot the confusion matrix for this value. We can see that with this threshold 20% of the seasons with below average rainfall is detected, and 60% of the "activations" would be false alarms
-# 
+
 # When separating by season and zooming in on our seasons of interest, the numbers are very different. During AMJ only once below average precipitation was observed, and this was also forecasted. However, 2/3 seasons that were forecasted to have bel.avg. this was not observed. During ASO no occurrence of below average precipitation was seen nor forecasted. 
-# 
+
+
 # Note: these numbers are not at all statistically significant!!
 
-# In[27]:
+# In[29]:
 
 
 def compute_confusionmatrix(df,target_var,predict_var, ylabel,xlabel,col_var=None,colp_num=3,title=None,figsize=(20,15)):
@@ -449,16 +471,16 @@ def compute_confusionmatrix(df,target_var,predict_var, ylabel,xlabel,col_var=Non
     return fig
 
 
-# In[28]:
+# In[30]:
 
 
-cm_thresh=compute_confusionmatrix(df_obsfor[df_obsfor.L==1],f"obs_bavg_35",f"for_bavg_1","Observed bel. avg. rainfall","Forecasted bel. avg. rainfall",figsize=(5,5))
+cm_thresh=compute_confusionmatrix(df_obsfor_l1,f"obs_bavg_50",f"for_bavg_10","Observed bel. avg. rainfall","Forecasted bel. avg. rainfall",figsize=(5,5))
 
 
-# In[29]:
+# In[31]:
 
 
-cm_thresh=compute_confusionmatrix(df_obsfor[df_obsfor.L==1],f"obs_bavg_35",f"for_bavg_1","Observed bel. avg. rainfall","Forecasted bel. avg. rainfall",col_var="season",colp_num=5)
+cm_thresh=compute_confusionmatrix(df_obsfor_l1,f"obs_bavg_50",f"for_bavg_10","Observed bel. avg. rainfall","Forecasted bel. avg. rainfall",col_var="season",colp_num=5)
 
 
 # ## Conclusion
@@ -469,7 +491,7 @@ cm_thresh=compute_confusionmatrix(df_obsfor[df_obsfor.L==1],f"obs_bavg_35",f"for
 
 # ## Archive
 
-# In[30]:
+# In[32]:
 
 
 #plot the observed vs forecast-observed
@@ -481,7 +503,7 @@ cbar_ax = g.fig.add_axes([.85, .25, .05, .4])
 plt.colorbar(cax=cbar_ax)
 
 
-# In[31]:
+# In[33]:
 
 
 #plot the observed vs forecast-observed for obs<=2mm
@@ -493,7 +515,7 @@ cbar_ax = g.fig.add_axes([.85, .25, .05, .4])
 plt.colorbar(cax=cbar_ax)
 
 
-# In[32]:
+# In[34]:
 
 
 fig,ax=plt.subplots(figsize=(10,10))
@@ -501,9 +523,10 @@ sns.lineplot(data=df_obsfor, x="for_start", y="40percth_cell", hue="L",ax=ax)
 # sns.lineplot(data=df_obsfor, x="time",y="bavg_cell",ax=ax,linestyle="--",marker="o")
 
 
-# In[33]:
+# In[35]:
 
 
+df_obsfor[f"max_cell_{threshold_for_prob}"]=np.where(df_obsfor.max_cell_for>=threshold_for_prob,1,0)
 #plot distribution precipitation with and without observed belowavg precip
 fig,ax=plt.subplots(figsize=(10,10))
 g=sns.boxplot(data=df_obsfor[df_obsfor.C==0],x="L",y="bavg_cell",ax=ax,color="#66B0EC",hue="max_cell_40",palette={0:"#CCE5F9",1:'#F2645A'})

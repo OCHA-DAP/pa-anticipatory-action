@@ -370,11 +370,6 @@ perc_for_40th=stats_country.loc[(stats_country.C==0)&(stats_country.L==1),'max_c
 glue("perc_for_maxcell_40th",perc_for_40th)
 ```
 
-#TODO: might want to look at at least 1% instead of at least 1 cell  
-#TODO: remove nan cells
-
-+++
-
 Across all months, {glue:text}`perc_for_maxcell_40th:.2f`% of the forecasts with 1 month leadtime had a >=40% probability of below average rainfall in at least one cell across the **whole** country
 
 ```{code-cell} ipython3
@@ -388,6 +383,9 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.set_xlabel("Publication month")
 ```
+
+### Methods of aggregation
+Note: all these computations only cover the region of interest
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
@@ -410,26 +408,24 @@ For the July forecast we wouldn't trigger with any method of aggregation, since 
 
 For March, when using the mean method aggregation, the trigger would have been met {glue:text}`num_trig_mar_mean` times{glue:text}`year_trig_mar_mean`.
 
-Below the distribution of the percentage of the area with >=40% probability is shown. From here it can be seen that the maximum percentage is {glue:text}`max_perc40_mar:.2f`%.
+Below the distribution of the percentage of the area with >=40% probability is shown for March. From here it can be seen that the maximum percentage is {glue:text}`max_perc40_mar:.2f`%.
 We look at the distribution of the percentage of the area with >=40% probability of below avg rainfall for the admins of interest, across all forecasts with a leadtime of 1. 
 When requiring 10% of cells to be above 40% this would be met {glue:text}`num_trig_mar_perc10:.2f` times{glue:text}`year_trig_mar_perc10:.2f`.
 
 ```{code-cell} ipython3
 :tags: [hide_input]
 
-#plot distribution for forecasts with C=0 (=below average) and L=1, for all months
+#plot distribution for forecasts with C=0 (=below average) and L=1, for March
 g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["month"]==3,"40percth_cell"],color="#007CE0",binwidth=1)
 ```
 
-```{code-cell} ipython3
-#TODO: add to show that 40% barely happens
-```
+The plot below shows the occurences across all months where at least 1% of the cells had a probability of at least 40% for below average rainfall. We can see that the occurrence of this is pretty rare. 
 
 ```{code-cell} ipython3
 :tags: [hide_input]
 
 #plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>0,"40percth_cell"],color="#007CE0",binwidth=3)
+g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>=1,"40percth_cell"],color="#007CE0",binwidth=3)
 ```
 
 ## Examine dominant tercile
@@ -438,13 +434,19 @@ g=sns.displot(stats_region_bavg_l1.loc[stats_region_bavg_l1["40percth_cell"]>0,"
 
 Besides knowing if the below average tercile reaches a certain threshold, it is also important to understand if the below average tercile is the dominant tercile. Where dominant indicates the tercile with the highes probability. Else, it wouldn't be logical to anticipate based on the likelihood of below average rainfall. 
 
-Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation. For this analysis we set this value,x, such that 10% of the area has a probability of at least x% for the given tercile.
+Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation. For this analysis we look at the 10% percentile boundary, meaning that 10% of the area has a probability of at least x% for the given tercile.
+
+This threshold was set since we want a substantial part of the region to meet the threshold. It wasn't set at a higher percentage, because from the above analysis we saw that this barely occurred in the past 4 years. However, this threshold and method of aggregation is still open for discussion. 
+
+Note: all these computations only cover the region of interest
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
 stats_region["publication_month"]=stats_region["F"].dt.to_period("M")
 stats_region_10perc=stats_region.pivot(index=['publication_month','L'], columns='C', values='10quant_cell').reset_index().rename(columns={0:"bel_avg",1:"normal",2:"abv_avg"})
+#remove index name
+stats_region_10perc = stats_region_10perc.rename_axis(None, axis=1)  
 ```
 
 ```{code-cell} ipython3
@@ -453,11 +455,13 @@ stats_region_10perc=stats_region.pivot(index=['publication_month','L'], columns=
 stats_region_10perc_l1=stats_region_10perc[stats_region_10perc.L==1]
 ```
 
-Below the publication months, where the forecast indicated at least 10% of the area to have a >=40% probability of the tercile are shown. We can see that for only 3 months this occurred for the below average tercile. For the above average tercile this is a more common phenomenon. 
+Below all publication months are shown, where the numbers indicate the 10% boundary for each tercile. Those that have a probability of at least 40 are marked in red. We can see that for only 3 months this occurred for the below average tercile. For the above average tercile this is a more common phenomenon. 
 
-For all three occurrences of the below average tercile having >=40% probability, this was also the dominant tercile. However the differences are not very large with the above average tercile in March 2018 and March 2021. 
+We can see that for all occurrences that there was an at least 40% probability, this only occurred in one tercile, i.e. this is also the dominant tercile.  However, the differences can be quite small, for example in March 2018 and March 2021. 
 
 Especially around March 2021 we can see an interesting pattern, where in February and April the forecast indicates a higher probability of above average instead of below average precipitation. Note however that these are forecasting different periods. I.e. the forecast of March is projecting for AMJ while the one in April is projecting for MJJ.
+
+When focussing on our months of interest, namely March and July, we can see that for March in 4 out of 5 years the below average was the dominant tercile. The opposite for July is true, where all years so far showed the above average as dominant tercile. 
 
 +++
 
@@ -473,6 +477,16 @@ Questions
 stats_region_10perc_40th_l1=stats_region_10perc_l1[(stats_region_10perc_l1.select_dtypes(include=np.number) >= 40).any(1)]
 ```
 
+Note: the NaNs in the table indicate a dry mask during those months
+
+```{code-cell} ipython3
+:tags: [output_scroll]
+
+stats_region_10perc_l1.drop("L",axis=1).set_index(["publication_month"]).style.apply(lambda x: ["color: red" if v >=40 else "" for v in x], axis = 1).set_precision(2)
+```
+
+The probabilities for March and July are shown below, where the dominant tercile is highlighted
+
 ```{code-cell} ipython3
 :tags: [hide_input]
 
@@ -483,13 +497,13 @@ def highlight_max(s):
     is_max = s == s.max()
     return ['color: red' if v else 'black' for v in is_max]
 
-stats_region_10perc_40th_l1.drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1)
+stats_region_10perc_l1[stats_region_10perc_l1.publication_month.dt.month.isin([3])].drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1).set_precision(2)
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
+:tags: [hide_input]
 
-stats_region_10perc_l1[stats_region_10perc.bel_avg>=40]
+stats_region_10perc_l1[stats_region_10perc_l1.publication_month.dt.month.isin([7])].drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1).set_precision(2)
 ```
 
 +++ {"tags": ["remove_cell"]}
