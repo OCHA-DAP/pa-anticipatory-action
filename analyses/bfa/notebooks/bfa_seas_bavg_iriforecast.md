@@ -16,11 +16,13 @@ kernelspec:
 # IRI forecast as a trigger for drought in Burkina Faso
 This notebook explores the option of using IRI's seasonal forecast as the indicator for a drought-related trigger in Burkina Faso. 
 From the country team the proposed trigger is:
-- Trigger #1 in March covering Apr-May-June. Threshold desired: 40%.
-- Trigger #2 in July covering Aug-Sep-Oct. Threshold desired: 50%. 
+- Trigger #1 in March covering June-July-August. Threshold desired: 40%.
 - Targeted Admin1s: Boucle de Mounhoun, Centre Nord, Sahel, Nord.
 
 This notebook explores if and when these triggers would be reached. Moreover, an exploration is done on how the raster data can be combined to come to one value for all 4 admin1s.
+
+<!-- - Trigger #1 in March covering Apr-May-June. Threshold desired: 40%.
+- Trigger #2 in July covering Aug-Sep-Oct. Threshold desired: 50%.  -->
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
@@ -70,6 +72,13 @@ threshold_jul=50
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
+leadtime=3
+glue("leadtime", leadtime)
+```
+
+```{code-cell} ipython3
+:tags: [remove_cell]
+
 country="bfa"
 config=Config()
 parameters = config.parameters(country)
@@ -99,7 +108,7 @@ iri_ds
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-iri_ds.sel(L=1).prob
+iri_ds.sel(L=leadtime).prob
 ```
 
 ```{code-cell} ipython3
@@ -109,7 +118,9 @@ gdf_adm1=gpd.read_file(adm1_bound_path)
 iri_clip=iri_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(gdf_adm1.geometry.apply(mapping), iri_ds.rio.crs, all_touched=True)
 ```
 
-Below the raw forecast data of below-average rainfall with 1 month leadtime, published in March and July is shown.
+Below the raw forecast data of below-average rainfall with {glue:text}`leadtime` month leadtime, published in March 
+<!-- and July  -->
+is shown.
 
 ```{code-cell} ipython3
 :tags: [hide_input]
@@ -132,6 +143,8 @@ for ax in g.axes.flat:
     ax.axis("off")
 # fig.tight_layout()
 ```
+
+We can also inspect the dominant tercile, which is shown below. This is similair to [the figure on the IRI Maproom](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html), except that the bins are defined slightly differently
 
 ```{code-cell} ipython3
 :tags: [hide_input]
@@ -247,7 +260,7 @@ g=iri_interp_reg.sel(L=1,C=0,F="2018-03").prob.plot(
 )
 df_bound = gpd.read_file(adm1_bound_path)
 df_bound.boundary.plot(linewidth=1, ax=g.axes, color="red")
-ax.axis("off")
+ax.axis("off");
 ```
 
 ```{code-cell} ipython3
@@ -280,11 +293,6 @@ stats_region["month"]=stats_region.F.dt.month
 :tags: [remove_cell]
 
 # stats_region.to_csv(stats_reg_path,index=False)
-```
-
-```{code-cell} ipython3
-leadtime=3
-glue("leadtime", leadtime)
 ```
 
 ```{code-cell} ipython3
@@ -432,7 +440,7 @@ For March, when using the mean method aggregation, the trigger would have been m
 
 Below the distribution of the percentage of the area with >=40% probability is shown for March. From here it can be seen that the maximum percentage is {glue:text}`max_perc40_mar:.2f`%.
 We look at the distribution of the percentage of the area with >=40% probability of below avg rainfall for the admins of interest, across all forecasts with a leadtime of {glue:text}`leadtime`. 
-When requiring 10% of cells to be above 40% this would be met {glue:text}`num_trig_mar_perc10:.2f` times{glue:text}`year_trig_mar_perc10:.2f`.
+When requiring 10% of cells to be above 40% this would be met {glue:text}`num_trig_mar_perc10` times{glue:text}`year_trig_mar_perc10`.
 
 ```{code-cell} ipython3
 :tags: [hide_input]
@@ -452,7 +460,7 @@ g=sns.displot(stats_region_bavg_lt.loc[stats_region_bavg_lt["40percth_cell"]>=1,
 
 While we can include the spatial severity in the trigger threshold, we should also take into account that the spatial uncertainty of seasonal forecasts is large. 
 
-Given the size of the area of interest, it might therefore be better to only focus on whether any cell within that region reached the probability threshold. 
+Given the size of the area of interest, it might therefore be better to only focus on whether any cell within that region reached the probability threshold. However, in this case 40% might be too sensitive of a trigger
 
 +++
 
@@ -493,7 +501,7 @@ Especially around March 2021 we can see an interesting pattern, where in Februar
 
 When focussing on our months of interest, namely March and July, we can see that for March in 4 out of 5 years the below average was the dominant tercile. The opposite for July is true, where all years so far showed the above average as dominant tercile. -->
 
-Below all publication months are shown, where the numbers indicate the cell with the maximum probability touching the region of interest for each tercile. Those that have a probability of at least 40% are marked in red. We can see that this occurs more often for above than below average. Moreover, it does occurr that both the below and above average tercile meet the threshold. 
+Below all publication months are shown, where the numbers indicate the cell with the maximum probability touching the region of interest for each tercile. Those that have a probability of at least 40% are marked in red. We can see that this occurs more often for above than below average. Moreover, it does occurr that both the below and above average tercile meet the threshold.
 
 +++
 

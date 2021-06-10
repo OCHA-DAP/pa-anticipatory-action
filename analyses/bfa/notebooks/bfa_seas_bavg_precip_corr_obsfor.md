@@ -162,27 +162,6 @@ g.fig.suptitle("Pixels with below average rainfall",size=24)
 g.fig.tight_layout()
 ```
 
-```{code-cell} ipython3
-:tags: [hide_input]
-
-#show the data for each month of 2020, clipped to MWI
-#TODO change subplot titles
-g=ds_season_below.sel(time=ds_season_below.time.dt.year.isin([2021])).precip.plot(
-    col="time",
-    col_wrap=6,
-    levels=[-666,0],
-    add_colorbar=False,
-    cmap="YlOrRd",
-)
-
-df_bound = gpd.read_file(adm1_bound_path)
-for ax in g.axes.flat:
-    df_bound.boundary.plot(linewidth=1, ax=ax, color="grey")
-    ax.axis("off")
-g.fig.suptitle("Pixels with below average rainfall",size=24)
-g.fig.tight_layout()
-```
-
 The plots below show the distribution of seasonal rainfall across the whole country (so not only the region of interest). The red line indicates the tercile value averaged across all raster cells. This means it is slightly different for each raster cell, but it helps to get a general feeling
 
 ```{code-cell} ipython3
@@ -250,8 +229,8 @@ gdf_reg=gdf_adm1[gdf_adm1.ADM1_FR.isin(adm_sel)]
 
 #compute stats
 df_stats_reg=compute_zonal_stats_xarray(ds_season_below,gdf_reg,lon_coord="x",lat_coord="y",var_name="precip")
-#some dates don't have forecasted values due to dry mask, remove these
-df_stats_reg=df_stats_reg.dropna(subset=["mean_cell"])
+#TODO: check if there are cases where nan shouldn't be filled with 0. But at least in cases where no below avg was observed, this is nan otherwise
+df_stats_reg=df_stats_reg.fillna(0)
 df_stats_reg["end_time"]=pd.to_datetime(df_stats_reg["time"].apply(lambda x: x.strftime('%Y-%m-%d')))
 df_stats_reg["end_month"]=df_stats_reg.end_time.dt.to_period("M")
 df_stats_reg["start_time"]=df_stats_reg.end_time.apply(lambda x: x+relativedelta(months=-2))
@@ -338,7 +317,7 @@ As first comparison we can make a density plot of the area forecasted to have >=
 
 As the plot below shows, these results are not very promissing. Only in a few seasons there was a >=40% probability of below average precipitation, and in most of those seasons, the percentage of the area that also observed the below average precipitation was relatively low.
 
-For some months the rainfall is really low due to the dry season, this results in very small ranges between the terciles. It might therefore not be correct to treat all seasons similarly when computing the correlation. However due to the limited data this is the only method we have. 
+For some months the rainfall is really low due to the dry season, this results in very small ranges between the terciles. It might therefore not be correct to treat all seasons similarly when computing the correlation. However due to the limited data this is the only method we have.
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
@@ -364,21 +343,6 @@ It would be possible that the observed and forecasted below average seasons don'
 Note:
 1) the forecasted percentage, is the percentage of the area where the probability of below average >=40
 2) some seasons are not included due to the dry mask defined by IRI
-
-```{code-cell} ipython3
-:tags: [hide_input]
-
-fig, ax = plt.subplots(figsize=(12,6))
-tidy = df_obsfor_lt[["seas_year","for_start","40percth_cell","bavg_cell"]].rename(columns={"40percth_cell":"forecasted","bavg_cell":"observed"}).melt(id_vars=['for_start','seas_year'],var_name="data_source").sort_values("for_start")
-tidy.rename(columns={"40percth_cell":"forecasted","bavg_cell":"observed"},inplace=True)
-sns.barplot(x='seas_year', y='value', data=tidy, ax=ax,hue="data_source",palette={"observed":"#CCE5F9","forecasted":'#F2645A'})
-sns.despine(fig)
-x_dates = tidy.seas_year.unique()
-ax.set_xticklabels(labels=x_dates, rotation=45, ha='right');
-ax.set_ylabel("Percentage of area")
-ax.set_ylim(0,100)
-ax.set_title("Percentage of area meeting criteria for observed and forecasted below average precipitation");
-```
 
 ```{code-cell} ipython3
 :tags: [hide_input]
