@@ -64,8 +64,10 @@ def compute_raster_stats(ds, raster_transform, gdf,gdf_id_col,ds_thresh_list=[2,
 
     return df
 
-def compute_stats_rainyseason(country_iso3, config, adm_level,days_ahead, output_dir, rainy_season_path,use_cache=True):
+def compute_stats_rainyseason(country_name, config, adm_level,days_ahead, output_dir, rainy_season_path,use_cache=True):
     # this takes some time to compute, couple of hours at max
+    parameters = config.parameters(country_name)
+    country_iso3=parameters["iso3_code"].lower()
     adm_col=parameters[f"shp_adm{adm_level}c"]
     #TODO: find a more dynamic method to define this path
     adm_bound_path=Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / country_iso3 / config.SHAPEFILE_DIR /parameters[f"path_admin{adm_level}_shp"]
