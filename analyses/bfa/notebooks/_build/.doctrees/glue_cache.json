@@ -1,17 +1,5 @@
 {
   "bfa_seas_bavg_precip_corr_obsfor": {
-    "occ_perc": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "occ_perc",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "5.714285714285714"
-      }
-    },
     "perc_obs_bavg_1in3": {
       "output_type": "display_data",
       "metadata": {
@@ -21,7 +9,7 @@
         }
       },
       "data": {
-        "text/plain": "43"
+        "text/plain": "40"
       }
     },
     "for_thresh": {
@@ -36,18 +24,6 @@
         "text/plain": "10"
       }
     },
-    "threshold_for_prob": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "threshold_for_prob",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "40"
-      }
-    },
     "pears_corr": {
       "output_type": "display_data",
       "metadata": {
@@ -57,7 +33,7 @@
         }
       },
       "data": {
-        "text/plain": "-0.15987708547765622"
+        "text/plain": "-0.20092487327314842"
       }
     },
     "occ_num": {
@@ -69,23 +45,35 @@
         }
       },
       "data": {
-        "text/plain": "2"
+        "text/plain": "5"
       }
-    }
-  },
-  "bfa_seas_bavg_iriforecast": {
-    "num_trig_jul": {
+    },
+    "occ_perc": {
       "output_type": "display_data",
       "metadata": {
         "scrapbook": {
-          "name": "num_trig_jul",
+          "name": "occ_perc",
           "mime_prefix": ""
         }
       },
       "data": {
-        "text/plain": "0"
+        "text/plain": "12.195121951219512"
       }
     },
+    "threshold_for_prob": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "threshold_for_prob",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "40"
+      }
+    }
+  },
+  "bfa_seas_bavg_iriforecast": {
     "max_prob_mar": {
       "output_type": "display_data",
       "metadata": {
@@ -95,151 +83,31 @@
         }
       },
       "data": {
-        "text/plain": "44.93519369687384"
+        "text/plain": "41.10788156588872"
       }
     },
-    "max_perc40_mar": {
+    "leadtime": {
       "output_type": "display_data",
       "metadata": {
         "scrapbook": {
-          "name": "max_perc40_mar",
+          "name": "leadtime",
           "mime_prefix": ""
         }
       },
       "data": {
-        "text/plain": "16.275862068965516"
+        "text/plain": "3"
       }
     },
-    "max_prob_jul": {
+    "year_trig_mar_mean": {
       "output_type": "display_data",
       "metadata": {
         "scrapbook": {
-          "name": "max_prob_jul",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "36.66180243665207"
-      }
-    },
-    "max_prob_mar_country": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "max_prob_mar_country",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "46.59822141306648"
-      }
-    },
-    "threshold_jul": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "threshold_jul",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "50"
-      }
-    },
-    "max_prob_jul_country": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "max_prob_jul_country",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "46.59822141306648"
-      }
-    },
-    "perc_for_maxcell_40th": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "perc_for_maxcell_40th",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "25.49019607843137"
-      }
-    },
-    "num_trig_mar_mean": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "num_trig_mar_mean",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "0"
-      }
-    },
-    "num_trig_mar": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "num_trig_mar",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "4"
-      }
-    },
-    "num_trig_mar_perc10": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "num_trig_mar_perc10",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "2"
-      }
-    },
-    "year_trig_jul": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "year_trig_jul",
+          "name": "year_trig_mar_mean",
           "mime_prefix": ""
         }
       },
       "data": {
         "text/plain": "''"
-      }
-    },
-    "year_trig_mar_perc10": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "year_trig_mar_perc10",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "' in 2018, 2021'"
-      }
-    },
-    "year_trig_mar": {
-      "output_type": "display_data",
-      "metadata": {
-        "scrapbook": {
-          "name": "year_trig_mar",
-          "mime_prefix": ""
-        }
-      },
-      "data": {
-        "text/plain": "' in 2018, 2019, 2020, 2021'"
       }
     },
     "threshold_mar": {
@@ -254,16 +122,160 @@
         "text/plain": "40"
       }
     },
-    "year_trig_mar_mean": {
+    "num_trig_jul": {
       "output_type": "display_data",
       "metadata": {
         "scrapbook": {
-          "name": "year_trig_mar_mean",
+          "name": "num_trig_jul",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "0"
+      }
+    },
+    "year_trig_jul": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "year_trig_jul",
           "mime_prefix": ""
         }
       },
       "data": {
         "text/plain": "''"
+      }
+    },
+    "num_trig_mar": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "num_trig_mar",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "1"
+      }
+    },
+    "max_perc40_mar": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "max_perc40_mar",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "11.586206896551724"
+      }
+    },
+    "perc_for_maxcell_40th": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "perc_for_maxcell_40th",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "33.33333333333333"
+      }
+    },
+    "num_trig_mar_perc10": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "num_trig_mar_perc10",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "1"
+      }
+    },
+    "max_prob_jul": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "max_prob_jul",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "43.19362178234879"
+      }
+    },
+    "threshold_jul": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "threshold_jul",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "50"
+      }
+    },
+    "max_prob_mar_country": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "max_prob_mar_country",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "42.183278335465324"
+      }
+    },
+    "max_prob_jul_country": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "max_prob_jul_country",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "51.90447998522855"
+      }
+    },
+    "num_trig_mar_mean": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "num_trig_mar_mean",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "0"
+      }
+    },
+    "year_trig_mar_perc10": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "year_trig_mar_perc10",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "' in 2017'"
+      }
+    },
+    "year_trig_mar": {
+      "output_type": "display_data",
+      "metadata": {
+        "scrapbook": {
+          "name": "year_trig_mar",
+          "mime_prefix": ""
+        }
+      },
+      "data": {
+        "text/plain": "' in 2017'"
       }
     }
   }
