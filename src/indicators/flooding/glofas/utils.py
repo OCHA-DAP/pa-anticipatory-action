@@ -30,9 +30,7 @@ def get_glofas_forecast(
     glofas_forecast = glofas.GlofasForecast()
     ds_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=country_iso3,
-            leadtime=leadtime,
-            version=version,
+            country_iso3=country_iso3, leadtime=leadtime, version=version,
         )
         for leadtime in leadtimes
     }
@@ -49,9 +47,7 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     ds_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=country_iso3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=country_iso3, version=version, leadtime=leadtime,
         )
         for leadtime in leadtimes
     }
@@ -109,7 +105,7 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
 
 def get_return_periods(ds_reanalysis: xr.Dataset, years=None) -> pd.DataFrame:
     if years is None:
-        years = [1.5, 2, 5, 10, 20]
+        years = [1.5, 2, 3, 5, 10, 20]
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
@@ -185,6 +181,22 @@ def get_groups_above_threshold(observations, threshold, min_duration=1):
         0
     ].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] > min_duration]
+
+
+def get_glofas_activations(da_glofas, thresh, ndays):
+    vals = da_glofas.values
+    groups = get_groups_above_threshold(vals, thresh, ndays)
+    df_glofas_act = pd.DataFrame(groups, columns=["start_index", "end_index"])
+    df_glofas_act["num_days"] = (
+        df_glofas_act["end_index"] - df_glofas_act["start_index"]
+    )
+    df_glofas_act["start_date"] = df_glofas_act["start_index"].apply(
+        lambda x: da_glofas.time[x].values
+    )
+    df_glofas_act["end_date"] = df_glofas_act["end_index"].apply(
+        lambda x: da_glofas.time[x].values
+    )
+    return df_glofas_act
 
 
 def get_rank(observations: np.array, forecast: np.array) -> np.array:
