@@ -12,10 +12,9 @@ sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import AreaFromShape, Station
 
-
 # Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "npl"
-LEADTIMES = [5, 10, 15]
+LEADTIMES = [x + 1 for x in range(20)]
 # TODO: Read in the csv file from GDrive
 STATIONS = {
     "Karnali": Station(lon=28.75, lat=81.25),
@@ -30,7 +29,7 @@ SHAPEFILE = (
     / "npl_admbnda_ocha_20201117"
     / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
 )
-VERSION = 2
+VERSION = 3
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
