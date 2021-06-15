@@ -295,7 +295,7 @@ for station1 in stations:
         x_hours_sub = np.arange(x_sub[0], x_sub[-1] + 1)
         corr_hours = corr_interp_func(x_hours_sub)
         offset = int(x_hours_sub[np.argmax(corr_hours)])
-        offset_df.at[station1, station2] = offset            
+        offset_df.at[station1, station2] = int(offset)          
         # Do an hourly interpolation and shift
         df_discharge = (pd.DataFrame({'station1': discharge_s1.values,
                                     'station2': discharge_s2.values}, 
@@ -310,10 +310,6 @@ for station1 in stations:
         # Then calculate pearsons correlation
         corr_df.at[station1, station2] = df_discharge.corr().loc['station1', 'station2_shifted']
 corr_df = corr_df.astype('float')
-```
-
-```python
-corr_df
 ```
 
 ```python
