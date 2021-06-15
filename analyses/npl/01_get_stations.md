@@ -46,6 +46,9 @@ STATIONS_FINAL = {
     'glofas': DATA_DIR / 'npl/glofas/npl_glofas_stations_final.gpkg',
     'dhm': GOV_DIR / 'npl_dhm_stations_final.gpkg'
 }
+
+# Coordinate system
+CRS = "EPSG:4326"
 ```
 
 ## Read in Nepal GloFAS stations
@@ -87,7 +90,7 @@ for i in range(2):
             table['lon'], table['lat']))
     table_list.append(table)
     
-df_glofas = pd.concat(table_list, ignore_index=True).set_crs("EPSG:4326")
+df_glofas = pd.concat(table_list, ignore_index=True).set_crs(CRS)
 # Fix a parsing error
 df_glofas = df_glofas.replace({'DCrHoMss': 'DHM'})
 
@@ -235,7 +238,7 @@ for q in ['lat', 'lon']:
     df_dhm[q] = df_dhm[q].apply(dms2dd)
 df_dhm['geometry'] = gpd.points_from_xy(df_dhm['lon'], df_dhm['lat'])
 
-df_dhm = df_dhm.set_crs("EPSG:4326")
+df_dhm = df_dhm.set_crs(CRS)
 
 df_dhm.to_file(DHM_STATION_FILENAME, driver="GPKG", index=False)
 
@@ -335,7 +338,7 @@ for source in ['glofas', 'dhm']:
         df = gpd.GeoDataFrame(df[[f'name_{source}', f'lat_{source}', f'lon_{source}']])
         df_final = df_final.append(df, ignore_index=True)
     df_final['geometry'] = gpd.points_from_xy(df_final[f'lon_{source}'], df_final[f'lat_{source}'])
-    df_final = df_final.set_crs("EPSG:4326")
+    df_final = df_final.set_crs(CRS)
     df_final.to_file(STATIONS_FINAL[source], driver="GPKG", index=False)
 
 ```
