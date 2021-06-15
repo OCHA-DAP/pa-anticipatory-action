@@ -18,6 +18,27 @@ from src.indicators.flooding.glofas import utils, glofas
 
 ```python
 COUNTRY_ISO3 = 'npl'
+
+RETURN_PERIODS_GLOFAS = {
+    'Chatara': {
+        1.5: 5920,
+        2.0: 6350,
+        5.0: 7400
+    },
+    'Chisapani': {
+        1.5: 5850,
+        2.0: 6300,
+        5.0: 7425,
+        20.0: 8900
+    },
+    'Asaraghat': {
+        1.5: 1700,
+        2.0: 1800,
+        5.0: 2070,
+        20.0: 2400
+    }
+}
+
 ```
 
 ```python
@@ -79,12 +100,10 @@ for i, station in enumerate(stations):
     fig, ax = plt.subplots()
     ax.plot(df_rps_empirical.index, df_rps_empirical[station])
     ax.plot(df_rps_empirical.index, df_rps_analytical[station])
-
+    if station in RETURN_PERIODS_GLOFAS:
+        for year, val in RETURN_PERIODS_GLOFAS[station].items():
+            ax.plot(year, val, 'o')
     ax.set_title(station)
-```
-
-```python
-df_rps_analytical
 ```
 
 ```python
