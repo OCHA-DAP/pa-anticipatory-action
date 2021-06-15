@@ -23,7 +23,7 @@ COUNTRY_ISO3 = 'npl'
 
 DURATION = 1 # Number of days that the GloFAS threshold should be exceeded
 
-RP_LIST = [2, 3, 5] # List of return period values to compare
+RP_LIST = [1.5, 2, 3, 5, 10, 20] # List of return period values to compare
 
 STATIONS = {
     'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
@@ -41,7 +41,7 @@ STATIONS_BY_MAJOR_BASIN = {
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
-df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
+df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
 ```
 
 ## When do activations occur at the different stations
@@ -50,7 +50,7 @@ We want to know how much stations within each basin are correlated, and if activ
 
 ```python
 cmap = mpl.cm.get_cmap('plasma_r')
-clist = cmap(np.linspace(0, 1, len(rp_list)))
+clist = cmap(np.linspace(0, 1, len(RP_LIST)))
 cdict = {rp: c for rp, c in zip(RP_LIST, clist)}
 legend_title = 'RP'
 ```
@@ -77,55 +77,17 @@ for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
     events_all[basin] = station_events
 ```
 
-## Are activations between basins correlated? 
-
-Checking Koshi + Bagmati and Karnali + Babai + West Rapti. For each event in the secondary basin, check to see what the shortest time is to the nearest event in the primary basin.
-
 ```python
-selected_stations = {
-    'Chatara': 'Koshi',
-    'Asaraghat':'Karnali'
-}
+x = np.array([1, 2, 3, 4, 4, 3, 2, 3, 4, 3, 2])
+g = utils.get_groups_above_threshold(x, 3.5)
 
-correlated_stations = {
-    'Chatara': ['Bagmati'], 
-    'Asaraghat': ['Babai', 'Rapti']}
-
-RP = 3
-```
-
-```python
-small_basin_distances = {}
-
-for large_basin_station in correlated_stations: 
-    
-    for small_basin in correlated_stations[large_basin_station]:
-        
-        large_basin_events = events_all[selected_stations[large_basin_station]][large_basin_station][RP]
-        small_basin_events = events_all[small_basin][STATIONS[small_basin][0]][RP]
-      
-        for index, row in small_basin_events.iterrows():
-            
-            small_event_start = small_basin_events.loc[index, 'start_index']
-            start_distances = [small_event_start - large_event_start for large_event_start in large_basin_events['start_index']]
-            min_distance = min(start_distances, key=abs)
-            small_basin_events.loc[index, 'min_distance'] = min_distance
-        
-        plt.figure()
-        plt.hist(small_basin_events.min_distance)
-        
-        # What percent of events occur within +-30 days?
-        perc_short_distance = (small_basin_events.min_distance.abs()<30).sum() / len(small_basin_events.min_distance)
-        
-        # Save to new df in case wanting to do more with this
-        small_basin_distances[small_basin] = small_basin_events
 ```
 
 ### Plot river discharge vs time for all stations
 
 ```python
-for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
-    stations = STATIONS[basin]
+rp_list = RP_LIST
+for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
     fig, axs = plt.subplots(len(stations), figsize=(10,2*len(stations)), squeeze=False)
     fig.suptitle(basin)
     #fig.supylabel('Discharge [m$^3$ s$^{-1}$]')
@@ -159,28 +121,28 @@ for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
 # TODO: Something seems a bit buggy here, 
 # as some stations don't have any events for a 1/3 RP
 
-#year_ranges = [
-#    [1979, 1988],
-#    [1989, 1998],
-#    [1999, 2009],
-#    [2010, 2021]
-#]
+year_ranges = [
+    [1979, 1988],
+    [1989, 1998],
+    [1999, 2009],
+    [2010, 2021]
+]
 
 #year_ranges = [[x, x+1] for x in range(1979, 2020)]
-year_ranges = [[1979, 2020]]
+#year_ranges = [[1979, 2020]]
 
-rp_list = [3]
+buffer = 5 # Buffer to make sure the lines show up
+rp_list = [1.5, 2, 5, 20]
 cmap = mpl.cm.get_cmap('plasma_r')
 clist = cmap(np.linspace(0, 1, len(rp_list)))
 
 all_events = {}
 
-for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
+for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
     
     basin_events = {}
 
-    stations = STATIONS[basin]
-    fig, axs = plt.subplots(len(year_ranges), figsize=(15, 3), squeeze=False)
+    fig, axs = plt.subplots(len(year_ranges), figsize=(15, 10), squeeze=False)
     fig.suptitle(basin)
     for iyear, year_range in enumerate(year_ranges):
         ax = axs[iyear, 0]
@@ -195,13 +157,13 @@ for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
             observations = ds[station].values
             x = ds.time
 
-            for rp in RP_LIST:
+            for rp in rp_list:
                 rp_val=df_return_period.loc[rp, station]
                 groups = utils.get_groups_above_threshold(observations, rp_val, DURATION)
                 df_activations = utils.get_glofas_activations(ds[station], rp_val, DURATION)
-                print(df_activations)
+                #print(df_activations)
                 for group in groups:
-                    idx = range(group[0], group[1])
+                    idx = range(group[0], group[1] + buffer)
                     ax.fill_between(x=x[idx], y1=istation, y2=istation+1, 
                                     fc=cdict[rp], alpha=1)
 
@@ -238,12 +200,12 @@ time = ds_glofas_reanalysis.time.values
 # Note that this is pretty crude because it only uses the 
 # date range of the initial event, and thus will depend on the order
 # of the event list.
-for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
+for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
     event_dict = {}
     for rp in rp_list:
         event_dict[rp] = {}
         ievent = 0
-        for istation, station in enumerate(STATIONS[basin]):
+        for istation, station in enumerate(stations):
             observations = ds_glofas_reanalysis[station].values
             rp_val=df_return_period.loc[rp, station]
             groups = utils.get_groups_above_threshold(observations, rp_val)
@@ -360,4 +322,48 @@ offset_df.style.background_gradient(cmap='Greens_r', low=-500, high=500)
 
 ```python
 corr_df.style.background_gradient(cmap='Blues_r')
+```
+
+## Are activations between basins correlated? 
+
+Checking Koshi + Bagmati and Karnali + Babai + West Rapti. For each event in the secondary basin, check to see what the shortest time is to the nearest event in the primary basin.
+
+```python
+selected_stations = {
+    'Chatara': 'Koshi',
+    'Asaraghat':'Karnali'
+}
+
+correlated_stations = {
+    'Chatara': ['Bagmati'], 
+    'Asaraghat': ['Babai', 'Rapti']}
+
+RP = 3
+```
+
+```python
+small_basin_distances = {}
+
+for large_basin_station in correlated_stations: 
+    
+    for small_basin in correlated_stations[large_basin_station]:
+        
+        large_basin_events = events_all[selected_stations[large_basin_station]][large_basin_station][RP]
+        small_basin_events = events_all[small_basin][STATIONS[small_basin][0]][RP]
+      
+        for index, row in small_basin_events.iterrows():
+            
+            small_event_start = small_basin_events.loc[index, 'start_index']
+            start_distances = [small_event_start - large_event_start for large_event_start in large_basin_events['start_index']]
+            min_distance = min(start_distances, key=abs)
+            small_basin_events.loc[index, 'min_distance'] = min_distance
+        
+        plt.figure()
+        plt.hist(small_basin_events.min_distance)
+        
+        # What percent of events occur within +-30 days?
+        perc_short_distance = (small_basin_events.min_distance.abs()<30).sum() / len(small_basin_events.min_distance)
+        
+        # Save to new df in case wanting to do more with this
+        small_basin_distances[small_basin] = small_basin_events
 ```
