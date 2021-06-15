@@ -1,0 +1,9 @@
+country_name: "south sudan"
+iso3_code: "SSD"
+iso2_code: "SS"
+path_admin0_shp: "ssd_admbnda_imwg_nbs_shp/ssd_admbnda_adm0_imwg_nbs_20180817.shp" #downloaded from https://data.humdata.org/dataset/south-sudan-administrative-boundaries
+path_admin1_shp: "ssd_admbnda_imwg_nbs_shp/ssd_admbnda_adm1_imwg_nbs_20180817.shp" #downloaded from https://data.humdata.org/dataset/south-sudan-administrative-boundaries
+path_admin2_shp: "ssd_admbnda_imwg_nbs_shp/ssd_admbnda_adm2_imwg_nbs_20180817.shp" #downloaded from https://data.humdata.org/dataset/south-sudan-administrative-boundaries
+shp_adm0c: "ADM0_EN"
+shp_adm1c: "ADM1_EN"
+shp_adm2c: "ADM2_EN"

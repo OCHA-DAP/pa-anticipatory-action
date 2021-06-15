@@ -49,6 +49,10 @@ class Config:
     #country specific shapefiles
     SHAPEFILE_DIR = 'cod_ab'
 
+    def country_data_dirs(self, country_iso3):
+        ### Chain dirs
+        COUNTRY_SHAPEFILE_PATH = Path(DATA_DIR) / PUBLIC_DIR / country_iso3 / SHAPEFILE_DIR
+
     #TODO: check if this is a good world boundaries file and if there is any copyright or so to it
     #world shapefile so used by all countries, save in drought folder
     WORLD_SHP_PATH=os.path.join('private', 'raw', 'glb', 'cod_ab', 'TM_WORLD_BORDERS-0','TM_WORLD_BORDERS-0.3.shp')
@@ -98,12 +102,21 @@ class Config:
 
 
     ### CHIRPS
-    #resolution can be 25 or 5
     CHIRPS_DIR = "chirps"
+    CHIRPS_MONTHLY_DIR = "monthly"
+    CHIRPS_SEASONAL_DIR = "seasonal"
+    # resolution can be 25 or 5
     CHIRPS_FTP_URL_GLOBAL_DAILY="https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_daily/netcdf/p{resolution}/chirps-v2.0.{year}.days_p{resolution}.nc"
     CHIRPS_FTP_URL_AFRICA_DAILY="https://data.chc.ucsb.edu/products/CHIRPS-2.0/africa_daily/tifs/p{resolution}/{year}/chirps-v2.0.{year}.{month}{day}.tif"
+    CHIRPS_FTP_URL_GLOBAL_MONTHLY="https://data.chc.ucsb.edu/products/CHIRPS-2.0/global_monthly/netcdf/chirps-v2.0.monthly.nc"
     CHIRPS_NC_FILENAME_RAW = "chirps_global_daily_{year}_p{resolution}.nc"
     CHIRPS_NC_FILENAME_CRS = "chirps_global_daily_{year}_p{resolution}_crs.nc"
+    CHIRPS_MONTHLY_RAW_DIR = Path(DATA_DIR) / PUBLIC_DIR / RAW_DIR / GLOBAL_ISO3 / CHIRPS_DIR / CHIRPS_MONTHLY_DIR
+    CHIRPS_MONTHLY_RAW_PATH = CHIRPS_MONTHLY_RAW_DIR / f"chirps_{GLOBAL_ISO3}_monthly.nc"
+    CHIRPS_MONTHLY_COUNTRY_FILENAME = "{country_iso3}_chirps_monthly.nc"
+    CHIRPS_SEASONAL_LOWERTERCILE_COUNTRY_FILENAME = "{country_iso3}_chirps_seasonal_lowertercile.nc"
     CHIRPS_LON = "longitude" #"x" #
     CHIRPS_LAT = "latitude" #"y" #
     CHIRPS_VARNAME = "precip"
+
+
