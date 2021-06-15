@@ -1,0 +1,10 @@
+country_name: "burkina faso"
+iso3_code: "bfa"
+iso2_code: "bf"
+#downloaded from https://data.humdata.org/dataset/burkina-faso-administrative-boundaries
+path_admin0_shp: "bfa_adm_igb_20200323_shp/bfa_admbnda_adm0_igb_20200323.shp"
+path_admin1_shp: "bfa_adm_igb_20200323_shp/bfa_admbnda_adm1_igb_20200323.shp"
+path_admin2_shp: "bfa_adm_igb_20200323_shp/bfa_admbnda_adm2_igb_20200323.shp"
+shp_adm0c: "ADM0_FR"
+shp_adm1c: "ADM1_FR"
+shp_adm2c: "ADM2_FR"
