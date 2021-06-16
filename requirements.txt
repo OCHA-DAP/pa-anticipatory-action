@@ -36,3 +36,6 @@ openpyxl==3.0.6
 xskillscore==0.0.19
 jupytext==1.11.1
 statsmodels==0.12.2
+mlxtend==0.18.0
+tabula==1.0.5
+selenium==3.141.0

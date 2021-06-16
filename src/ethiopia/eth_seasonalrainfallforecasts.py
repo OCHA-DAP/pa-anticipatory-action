@@ -72,12 +72,15 @@ def main(download, config=None):
     # fig_bound.savefig(os.path.join(output_dir, f'{provider}_rasterbound_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png',bbox_inches='tight')
     #comput statistics per admin
     iri_df=compute_raster_statistics(adm_path,iri_ds_sel_array,iri_transform,50)
-    # plot the statistics
-    fig_stats = plot_spatial_columns(iri_df, ['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched'])
-    # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
-    # plot the statistics with bins
-    fig_stats_bins = plot_spatial_columns(iri_df, ['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched'],predef_bins=bins)
-    # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+
+    #TODO: someting is broken with the plot_spatial_columns function
+    # # plot the statistics
+    # fig_stats = plot_spatial_columns(iri_df, ['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched'])
+    # # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
+    # # plot the statistics with bins
+    # fig_stats_bins = plot_spatial_columns(iri_df, ['max_cell_touched', 'max_cell', 'avg_cell', 'avg_cell_touched'],predef_bins=bins)
+    # # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+    #
 
 
     provider="ICPAC"
@@ -94,12 +97,12 @@ def main(download, config=None):
     # comput statistics per admin
     icpac_ds_array = icpac_ds[config.LOWERTERCILE].values
     icpac_df = compute_raster_statistics(adm_path, icpac_ds_array, icpac_transform, 50)
-    # plot the statistics
-    fig_stats = plot_spatial_columns(icpac_df, statlist_plot)
-    # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
-    # plot the statistics with bins
-    fig_stats_bins = plot_spatial_columns(icpac_df, statlist_plot,predef_bins=bins)
-    # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+    # # plot the statistics
+    # fig_stats = plot_spatial_columns(icpac_df, statlist_plot)
+    # # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
+    # # plot the statistics with bins
+    # fig_stats_bins = plot_spatial_columns(icpac_df, statlist_plot,predef_bins=bins)
+    # # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
 
     provider="NMME"
     nmme_ds, nmme_transform = get_nmme_data(config, pubdate_str, download=download)
@@ -115,12 +118,12 @@ def main(download, config=None):
     #compute statistics per admin
     nmme_df=compute_raster_statistics(adm_path,nmme_ds_sel_array,nmme_transform,50)
 
-    # plot the statistics
-    fig_stats = plot_spatial_columns(nmme_df, statlist_plot)
-    # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
-    # plot the statistics with bins
-    fig_stats_bins = plot_spatial_columns(nmme_df, statlist_plot, predef_bins=bins)
-    # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
+    # # plot the statistics
+    # fig_stats = plot_spatial_columns(nmme_df, statlist_plot)
+    # # fig_stats.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow.png'), format='png')
+    # # plot the statistics with bins
+    # fig_stats_bins = plot_spatial_columns(nmme_df, statlist_plot, predef_bins=bins)
+    # # fig_stats_bins.savefig(os.path.join(output_dir, f'{provider}_statistics_L{leadtime}_F{pubdate_str}_Cbelow_bins.png'), format='png')
 
     #Create plot of raw dat of the different providers that only shows Ethiopia
     bins=[0,40,45,50,55,60,70,100]

@@ -15,6 +15,9 @@ glofas:
     Dipayal:
       lat: 29.25
       lon: 80.95
+    Kampughat:
+      lat: 26.85
+      lon: 86.85
     Kusum:
       lat: 27.85
       lon: 82.35
