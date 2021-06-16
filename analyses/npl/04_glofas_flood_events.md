@@ -33,9 +33,23 @@ STATIONS = {
     'Babai': ['Chepang']
 }
 
+STATIONS_BY_MAJOR_BASIN = {
+    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan'],
+    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang'],
+}
+
+FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
+
+DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
+GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
+GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
+
+DURATION = 1
+
 ```
 
 ```python
+
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
@@ -43,7 +57,9 @@ ds_glofas_reforecast = utils.get_glofas_reforecast(
     interp=True
 )
 
-df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
+#df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
+df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
+
 ```
 
 ```python
@@ -65,13 +81,12 @@ def get_da_glofas_summary(da_glofas):
 ```
 
 ```python
-ndays = 3
 forecast_prob = 50
 
 days_before_buffer = 5
 days_after_buffer = 25
 
-rp_list = [1.5, 2]
+rp_list = [1.5, 2, 5]
 
 df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'TP', 'FP', 'FN'])
 
@@ -84,14 +99,14 @@ for station in df_return_period.columns:
 
         # The GlofAS event takes place on the Nth day (since for an event)
         # you require N days in a row
-        event_groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=ndays)
+        event_groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=DURATION)
         event_dates = [event_group[0] + ndays - 1 for event_group in event_groups]
 
         for leadtime in LEADTIMES:
             TP = 0
             FN = 0
             
-            forecast_groups = utils.get_groups_above_threshold(forecast.sel(leadtime=leadtime), rp_val, min_duration=ndays)
+            forecast_groups = utils.get_groups_above_threshold(forecast.sel(leadtime=leadtime), rp_val, min_duration=DURATION)
             forecast_dates = np.array([forecast_group[0] + ndays - 1 for forecast_group in forecast_groups])
             forecast_detections = np.zeros(len(forecast_dates))
             
@@ -127,35 +142,54 @@ df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_st
 ```
 
 ```python
-rp = 2
-plot_numbers = False
+rp_dict = {
+    1.5: '-', 
+    2: '--',
+    5: ':'
+}
+plot_numbers = True
 plot_precision_recall = True
-for station in ['Chatara', 'Kampughat', 'Asaraghat', 'Samajhighat', 'Chepang']:
+for istation, station in enumerate(FINAL_STATIONS):
     if plot_numbers:
+        qs = ['TP', 'FP', 'FN']
         fig, ax = plt.subplots()
-        data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
-        ax.plot(data['leadtime'], data['TP'], label='TP')
-        ax.plot(data['leadtime'], data['FP'], label='FP')
-        ax.plot(data['leadtime'], data['FN'], label='FN')
+        for rp, ls in rp_dict.items():
+            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+            for iq, q in enumerate(qs):
+                ax.plot(data['leadtime'], data[q], ls=ls, c=f'C{iq}')
         ax.set_title(station)
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_xlabel('Leadtime [days]')
         ax.set_ylabel('Number')
+        # Make legend
+        for iq, q in enumerate(qs):
+            ax.plot([], [], c=f'C{iq}', label=q)
+        for rp, ls in rp_dict.items():
+            ax.plot([], [], c='k', ls=ls, label=rp)
         ax.legend()
     
     if plot_precision_recall:
+        qs = ['precision', 'recall']
         fig, ax = plt.subplots()
-        data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
-        ax.plot(data['leadtime'], data['precision'], label='precision')
-        ax.plot(data['leadtime'], data['recall'], label='recall')
+        for rp, ls in rp_dict.items():
+            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+            for iq, q in enumerate(qs):
+                ax.plot(data['leadtime'], data[q], ls=ls, c=f'C{iq}')
         ax.set_title(station)
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_xlabel('Leadtime [days]')
         ax.set_ylabel('Fraction')
         ax.set_ylim(-0.1, 1.1)
+        # Make legend
+        for iq, q in enumerate(qs):
+            ax.plot([], [], c=f'C{iq}', label=q)
+        for rp, ls in rp_dict.items():
+            ax.plot([], [], c='k', ls=ls, label=rp)
         ax.legend()
 ```
+
+### Make plot showing event comparison
 
 ```python
 rp = 2
@@ -168,8 +202,8 @@ thresh = df_return_period.loc[rp, station]
 fig, axs = plt.subplots(3, figsize=(8,6))
 observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station]
 forecast = get_da_glofas_summary(ds_glofas_reforecast[station])[forecast_prob]
-forecast_1 = forecast.sel(leadtime=5)
-forecast_2 = forecast.sel(leadtime=10)
+forecast_1 = forecast.sel(leadtime=1)
+forecast_2 = forecast.sel(leadtime=3)
 fig.supylabel('River dischange [m$^3$ s${-1}$]')
 fig.supxlabel('Year')
 fig.suptitle(station)
@@ -188,9 +222,50 @@ for i, q in enumerate([forecast_2, forecast_1, observations]):
     #ax.set_xlim(0, 120000)
     ax.minorticks_on()
     ax.axhline(thresh, c='r', lw=0.5)
-    for detection in utils.get_groups_above_threshold(y, thresh, ndays):
+    for detection in utils.get_groups_above_threshold(y, thresh, DURATION):
         a = detection[0] - GLOFAS_DETECTION_WINDOW_BEHIND
         b = detection[0] + GLOFAS_DETECTION_WINDOW_AHEAD
         #ax.plot(x[a:b], y[a:b], '-r', lw=1, alpha=0.5)
         ax.plot(x[detection[0]], y[detection[0]], 'o', c=c2, lw=2, mfc='none')
+```
+
+### Compare Chisapani to Asaraghat
+
+```python
+# Want to compare Chisapani to Asaraghat
+rp = 1.5
+ls_list = ['-', '--']
+stations = ['Asaraghat', 'Chisapani']
+fig, ax = plt.subplots()
+for istation, station in enumerate(stations):
+    qs = ['precision', 'recall']
+    data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+    for iq, q in enumerate(qs):
+        ax.plot(data['leadtime'], data[q], ls=ls_list[istation], c=f'C{iq}')
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+ax.set_xlabel('Leadtime [days]')
+ax.set_ylabel('Fraction')
+ax.set_ylim(-0.1, 1.1)
+# Make legend
+for iq, q in enumerate(qs):
+    ax.plot([], [], c=f'C{iq}', label=q)
+for istation, station in enumerate(stations):
+    ax.plot([], [], c='k', ls=ls_list[istation], label=station)
+ax.legend()
+```
+
+```python
+rp = 1.5
+leadtimes = [1, 3, 5, 7, 10]
+for station in ['Asaraghat', 'Chisapani']:
+    df = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp) & (df_station_stats.leadtime.isin(leadtimes))]
+    print(np.round(100 * (1-df['recall'])))
+```
+
+```python
+df_station_stats
+```
+
+```python
+
 ```

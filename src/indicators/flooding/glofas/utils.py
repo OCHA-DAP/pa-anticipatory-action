@@ -184,7 +184,7 @@ def get_groups_above_threshold(observations, threshold, min_duration=1):
     groups = np.where(np.diff(observations > threshold, prepend=False, append=False))[
         0
     ].reshape(-1, 2)
-    return [group for group in groups if group[1] - group[0] > min_duration]
+    return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
 def get_rank(observations: np.array, forecast: np.array) -> np.array:
