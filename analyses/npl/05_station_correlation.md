@@ -16,6 +16,8 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
+
+mpl.rcParams['figure.dpi'] = 300
 ```
 
 ```python
@@ -23,7 +25,7 @@ COUNTRY_ISO3 = 'npl'
 
 DURATION = 1 # Number of days that the GloFAS threshold should be exceeded
 
-RP_LIST = [1.5, 2, 3, 5, 10, 20] # List of return period values to compare
+RP_LIST = [2, 3, 5] # List of return period values to compare
 
 STATIONS = {
     'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
@@ -36,12 +38,23 @@ STATIONS_BY_MAJOR_BASIN = {
     'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan'],
     'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang'],
 }
+
+STATIONS_SEL = {
+    'Karnali': ['Chisapani', 'Asaraghat'],
+    'Rapti': ['Kusum'],
+    'Babai': ['Chepang']
+}
+
+DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
+GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
+GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 ```
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
+df_return_period_glofas = pd.read_excel(GLOFAS_RP_FILENAME)
 ```
 
 ## When do activations occur at the different stations
@@ -77,17 +90,11 @@ for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
     events_all[basin] = station_events
 ```
 
-```python
-x = np.array([1, 2, 3, 4, 4, 3, 2, 3, 4, 3, 2])
-g = utils.get_groups_above_threshold(x, 3.5)
-
-```
-
 ### Plot river discharge vs time for all stations
 
 ```python
 rp_list = RP_LIST
-for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in STATIONS_SEL.items():
     fig, axs = plt.subplots(len(stations), figsize=(10,2*len(stations)), squeeze=False)
     fig.suptitle(basin)
     #fig.supylabel('Discharge [m$^3$ s$^{-1}$]')
@@ -113,6 +120,7 @@ for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
                 ax.plot([], [], c=cdict[rp], label=rp)
             ax.legend(title=legend_title)
 
+    plt.savefig(f'C:/Users/Hannah/Desktop/discharge_{station}_{basin}.png')
 ```
 
 ### Plot RP exceedance
@@ -129,16 +137,16 @@ year_ranges = [
 ]
 
 #year_ranges = [[x, x+1] for x in range(1979, 2020)]
-#year_ranges = [[1979, 2020]]
+year_ranges = [[1979, 2020]]
 
 buffer = 5 # Buffer to make sure the lines show up
-rp_list = [1.5, 2, 5, 20]
+rp_list = RP_LIST
 cmap = mpl.cm.get_cmap('plasma_r')
 clist = cmap(np.linspace(0, 1, len(rp_list)))
 
 all_events = {}
 
-for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in STATIONS_SEL.items():
     
     basin_events = {}
 
@@ -175,6 +183,146 @@ for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
                 ax.plot([], [], c=cdict[rp], label=rp)
             ax.legend(title=legend_title)
 
+```
+
+### Visualize what happens at the smaller basins when larger basin triggers
+
+```python
+int(df_return_period_glofas.loc[df_return_period_glofas['rp']==5, station])
+```
+
+```python
+def get_avg_slope(start, end, dur):
+    return(end - start) / dur
+```
+
+```python
+get_avg_slope(ds_sel_buffer[0].values, ds_sel_buffer[15].values, 15)
+```
+
+```python
+slp_post
+```
+
+```python
+RP_EVENT = 5 # To define the event threshold
+RP_SECONDARY = 5 # Refernce RP level for secondary station values 
+PRIMARY_STATIONS = ['Chisapani', 'Asaraghat'] # Identify trigger instances at these stations
+SECONDARY_STATIONS = ['Chepang', 'Kusum'] # Compare against the GloFAS levels at these stations
+
+for station in PRIMARY_STATIONS:
+    
+    # Use the RP levels defined by GloFAS
+    rp_val_event = int(df_return_period_glofas.loc[df_return_period_glofas['rp']==RP_EVENT, station])
+    #rp_val_event = df_return_period.loc[RP_EVENT, station]
+    observations = ds_glofas_reanalysis[station].values
+    groups = utils.get_groups_above_threshold(observations, rp_val_event, DURATION)
+        
+    for station_small in SECONDARY_STATIONS:
+        
+        rp_val_secondary = df_return_period.loc[RP_SECONDARY, station_small]  
+        ds = ds_glofas_reanalysis[station_small]        
+        
+        max_post = []
+        max_during = []
+        max_pre = []
+        
+        #slp_post = []
+        #slp_during = []
+        #slp_pre = []
+        
+        ngroups = len(groups)
+        nrows = 2
+        ncols = round(ngroups/nrows)
+        igroup = 1
+        
+        fig, axs = plt.subplots(nrows, ncols, figsize=(15,5), squeeze=False, sharey=True)
+        fig.suptitle(f'{station_small} vs {station}')
+        
+        for i in range(nrows):
+
+            for j in range(ncols):
+                
+                try:
+                    group = groups[igroup-1]
+
+                    ds_sel_buffer = ds[group[0]-15: (group[-1]+15)]                                       
+                    ds_sel = ds[group[0]: group[-1]+1]
+                    ds_sel_norm = ds_sel_buffer / rp_val_secondary
+
+                    max_post.append(max(ds_sel_norm[-15:-1].values))
+                    max_during.append(max(ds_sel_norm[15:-15].values))
+                    max_pre.append(max(ds_sel_norm[0:15].values))
+                    
+                    #slp_post.append(get_avg_slope(ds_sel_buffer[-15].values, ds_sel_buffer[-1].values, 15))                                     
+                    #slp_during.append(get_avg_slope(ds_sel_buffer[15].values, ds_sel_buffer[-15].values, len(ds_sel_buffer[15,-15])))
+                    #slp_pre.append(get_avg_slope(ds_sel_buffer[0].values, ds_sel_buffer[15].values, 15)) 
+                    
+                    x = ds_sel_buffer.time
+
+                    ax = axs[i,j]
+                    ax.axes.xaxis.set_ticks([])
+                    ax.set_ylim([0, 1.5])
+
+                    trigger_start_formatted = pd.to_datetime(ds_sel[0].time.values).date()
+                    trigger_end_formatted = pd.to_datetime(ds_sel[-1].time.values).date()
+                    ax.set_title(f'{trigger_start_formatted} - {trigger_end_formatted}', fontsize=8)
+                    ax.fill_between(x=ds_sel.time, y1=0, y2=1.5,alpha=0.25)
+
+                    ax.hlines(y=1, xmin=ds_sel_buffer.time[0], xmax=ds_sel_buffer.time[-1], lw=1, ls='--')
+                    ax.plot(x, ds_sel_norm, c='red', lw=1, alpha=1)
+                    ax.spines['right'].set_visible(False)
+                    ax.spines['top'].set_visible(False)
+                
+                # In case we have too many subplots defined
+                except:
+                    fig.delaxes(axs[i,j])
+                
+                igroup+=1
+                    
+        fig.tight_layout()
+            
+        plt.savefig(f'C:/Users/Hannah/Desktop/discharge_{station_small}_{station}_{RP_SECONDARY}_{RP_EVENT}.png')
+        
+        # Make the histograms of max % of RP reached
+        n_bins = 5
+        fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharey=True, sharex=True)
+        axs[0].hist(max_pre, bins=n_bins)
+        axs[0].set_title('15 Days Before Trigger Period')
+        axs[0].set_xlabel(f'Max % of {RP_SECONDARY}-year RP reached')
+        axs[0].axvline(1, c='red', ls='--')
+        
+        axs[1].hist(max_during, bins=n_bins)
+        axs[1].set_title('During Trigger Period')
+        axs[1].set_xlabel(f'Max % of {RP_SECONDARY}-year RP reached')
+        axs[1].axvline(1, c='red', ls='--')
+        
+        axs[2].hist(max_post, bins=n_bins)
+        axs[2].set_title('15 Days After Trigger Period')
+        axs[2].set_xlabel(f'Max % of {RP_SECONDARY}-year RP reached')
+        axs[2].axvline(1, c='red', ls='--')
+            
+        plt.savefig(f'C:/Users/Hannah/Desktop/max_hist_{station_small}_{station}_{RP_SECONDARY}_{RP_EVENT}.png')
+        
+        # Make the histograms of average slope
+        #n_bins = 5
+        #fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharey=True, sharex=True)
+        #axs[0].hist(slp_pre, bins=n_bins)
+        #axs[0].set_title('15 Days Before Trigger Period')
+        #axs[0].set_xlabel('Average daily change in discharge')
+        #axs[0].axvline(0, c='red', ls='--')
+        
+        #axs[1].hist(slp_during, bins=n_bins)
+        #axs[1].set_title('During Trigger Period')
+        #axs[1].set_xlabel('Average daily change in discharge')
+        #axs[1].axvline(0, c='red', ls='--')
+        
+        #axs[2].hist(slp_post, bins=n_bins)
+        #axs[2].set_title('15 Days After Trigger Period')
+        #axs[2].set_xlabel('Average daily change in discharge')
+        #axs[2].axvline(0, c='red', ls='--')
+            
+        #plt.savefig(f'C:/Users/Hannah/Desktop/avg_slp_{station_small}_{station}_{RP_SECONDARY}_{RP_EVENT}.png')
 ```
 
 ### Find events occuring at stations simultaneously
