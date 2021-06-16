@@ -10,6 +10,7 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.ecmwf.ecmwf import Ecmwf
 from src.indicators.flooding.glofas.area import AreaFromShape, Station
 from src.utils_general.utils import parse_yaml
 
@@ -34,15 +35,20 @@ logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=False, process=True):
+def main(download=True, process=False):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_forecast = glofas.GlofasForecast()
     glofas_reforecast = glofas.GlofasReforecast()
+    ecmwf = Ecmwf()
 
     if download:
         df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
         area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
+        ecmwf.download(
+            country_iso3=COUNTRY_ISO3,
+            area=area
+        )
         glofas_reanalysis.download(
             country_iso3=COUNTRY_ISO3,
             area=area,

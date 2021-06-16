@@ -6,6 +6,7 @@ import numpy as np
 import xarray as xr
 
 from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.cds import cds
 from src.indicators.flooding.glofas.area import Area
 
 
@@ -18,15 +19,15 @@ def test_expand_dims():
     )
     ds.coords["z"] = 1
     assert "z" not in ds.dims.keys()
-    ds = glofas.expand_dims(
+    ds = cds.expand_dims(
         ds=ds, dataset_name="var_a", coord_names=["z", "x", "y"], expansion_dim=0
     )
     assert "z" in ds.dims.keys()
 
 
-@mock.patch("src.indicators.flooding.glofas.glofas.cdsapi.Client.retrieve")
-@mock.patch("src.indicators.flooding.glofas.glofas.Path.mkdir")
-@mock.patch.object(glofas, "DATA_DIR", Path("/tmp"))
+@mock.patch("src.indicators.flooding.cds.cds.cdsapi.Client.retrieve")
+@mock.patch("src.indicators.flooding.cds.cds.Path.mkdir")
+@mock.patch.object(cds, "DATA_DIR", Path("/tmp"))
 class TestDownload(unittest.TestCase):
     def setUp(self):
         self.country_iso3 = "abc"
@@ -85,9 +86,9 @@ class TestDownload(unittest.TestCase):
                 "month": self.expected_months,
                 "day": self.expected_days,
                 "area": self.expected_area,
+                "leadtime_hour": f"{self.expected_leadtime}",
                 "system_version": "version_3_1",
                 "hydrological_model": "lisflood",
-                "leadtime_hour": f"{self.expected_leadtime}",
             },
             "target": Path(
                 f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-forecast"
@@ -118,9 +119,9 @@ class TestDownload(unittest.TestCase):
                 "hmonth": self.expected_months,
                 "hday": self.expected_days,
                 "area": self.expected_area,
+                "leadtime_hour": f"{self.expected_leadtime}",
                 "system_version": "version_3_1",
                 "hydrological_model": "lisflood",
-                "leadtime_hour": f"{self.expected_leadtime}",
             },
             "target": Path(
                 f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-reforecast"
