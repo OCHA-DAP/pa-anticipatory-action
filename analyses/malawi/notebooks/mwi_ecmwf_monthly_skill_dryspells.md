@@ -69,6 +69,8 @@ monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspe
 plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells")
 plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 
+monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells","monthly_precipitation")
+
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 all_dry_spells_list_path=os.path.join(country_data_processed_dir,"dry_spells","full_list_dry_spells.csv")
 monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal","chirps_monthly_total_precipitation_admin1.csv")
@@ -238,7 +240,7 @@ df_for["season_approx"]=np.where(df_for.date.dt.month>=10,df_for.date.dt.year,df
 
 ```python
 sel_adm=["Southern"]
-sel_months=[12,1,2]
+sel_months=[1,2]
 sel_leadtime=[1,2,3,4,5,6]
 seas_years=range(2000,2020)
 
@@ -439,27 +441,43 @@ df_pr_sep_lt.threshold=df_pr_sep_lt.threshold.astype(int)
 ```
 
 ```python
-num_plots = len(df_pr_sep_lt.leadtime.unique())
-colp_num=3
-if num_plots==1:
-    colp_num=1
-rows = math.ceil(num_plots / colp_num)
-position = range(1, num_plots + 1)
-fig=plt.figure()#figsize=(25,10))
-for i, m in enumerate(df_pr_sep_lt.leadtime.unique()):
-    ax = fig.add_subplot(rows,colp_num,i+1)
-    df_pr_sep_lt[df_pr_sep_lt.leadtime==m].plot(x="threshold",y="month_miss_rate" ,figsize=(20, 9), color='#F2645A',legend=False,ax=ax,label="dry spell occurred and monthly precipitation above threshold (miss rate)")
-    df_pr_sep_lt[df_pr_sep_lt.leadtime==m].plot(x="threshold",y="month_false_alarm_rate" ,figsize=(20, 9), color='#66B0EC',legend=False,ax=ax,label="monthly precipitation below threshold but no dry spell occurred (false alarms)")
+#same but now also separated by month instead of only by leadtime
+pr_list=[]
+threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+unique_lt=df_ds_for.leadtime.unique()
+unique_months=df_ds_for.month_name.unique()
 
-    ax.set_xlabel("Monthly rainfall threshold (mm)", labelpad=20, weight='bold', size=12)
-    ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
-    ax.set_title(f"Leadtime = {int(m)} months")
-    sns.despine(left=True,bottom=True)
+for l in unique_lt:
+    for m in unique_months:
+        df_pr_perlt_m=pd.DataFrame(threshold_list,columns=["threshold"]).set_index(['threshold'])
+        df_ds_for_lt_m=df_ds_for[(df_ds_for.leadtime==l)&(df_ds_for.month_name==m)]
+        y_target =  df_ds_for_lt_m.dry_spell
 
-handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center')
-fig.tight_layout(rect=(0,0,1,0.9))
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_missfalse_perlt_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
+        for t in threshold_list:
+            y_predicted = np.where(df_ds_for_lt_m.mean_cell<=t,1,0)
+
+            cm = confusion_matrix(y_target=y_target, 
+                                  y_predicted=y_predicted)
+            tn,fp,fn,tp=cm.flatten()
+            df_pr_perlt_m.loc[t,["month_ds","month_no_ds","month_miss_rate","month_false_alarm_rate","precision","recall","num_trig","detection_rate"]]=tp/(tp+fn)*100,tn/(tn+fp)*100,fn/(tp+fn)*100,fp/(tp+fp+0.000001)*100,tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+            df_pr_perlt_m.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
+            df_pr_perlt_m.loc[t,"leadtime"]=int(l)
+            df_pr_perlt_m.loc[t,"month"]=m
+        df_pr_perlt_m=df_pr_perlt_m.reset_index()
+        pr_list.append(df_pr_perlt_m)
+df_pr_sep_lt_m=pd.concat(pr_list).sort_values(["leadtime","threshold"])
+df_pr_sep_lt_m.threshold=df_pr_sep_lt_m.threshold.astype(int)
+df_pr_sep_lt_m.leadtime=df_pr_sep_lt_m.leadtime.astype(int)
+df_pr_sep_lt_m["detection_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{int(x.month_ds)}% ({int(x.tp)}/{int(x.tp+x.fn)})",axis=1)
+df_pr_sep_lt_m["false_alarm_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_false_alarm_rate)}% ({int(x.fp)}/{int(x.tp+x.fp)})",axis=1)
+```
+
+```python
+df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin([2,4]))][["month","threshold","leadtime","detection_rate","false_alarm_rate"]].sort_values(["month","leadtime","threshold"])
+```
+
+```python
+# df_pr_sep_lt_m_sel.to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_detect_falsealarm_thresholds_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
 ```
 
 ```python
