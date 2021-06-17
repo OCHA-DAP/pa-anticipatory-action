@@ -269,7 +269,6 @@ With the forecasts there is an extra variable, namely the minimum probability of
 
 ```{code-cell} ipython3
 leadtime=3
-leadtime_list=[1,3]
 ```
 
 ```{code-cell} ipython3
@@ -311,12 +310,6 @@ df_obsfor_lt=df_obsfor[df_obsfor.L==leadtime].dropna()
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-df_obsfor_lt=df_obsfor[df_obsfor.L.isin(leadtime_list)].dropna()
-```
-
-```{code-cell} ipython3
-:tags: [remove_cell]
-
 df_obsfor_lt.head()
 ```
 
@@ -352,33 +345,6 @@ Note:
 2) some seasons are not included due to the dry mask defined by IRI
 
 ```{code-cell} ipython3
-df_obsfor_lt_multip=df_obsfor_lt[["L","seas_year","for_start","for_end_month","40percth_cell","bavg_cell"]].pivot(index=["for_start","for_end_month","bavg_cell","seas_year"], columns='L', values='40percth_cell').reset_index().rename(columns={1:"forecasted_L1",3:"forecasted_L3"})
-```
-
-```{code-cell} ipython3
-df_obsfor_lt_multip
-```
-
-```{code-cell} ipython3
-tidy
-```
-
-```{code-cell} ipython3
-:tags: [hide_input]
-
-fig, ax = plt.subplots(figsize=(12,6))
-tidy = df_obsfor_lt_multip[["seas_year","for_start","forecasted_L1","forecasted_L3","bavg_cell"]].rename(columns={"bavg_cell":"observed"}).melt(id_vars=['for_start','seas_year'],var_name="data_source").sort_values("for_start")
-tidy.rename(columns={"40percth_cell":"forecasted","bavg_cell":"observed"},inplace=True)
-sns.barplot(x='seas_year', y='value', data=tidy, ax=ax,hue="data_source", palette={"observed":"#CCE5F9","forecasted_L1":'#F2645A',"forecasted_L3":'#78D9D1'})
-sns.despine(fig)
-x_dates = tidy.seas_year.unique()
-ax.set_xticklabels(labels=x_dates, rotation=45, ha='right');
-ax.set_ylabel("Percentage of area")
-ax.set_ylim(0,100)
-ax.set_title("Percentage of area meeting criteria for observed and forecasted below average precipitation");
-```
-
-```{code-cell} ipython3
 :tags: [hide_input]
 
 fig, ax = plt.subplots(figsize=(12,6))
@@ -391,16 +357,6 @@ ax.set_xticklabels(labels=x_dates, rotation=45, ha='right');
 ax.set_ylabel("Percentage of area")
 ax.set_ylim(0,100)
 ax.set_title("Percentage of area meeting criteria for observed and forecasted below average precipitation");
-```
-
-```{code-cell} ipython3
-df_obsfor_lt[df_obsfor_lt.start_time.dt.month==6]
-```
-
-```{code-cell} ipython3
-:tags: [hide_input]
-
-df_obsfor_lt[df_obsfor_lt.]
 ```
 
 ```{code-cell} ipython3

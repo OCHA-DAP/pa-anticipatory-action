@@ -127,7 +127,7 @@ gdf_reg=gdf_adm1[gdf_adm1.ADM1_FR.isin(adm_sel)]
 
 Below the raw forecast data of below-average rainfall with {glue:text}`leadtime_mar` month leadtime, published in March is shown. The red areas are the 4 admin1's we are focussing on
 
-The negative values indicate below average rainfall, and the positive values above average. 
+The negative values indicate below average rainfall, and the positive values above average.
 
 +++
 
