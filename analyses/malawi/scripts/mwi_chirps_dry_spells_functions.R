@@ -278,6 +278,76 @@ listDSDaysPerPixel <- function(i, adm_name) {
     return(dates_list)
   }
 
+# create binary for days in rainy season per pixel (for cells + season_approx for which onset and cessation dates are available)
+listRSDaysPerPixel <- function(i, adm_name) {
+          
+        # take cell number
+        cell_number <- rainy_seasons_detail.nonas$cell[i]
+  
+        # take season_approx
+        season_approx_value <- rainy_seasons_detail.nonas$season_approx[i]
+        
+        # take adm2 
+        adm_name <- rainy_seasons_detail.nonas$ADM2_PCODE[i]
+        
+        # generate list of dates of the dry spell
+        dates_list <- data.frame(date = seq(from = rainy_seasons_detail.nonas$onset_date[i], 
+                                            to = rainy_seasons_detail.nonas$cessation_date[i], 
+                                            by = 1))
+        # add cell number
+        dates_list$cell <- cell_number
+        
+        # add adm names
+        dates_list$ADM2_PCODE <- adm_name
+        
+        # add season_approx
+        dates_list$season_approx <- season_approx_value
+        
+        return(dates_list)
+        }
+        
+
+# create binary for each pixel for days in a dry spell (14-d <=2mm cum) and for days in rainy season ## RUNS TOO SLOWLY
+listRainyDrySpellDaysPerPixel <- function(i) {
+  
+  # take cell number
+  cell_number <- cell_summary$cell[i]
+  
+  # take season_approx
+  season_approx_value <- cell_summary$season_approx[i]
+  
+  # take adm2 
+  ADM2_PCODE <- cell_summary$ADM2_PCODE[i]
+  
+  # generate list of dates of the dry spell
+  ds_dates_list <- data.frame(date = seq(from = cell_summary$dry_spell_first_date[i], 
+                                      to = cell_summary$dry_spell_last_date[i], 
+                                      by = 1))
+  
+  # generate list of dates of the rainy season
+  rs_dates_list <- data.frame(date = seq(from = cell_summary$onset_date[i], 
+                                         to = cell_summary$cessation_date[i], 
+                                         by = 1))
+  # add cell number
+  ds_dates_list$cell <- cell_number
+  rs_dates_list$cell <- cell_number
+  
+  # add adm names
+  ds_dates_list$ADM2_PCODE <- ADM2_PCODE
+  rs_dates_list$ADM2_PCODE <- ADM2_PCODE
+  
+  # add season_approx
+  ds_dates_list$season_approx <- season_approx_value
+  rs_dates_list$season_approx <- season_approx_value
+  
+  # create list to return two objects
+  list_dates <- list(ds_dates_list = ds_dates_list, rs_dates_list = rs_dates_list)
+  
+  return(list_dates)
+}
+
+
+
 
 ## user-defined run-length encoding function in base R
 runlengthEncoding <- function(x) {
