@@ -16,19 +16,22 @@ library(ggcorrplot)
 # Setup -------------------------------------------------------------------
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
-shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
+shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
 
 shp_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp"))
 shp_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
 
-df_dryspells <- read.csv(paste0(data_dir, '/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
-df_dryspells_px <- read.csv(paste0(data_dir, '/processed/malawi/dry_spells/ds_counts_per_pixel_adm1.csv'))
+processed_country_dir <- paste0(data_dir,"/public/processed/mwi/")
+exploration_country_dir <- paste0(data_dir,"/public/exploration/mwi/")
 
-df_crop <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/agriculture-and-rural-development_mwi.csv'))
-df_asi <- read.csv(paste0(data_dir, '/exploration/malawi/ASI/malawi_asi_dekad.csv'))
-df_globalipc <- read.csv(paste0(data_dir, '/processed/malawi/GlobalIPCProcessed/malawi_globalipc_admin2.csv'))
-df_fewsnet <- read.csv(paste0(data_dir, '/processed/malawi/FewsNetWorldPop/malawi_fewsnet_worldpop_admin2.csv'))
-df_price <- read.csv(paste0(data_dir, '/exploration/malawi/crop_production/wfp_food_prices_malawi.csv'))
+df_dryspells <- read.csv(paste0(processed_country_dir, 'dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
+df_dryspells_px <- read.csv(paste0(processed_country_dir, 'dry_spells/ds_counts_per_pixel_adm1.csv'))
+
+df_crop <- read.csv(paste0(exploration_country_dir, 'crop_production/agriculture-and-rural-development_mwi.csv'))
+df_asi <- read.csv(paste0(exploration_country_dir, 'ASI/malawi_asi_dekad.csv'))
+df_globalipc <- read.csv(paste0(processed_country_dir, 'ipc_global/malawi_globalipc_admin2.csv'))
+df_fewsnet <- read.csv(paste0(processed_country_dir, 'fewsnet/worldpop/malawi_fewsnet_worldpop_admin2.csv'))
+df_price <- read.csv(paste0(exploration_country_dir, 'crop_production/wfp_food_prices_malawi.csv'))
 
 # Crop production ---------------------------------------------------------
 
@@ -193,7 +196,7 @@ df_asi_sel_max <- df_asi_sel %>%
 
 # Preprocessed in the mwi_wrsi_process.R file,
 # using the outputs from the GeoWRSI software 
-wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
+wrsi_dir <- paste0(exploration_country_dir, 'wrsi/')
 #wrsi_mean <- read.csv(paste0(wrsi_dir, 'wrsi_mean_adm1.csv'))
 
 wrsi_min <- read.csv(paste0(wrsi_dir, 'wrsi_min_adm1.csv'))
@@ -219,7 +222,7 @@ df_wrsi_season <- wrsi_min_na %>%
 
 # Monthly temperature -----------------------------------------------------
 
-temp_dir = paste0(data_dir, '/processed/malawi/dry_spells/gee_output/')
+temp_dir = paste0(processed_country_dir, 'dry_spells/gee_output/')
 
 temp_files <- list.files(path = temp_dir, pattern='mwi_adm1_ecmwf-era5-monthly_median')
 

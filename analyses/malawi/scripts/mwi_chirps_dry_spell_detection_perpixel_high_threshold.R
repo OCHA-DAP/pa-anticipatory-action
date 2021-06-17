@@ -22,8 +22,9 @@ rasterOptions(maxmemory = 1e+09)
 # set directory paths
 # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 data_dir <- Sys.getenv("AA_DATA_DIR")
-shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
-chirps_path <- paste0(data_dir, "/raw/drought/chirps")
+shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
+chirps_path <- paste0(data_dir, "/public/raw/glb/chirps/")
+dry_spell_processed_path <- paste0(data_dir,"/public/processed/mwi/dry_spells")
 
 #####
 ## process shapefiles
@@ -68,27 +69,27 @@ year_by_adm2$year <- as.character(year_by_adm2$year)
 #####
 
 # read in CHIRPS data (multiple multi-layer raster files) into a single stack
-s2000 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2000_p05.nc")) # each file has to be read in separately or layer names get lost
-s2001 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2001_p05.nc"))
-s2002 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2002_p05.nc"))
-s2003 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2003_p05.nc"))
-s2004 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2004_p05.nc"))
-s2005 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2005_p05.nc"))
-s2006 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2006_p05.nc"))
-s2007 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2007_p05.nc"))
-s2008 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2008_p05.nc"))
-s2009 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2009_p05.nc"))
-s2010 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2010_p05.nc")) 
-s2011 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2011_p05.nc"))
-s2012 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2012_p05.nc"))
-s2013 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2013_p05.nc"))
-s2014 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2014_p05.nc"))
-s2015 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2015_p05.nc"))
-s2016 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2016_p05.nc"))
-s2017 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2017_p05.nc"))
-s2018 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2018_p05.nc"))
-s2019 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2019_p05.nc"))
-s2020 <- raster::stack(paste0(data_dir, "/raw/drought/chirps/chirps_global_daily_2020_p05.nc"))
+s2000 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2000_p05.nc")) # each file has to be read in separately or layer names get lost
+s2001 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2001_p05.nc"))
+s2002 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2002_p05.nc"))
+s2003 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2003_p05.nc"))
+s2004 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2004_p05.nc"))
+s2005 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2005_p05.nc"))
+s2006 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2006_p05.nc"))
+s2007 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2007_p05.nc"))
+s2008 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2008_p05.nc"))
+s2009 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2009_p05.nc"))
+s2010 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2010_p05.nc")) 
+s2011 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2011_p05.nc"))
+s2012 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2012_p05.nc"))
+s2013 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2013_p05.nc"))
+s2014 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2014_p05.nc"))
+s2015 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2015_p05.nc"))
+s2016 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2016_p05.nc"))
+s2017 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2017_p05.nc"))
+s2018 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2018_p05.nc"))
+s2019 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2019_p05.nc"))
+s2020 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2020_p05.nc"))
 
 s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s2008, s2009, s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020) # all files combined into a stack
 
@@ -97,8 +98,8 @@ s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adms_spatial_extent)
 nbr_layers <- nlayers(s2000_s2020_cropped)
 
 # save as a raster file not RDS (same spatial_extent with adm1 and adm2)
-#writeRaster(s2000_s2020_cropped, filename = paste0(data_dir, '/processed/malawi/dry_spells/s2000_s2020_cropped.tif'), format="GTiff", overwrite=TRUE, options=c("INTERLEAVE=BAND","COMPRESS=LZW"))
-#s2000_s2020_cropped <- brick(paste0(data_dir, "/processed/malawi/dry_spells/s2000_s2020_cropped.tif")) # read in saved raster file
+#writeRaster(s2000_s2020_cropped, filename = paste0(dry_spell_processed_path, 's2000_s2020_cropped.tif'), format="GTiff", overwrite=TRUE, options=c("INTERLEAVE=BAND","COMPRESS=LZW"))
+#s2000_s2020_cropped <- brick(paste0(dry_spell_processed_path, "s2000_s2020_cropped.tif")) # read in saved raster file
 
 # extract every cell value over 20 years per adm region (Note: not exploding multipart polygons)
 all_years_cell_values_adm2 <- raster::extract(s2000_s2020_cropped, mwi_adm2, cellnumbers = T, df = T, nl = nbr_layers) # return a df with polygon id, cell id, and values per cell for every day of 2000-2020 (1 day/layer at a time)
@@ -106,10 +107,10 @@ all_years_cell_values_adm2 <- raster::extract(s2000_s2020_cropped, mwi_adm2, cel
 
 # save/read the extracted values
 
-#saveRDS(all_years_cell_values_adm2, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
-#all_years_cell_values_adm2 <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm2.RDS"))
-#saveRDS(all_years_cell_values_adm1, paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm1.RDS"))
-#all_years_cell_values_adm1 <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/all_years_cell_values_adm1.RDS"))
+#saveRDS(all_years_cell_values_adm2, paste0(dry_spell_processed_path, "all_years_cell_values_adm2.RDS"))
+#all_years_cell_values_adm2 <- readRDS(paste0(dry_spell_processed_path, "all_years_cell_values_adm2.RDS"))
+#saveRDS(all_years_cell_values_adm1, paste0(dry_spell_processed_path, "all_years_cell_values_adm1.RDS"))
+#all_years_cell_values_adm1 <- readRDS(paste0(dry_spell_processed_path, "all_years_cell_values_adm1.RDS"))
 
 # add pcode for each region
 mwi_adm2_ids$ID <- seq_along(1:n_distinct(mwi_adm2_ids$ADM2_PCODE)) # creates IDs based on layer order, which is used by extract to assign its IDs
@@ -240,8 +241,8 @@ nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were 
 nrow(rainy_seasons_detail) / 22 == n_distinct(data$cell) # confirm there is a record for every year and every cell
 
 # save results
-#write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_per_pixel_adm2.csv"), row.names = FALSE)
-#write.csv(rainy_seasons_detail, file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_per_pixel_adm1.csv"), row.names = FALSE)
+#write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, "rainy_seasons_detail_2000_2020_per_pixel_adm2.csv"), row.names = FALSE)
+#write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, "rainy_seasons_detail_2000_2020_per_pixel_adm1.csv"), row.names = FALSE)
 
 #####
 ## identify dry days that occurred during a rainy season per cell
@@ -292,7 +293,7 @@ dry_spells_details <- dry_spells_list %>%
 
 nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were kept
 
-#write.csv(dry_spells_details, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_details_per_pixel_adm2_300mm.csv"), row.names = FALSE)
+#write.csv(dry_spells_details, file = paste0(dry_spell_processed_path, "dry_spells_details_per_pixel_adm2_300mm.csv"), row.names = FALSE)
 
 # identify dry spells during rainy seasons per cell
 dry_spells_details$cell <- as.character(dry_spells_details$cell)
@@ -312,8 +313,8 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
 #                                         dplyr::select(cell, ADM1_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm2_300mm.csv"), row.names = FALSE)
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_per_pixel_adm1.csv"), row.names = FALSE)
+#write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_per_pixel_adm2_300mm.csv"), row.names = FALSE)
+#write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
 # build list of dry spell dates per cell
@@ -336,8 +337,8 @@ for (i in seq_along(1:nrow(dry_spells_during_rainy_season_list))) {
 df$rainy_season_dry_spell <- 1
 
 # save
-#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm2_300mm.csv"), row.names = FALSE)
-#write.csv(df, file = paste0(data_dir, "/processed/malawi/dry_spells/ds_dates_per_pixel_adm1.csv"), row.names = FALSE)
+#write.csv(df, file = paste0(dry_spell_processed_path, "ds_dates_per_pixel_adm2_300mm.csv"), row.names = FALSE)
+#write.csv(df, file = paste0(dry_spell_processed_path, "ds_dates_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
 # build list of dates, across all cells, with binary dry spell/no
@@ -362,8 +363,8 @@ complete_list$rainy_season_dry_spell <- complete_list$rainy_season_dry_spell %>%
 
 prop.table(table(complete_list$rainy_season_dry_spell))
 
-#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm2_300mm.csv"), row.names = FALSE)
-#write.csv(complete_list,  file = paste0(data_dir, "/processed/malawi/dry_spells/complete_list_per_pixel_adm1.csv"), row.names = FALSE)
+#write.csv(complete_list,  file = paste0(dry_spell_processed_path, "complete_list_per_pixel_adm2_300mm.csv"), row.names = FALSE)
+#write.csv(complete_list,  file = paste0(dry_spell_processed_path, "complete_list_per_pixel_adm1.csv"), row.names = FALSE)
 
 ##############
 # compute dry spell coverage per adm 
@@ -386,8 +387,8 @@ summary(adm1_ds_counts)
 
 
 # save
-#write.csv(adm2_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm2_300mm.csv"), row.names = FALSE)
-#write.csv(adm1_ds_counts,  file = paste0(data_dir, "/processed/malawi/dry_spells/ds_counts_per_pixel_adm1.csv"), row.names = FALSE)
+#write.csv(adm2_ds_counts,  file = paste0(dry_spell_processed_path, "ds_counts_per_pixel_adm2_300mm.csv"), row.names = FALSE)
+#write.csv(adm1_ds_counts,  file = paste0(dry_spell_processed_path, "ds_counts_per_pixel_adm1.csv"), row.names = FALSE)
 
 # viz
 ggplot(data = adm2_ds_counts, aes(x = date, y = perc_ds_cells)) +
