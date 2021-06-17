@@ -1,6 +1,6 @@
 from shapely.geometry import Polygon
 
-from src.indicators.flooding.glofas.area import Station, AreaFromStations, AreaFromShape
+from src.indicators.flooding.cds.area import Station, AreaFromStations, AreaFromShape
 
 
 FAKE_STATIONS = {

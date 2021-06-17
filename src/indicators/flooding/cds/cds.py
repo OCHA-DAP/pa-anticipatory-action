@@ -10,7 +10,7 @@ import numpy as np
 import xarray as xr
 import cdsapi
 
-from src.indicators.flooding.glofas.area import Area, Station
+from src.indicators.flooding.cds.area import Area, Station
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
@@ -46,7 +46,7 @@ class Cds:
         :param date_variable_prefix: Some GloFAS datasets have the prefix "h" in front of some query keys
         """
         self.data_directory = data_directory
-        self.cds_variable_name = cds_variable_name,
+        self.cds_variable_name = cds_variable_name
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name

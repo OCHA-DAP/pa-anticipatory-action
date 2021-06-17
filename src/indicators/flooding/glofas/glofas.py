@@ -6,7 +6,7 @@ from typing import Dict, List
 
 import xarray as xr
 
-from src.indicators.flooding.glofas.area import Area, Station
+from src.indicators.flooding.cds.area import Area, Station
 from src.indicators.flooding.cds import cds
 
 DATA_DIRECTORY = "glofas"

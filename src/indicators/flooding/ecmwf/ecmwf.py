@@ -6,7 +6,7 @@ from typing import Dict
 
 import xarray as xr
 
-from src.indicators.flooding.glofas.area import Area, Station
+from src.indicators.flooding.cds.area import Area, Station
 from src.indicators.flooding.cds import cds
 
 
@@ -16,7 +16,7 @@ CDS_VARIABLE_NAME = "total_precipitation"
 logger = logging.getLogger(__name__)
 
 
-class Ecmwf(cds.Cds):
+class EcmwfEra5(cds.Cds):
 
     def __init__(self):
         super().__init__(
