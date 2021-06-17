@@ -1,48 +1,21 @@
 from pathlib import Path
 import os
-import sys
 import xarray as xr
-import geopandas as gpd
+#rioxarray shows up grey, but is actually being used
 import rioxarray
-from shapely.geometry import mapping
-import pandas as pd
-import numpy as np
+import logging
 from datetime import datetime, timedelta
 import logging
 import urllib
 import rasterio
+import geopandas as gpd
+import numpy as np
 
+from src.utils_general.utils import download_ftp
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-from utils_general.utils import download_ftp
-from indicators.drought.config import Config
-from utils_general.plotting import plot_raster_boundaries_clip, plot_histogram
+logger = logging.getLogger(__name__)
 
-
-def chirps_plot_alldates(ds,adm1_path,config,predef_bins=None):
-    #just testing function, has to be optimized
-    df_bound=gpd.read_file(adm1_path)
-    ds_clip = ds.rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
-    # comprehend dataset to list of datasets to give as input to plotting function
-    #compute histogram of all historical values
-    #quite some nans, but this is due that ds_clip is a rectangle where any cells outside the country boundaries are set to nan
-    ds_clip_array=ds_clip[config.CHIRPS_VARNAME].values.flatten()
-    fig_histog=plot_histogram(ds_clip_array,xlabel="Precipitation (mm)")
-
-    ds_list = [ds_clip.sel(time=p) for p in ds_clip["time"]]
-
-    #create list of titles for subplots
-    #TODO: find better way to format title list regardless of x being datetime object
-    # ds_list_date_str=[pd.to_datetime(str(x)).strftime("%Y-%m-%d") for x in ds_clip["time"].values]
-    ds_list_date_str=[x for x in ds_clip["time"].values]
-    if predef_bins is None:
-        predef_bins=np.linspace(ds_clip.precip.min(), ds_clip.precip.max(), 10)
-    fig_clip = plot_raster_boundaries_clip(ds_list, adm1_path, title_list=ds_list_date_str, forec_val=config.CHIRPS_VARNAME, colp_num=3, figsize=(90,60),labelsize=40,predef_bins=predef_bins) #figszie=18*colp_num,6*rows
-
-    return fig_histog,fig_clip
-
-def download_chirps(config,year,resolution="25",write_crs=False):
+def download_chirps_daily(config,year,resolution="25",write_crs=False):
     """
         Download the CHIRPS data for year from their ftp server
         Args:
@@ -50,7 +23,7 @@ def download_chirps(config,year,resolution="25",write_crs=False):
             year (str or int): year for which the data should be downloaded in YYYY format
             resolution (str): resolution of the data to be downloaded. Can be 25 or 05
         """
-    chirps_dir = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR)
+    chirps_dir = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
     chirps_filepath = os.path.join(chirps_dir, config.CHIRPS_NC_FILENAME_RAW.format(year=year,resolution=resolution))
     # TODO: decide if only download if file doesn't exist. Not sure if ever gets updated
@@ -74,7 +47,105 @@ def download_chirps(config,year,resolution="25",write_crs=False):
         except urllib.error.HTTPError as e:
             logging.error(f"{e}. Date might be later than last reported datapoint. URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}")
 
-def get_chirps_data(config, year, resolution="25", download=False):
+def download_chirps_monthly(
+    config,
+    use_cache: bool = True,
+):
+    """
+    Download global chirps dataset containing monthly entries and save to file
+    Args:
+        config (Config): config for the drought indicator
+        use_cache: if True, don't download if filename already exists
+    """
+    # If caching is on and file already exists, don't download again
+    if use_cache and config.CHIRPS_MONTHLY_RAW_PATH.exists():
+        logger.debug(
+            f"{config.CHIRPS_MONTHLY_RAW_PATH} already exists and cache is set to True, skipping"
+        )
+        return config.CHIRPS_MONTHLY_RAW_PATH
+    Path(config.CHIRPS_MONTHLY_RAW_PATH.parent).mkdir(parents=True, exist_ok=True)
+    logger.debug(f"Querying for {config.CHIRPS_MONTHLY_RAW_PATH}...")
+    download_ftp(config.CHIRPS_FTP_URL_GLOBAL_MONTHLY, config.CHIRPS_MONTHLY_RAW_PATH)
+    logger.debug(f"...successfully downloaded {config.CHIRPS_MONTHLY_RAW_PATH}")
+    return config.CHIRPS_MONTHLY_RAW_PATH
+
+def clip_chirps_monthly_bounds(
+        config,
+        country_name: str,
+        country_iso3: str,
+        use_cache = True
+    ):
+    """
+    Clip the global chirps dataset to the boundaries of country_name
+    This will enable faster processing
+    Clipping can take max half an hour
+    """
+    parameters = config.parameters(country_name)
+    adm0_bound_path = Path(
+        config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / country_iso3 / config.SHAPEFILE_DIR / parameters[
+                          "path_admin0_shp"]
+    chirps_monthly_country_dir = Path(
+        config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / country_iso3 / config.CHIRPS_DIR / config.CHIRPS_MONTHLY_DIR
+    chirps_monthly_country_filepath = chirps_monthly_country_dir / config.CHIRPS_MONTHLY_COUNTRY_FILENAME.format(country_iso3=country_iso3)
+    if use_cache and chirps_monthly_country_filepath.exists():
+        logger.debug(
+            f"{chirps_monthly_country_filepath} already exists and cache is set to True, skipping"
+        )
+        return chirps_monthly_country_filepath
+
+    Path(chirps_monthly_country_dir).mkdir(parents=True, exist_ok=True)
+    logger.debug(f"Clipping global data to {config.CHIRPS_MONTHLY_RAW_PATH}...")
+    # would like to rioxarray but seems slower/crashing with clip
+    ds = xr.open_dataset(config.CHIRPS_MONTHLY_RAW_PATH).rio.write_crs("EPSG:4326")
+    gdf_adm1 = gpd.read_file(adm0_bound_path)
+    ds_country=ds.rio.set_spatial_dims(x_dim="longitude",y_dim="latitude").rio.clip(gdf_adm1["geometry"], ds.rio.crs, all_touched=True)
+    ds_country.to_netcdf(chirps_monthly_country_filepath)
+    logger.debug(f"...successfully saved clipped data to {config.CHIRPS_MONTHLY_RAW_PATH}")
+    return chirps_monthly_country_filepath
+
+def compute_seasonal_lowertercile_raster(
+        config,
+        country_iso3: str,
+        use_cache: bool = True,
+    ):
+    #number of months that is considered a season
+    seas_len=3
+    chirps_country_dir = Path(
+        config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / country_iso3 / config.CHIRPS_DIR
+    chirps_monthly_country_dir = chirps_country_dir / config.CHIRPS_MONTHLY_DIR
+    chirps_seasonal_country_dir = chirps_country_dir / config.CHIRPS_SEASONAL_DIR
+    chirps_monthly_country_filepath = chirps_monthly_country_dir / config.CHIRPS_MONTHLY_COUNTRY_FILENAME.format(country_iso3=country_iso3)
+    chirps_seasonal_lowertercile_country_filepath = chirps_seasonal_country_dir / config.CHIRPS_SEASONAL_LOWERTERCILE_COUNTRY_FILENAME.format(country_iso3=country_iso3)
+
+    if use_cache and chirps_seasonal_lowertercile_country_filepath.exists():
+        logger.debug(
+            f"{chirps_seasonal_lowertercile_country_filepath} already exists and cache is set to True, skipping"
+        )
+        return chirps_seasonal_lowertercile_country_filepath
+
+    Path(chirps_seasonal_country_dir).mkdir(parents=True, exist_ok=True)
+    logger.debug(f"Computing lower tercile values...")
+    ds = xr.open_dataset(chirps_monthly_country_filepath)
+    # compute the rolling sum over three month period. Rolling sum works backwards, i.e. value for month 3 is sum of month 1 till 3. So month==1 is NDJ season
+    ds_season=ds.rolling(time=seas_len,min_periods=seas_len).sum().dropna(dim="time",how="all")
+    #define the years that are used to define the climatology. We use 1982-2010 since this is also the period used by IRI's seasonal forecasts
+    #see https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/
+    ds_season_climate=ds_season.sel(time=ds_season.time.dt.year.isin(range(1982,2011)))
+    #compute the thresholds for the lower tercile, i.e. below average, per season
+    #since we computed a rolling sum, each month represents a season
+    ds_season_climate_quantile=ds_season_climate.groupby(ds_season_climate.time.dt.month).quantile(0.33)
+    #determine the raster cells that have below-average precipitation, other cells are set to -666
+    list_ds_seass=[]
+    for s in np.unique(ds_season.time.dt.month):
+        ds_seas_sel=ds_season.sel(time=ds_season.time.dt.month==s)
+        #keep original values of cells that are either nan or have below average precipitation, all others are set to -666
+        ds_seas_below=ds_seas_sel.where((ds_seas_sel.isnull())|(ds_seas_sel<=ds_season_climate_quantile.sel(month=s)),-666)
+        list_ds_seass.append(ds_seas_below)
+    ds_season_below=xr.concat(list_ds_seass,dim="time")
+    ds_season_below.to_netcdf(chirps_seasonal_lowertercile_country_filepath)
+    return chirps_seasonal_lowertercile_country_filepath
+
+def get_chirps_data_daily(config, year, resolution="25", download=False):
     """
     Load CHIRP's NetCDF file as xarray dataset
     Args:
@@ -89,9 +160,9 @@ def get_chirps_data(config, year, resolution="25", download=False):
     """
 
     if download:
-        download_chirps(config,year,resolution)
+        download_chirps_daily(config,year,resolution)
 
-    chirps_filepath_crs = os.path.join(config.DROUGHTDATA_DIR, config.CHIRPS_DIR,config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution))
+    chirps_filepath_crs = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR,config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution))
     #TODO: would prefer rioxarray but crashes when clipping
     ds = xr.open_dataset(chirps_filepath_crs)
     # ds = rioxarray.open_rasterio(chirps_filepath_crs)
@@ -101,3 +172,20 @@ def get_chirps_data(config, year, resolution="25", download=False):
         transform = src.transform
 
     return ds, transform
+
+def get_chirps_data_monthly(
+        config,
+        country_name: str,
+        country_iso3: str,
+        download: bool = True,
+        process: bool = True,
+        use_cache: bool = True
+):
+    if download:
+        download_chirps_monthly(config,use_cache)
+    if process:
+        clip_chirps_monthly_bounds(
+            config=config,
+            country_name=country_name,
+            country_iso3=country_iso3,
+            use_cache=use_cache)

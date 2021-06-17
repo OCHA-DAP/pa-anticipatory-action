@@ -113,7 +113,7 @@ def plot_raster_boundaries(ds_nc,country, parameters, config, lon='lon',lat='lat
     lats=ds_nc.coords[lat]
     prob=ds_nc[forec_val]
 
-    boundaries_adm1_path = os.path.join(os.environ['AA_DATA_DIR'], 'raw', country, config.SHAPEFILE_DIR,parameters['path_admin2_shp'])
+    boundaries_adm1_path = os.path.join(os.environ['AA_DATA_DIR'], 'public', 'raw', parameters['iso3_code'], config.SHAPEFILE_DIR,parameters['path_admin2_shp'])
     boundaries_world_path = os.path.join(os.environ['AA_DATA_DIR'], config.WORLD_SHP_PATH)
     # load admin boundaries shapefile
     df_adm = gpd.read_file(boundaries_adm1_path)
@@ -202,7 +202,7 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
         fig.suptitle(suptitle, size=10)
     return fig
 
-def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd'):
+def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd',colp_num=2):
     """
     Create a subplot for each variable in col_list where the value for the variable per spatial region defined in "df" is shown
     If predef_bins are given, the values will be classified to these bins. Else a different color will be given to each unique value
@@ -222,15 +222,21 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
     plt.clf()
 
     #define the number of columns and rows
-    colp_num = 2
+    # colp_num = 2
     num_plots = len(col_list)
+    if num_plots == 1:
+        colp_num = 1
     rows = num_plots // colp_num
     rows += num_plots % colp_num
     position = range(1, num_plots + 1)
 
     #TODO: messy now with the axes and ax objects, find neater method. If using plt.figure and then add_subplots calling function several times will overlap the plots :/
     fig, axes=plt.subplots(rows,colp_num)
-    [axi.set_axis_off() for axi in axes.ravel()]
+    if num_plots == 1:
+        axes.set_axis_off()
+    else:
+        [axi.set_axis_off() for axi in axes.ravel()]
+
     #if bins, set norm to classify the values in the bins
     if predef_bins is not None:
         scheme = None
@@ -261,7 +267,7 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
                                   "hatch": "///",
                                   "label": "No values"})
         else:
-            df.plot(col, ax=ax, legend=True, k=colors, cmap=cmap, norm=norm, scheme=scheme,
+            df.plot(col, ax=ax, legend=False, k=colors, cmap=cmap, norm=norm, scheme=scheme,
                     legend_kwds=legend_kwds
                     )
 
@@ -270,6 +276,7 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
         plt.title(col)
         ax.axis("off")
         plt.axis("off")
+
 
         #prettify legend if using individual color for each value
         if predef_bins is None and not df[col].isnull().values.all():
@@ -284,7 +291,12 @@ def plot_spatial_columns(df, col_list, title=None, predef_bins=None,cmap='YlOrRd
                 except:
                     new_text = upper
                 lbl.set_text(new_text)
+    #TODO: might want to make a distinction with using colorbar and legend depending on categorized or continous bins..
+    leg = ax.get_legend()
+    # patch_col = ax.collections[0]
+    # cb = fig.colorbar(patch_col, ax=ax, shrink=0.5)
 
+    # leg.set_bbox_to_anchor((0., 0.2, 0.2, 0.2))
     #TODO: fix legend and prettify plot
     if title:
         fig.suptitle(title, fontsize=14, y=0.92)

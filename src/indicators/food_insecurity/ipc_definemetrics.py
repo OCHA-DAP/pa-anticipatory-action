@@ -7,9 +7,9 @@ import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args
-from utils_general.utils import config_logger
+from src.indicators.food_insecurity.config import Config
+from src.indicators.food_insecurity.utils import parse_args
+from src.utils_general.utils import config_logger
 
 logger = logging.getLogger(__name__)
 
@@ -66,98 +66,3 @@ def define_trigger_increase(row, period, level, perc):
         return 1
     else:
         return 0
-
-def main(country, admin_level, suffix, config=None):
-    #TODO: now keeping for reference but remove or adjust in future
-    """
-    Compute all functions to return one dataframe with processed columns and if trigger is met for each data-source combination
-    Args:
-        country_iso3: string with iso3 code
-        suffix: string to attach to the output files name
-        admin_level: integer indicating which admin level to aggregate to
-        suffix: string that is attached to the input file names and will be attached to the output file names
-        config_file: path to config file
-    """
-    if config is None:
-        config = Config()
-    parameters = config.parameters(country)
-    COUNTRY_FOLDER = f"../../analyses/{country}"
-
-    FEWS_PROCESSED_FOLDER = f"{COUNTRY_FOLDER}/Data/FewsNetProcessed/"
-    GIPC_PROCESSED_FOLDER = f"{COUNTRY_FOLDER}/Data/GlobalIPCProcessed/"
-    processed_fews_path = (
-        f"{FEWS_PROCESSED_FOLDER}{country}_fewsnet_admin{admin_level}{suffix}.csv"
-    )
-    processed_globalipc_path = (
-        f"{GIPC_PROCESSED_FOLDER}{country}_globalipc_ADMIN{admin_level}{suffix}.csv"
-    )
-
-    RESULT_FOLDER = f"{COUNTRY_FOLDER}/Data/IPC_trigger/"
-    Path(RESULT_FOLDER).mkdir(parents=True, exist_ok=True)
-
-    # 3p = IPC level 3 or higher, 2m = IPC level 2 or lower
-    ipc_cols = [
-        f"{period}_{i}"
-        for period in ["CS", "ML1", "ML2"]
-        for i in [1, 2, 3, 4, 5, "3p", "2m"]
-    ] + [
-        f"perc_{period}_{i}"
-        for period in ["CS", "ML1", "ML2"]
-        for i in [1, 2, 3, 4, 5, "3p", "2m"]
-    ]
-    pop_cols = [
-        f"pop_{period}" for period in ["CS", "ML1", "ML2", f"ADMIN{admin_level}"]
-    ]
-
-    # TODO: implement ADMIN0 in preprocess scripts, and select it here as well
-    adm_cols = [f"ADMIN{a}" for a in range(1, int(admin_level) + 1)]
-
-    # initialize dataframes such that can later check if they are filled with data
-    df_fewss = None
-    df_gipcs = None
-
-    if os.path.exists(processed_fews_path):
-        df_fews = pd.read_csv(processed_fews_path, index_col=0)
-        # TODO: adjust column names in process_fewsnet_subnatpop.py instead
-        df_fews = df_fews.rename(
-            columns={
-                parameters["shp_adm1c"]: "ADMIN1",
-                parameters["shp_adm2c"]: "ADMIN2",
-                "adjusted_population": f"pop_ADMIN{admin_level}",
-            }
-        )
-        df_fews = add_columns(df_fews, "FewsNet")
-        df_fewss = df_fews[["date", "Source"] + adm_cols + pop_cols + ipc_cols]
-
-    if os.path.exists(processed_globalipc_path):
-        df_gipc = pd.read_csv(processed_globalipc_path, index_col=0)
-        df_gipc = add_columns(df_gipc, "GlobalIPC")
-        df_gipcs = df_gipc[["date", "Source"] + adm_cols + pop_cols + ipc_cols]
-
-    if df_fewss is not None and df_gipcs is not None:
-        df_comb = pd.concat([df_fewss, df_gipcs])
-        df_comb_trig = compute_trigger(df_comb)
-
-    elif df_fewss is not None:
-        df_comb = df_fewss
-        df_comb_trig = compute_trigger(df_comb)
-        logger.warning("No Global IPC data found")
-
-    elif df_gipcs is not None:
-        df_comb = df_gipcs
-        df_comb_trig = compute_trigger(df_comb)
-        logger.warning("No FewsNet data found")
-
-    else:
-        df_comb_trig = pd.DataFrame()
-        logger.warning("No data found")
-
-    df_comb_trig.to_csv(
-        f"{RESULT_FOLDER}trigger_results_admin{admin_level}{suffix}.csv", index=False
-    )
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    config_logger(level="warning")
-    main(args.country.lower(), args.admin_level, args.suffix)

@@ -7,11 +7,12 @@ from pathlib import Path
 import logging
 from tqdm import tqdm
 import sys
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
-from indicators.food_insecurity.config import Config
-from indicators.food_insecurity.utils import parse_args, download_fewsnet, download_worldpop, compute_percentage_columns
-from utils_general.utils import config_logger
+
+from src.indicators.food_insecurity.config import Config
+from src.indicators.food_insecurity.utils import parse_args, download_fewsnet, download_worldpop, compute_percentage_columns
+from src.utils_general.utils import config_logger
 logger = logging.getLogger(__name__)
 
 def retrieve_admcols(admin_level,config):
@@ -280,9 +281,12 @@ def retrieve_fewsnet_worldpop(country, admin_level, suffix="", download=False, c
     if "fewsnet_dates_remove" in parameters.keys():
         fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
 
-    country_folder = os.path.join(config.DIR_PATH,config.ANALYSES_DIR,country)
-    fewsnet_raw_dir = os.path.join(config.FOODINSECURITYDATA_DIR, config.FEWSNET_RAW_DIR)
-    worldpop_dir = os.path.join(country_folder, config.DATA_DIR, config.WORLDPOP_RAW_DIR)
+    country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower())
+    glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
+    country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower())
+
+    fewsnet_raw_dir = os.path.join(glb_data_raw_dir, config.FEWSNET_DIR)
+    worldpop_dir = os.path.join(country_data_raw_dir, config.WORLDPOP_DIR)
 
     if download:
         for d in fewsnet_dates:
@@ -292,8 +296,9 @@ def retrieve_fewsnet_worldpop(country, admin_level, suffix="", download=False, c
         for y in years_unique:
             download_worldpop(country_iso3, y, worldpop_dir, config)
 
-    adminbound_path = os.path.join(country_folder,config.DATA_DIR,config.SHAPEFILE_DIR,parameters[f"path_admin{admin_level}_shp"])
-    output_dir = os.path.join(country_folder, config.DATA_DIR, config.FEWSWORLDPOP_PROCESSED_DIR)
+    adminbound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR,
+                              parameters[f'path_admin{admin_level}_shp'])
+    output_dir = os.path.join(country_data_processed_dir, config.FEWSWORLDPOP_PROCESSED_DIR)
     # create output dir if it doesn't exist yet
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 

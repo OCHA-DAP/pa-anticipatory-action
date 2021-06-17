@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 import rasterio
 import xarray as xr
+import rioxarray
 
 from src.indicators.drought.config import Config
 from src.utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar
@@ -22,7 +23,7 @@ def download_iri(iri_auth,config,chunk_size=128):
     """
     #TODO: it would be nicer to download with opendap instead of requests, since then the file doesn't even have to be saved and is hopefully faster.
     # But haven't been able to figure out how to do that with cookie authentication
-    IRI_dir = os.path.join(config.DROUGHTDATA_DIR,config.IRI_DIR)
+    IRI_dir = os.path.join(config.GLOBAL_DIR,config.IRI_DIR)
     Path(IRI_dir).mkdir(parents=True, exist_ok=True)
     IRI_filepath = os.path.join(IRI_dir, config.IRI_NC_FILENAME_RAW)
     # strange things happen when just overwriting the file, so delete it first if it already exists
@@ -74,7 +75,7 @@ def get_iri_data(config, download=False):
         if not iri_auth:
             logger.error("No authentication file found. Needs the environment variable 'IRI_AUTH'")
         download_iri(iri_auth,config)
-    IRI_filepath = os.path.join(config.DROUGHTDATA_DIR, config.IRI_DIR, config.IRI_NC_FILENAME_CRS)
+    IRI_filepath = os.path.join(config.GLOBAL_DIR, config.IRI_DIR, config.IRI_NC_FILENAME_CRS)
     # the nc contains two bands, prob and C. Still not sure what C is used for but couldn't discover useful information in it and will give an error if trying to read both (cause C is also a variable in prob)
     #the date format is formatted as months since 1960. In principle xarray can convert this type of data to datetime, but due to a wrong naming of the calendar variable it cannot do this automatically
     #Thus first load with decode_times=False and then change the calendar variable and decode the months
