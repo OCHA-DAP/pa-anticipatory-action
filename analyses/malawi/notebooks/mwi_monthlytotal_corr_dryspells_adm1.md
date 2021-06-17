@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.2
+      jupytext_version: 1.10.3
   kernelspec:
     display_name: antact
     language: python
@@ -128,6 +128,11 @@ def load_monthly_dryspell_precip(ds_path,precip_path,min_ds_days_month=7,min_adm
 #### Merge precipitation data on adm1 with dry spells on adm2
 
 ```python
+#select only dec,jan,feb as those are the months we are focussing on
+months_sel=[1,2]
+```
+
+```python
 min_ds_days_month=7
 min_adm_ds_month=3
 df_comb_countmonth=load_monthly_dryspell_precip(all_dry_spells_list_path,monthly_precip_path,min_ds_days_month=min_ds_days_month,min_adm_ds_month=min_adm_ds_month)
@@ -147,9 +152,8 @@ df_comb_countmonth_labels_southern=df_comb_countmonth_labels[df_comb_countmonth_
 ```
 
 ```python
-#select only dec,jan,feb as those are the months we are focussing on
-df_southern_countmonth_decjanfeb=df_comb_countmonth_southern[df_comb_countmonth_southern.month.isin([12,1,2])]
-df_southern_countmonth_labels_decjanfeb=df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin([12,1,2])]
+df_southern_countmonth_decjanfeb=df_comb_countmonth_southern[df_comb_countmonth_southern.month.isin(months_sel)]
+df_southern_countmonth_labels_decjanfeb=df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin(months_sel)]
 ```
 
 ```python
@@ -348,7 +352,7 @@ if num_plots==1:
 rows = math.ceil(num_plots / colp_num)
 position = range(1, num_plots + 1)
 fig=plt.figure(figsize=(16,1))
-for i, m in enumerate([12,1,2]):#df_pr_sep_month.month.unique()):
+for i, m in enumerate(months_sel):#df_pr_sep_month.month.unique()):
     ax = fig.add_subplot(rows,colp_num,i+1)
     df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_miss_rate" ,figsize=(16, 8), style='.-',color='#F2645A',legend=False,ax=ax,label="dry spell occurred and monthly precipitation above threshold (misses)")
     df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_false_alarm_rate" ,figsize=(16, 8), style='.-',color='#66B0EC',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation below threshold (false alarms)")
@@ -379,10 +383,41 @@ if num_plots==1:
 rows = math.ceil(num_plots / colp_num)
 position = range(1, num_plots + 1)
 fig=plt.figure(figsize=(16,1))
-for i, m in enumerate([12,1,2]):#df_pr_sep_month.month.unique()):
+for i, m in enumerate(months_sel):#df_pr_sep_month.month.unique()):
     ax = fig.add_subplot(rows,colp_num,i+1)
-    df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_ds" ,figsize=(16, 8), color='#F2645A',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold")
-    df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_no_ds" ,figsize=(16, 8), color='#66B0EC',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation above threshold") #["#18998F","#FCE0DE"]
+    df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_ds" ,figsize=(16, 8), style='.-',color='#F2645A',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold (match)")
+    df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_false_alarm_rate" ,figsize=(16, 8), style='.-',color='#66B0EC',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation below threshold (false positive match)")
+
+    # Set x-axis label
+    ax.set_xlabel("Monthly rainfall threshold (mm)", labelpad=20, weight='bold', size=12)
+
+    # Set y-axis label
+    ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
+    ax.set_title(f"month = {calendar.month_name[int(m)]}")
+    # Despine
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+plt.gcf().set_size_inches(15,5)
+handles, labels = ax.get_legend_handles_labels()
+fig.legend(handles, labels, loc='upper center')
+fig.tight_layout(rect=(0,0,1,0.9))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_adm1_permonth.png"))
+```
+
+```python
+num_plots = len(df_pr_sep_month.month.unique())
+colp_num=3
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(16,1))
+for i, m in enumerate(months_sel):#df_pr_sep_month.month.unique()):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_ds" ,figsize=(16, 8), color='#F2645A',legend=False,ax=ax,label="dry spell occurred and observed monthly precipitation below threshold")
+    df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_no_ds" ,figsize=(16, 8), color='#66B0EC',legend=False,ax=ax,label="no dry spell occurred and observed monthly precipitation above threshold") #["#18998F","#FCE0DE"]
 
     # Set x-axis label
     ax.set_xlabel("Monthly rainfall threshold (mm)", labelpad=20, weight='bold', size=12)
@@ -471,7 +506,7 @@ df_daterange_comb=refactor_data_hm(df_comb_countmonth_southern,threshold)
 ```
 
 ```python
-df_daterange_comb_southern_decjanfeb = df_daterange_comb[(df_daterange_comb.ADM1_EN=="Southern")&(df_daterange_comb.date.dt.month.isin([12,1,2]))]
+df_daterange_comb_southern_decjanfeb = df_daterange_comb[(df_daterange_comb.ADM1_EN=="Southern")&(df_daterange_comb.date.dt.month.isin(months_sel))]
 df_daterange_comb_southern_decjanfeb.to_csv(os.path.join(country_data_processed_dir,"dry_spells","seasonal",f"monthly_dryspellobs_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold}_southern_decjanfeb.csv"))
 ```
 
@@ -496,8 +531,8 @@ df_countmonth_4mm_labels_southern=df_countmonth_4mm_labels[df_countmonth_4mm_lab
 
 ```python
 #select only dec,jan,feb as those are the months we are focussing on
-df_countmonth_4mm_southern_decjanfeb=df_countmonth_4mm_southern[df_countmonth_4mm_southern.month.isin([12,1,2])]
-df_countmonth_4mm_labels_southern_decjanfeb=df_countmonth_4mm_labels_southern[df_countmonth_4mm_labels_southern.month.isin([12,1,2])]
+df_countmonth_4mm_southern_decjanfeb=df_countmonth_4mm_southern[df_countmonth_4mm_southern.month.isin(months_sel)]
+df_countmonth_4mm_labels_southern_decjanfeb=df_countmonth_4mm_labels_southern[df_countmonth_4mm_labels_southern.month.isin(months_sel)]
 ```
 
 ```python
@@ -639,7 +674,7 @@ if num_plots==1:
 rows = math.ceil(num_plots / colp_num)
 position = range(1, num_plots + 1)
 fig=plt.figure(figsize=(16,1))
-for i, m in enumerate([12,1,2]):#df_pr_sep_month.month.unique()):
+for i, m in enumerate(months_sel):#df_pr_sep_month.month.unique()):
     ax = fig.add_subplot(rows,colp_num,i+1)
     df_pr_sep_month_4mm[df_pr_sep_month_4mm.month==m].plot(x="threshold",y="month_ds" ,figsize=(16, 8), color='#F2645A',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold")
     df_pr_sep_month_4mm[df_pr_sep_month_4mm.month==m].plot(x="threshold",y="month_no_ds" ,figsize=(16, 8), color='#66B0EC',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation above threshold") #["#18998F","#FCE0DE"]
@@ -674,7 +709,7 @@ df_daterange_comb_4mm=refactor_data_hm(df_countmonth_4mm_southern,threshold_4mm)
 ```
 
 ```python
-df_daterange_comb_4mm_southern_decjanfeb = df_daterange_comb_4mm[(df_daterange_comb_4mm.ADM1_EN=="Southern")&(df_daterange_comb_4mm.date.dt.month.isin([12,1,2]))]
+df_daterange_comb_4mm_southern_decjanfeb = df_daterange_comb_4mm[(df_daterange_comb_4mm.ADM1_EN=="Southern")&(df_daterange_comb_4mm.date.dt.month.isin(months_sel))]
 df_daterange_comb_4mm_southern_decjanfeb.to_csv(os.path.join(country_data_processed_dir,"dry_spells","seasonal",f"monthly_dryspellobs_4mm_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold_4mm}_southern_decjanfeb.csv"))
 ```
 
@@ -686,7 +721,7 @@ def load_monthly_dryspell_precip_count(ds_path,precip_path,min_ds_days_month=7,m
     if print_numds:
         df_adm2=gpd.read_file(adm2_bound_path)
         df_ds_all_nums=df_ds_all.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
-        df_ds_all_nums=df_ds_all_nums[(df_ds_all_nums.ADM1_EN=="Southern")&((df_ds_all_nums.dry_spell_first_date.dt.month.isin([12,1,2]))|(df_ds_all_nums.dry_spell_first_date.dt.month.isin([12,1,2])))]
+        df_ds_all_nums=df_ds_all_nums[(df_ds_all_nums.ADM1_EN=="Southern")&((df_ds_all_nums.dry_spell_first_date.dt.month.isin(months_sel))|(df_ds_all_nums.dry_spell_first_date.dt.month.isin(months_sel)))]
         print("num adm2-date combs with dry spell:",len(df_ds_all_nums))
     #get list of all dates that were part of a dry spell
     df_ds_res=df_ds_all.reset_index(drop=True)
@@ -703,7 +738,7 @@ def load_monthly_dryspell_precip_count(ds_path,precip_path,min_ds_days_month=7,m
     
     df_ds_month=df_ds_countmonth[df_ds_countmonth.dryspell_obs>=min_ds_days_month]
     df_ds_month=df_ds_month.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
-    print("num adm2-month combs with dry spell:",len(df_ds_month[(df_ds_month.ADM1_EN=="Southern")&(df_ds_month.date_month.dt.month.isin([12,1,2]))].groupby(["date_month","pcode"],as_index=False).count()))
+    print("num adm2-month combs with dry spell:",len(df_ds_month[(df_ds_month.ADM1_EN=="Southern")&(df_ds_month.date_month.dt.month.isin(months_sel))].groupby(["date_month","pcode"],as_index=False).count()))
     
     #TODO: this is not really generalizable
     if precip_adm_col not in df_ds_month.columns:
@@ -711,7 +746,7 @@ def load_monthly_dryspell_precip_count(ds_path,precip_path,min_ds_days_month=7,m
         df_ds_month=df_ds_month.merge(df_adm2[["ADM2_PCODE","ADM2_EN","ADM1_EN"]],left_on=ds_adm_col,right_on="ADM2_PCODE")
         
     df_ds_month_adm1=df_ds_month.groupby([precip_adm_col,"date_month"],as_index=False).count()
-    print("num ds at adm1:", len(df_ds_month_adm1[(df_ds_month_adm1.ADM1_EN=="Southern")&(df_ds_month_adm1.date_month.dt.month.isin([12,1,2]))]))
+    print("num ds at adm1:", len(df_ds_month_adm1[(df_ds_month_adm1.ADM1_EN=="Southern")&(df_ds_month_adm1.date_month.dt.month.isin(months_sel))]))
     
     #load the monthly precipitation data
     df_total_month=pd.read_csv(precip_path)
@@ -724,7 +759,7 @@ def load_monthly_dryspell_precip_count(ds_path,precip_path,min_ds_days_month=7,m
     #dryspell_obs is number of adm2s in which a dry spell is observed in the given date_month
     #select all date_months with at least min_adm_ds_month adm2 having a dry spell
     df_comb_countmonth["dry_spell"]=np.where(df_comb_countmonth.dryspell_obs>=min_adm_ds_month,1,0)
-    print(f"num ds adm1 >={min_adm_ds_month}adm2s:",len(df_comb_countmonth[(df_comb_countmonth.dry_spell==1)&(df_comb_countmonth.ADM1_EN=="Southern")&(df_comb_countmonth.date_month.dt.month.isin([12,1,2]))]))
+    print(f"num ds adm1 >={min_adm_ds_month}adm2s:",len(df_comb_countmonth[(df_comb_countmonth.dry_spell==1)&(df_comb_countmonth.ADM1_EN=="Southern")&(df_comb_countmonth.date_month.dt.month.isin(months_sel))]))
     
     df_comb_countmonth["month"]=df_comb_countmonth.date_month.dt.month
     df_comb_countmonth["season_approx"]=np.where(df_comb_countmonth.month>=10,df_comb_countmonth.date_month.dt.year,df_comb_countmonth.date_month.dt.year-1)
@@ -817,8 +852,8 @@ for ax in g.axes.flatten():
 
 ```python
 #select only dec,jan,feb as those are the months we are focussing on
-df_southern_countmonth_decjanfeb=df_comb_countmonth_southern[df_comb_countmonth_southern.month.isin([12,1,2])]
-df_southern_countmonth_labels_decjanfeb=df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin([12,1,2])]
+df_southern_countmonth_decjanfeb=df_comb_countmonth_southern[df_comb_countmonth_southern.month.isin(months_sel)]
+df_southern_countmonth_labels_decjanfeb=df_comb_countmonth_labels_southern[df_comb_countmonth_labels_southern.month.isin(months_sel)]
 ```
 
 ```python
@@ -834,7 +869,7 @@ ax.get_legend().set_title("Dry spell occurred")
 
 ```python
 # #statistics shown in boxplot by month
-# for m in [12,1,2]:
+# for m in months_sel:
 #     print(f"month={m}")
 #     print(df_southern_countmonth_labels_decjanfeb.loc[df_southern_countmonth_labels_decjanfeb.month==m,"mean_cell"].describe())
 ```
@@ -927,7 +962,7 @@ if num_plots==1:
 rows = math.ceil(num_plots / colp_num)
 position = range(1, num_plots + 1)
 fig=plt.figure(figsize=(16,1))
-for i, m in enumerate([12,1,2]):#df_pr_sep_month.month.unique()):
+for i, m in enumerate(months_sel):#df_pr_sep_month.month.unique()):
     ax = fig.add_subplot(rows,colp_num,i+1)
     df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_ds" ,figsize=(16, 8), color='#F2645A',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold")
     df_pr_sep_month[df_pr_sep_month.month==m].plot(x="threshold",y="month_no_ds" ,figsize=(16, 8), color='#66B0EC',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation above threshold") #["#18998F","#FCE0DE"]
@@ -955,7 +990,7 @@ fig.tight_layout(rect=(0,0,1,0.9))
 ```
 
 ```python
-df_southern_decjanfeb=df_comb_countmonth_southern[df_comb_countmonth_southern.month.isin([12,1,2])]
+df_southern_decjanfeb=df_comb_countmonth_southern[df_comb_countmonth_southern.month.isin(months_sel)]
 ```
 
 ```python
@@ -1023,7 +1058,7 @@ df_daterange_comb.rename(columns={"ADM2_PCODE":"pcode"},inplace=True)
 ```
 
 ```python
-df_daterange_comb_southern_decjanfeb = df_daterange_comb[(df_daterange_comb.ADM1_EN=="Southern")&(df_daterange_comb.date.dt.month.isin([12,1,2]))]
+df_daterange_comb_southern_decjanfeb = df_daterange_comb[(df_daterange_comb.ADM1_EN=="Southern")&(df_daterange_comb.date.dt.month.isin(months_sel))]
 # df_daterange_comb_southern_decjanfeb.to_csv(os.path.join(country_data_processed_dir,"dry_spells","seasonal",f"monthly_dryspellobs_th{threshold}_southern_decjanfeb.csv"))
 ```
 
