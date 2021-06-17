@@ -2,9 +2,7 @@ import unittest
 from unittest import mock
 from pathlib import Path
 
-from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.ecmwf import ecmwf
-from src.indicators.flooding.cds import cds
+from src.indicators.flooding.cds import cds, glofas, ecmwf
 from src.indicators.flooding.cds.area import Area
 
 import numpy as np
