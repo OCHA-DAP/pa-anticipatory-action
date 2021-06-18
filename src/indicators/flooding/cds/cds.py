@@ -26,6 +26,7 @@ class Cds:
         self,
         data_directory: str,
         cds_variable_name: str,
+        xarray_variable_name: str,
         year_min: Union[int, Dict[int, int]],
         year_max: int,
         cds_name: str,
@@ -47,6 +48,7 @@ class Cds:
         """
         self.data_directory = data_directory
         self.cds_variable_name = cds_variable_name
+        self.xarray_variable_name = xarray_variable_name
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
@@ -131,7 +133,7 @@ class Cds:
         month: int = None,
         leadtime: int = None,
         toggle_hours: bool = False,
-        **kwargs
+        **kwargs,
     ) -> dict:
         query = {
             "variable": self.cds_variable_name,
@@ -153,8 +155,7 @@ class Cds:
         logger.debug(f"Query: {query}")
         return query
 
-    @staticmethod
-    def _read_in_control_and_perturbed_datasets(filepath_list: List[Path]):
+    def _read_in_control_and_perturbed_datasets(self, filepath_list: List[Path]):
         """
         Read in dataset that has both control and ensemble perturbed forecast
         and combine them
@@ -175,13 +176,49 @@ class Cds:
                 if data_type == "cf":
                     ds = expand_dims(
                         ds=ds,
-                        dataset_name="dis24",
+                        dataset_name=self.xarray_variable_name,
                         coord_names=["number", "time", "latitude", "longitude"],
                         expansion_dim=0,
                     )
                 ds_list.append(ds)
         ds = xr.combine_by_coords(ds_list)
         return ds
+
+    def get_station_dataset(self,
+                            stations: Dict[str, Station], ds: xr.Dataset, coord_names: List[str]
+                            ) -> xr.Dataset:
+        # Check that lat and lon are in the bounds
+        for station_name, station in stations.items():
+            if not ds.longitude.min() < station.lon < ds.longitude.max():
+                raise CoordsOutOfBounds(
+                    station_name=station_name,
+                    param_name="longitude",
+                    coord_station=station.lon,
+                    coord_min=ds.longitude.min().values,
+                    coord_max=ds.longitude.max().values,
+                )
+            if not ds.latitude.min() < station.lat < ds.latitude.max():
+                raise CoordsOutOfBounds(
+                    station_name=station_name,
+                    param_name="latitude",
+                    coord_station=station.lat,
+                    coord_min=ds.latitude.min().values,
+                    coord_max=ds.latitude.max().values,
+                )
+        # If they are then return the correct pixel
+        return xr.Dataset(
+            data_vars={
+                station_name: (
+                    coord_names,
+                    ds.isel(
+                        longitude=np.abs(ds.longitude - station.lon).argmin(),
+                        latitude=np.abs(ds.latitude - station.lat).argmin(),
+                    )[self.xarray_variable_name],
+                )
+                for station_name, station in stations.items()
+            },
+            coords={coord_name: ds[coord_name] for coord_name in coord_names},
+        )
 
     def _write_to_processed_file(
         self,
@@ -211,7 +248,13 @@ class Cds:
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / self.data_directory / filename
+        return (
+            DATA_DIR
+            / PROCESSED_DATA_DIR
+            / country_iso3
+            / self.data_directory
+            / filename
+        )
 
     def read_processed_dataset(
         self,
@@ -264,38 +307,3 @@ class CoordsOutOfBounds(Exception):
         super().__init__(message)
 
 
-def get_station_dataset(
-    stations: Dict[str, Station], ds: xr.Dataset, coord_names: List[str]
-) -> xr.Dataset:
-    # Check that lat and lon are in the bounds
-    for station_name, station in stations.items():
-        if not ds.longitude.min() < station.lon < ds.longitude.max():
-            raise CoordsOutOfBounds(
-                station_name=station_name,
-                param_name="longitude",
-                coord_station=station.lon,
-                coord_min=ds.longitude.min().values,
-                coord_max=ds.longitude.max().values,
-            )
-        if not ds.latitude.min() < station.lat < ds.latitude.max():
-            raise CoordsOutOfBounds(
-                station_name=station_name,
-                param_name="latitude",
-                coord_station=station.lat,
-                coord_min=ds.latitude.min().values,
-                coord_max=ds.latitude.max().values,
-            )
-    # If they are then return the correct pixel
-    return xr.Dataset(
-        data_vars={
-            station_name: (
-                coord_names,
-                ds.isel(
-                    longitude=np.abs(ds.longitude - station.lon).argmin(),
-                    latitude=np.abs(ds.latitude - station.lat).argmin(),
-                )["dis24"],
-            )
-            for station_name, station in stations.items()
-        },
-        coords={coord_name: ds[coord_name] for coord_name in coord_names},
-    )

@@ -11,6 +11,8 @@ from src.indicators.flooding.cds import cds
 
 DATA_DIRECTORY = "glofas"
 CDS_VARIABLE_NAME = "river_discharge_in_the_last_24_hours"
+XARRAY_VARIABLE_NAME = "dis24"
+
 DEFAULT_VERSION = 3
 HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
@@ -23,13 +25,21 @@ class Glofas(cds.Cds):
         :param system_version_minor: The minor version of the GloFAS model. Depends on the major version,
          so is given as a dictionary with the format {major_version: minor_version}
         """
-        self.system_version_minor = kwargs.pop('system_version_minor')
-        super().__init__(data_directory=DATA_DIRECTORY, cds_variable_name=CDS_VARIABLE_NAME, *args, **kwargs)
+        self.system_version_minor = kwargs.pop("system_version_minor")
+        super().__init__(
+            data_directory=DATA_DIRECTORY,
+            cds_variable_name=CDS_VARIABLE_NAME,
+            xarray_variable_name=XARRAY_VARIABLE_NAME,
+            *args,
+            **kwargs,
+        )
 
     def _get_query(self, *args, **kwargs):
-        version = kwargs.pop('version')
+        version = kwargs.pop("version")
         query = super()._get_query(*args, **kwargs)
-        query["system_version"] = f"version_{version}_{self.system_version_minor[version]}"
+        query[
+            "system_version"
+        ] = f"version_{version}_{self.system_version_minor[version]}"
         query["hydrological_model"] = HYDROLOGICAL_MODELS[version]
         return query
 
@@ -92,7 +102,7 @@ class GlofasReanalysis(Glofas):
         ) as ds:
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
-            ds_new = cds.get_station_dataset(
+            ds_new = self.get_station_dataset(
                 stations=stations, ds=ds, coord_names=["time"]
             )
         # Write out the new dataset to a file
@@ -163,7 +173,7 @@ class GlofasForecast(Glofas):
             ds = self._read_in_control_and_perturbed_datasets(filepath_list)
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
-            ds_new = cds.get_station_dataset(
+            ds_new = self.get_station_dataset(
                 stations=stations, ds=ds, coord_names=["number", "time"]
             )
             # Write out the new dataset to a file
@@ -246,7 +256,7 @@ class GlofasReforecast(Glofas):
             )
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
-            ds_new = cds.get_station_dataset(
+            ds_new = self.get_station_dataset(
                 stations=stations, ds=ds, coord_names=["number", "time"]
             )
             # Write out the new dataset to a file
@@ -256,5 +266,3 @@ class GlofasReforecast(Glofas):
                 ds=ds_new,
                 leadtime=leadtime,
             )
-
-
