@@ -66,12 +66,12 @@ class EcmwfEra5(cds.Cds):
         with xr.open_mfdataset(
             filepath_list,
             engine="cfgrib",
-            backend_kwargs={"indexpath": "", "filter_by_keys": {"numberOfPoints": 136}},
+            backend_kwargs={"indexpath": "", "filter_by_keys": {"numberOfPoints": 528}},
         ) as ds:
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = self.get_station_dataset(
-                stations=stations, ds=ds, coord_names=["time"]
+                stations=stations, ds=ds, coord_names=["time", "step"]
             )
         # Write out the new dataset to a file
         self._write_to_processed_file(

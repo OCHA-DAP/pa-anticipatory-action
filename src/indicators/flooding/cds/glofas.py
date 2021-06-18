@@ -108,8 +108,8 @@ class GlofasReanalysis(Glofas):
         # Write out the new dataset to a file
         self._write_to_processed_file(
             country_iso3=country_iso3,
-            version=version,
             ds=ds_new,
+            version=version,
         )
 
 
@@ -262,7 +262,7 @@ class GlofasReforecast(Glofas):
             # Write out the new dataset to a file
             self._write_to_processed_file(
                 country_iso3=country_iso3,
-                version=version,
                 ds=ds_new,
                 leadtime=leadtime,
+                version=version,
             )

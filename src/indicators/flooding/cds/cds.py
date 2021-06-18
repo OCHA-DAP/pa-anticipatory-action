@@ -223,9 +223,9 @@ class Cds:
     def _write_to_processed_file(
         self,
         country_iso3: str,
-        version: int,
         ds: xr.Dataset,
         leadtime: int = None,
+        version: int = None
     ) -> Path:
         filepath = self._get_processed_filepath(
             country_iso3=country_iso3,
