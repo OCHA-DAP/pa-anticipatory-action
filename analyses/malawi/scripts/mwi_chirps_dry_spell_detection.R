@@ -16,6 +16,7 @@ source("scripts/mwi_chirps_dry_spells_functions.R")
 
 # set options
 rasterOptions(maxmemory = 1e+09)
+options(scipen=999)
 
 # set directory paths
 # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
@@ -728,10 +729,55 @@ data_long %>%
   ungroup() %>%
   summary(n_dry_days)
 
+############
+# LOOK AT FALSE ALARMS
+############
+
+# distribution of rolling sums in southern region for Jan and Feb
+data_long_mean_values %>%
+  mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
+  filter(southern_region == 1 & month %in% c(1,2)) %>%
+  summary()
+
+# compute max/min 10-day rolling sum per month for southern region
+fa <- data_long_mean_values %>%
+        mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
+        filter(southern_region == 1) %>% # select records for southern region
+        group_by(year, month) %>%
+        summarise(max_10d_sum = max(round(rollsum_10d, 0), na.rm = T),
+                  min_10d_sum = min(round(rollsum_10d,0), na.rm = T))
+write.csv(fa, file = paste0(dry_spell_processed_path, "false_alarms_deep_dive.csv"), row.names = FALSE)
+
+# descriptive stats of max_10d_sum and min_10d_sum for Jan and Feb
+fa %>% 
+  filter(month %in% c(1, 2)) %>%
+  summary()
+  
+# distribution of min roll_sum10d per month, then in Jan and Feb
+ggplot(fa, aes(min_10d_sum)) + geom_histogram()
+
+fa %>% 
+  filter(month %in% c(1, 2)) %>%
+  ggplot(aes(min_10d_sum)) + geom_histogram()
+
+# distribution of 10-day rolling sums 
+data_long_mean_values %>%
+  mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
+  filter(southern_region == 1) %>% # select records for southern region %>%
+  ggplot(aes(rollsum_10d)) +
+  geom_histogram() 
+#+  xlim(0, 30)
+
+# distribution of 14-day rolling sums 
+data_long_mean_values %>%
+  mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
+  filter(southern_region == 1) %>% # select records for southern region %>%
+  ggplot(aes(rollsum_14d)) +
+  geom_histogram()   
+  # xlim(0, 30)
 
 #### TO DO / NEXT STEPS
 # planting season: Effective planting season start: Two consecutive 10-day periods with at least 20mm of rain each (WFP) after 1 Nov.
 # dry spell timing in days since planting
-
 
   
