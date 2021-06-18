@@ -519,6 +519,24 @@ If we want to continue understanding the suitability of this trigger, we therefo
 ## Archive
 
 ```{code-cell} ipython3
+:tags: [hide_input]
+
+#determine historically below average rainy seasons, observed data
+fig, ax = plt.subplots(figsize=(40,15))
+df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
+df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
+df_stats_reg["rainy_seas"]=np.where((df_stats_reg.start_month.dt.month>=5)&(df_stats_reg.end_month.dt.month<=11),1,0)
+df_stats_reg=df_stats_reg.sort_values("start_month")
+sns.barplot(x='seas_year', y='bavg_cell', data=df_stats_reg[df_stats_reg.start_month.dt.year>=2000], hue="rainy_seas",ax=ax)
+sns.despine(fig)
+x_dates = df_stats_reg[df_stats_reg.start_month.dt.year>=2000].seas_year.unique()
+ax.set_xticklabels(labels=x_dates, rotation=45, ha='right');
+ax.set_ylabel("Percentage of area")
+ax.set_ylim(0,100)
+ax.set_title("Percentage of area meeting criteria for observed and forecasted below average precipitation");
+```
+
+```{code-cell} ipython3
 :tags: [remove_cell]
 
  #plot the observed vs forecast-observed
