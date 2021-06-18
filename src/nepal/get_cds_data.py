@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=False):
+def main(download=False, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
     glofas_reforecast = glofas.GlofasReforecast()
@@ -61,17 +61,21 @@ def main(download=True, process=False):
 
     if process:
         stations = {name: Station(lon=coords['lon'], lat=coords['lat']) for name, coords in STATIONS.items()}
-        glofas_reanalysis.process(
+        ecmwf_era5.process(
             country_iso3=COUNTRY_ISO3,
-            stations=stations,
-            version=VERSION,
+            stations=stations
         )
-        glofas_reforecast.process(
-            country_iso3=COUNTRY_ISO3,
-            stations=stations,
-            leadtimes=LEADTIMES,
-            version=VERSION,
-        )
+        #glofas_reanalysis.process(
+        #    country_iso3=COUNTRY_ISO3,
+        #    stations=stations,
+        #    version=VERSION,
+        #)
+        #glofas_reforecast.process(
+        #    country_iso3=COUNTRY_ISO3,
+        #    stations=stations,
+        #    leadtimes=LEADTIMES,
+        #    version=VERSION,
+        #)
 
 
 if __name__ == "__main__":

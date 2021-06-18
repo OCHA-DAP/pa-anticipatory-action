@@ -55,20 +55,20 @@ class EcmwfEra5(cds.Cds):
         stations: Dict[str, Station],
     ):
         # Get list of files to open
-        logger.info(f"Processing GloFAS Reanalysis v{version}")
+        logger.info(f"Processing ECMWF rainfall")
         filepath_list = [
             self._get_raw_filepath(
                 country_iso3=country_iso3,
-                version=version,
                 year=year,
             )
             for year in range(self.year_min, self.year_max + 1)
         ]
         # Read in the dataset
+        # TODO: Read in the ensemble (numberOfPoints 136)
+        # TODO: numberOfPoints is unique to each Area and won't work for a new country
         logger.info(f"Reading in {len(filepath_list)} files")
-
         with xr.open_mfdataset(
-            filepath_list, engine="cfgrib", backend_kwargs={"indexpath": ""}
+            filepath_list, engine="cfgrib", backend_kwargs={"indexpath": "", 'filter_by_keys': {'numberOfPoints': 136}}
         ) as ds:
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")

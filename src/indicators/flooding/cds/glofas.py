@@ -160,7 +160,7 @@ class GlofasForecast(Glofas):
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
-            ds = self._read_in_ensemble_and_perturbed_datasets(filepath_list)
+            ds = self._read_in_control_and_perturbed_datasets(filepath_list)
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = cds.get_station_dataset(
@@ -241,7 +241,7 @@ class GlofasReforecast(Glofas):
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
-            ds = self._read_in_ensemble_and_perturbed_datasets(
+            ds = self._read_in_control_and_perturbed_datasets(
                 filepath_list=filepath_list
             )
             # Create a new dataset with just the station pixels

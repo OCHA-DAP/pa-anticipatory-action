@@ -1,5 +1,5 @@
 """
-Download raster data from GLOFAS and extracts time series of water discharge in selected locations
+Download data from CDS
 """
 from pathlib import Path
 import logging
@@ -35,7 +35,7 @@ class Cds:
     ):
         """
         Create an instance of a CDS object, from which you can download and process raw data, and
-        read in the processed data.
+        read in the processed data. The specifics of the datasets are defined in the child classes.
         :param year_min: The earliest year that the dataset is available. Can be a single integer,
         or a dictionary with structure {major_version: year_min} if the minimum year depends on the GloFAS
         model version.
@@ -98,8 +98,8 @@ class Cds:
     def _get_raw_filepath(
         self,
         country_iso3: str,
-        version: int,
         year: int,
+        version: int = None,
         month: int = None,
         leadtime: int = None,
     ):
@@ -154,7 +154,7 @@ class Cds:
         return query
 
     @staticmethod
-    def _read_in_ensemble_and_perturbed_datasets(filepath_list: List[Path]):
+    def _read_in_control_and_perturbed_datasets(filepath_list: List[Path]):
         """
         Read in dataset that has both control and ensemble perturbed forecast
         and combine them
@@ -203,9 +203,11 @@ class Cds:
         return filepath
 
     def _get_processed_filepath(
-        self, country_iso3: str, version: int, leadtime: int = None
+        self, country_iso3: str, version: int = None, leadtime: int = None
     ) -> Path:
-        filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        filename = f"{country_iso3}_{self.cds_name}"
+        if version is not None:
+            filename += f"_v{version}"
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
