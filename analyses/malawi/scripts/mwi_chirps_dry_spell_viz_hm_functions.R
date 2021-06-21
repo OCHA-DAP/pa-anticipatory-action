@@ -96,7 +96,7 @@ plot_heatmap <- function(df_dry_spells,df_rainy_season, match_values,match_label
   return(hm_plot)
 }
 
-plot_heatmap_without_rainy <- function(df_dry_spells,df_rainy_season, match_values,match_labels,color_scale,y_label,plot_title,ds_flatdata=FALSE,sub_title=""){
+plot_heatmap_without_rainy <- function(df_dry_spells,df_rainy_season, match_values,match_labels,color_scale,y_label,plot_title,ds_flatdata=FALSE,sub_title="",yticks_text=FALSE){
   #plot only the months in the df_dry_spells, not the full year where the rainy season is shown
   #this requires a few changes in the plotting structure, and thus needs a separate function
   #ds_flatdata: choose the appropriate preprocessing, depending on the format the data comes in
