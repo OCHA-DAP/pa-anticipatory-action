@@ -32,7 +32,9 @@ def get_glofas_forecast(
     glofas_forecast = glofas.GlofasForecast()
     ds_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=country_iso3, leadtime=leadtime, version=version,
+            country_iso3=country_iso3,
+            leadtime=leadtime,
+            version=version,
         )
         for leadtime in leadtimes
     }
@@ -49,7 +51,9 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     ds_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=country_iso3, version=version, leadtime=leadtime,
+            country_iso3=country_iso3,
+            version=version,
+            leadtime=leadtime,
         )
         for leadtime in leadtimes
     }
@@ -105,7 +109,9 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
     )
 
 
-def get_return_periods(ds_reanalysis: xr.Dataset, years=None, method="analytical", show_plot=False) -> pd.DataFrame:
+def get_return_periods(
+    ds_reanalysis: xr.Dataset, years=None, method="analytical", show_plot=False
+) -> pd.DataFrame:
     """
     :param ds_reanalysis: GloFAS reanalysis dataset
     :param years: Return period years to compute
@@ -118,9 +124,13 @@ def get_return_periods(ds_reanalysis: xr.Dataset, years=None, method="analytical
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
         if method == "analytical":
-            f_rp = _get_return_period_function_analytical(ds_reanalysis=ds_reanalysis, station=station, show_plot=show_plot)
+            f_rp = _get_return_period_function_analytical(
+                ds_reanalysis=ds_reanalysis, station=station, show_plot=show_plot
+            )
         elif method == "empirical":
-            f_rp = _get_return_period_function_empirical(ds_reanalysis=ds_reanalysis, station=station)
+            f_rp = _get_return_period_function_empirical(
+                ds_reanalysis=ds_reanalysis, station=station
+            )
         else:
             logger.error(f"{method} is not a valid keyword for method")
             return None
@@ -128,10 +138,14 @@ def get_return_periods(ds_reanalysis: xr.Dataset, years=None, method="analytical
     return df_rps
 
 
-def _get_return_period_function_analytical(ds_reanalysis: xr.Dataset, station: str, show_plot: bool):
+def _get_return_period_function_analytical(
+    ds_reanalysis: xr.Dataset, station: str, show_plot: bool
+):
     df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
-    discharge = df_rp['discharge']
-    shape, loc, scale = gev.fit(discharge, loc=discharge.median(), scale=discharge.median() / 2)
+    discharge = df_rp["discharge"]
+    shape, loc, scale = gev.fit(
+        discharge, loc=discharge.median(), scale=discharge.median() / 2
+    )
     x = np.linspace(discharge.min(), discharge.max(), 100)
     if show_plot:
         fig, ax = plt.subplots()
@@ -163,8 +177,6 @@ def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     )
     df_rp["year"] = df_rp.index.year
     return df_rp
-
-
 
 
 def get_crps(
