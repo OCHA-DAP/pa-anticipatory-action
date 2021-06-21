@@ -65,15 +65,22 @@ for station in STATIONS:
 ```
 
 ```python
-# For Chatara, remove 1980 and 1981 since there is abbig gap
-# For Chisapani, remove all data before 1985 becuase something weird changed with the WL
-
+# For Chatara, remove 1980 and 1981 since there is a large gap
 df_wl.loc[df_wl.index.year.isin([1980, 1981]), 'Chatara'] = np.nan
+
+# For Chisapani, remove all data before 1985 becuase something weird changed with the WL,
+# and remove 1989 which also has gaps
 df_wl.loc[df_wl.index.year < 1985, 'Chisapani'] = np.nan
+df_wl.loc[df_wl.index.year == 1989, 'Chisapani'] = np.nan
+
 
 ```
 
 ```python
-# Write out the station files:, 'Chepang']
-df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index=False)
+# Write out the station files:, 'Chepang']:, 'Chepang']
+df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME)
+```
+
+```python
+
 ```
