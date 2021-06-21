@@ -441,6 +441,7 @@ fig.tight_layout(rect=(0,0,1,0.9))
 
 ```python
 print("point of intersection")
+#this is across all leadtimes, so might not be the best point for leadtimes of interest
 df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
 ```
 
@@ -521,9 +522,9 @@ df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_
 ```
 
 ```python
-threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
+# threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
 #for easily testing different thresholds
-# threshold_perc=180
+threshold_perc=210
 ```
 
 ```python
@@ -532,6 +533,10 @@ threshold_perc
 
 ```python
 df_ds_for["for_below_th"]=np.where(df_ds_for.mean_cell<=threshold_perc,1,0)
+```
+
+```python
+# df_ds_for[["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th"]].to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_list_dsobs_forblw_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
 ```
 
 ```python
