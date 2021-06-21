@@ -74,13 +74,3 @@ df_wl.loc[df_wl.index.year < 1985, 'Chisapani'] = np.nan
 # Write out the station files
 df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index=False)
 ```
-
-
-
-```python
-df_wl['Chatara'].dropna().index.yea
-```
-
-```python
-
-```
