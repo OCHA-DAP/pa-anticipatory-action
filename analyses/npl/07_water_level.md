@@ -18,7 +18,10 @@ STATION_INFO_FILENAME = 'npl_dhm_station_info.xlsx'
 
 STATIONS = [
     'Chatara',
-    'Chisapani'
+    'Chisapani',
+    'Asaraghat',
+    'Chepang',
+    'Kusum'
 ]
 ```
 
@@ -71,6 +74,6 @@ df_wl.loc[df_wl.index.year < 1985, 'Chisapani'] = np.nan
 ```
 
 ```python
-# Write out the station files
+# Write out the station files:, 'Chepang']
 df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index=False)
 ```
