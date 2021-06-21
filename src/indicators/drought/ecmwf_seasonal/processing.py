@@ -33,7 +33,7 @@ def get_ecmwf_forecast(country_iso3, version: int = 5):
 
     return ds_ecmwf_forecast
 
-def get_ecmwf_forecast_by_leadtime(version: int = 5):
+def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
     """
     Reshape dataset to have the time variable as the month during the forecast was valid
     instead of the month the forecast was published
@@ -43,7 +43,7 @@ def get_ecmwf_forecast_by_leadtime(version: int = 5):
     Returns:
         dataset with valid month per publication data-leadtime
     """
-    ds_ecmwf_forecast = get_ecmwf_forecast(version)
+    ds_ecmwf_forecast = get_ecmwf_forecast(country_iso3=country_iso3, version=version)
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
@@ -57,7 +57,7 @@ def compute_stats_per_admin(country,adm_level=1,use_cache=True,interpolate=True)
     adm_boundaries_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR, parameters[f"path_admin{adm_level}_shp"])
 
     #read the forecasts
-    ds = get_ecmwf_forecast_by_leadtime()
+    ds = get_ecmwf_forecast_by_leadtime(country_iso3)
 
     if interpolate:
         #read observed data to get resolution to interpolate to
