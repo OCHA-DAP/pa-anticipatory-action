@@ -233,7 +233,7 @@ hm_monthly <- plot_heatmap(df_dry_spells,df_rainy_season, dry_spell_match_values
  output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_monthly_precip_mean_th{threshold}_adm2_southern_decjanfeb.png'))
  hm_monthly_southern_sel <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,ds_flatdata=TRUE)
  ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=20,height=15)
-  
+
 
 
  ### Only southern and Dec, Jan, Feb: Below threshold monthly precipitation and occurrence of dry spells on ADM1
@@ -276,51 +276,24 @@ hm_monthly <- plot_heatmap(df_dry_spells,df_rainy_season, dry_spell_match_values
  sub_title="The year corresponds to the start of the rainy season"
  output_path_hm=paste0(exploration_dry_spell_dir, glue('mwi_viz_hm_dry_spell_monthly_precip_mean_4mm_ds{min_ds_days_month}{min_adm_ds_month}_th{threshold}_adm1_southern_decjanfeb.png'))
 
- hm_monthly_southern_sel <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,ds_flatdata=TRUE,sub_title=sub_title)
- hm_monthly_southern_sel
- ggsave(output_path_hm,plot = hm_monthly_southern_sel, width=25,height=15)
-
-
- ### Only southern and Dec, Jan, Feb: Below threshold monthly observed and forecasted precipitation on ADM1
- #Set general variables for heatmap
- threshold<- 180
- perc_th_value<- 45
- lt <- 6
-
- #classify match dry spell and below threshold precip during dry season as dry season (occurred once on 16-03-2020)
- dry_spell_match_values=c(3,0,2,1)
- match_values_labels=c(glue("<={threshold} observed and <={threshold} forecasted"), glue(">{threshold} observed and >{threshold} forecasted"),glue("<={threshold} observed"),glue('<={threshold} forecasted'))
- color_scale=c('#0063B3','#b3e7ff','#F2645A',"#78D9D1")
- y_label=""
- df_dry_spells <- read.csv(paste0(exploration_dry_spell_dir,'monthly_precipitation/',glue('monthly_precip_obsfor_lt{lt}_th{threshold}_perc_{perc_th_value}_southern_decjanfeb.csv')))
- df_rainy_season <- read.csv(paste0(dry_spell_dir, "rainy_seasons_detail_2000_2020_mean_back.csv"))
- #only  the southern region
- df_rainy_season_southern <- df_rainy_season %>% mutate(region = substr(pcode, 3, 3)) %>%  filter(region==3)
-
- plot_title=glue("Overlap observed and forecasted <={threshold} mm monthly precipitation for the Southern region with leadtime = {lt} months")
- sub_title="The year corresponds to the start of the rainy season"
- output_path_hm=paste0(exploration_dry_spell_dir, 'monthly_precipitation/',glue('mwi_viz_hm_monthly_precip_obsfor_mean_th{threshold}_perc_{perc_th_value}_lt{lt}_adm1_southern_decjanfeb.png'))
- hm_monthly_obsfor <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,ds_flatdata=TRUE,sub_title=sub_title)
- hm_monthly_obsfor
- ggsave(output_path_hm,plot = hm_monthly_obsfor, width=25,height=15)
-
  ### observed dry spell and forecasted below threshold monthly precipitation based on 50% probability on ADM1
- threshold<- 210
+ threshold<- 180
  perc_th_value<- 50
- lt <- 4
+ lt <- 2
+ months_str <- "janfeb"
 
  dry_spell_match_values=c(3,0,2,1)
  match_values_labels=c(glue("Observed dry spell and <={threshold} mm forecasted"), glue("No observed dry spell and >{threshold} mm forecasted"),glue("Observed dry spell"),glue('<={threshold} mm forecasted'))
  color_scale=c('#0063B3','#b3e7ff','#F2645A',"#78D9D1")
  y_label=""
- df_dry_spells <- read.csv(paste0(exploration_dry_spell_dir,'monthly_precipitation/',glue('monthly_precip_dsobs_formonth_lt{lt}_th{threshold}_perc_{perc_th_value}_southern_decjanfeb.csv')))
+ df_dry_spells <- read.csv(paste0(exploration_dry_spell_dir,'monthly_precipitation/',glue('monthly_precip_dsobs_formonth_lt{lt}_th{threshold}_perc_{perc_th_value}_southern_{months_str}.csv')))
  df_rainy_season <- read.csv(paste0(dry_spell_dir, "rainy_seasons_detail_2000_2020_mean_back.csv"))
  #only  the southern region
  df_rainy_season_southern <- df_rainy_season %>% mutate(region = substr(pcode, 3, 3)) %>%  filter(region==3)
 
  plot_title=glue("Overlap dry spells and forecasted {perc_th_value}% probability <={threshold} mm monthly precipitation with leadtime = {lt} months")
  sub_title="The year corresponds to the start of the rainy season"
- output_path_hm=paste0(exploration_dry_spell_dir, 'monthly_precipitation/',glue('mwi_viz_hm_monthly_precip_dsobs_formonth_mean_th{threshold}_perc_{perc_th_value}_lt{lt}_southern_decjanfeb.png'))
+ output_path_hm=paste0(exploration_dry_spell_dir, 'monthly_precipitation/',glue('mwi_viz_hm_monthly_precip_dsobs_formonth_mean_th{threshold}_perc_{perc_th_value}_lt{lt}_southern_{months_str}.png'))
  hm_monthly_obsfor <-plot_heatmap_without_rainy(df_dry_spells,df_rainy_season_southern, dry_spell_match_values,match_values_labels,color_scale,y_label,plot_title,ds_flatdata=TRUE,sub_title=sub_title)
  hm_monthly_obsfor
  ggsave(output_path_hm,plot = hm_monthly_obsfor, width=25,height=15)
