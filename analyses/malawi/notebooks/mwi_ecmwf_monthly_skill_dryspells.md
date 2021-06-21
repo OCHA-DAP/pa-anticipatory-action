@@ -76,9 +76,25 @@ all_dry_spells_list_path=os.path.join(country_data_processed_dir,"dry_spells","f
 monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal","chirps_monthly_total_precipitation_admin1.csv")
 ```
 
+```python
+#set plot colors
+ds_color='#F2645A'
+no_ds_color='#CCE5F9'
+no_ds_color_dark='#66B0EC'
+```
+
 ### Define functions
 
 ```python
+def det_rate(tp,fn,epsilon):
+    return tp/(tp+fn+epsilon)*100
+def tn_rate(tn,fp,epsilon):
+    return tn/(tn+fp+epsilon)*100
+def miss_rate(fn,tp,epsilon):
+    return fn/(tp+fn+epsilon)*100
+def false_alarm_rate(fp,tp,epsilon):
+    return fp/(tp+fp+epsilon)*100
+
 def compute_miss_false_leadtime(df,target_var,predict_var):
     df_pr=pd.DataFrame(list(df.leadtime.unique()),columns=["leadtime"]).set_index('leadtime')
     #TODO: also account for different adm1's
@@ -91,7 +107,10 @@ def compute_miss_false_leadtime(df,target_var,predict_var):
                               y_predicted=y_predicted)
 
         tn,fp,fn,tp=cm.flatten()
-        df_pr.loc[m,["month_ds","month_no_ds","month_miss_rate","month_false_alarm_rate"]]=tp/(tp+fn)*100,tn/(tn+fp)*100,fn/(tp+fn)*100,fp/(tp+fp)*100
+        df_pr.loc[m,["month_ds"]] = det_rate(tp,fn,epsilon)
+        df_pr.loc[m,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+        df_pr.loc[m,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+        df_pr.loc[m,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
         df_pr.loc[m,["tn","tp","fp","fn"]]=tn,tp,fp,fn
     df_pr=df_pr.reset_index()
     return df_pr
@@ -211,6 +230,9 @@ def load_dryspell_data(ds_path,min_ds_days_month=7,min_adm_ds_month=3,ds_adm_col
 ### Load the forecast data
 And select the data of interest
 
+
+Note: the forecast data is an ensemble model. The statistics over the whole admin region per ensemble member were first computed, after which we combine the ensemble models with different percentile thresholds. While we think this methodology makes sense, one could also argue to first group by the ensemble members and then aggregating to the admin. This was also tested and no large differences were found. 
+
 ```python
 #read the ecmwf forecast per adm1 per date and concat all dates
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular, but results actually worsen with this
@@ -235,7 +257,12 @@ print(len(all_files))
 aggr_meth="mean_cell"
 #for earlier dates, the model included less members --> values for those members are nan --> remove those rows
 df_for = df_for[df_for[aggr_meth].notna()]
-df_for["season_approx"]=np.where(df_for.date.dt.month>=10,df_for.date.dt.year,df_for.date.dt.year-1)
+#start month of the rainy season
+start_rainy_seas=10
+#season approx indicates the year during which the rainy season started
+#this is done because it can start during one year and continue the next calendar year
+#we therefore prefer to group by rainy season instead of by calendar year
+df_for["season_approx"]=np.where(df_for.date.dt.month>=start_rainy_seas,df_for.date.dt.year,df_for.date.dt.year-1)
 ```
 
 ```python
@@ -248,7 +275,7 @@ adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
 lt_str="".join([str(l) for l in sel_leadtime])
 
-#for this analysis we are only interested in the southern region during the DecJanFeb period, since this is most sensitive to dry spells
+#for this analysis we are only interested in the southern region during a few months that the dry spells have the biggest impact
 df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.leadtime.isin(sel_leadtime))&(df_for.season_approx.isin(seas_years))]
 ```
 
@@ -316,7 +343,7 @@ df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("
 
 ```python
 #for some reason facetgrid doesn't want to show the values if there is only one occurence (i.e. in January..)
-g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":"#CCE5F9","yes":'#F2645A'})
+g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
 g.map_dataframe(sns.histplot, "mean_cell",common_norm=False,alpha=1,binwidth=10)
 
 g.add_legend(title="Dry spell occurred")  
@@ -329,7 +356,7 @@ for ax in g.axes.flatten():
 ```python
 #plot distribution precipitation with and withoud dry spell
 fig,ax=plt.subplots(figsize=(10,10))
-g=sns.boxplot(data=df_ds_for_labels,x="leadtime",y="mean_cell",ax=ax,color="#66B0EC",hue="dry_spell",palette={"no":"#CCE5F9","yes":'#F2645A'})
+g=sns.boxplot(data=df_ds_for_labels,x="leadtime",y="mean_cell",ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
 ax.set_ylabel("Monthly precipitation")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
@@ -343,13 +370,18 @@ ax.get_legend().set_title("Dry spell occurred")
 y_target =  df_ds_for.dry_spell
 threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for_labels.mean_cell.max()%10,10)
 df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
+#to prevent division by zero
+epsilon=0.00001
 for t in threshold_list:
     y_predicted = np.where(df_ds_for.mean_cell<=t,1,0)
 
     cm = confusion_matrix(y_target=y_target, 
                           y_predicted=y_predicted)
     tn,fp,fn,tp=cm.flatten()
-    df_pr_th.loc[t,["month_ds","month_no_ds","month_miss_rate","month_false_alarm_rate"]]=tp/(tp+fn+0.00001)*100,tn/(tn+fp+0.00001)*100,fn/(tp+fn+0.00001)*100,fp/(tp+fp+0.00001)*100
+    df_pr_th.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
+    df_pr_th.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+    df_pr_th.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+    df_pr_th.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
     df_pr_th.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
 df_pr_th=df_pr_th.reset_index()
 ```
@@ -357,8 +389,8 @@ df_pr_th=df_pr_th.reset_index()
 ```python
 fig,ax=plt.subplots()
 
-df_pr_th.plot(x="threshold",y="month_ds" ,figsize=(16, 8), color='#F2645A',style='.-',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold")
-df_pr_th.plot(x="threshold",y="month_no_ds" ,figsize=(16, 8), color='#66B0EC',style='.-',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation above threshold")
+df_pr_th.plot(x="threshold",y="month_ds" ,figsize=(16, 8), color=ds_color,style='.-',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold")
+df_pr_th.plot(x="threshold",y="month_no_ds" ,figsize=(16, 8), color=no_ds_color_dark,style='.-',legend=False,ax=ax,label="no dry spell occurred and monthly precipitation above threshold")
 
 ax.set_xlabel("Monthly rainfall threshold (mm)", labelpad=20, weight='bold', size=20)
 ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=20)
@@ -379,8 +411,8 @@ fig.tight_layout(rect=(0,0,1,0.9))
 ```python
 fig,ax=plt.subplots()
 
-df_pr_th.plot(x="threshold",y="month_miss_rate" ,figsize=(16, 8), color='#F2645A',legend=False,ax=ax,style='.-',label="dry spell occurred and monthly precipitation above threshold (misses)")
-df_pr_th.plot(x="threshold",y="month_false_alarm_rate" ,figsize=(16, 8), color='#66B0EC',legend=False,ax=ax,style='.-',label="no dry spell occurred and monthly precipitation below threshold (false alarms)") #["#18998F","#FCE0DE"]
+df_pr_th.plot(x="threshold",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=False,ax=ax,style='.-',label="dry spell occurred and monthly precipitation above threshold (misses)")
+df_pr_th.plot(x="threshold",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=False,ax=ax,style='.-',label="no dry spell occurred and monthly precipitation below threshold (false alarms)")
 
 # Set x-axis label
 ax.set_xlabel("Monthly rainfall threshold (mm)", labelpad=20, weight='bold', size=20)
@@ -428,7 +460,11 @@ for m in unique_lt:
         cm = confusion_matrix(y_target=y_target, 
                               y_predicted=y_predicted)
         tn,fp,fn,tp=cm.flatten()
-        df_pr_perlt.loc[t,["month_ds","month_no_ds","month_miss_rate","month_false_alarm_rate","precision","recall","num_trig","detection_rate"]]=tp/(tp+fn)*100,tn/(tn+fp)*100,fn/(tp+fn)*100,fp/(tp+fp+0.000001)*100,tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+        df_pr_perlt.loc[t,["precision","recall","num_trig","detection_rate"]]=tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+        df_pr_perlt.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
+        df_pr_perlt.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+        df_pr_perlt.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+        df_pr_perlt.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
         df_pr_perlt.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
         df_pr_perlt.loc[t,"leadtime"]=m
     df_pr_perlt=df_pr_perlt.reset_index()
@@ -459,7 +495,11 @@ for l in unique_lt:
             cm = confusion_matrix(y_target=y_target, 
                                   y_predicted=y_predicted)
             tn,fp,fn,tp=cm.flatten()
-            df_pr_perlt_m.loc[t,["month_ds","month_no_ds","month_miss_rate","month_false_alarm_rate","precision","recall","num_trig","detection_rate"]]=tp/(tp+fn)*100,tn/(tn+fp)*100,fn/(tp+fn)*100,fp/(tp+fp+0.000001)*100,tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+            df_pr_perlt_m.loc[t,["precision","recall","num_trig","detection_rate"]]=tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+            df_pr_perlt_m.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
+            df_pr_perlt_m.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+            df_pr_perlt_m.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+            df_pr_perlt_m.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
             df_pr_perlt_m.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
             df_pr_perlt_m.loc[t,"leadtime"]=int(l)
             df_pr_perlt_m.loc[t,"month"]=m
@@ -609,7 +649,7 @@ df_obs_for.loc[:,"obs_below_th"]=np.where(df_obs_for.loc[:,aggr_meth]<=threshold
 
 ```python
 #plot distribution of probability with and without dry spell
-g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="dry_spell",palette={0:"#CCE5F9",1:'#F2645A'})
+g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="dry_spell",palette={0:no_ds_color,1:ds_color})
 g.map_dataframe(sns.histplot, "perc_below",common_norm=False,kde=True,alpha=1,binwidth=10)
 
 g.add_legend(title="Dry spell occurred")  
@@ -622,7 +662,7 @@ g.fig.tight_layout()
 ```
 
 ```python
-g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="obs_below_th",palette={0:"#CCE5F9",1:'#F2645A'})
+g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="obs_below_th",palette={0:no_ds_color,1:ds_color})
 g.map_dataframe(sns.histplot, "perc_below",common_norm=False,kde=True,alpha=1,binwidth=10)#x="mean_cell",hue="dry_spell")
 
 g.add_legend(title=f"<={threshold} mm occurred")  
@@ -703,8 +743,8 @@ df_pr=compute_miss_false_leadtime(df_obs_for,"obs_below_th","for_below_th")
 ```python
 fig,ax=plt.subplots()
 
-df_pr.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color='#F2645A',legend=True,ax=ax,label="observed below and forecasted above threshold (misses)")
-df_pr.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color='#66B0EC',legend=True,ax=ax,label="observed above and forecasted below threshold (false alarms)")
+df_pr.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=True,ax=ax,label="observed below and forecasted above threshold (misses)")
+df_pr.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=True,ax=ax,label="observed above and forecasted below threshold (false alarms)")
 
 ax.set_xlabel("Leadtime (months)", labelpad=20, weight='bold', size=12)
 ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
@@ -727,8 +767,8 @@ df_pr_ds=compute_miss_false_leadtime(df_obs_for,"dry_spell","for_below_th")
 ```python
 fig,ax=plt.subplots()
 
-df_pr_ds.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color='#F2645A',legend=True,ax=ax,label="observed dry spell and forecasted above threshold (misses)")
-df_pr_ds.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color='#66B0EC',legend=True,ax=ax,label="observed dry spell and forecasted below threshold (false alarms)") #["#18998F","#FCE0DE"]
+df_pr_ds.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=True,ax=ax,label="observed dry spell and forecasted above threshold (misses)")
+df_pr_ds.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=True,ax=ax,label="observed dry spell and forecasted below threshold (false alarms)") 
 
 ax.set_xlabel("Leadtime (months)", labelpad=20, weight='bold', size=12)
 ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
@@ -757,12 +797,12 @@ fig_cm_ds=compute_confusionmatrix_leadtime(df_obs_for,"dry_spell","for_below_th"
 
 ```python
 fig,ax=plt.subplots(figsize=(10,10))
-g=sns.boxplot(data=df_obs_for,x="leadtime",y="perc_below",ax=ax,color="#66B0EC",hue="dry_spell",palette={0:"#CCE5F9",1:'#F2645A'})
+g=sns.boxplot(data=df_obs_for,x="leadtime",y="perc_below",ax=ax,color=no_ds_color_dark,hue="dry_spell",palette={0:no_ds_color,1:ds_color})
 ax.set_ylabel(f"Probability of <={int(threshold)}mm")
 sns.despine()
 ax.set_xlabel("Lead time")
 ax.get_legend().set_title("Dry spell occurred")
-# fig.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds7_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_precipitation_boxplot_{month_str}_southern_ds7_adm1.png"))
 ```
 
 ```python
@@ -787,8 +827,8 @@ df_pr_ds=compute_miss_false_leadtime(df_obs_for,"dry_spell","for_below_th_perc")
 ```python
 fig,ax=plt.subplots()
 
-df_pr_ds.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color='#F2645A',legend=True,ax=ax,label="observed dry spell and forecasted above threshold (misses)")
-df_pr_ds.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color='#66B0EC',legend=True,ax=ax,label="observed dry spell and forecasted below threshold (false alarms)") #["#18998F","#FCE0DE"]
+df_pr_ds.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=True,ax=ax,label="observed dry spell and forecasted above threshold (misses)")
+df_pr_ds.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=True,ax=ax,label="observed dry spell and forecasted below threshold (false alarms)") 
 
 ax.set_xlabel("Leadtime (months)", labelpad=20, weight='bold', size=12)
 ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
