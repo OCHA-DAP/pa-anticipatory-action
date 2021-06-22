@@ -2,6 +2,7 @@ from typing import List, Dict
 import logging
 
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
@@ -180,8 +181,25 @@ def get_crps(
     return df_crps
 
 
-def get_groups_above_threshold(observations, threshold, min_duration=1):
-    groups = np.where(np.diff(observations >= threshold, prepend=False, append=False))[
+def get_groups_above_threshold(
+    observations: ArrayLike,
+    threshold: float,
+    min_duration: int = 1,
+    additional_condition: ArrayLike = None,
+) -> List:
+    """
+    Get indices where consecutive values are equal to or above a threshold
+    :param observations: The array of values to search for groups (length N)
+    :param threshold: The threshold above which the values must be
+    :param min_duration: The minimum group size (default 1)
+    :param additional_condition: (optional) Any additional condition the values must satisfy
+    (array-like of bools, length N)
+    :return: list of arrays with indices
+    """
+    condition = observations >= threshold
+    if additional_condition is not None:
+        condition = condition & additional_condition
+    groups = np.where(np.diff(condition, prepend=False, append=False))[
         0
     ].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] >= min_duration]

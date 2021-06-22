@@ -8,6 +8,7 @@ often these events correspond to a GloFAS RP exceedance.
 import os
 from pathlib import Path
 import sys
+from importlib import reload
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -18,6 +19,7 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
+reload(utils)
 
 pd.options.mode.chained_assignment = None  # default='warn'
 mpl.rcParams['figure.dpi'] = 200
@@ -44,6 +46,7 @@ STATIONS = [
 
 LEVEL_TYPES = ['warning', 'danger']
 RP_LIST = [1.5, 2, 5]
+WL_DAYS = [1, 2, 3, 4, 5] # How many days earlier the warning level is reached
 ```
 
 ```python
@@ -87,8 +90,20 @@ for station in STATIONS:
         rp_val = df_return_period.loc[rp, station]
         events = utils.get_groups_above_threshold(data['river_discharge'], rp_val, min_duration=DURATION)
         event_start_indices = [event[0] for event in events]
-        data[f"event_{rp}"] = False
-        data[f"event_{rp}"].iloc[event_start_indices] = True
+        data[f"event_rp{rp}"] = False
+        data[f"event_rp{rp}"].iloc[event_start_indices] = True
+    # Get water at warning level n days previously events
+    # Only do 2 year RP for now
+    for wl_day in WL_DAYS:
+        rp = 2
+        rp_val = df_return_period.loc[rp, station]
+        condition = data.shift(wl_day)['water_level'] >  df_station_info.at[station, f'warning_level']
+        events = utils.get_groups_above_threshold(data['river_discharge'], rp_val, min_duration=DURATION,
+                                                 additional_condition=condition)
+        event_start_indices = [event[0] for event in events]
+        data[f"event_rp{rp}_wl{wl_day}"] = False
+        data[f"event_rp{rp}_wl{wl_day}"].iloc[event_start_indices] = True
+
     df_station_dict[station] = data
     fig, ax = plt.subplots()
     ax.plot(data.water_level, data.river_discharge, '.')
@@ -111,7 +126,7 @@ for station in STATIONS:
         n = df_station[f"event_{level_type}"].sum()
         print(f"{level_type} level: {n}")
     for rp in RP_LIST:
-        n = df_station[f"event_{rp}"].sum()
+        n = df_station[f"event_rp{rp}"].sum()
         print(f"1 in {rp} y: {n}")
     print('\n')
 ```
@@ -130,35 +145,42 @@ event_level_type = 'danger'
 days_before_buffer = 5 # How many days the true event can occur before the GloFAS event
 days_after_buffer = 30 # How many days the tru event can occur after the GloFAS event
 
-df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN'])
+df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN', 'wl_days'])
 
 for station in STATIONS:
-    df_station = df_station_dict[station]
-    df_true_events = df_station[df_station[f"event_{event_level_type}"]]
-    df_true_events['detections'] = 0
-    TP = 0
-    FP = 0
-    glofas_events = df_station[df_station[f"event_{rp}"]].index
-    print(f"{station}")
-    print(f"True events: {len(df_true_events)}")
-    print(f"Glofas events: {len(glofas_events)}")
-    for glofas_event in glofas_events:
-        # Check if any events are around that date
-        days_offset = (df_true_events.index - glofas_event) /  np.timedelta64(1, 'D')
-        detected = (days_offset > -1 * days_before_buffer) & (days_offset < days_after_buffer)
-        df_true_events.loc[detected, 'detections'] += 1
-        # If there were any detections, it's  a TP. Otherwise a FP
-        if sum(detected):
-            TP += 1
+    for wl_days in [None] + WL_DAYS:
+        df_station = df_station_dict[station]
+        df_true_events = df_station[df_station[f"event_{event_level_type}"]]
+        df_true_events['detections'] = 0
+        TP = 0
+        FP = 0
+        if wl_days is None:
+            glofas_cname = f"event_rp{rp}"
         else:
-            FP += 1
-    df_station_stats = df_station_stats.append({
-        'station': station,
-        'TP': TP,
-        'FP': FP,
-        'FN': len(df_true_events[df_true_events['detections'] == 0])
-    }, ignore_index=True)
-df_station_stats
+            glofas_cname = f"event_rp{rp}_wl{wl_days}"
+        glofas_events = df_station[df_station[glofas_cname]].index
+        if wl_days is None:
+            print(f"{station}")
+            print(f"True events: {len(df_true_events)}")
+            print(f"Glofas events: {len(glofas_events)}")
+        for glofas_event in glofas_events:
+            # Check if any events are around that date
+            days_offset = (df_true_events.index - glofas_event) /  np.timedelta64(1, 'D')
+            detected = (days_offset > -1 * days_before_buffer) & (days_offset < days_after_buffer)
+            df_true_events.loc[detected, 'detections'] += 1
+            # If there were any detections, it's  a TP. Otherwise a FP
+            if sum(detected):
+                TP += 1
+            else:
+                FP += 1
+        df_station_stats = df_station_stats.append({
+            'station': station,
+            'TP': TP,
+            'FP': FP,
+            'FN': len(df_true_events[df_true_events['detections'] == 0]),
+            'wl_days': wl_days
+        }, ignore_index=True)
+df_station_stats[df_station_stats['wl_days'].isnull()]
 ```
 
 # 
@@ -197,13 +219,56 @@ for station in STATIONS:
     idx = df['river_discharge'] >= rp_val
     #ax2.plot(df.loc[idx, 'river_discharge'], '.', c='C1')
     ax2.axhline(rp_val, c='C1')
-    for event in list(df.index[df[f'event_{rp}']]):
+    for event in list(df.index[df[f'event_rp{rp}']]):
         plot_arrow(ax2, event, rp_val, 'C1')
     
     ax2.set_ylabel('GloFAS river discharge [m$^3$ s$^{-1}$]')
     ax2.set_ylim(None, rp_val + 0.7 * rp_val)
+```
 
-events
+### Check difference when using additional warning level condition
+
+```python
+for istation, station in enumerate(STATIONS):
+    qs = ['TP', 'FP', 'FN']
+    fig, ax = plt.subplots()
+    data = df_station_stats[(df_station_stats['station'] == station)]
+    data.loc[data['wl_days'].isnull(), 'wl_days'] = 0
+    for iq, q in enumerate(qs):
+        ax.plot(data['wl_days'], data[q], label=q)
+    ax.set_title(station)
+    ax.set_xlabel('Warning level reached N days before')
+    ax.set_ylabel('Number')
+    # Make legend
+    ax.legend()
+
+```
+
+```python
+# Check time between warning and danger level
+from matplotlib.ticker import MaxNLocator
+
+for station, df_station in df_station_dict.items():
+    warning_level = df_station_info.at[station, f'warning_level']
+    danger_level = df_station_info.at[station, f'danger_level']
+    events = df_station[df_station['event_warning']]
+    date_diff = []
+    #rint('warning and danger', warning_level, danger_level)
+    for date_warning, _ in events.iterrows():
+        #rint('event', date_warning)
+        df = df_station[df_station.index >= date_warning]
+        for date_danger, row_danger in df.iterrows():
+            #rint(date_danger, row_danger['water_level'])
+            if row_danger['water_level'] >= danger_level:
+                date_diff.append((date_danger - date_warning) / np.timedelta64(1, 'D'))
+            elif row_danger['water_level'] < warning_level:
+                break
+    fig, ax = plt.subplots()
+    ax.set_title(station)
+    ax.hist(date_diff, bins=np.arange(0, 6, 1)-0.5)
+    ax.set_xlabel('Number of days danger level is reached after warning level')
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_ylabel('Number of events')
 ```
 
 ```python
