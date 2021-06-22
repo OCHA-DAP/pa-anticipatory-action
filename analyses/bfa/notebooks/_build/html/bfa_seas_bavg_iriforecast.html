@@ -1,0 +1,1408 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IRI forecast as a trigger for drought in Burkina Faso &#8212; Developing a drought trigger for Burkina Faso</title>
+    
+  <link href="_static/css/theme.css" rel="stylesheet" />
+  <link href="_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/sphinx-book-theme.acff12b8f9c144ce68a297486a2fa670.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css" />
+    <link rel="stylesheet" type="text/css" href="_static/panels-variables.06eb56fa6e07937060861dad626602ad.css" />
+    
+  <link rel="preload" as="script" href="_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/togglebutton.js"></script>
+    <script src="_static/clipboard.min.js"></script>
+    <script src="_static/copybutton.js"></script>
+    <script >var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
+    <script src="_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <script async="async" src="https://unpkg.com/thebelab@latest/lib/index.js"></script>
+    <script >
+        const thebe_selector = ".thebe"
+        const thebe_selector_input = "pre"
+        const thebe_selector_output = ".output"
+    </script>
+    <script async="async" src="_static/sphinx-thebe.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Correlation of forecasted and observed lower tercile precipitation" href="bfa_seas_bavg_precip_corr_obsfor.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        <div class="navbar-brand-box">
+    <a class="navbar-brand text-wrap" href="index.html">
+      
+      <img src="_static/centre_logo.png" class="logo" alt="logo">
+      
+      
+      <h1 class="site-logo" id="site-title">Developing a drought trigger for Burkina Faso</h1>
+      
+    </a>
+</div><form class="bd-search d-flex align-items-center" action="search.html" method="get">
+  <i class="icon fas fa-search"></i>
+  <input type="search" class="form-control" name="q" id="search-input" placeholder="Search this book..." aria-label="Search this book..." autocomplete="off" >
+</form><nav class="bd-links" id="bd-docs-nav" aria-label="Main navigation">
+    <div class="bd-toc-item active">
+        <ul class="nav bd-sidenav">
+ <li class="toctree-l1 current">
+  <a class="reference internal" href="#">
+   IRI forecast as a trigger for drought in Burkina Faso
+  </a>
+ </li>
+</ul>
+<ul class="nav bd-sidenav">
+ <li class="toctree-l1">
+  <a class="reference internal" href="bfa_seas_bavg_precip_corr_obsfor.html">
+   Correlation of forecasted and observed lower tercile precipitation
+  </a>
+ </li>
+</ul>
+
+    </div>
+</nav> <!-- To handle the deprecated key -->
+
+<div class="navbar_extra_footer">
+  Powered by <a href="https://jupyterbook.org">Jupyter Book</a>
+</div>
+
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        <a class="dropdown-buttons"
+            href="_sources/bfa_seas_bavg_iriforecast.ipynb"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download notebook file" data-toggle="tooltip"
+                data-placement="left">.ipynb</button></a>
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="_sources/bfa_seas_bavg_iriforecast.md"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.md</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Launch interactive content"><i class="fas fa-rocket"></i></button>
+    <div class="dropdown-buttons">
+        
+        <a class="binder-button" href="https://mybinder.org/v2/gh/OCHA-DAP/pa-anticipatory-action/master?urlpath=tree/analyses/bfa/notebooks/bfa_seas_bavg_iriforecast.ipynb"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Launch Binder" data-toggle="tooltip"
+                data-placement="left"><img class="binder-button-logo"
+                    src="_static/images/logo_binder.svg"
+                    alt="Interact on binder">Binder</button></a>
+        
+        
+        
+        
+    </div>
+</div>
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#inspect-forecasts">
+   Inspect forecasts
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#analyze-statistics-probability-below-average">
+   Analyze statistics probability below average
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#methods-of-aggregation">
+     Methods of aggregation
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#examine-dominant-tercile">
+   Examine dominant tercile
+  </a>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <div class="section" id="iri-forecast-as-a-trigger-for-drought-in-burkina-faso">
+<h1>IRI forecast as a trigger for drought in Burkina Faso<a class="headerlink" href="#iri-forecast-as-a-trigger-for-drought-in-burkina-faso" title="Permalink to this headline">¶</a></h1>
+<p>This notebook explores the option of using IRI’s seasonal forecast as the indicator for a drought-related trigger in Burkina Faso.
+From the country team the proposed trigger is:</p>
+<ul class="simple">
+<li><p>Trigger #1 in March covering June-July-August. Threshold desired: 40%.</p></li>
+<li><p>Targeted Admin1s: Boucle de Mounhoun, Centre Nord, Sahel, Nord.</p></li>
+</ul>
+<p>This notebook explores if and when these triggers would be reached. Moreover, an exploration is done on how the raster data can be combined to come to one value for all 4 admin1s.</p>
+<!-- - Trigger #1 in March covering Apr-May-June. Threshold desired: 40%.
+- Trigger #2 in July covering Aug-Sep-Oct. Threshold desired: 50%.  --><div class="section" id="inspect-forecasts">
+<h2>Inspect forecasts<a class="headerlink" href="#inspect-forecasts" title="Permalink to this headline">¶</a></h2>
+<p>these are the variables of the forecast data, where C indicates the tercile (below-average, normal, or above-average).<br />
+F indicates the publication month, and L the leadtime</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">iri_ds</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div><svg style="position: absolute; width: 0; height: 0; overflow: hidden">
+<defs>
+<symbol id="icon-database" viewBox="0 0 32 32">
+<path d="M16 0c-8.837 0-16 2.239-16 5v4c0 2.761 7.163 5 16 5s16-2.239 16-5v-4c0-2.761-7.163-5-16-5z"></path>
+<path d="M16 17c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+<path d="M16 26c-8.837 0-16-2.239-16-5v6c0 2.761 7.163 5 16 5s16-2.239 16-5v-6c0 2.761-7.163 5-16 5z"></path>
+</symbol>
+<symbol id="icon-file-text2" viewBox="0 0 32 32">
+<path d="M28.681 7.159c-0.694-0.947-1.662-2.053-2.724-3.116s-2.169-2.030-3.116-2.724c-1.612-1.182-2.393-1.319-2.841-1.319h-15.5c-1.378 0-2.5 1.121-2.5 2.5v27c0 1.378 1.122 2.5 2.5 2.5h23c1.378 0 2.5-1.122 2.5-2.5v-19.5c0-0.448-0.137-1.23-1.319-2.841zM24.543 5.457c0.959 0.959 1.712 1.825 2.268 2.543h-4.811v-4.811c0.718 0.556 1.584 1.309 2.543 2.268zM28 29.5c0 0.271-0.229 0.5-0.5 0.5h-23c-0.271 0-0.5-0.229-0.5-0.5v-27c0-0.271 0.229-0.5 0.5-0.5 0 0 15.499-0 15.5 0v7c0 0.552 0.448 1 1 1h7v19.5z"></path>
+<path d="M23 26h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 22h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+<path d="M23 18h-14c-0.552 0-1-0.448-1-1s0.448-1 1-1h14c0.552 0 1 0.448 1 1s-0.448 1-1 1z"></path>
+</symbol>
+</defs>
+</svg>
+<style>/* CSS stylesheet for displaying xarray objects in jupyterlab.
+ *
+ */
+
+:root {
+  --xr-font-color0: var(--jp-content-font-color0, rgba(0, 0, 0, 1));
+  --xr-font-color2: var(--jp-content-font-color2, rgba(0, 0, 0, 0.54));
+  --xr-font-color3: var(--jp-content-font-color3, rgba(0, 0, 0, 0.38));
+  --xr-border-color: var(--jp-border-color2, #e0e0e0);
+  --xr-disabled-color: var(--jp-layout-color3, #bdbdbd);
+  --xr-background-color: var(--jp-layout-color0, white);
+  --xr-background-color-row-even: var(--jp-layout-color1, white);
+  --xr-background-color-row-odd: var(--jp-layout-color2, #eeeeee);
+}
+
+html[theme=dark],
+body.vscode-dark {
+  --xr-font-color0: rgba(255, 255, 255, 1);
+  --xr-font-color2: rgba(255, 255, 255, 0.54);
+  --xr-font-color3: rgba(255, 255, 255, 0.38);
+  --xr-border-color: #1F1F1F;
+  --xr-disabled-color: #515151;
+  --xr-background-color: #111111;
+  --xr-background-color-row-even: #111111;
+  --xr-background-color-row-odd: #313131;
+}
+
+.xr-wrap {
+  display: block;
+  min-width: 300px;
+  max-width: 700px;
+}
+
+.xr-text-repr-fallback {
+  /* fallback to plain text repr when CSS is not injected (untrusted notebook) */
+  display: none;
+}
+
+.xr-header {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: solid 1px var(--xr-border-color);
+}
+
+.xr-header > div,
+.xr-header > ul {
+  display: inline;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xr-obj-type,
+.xr-array-name {
+  margin-left: 2px;
+  margin-right: 10px;
+}
+
+.xr-obj-type {
+  color: var(--xr-font-color2);
+}
+
+.xr-sections {
+  padding-left: 0 !important;
+  display: grid;
+  grid-template-columns: 150px auto auto 1fr 20px 20px;
+}
+
+.xr-section-item {
+  display: contents;
+}
+
+.xr-section-item input {
+  display: none;
+}
+
+.xr-section-item input + label {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-item input:enabled + label {
+  cursor: pointer;
+  color: var(--xr-font-color2);
+}
+
+.xr-section-item input:enabled + label:hover {
+  color: var(--xr-font-color0);
+}
+
+.xr-section-summary {
+  grid-column: 1;
+  color: var(--xr-font-color2);
+  font-weight: 500;
+}
+
+.xr-section-summary > span {
+  display: inline-block;
+  padding-left: 0.5em;
+}
+
+.xr-section-summary-in:disabled + label {
+  color: var(--xr-font-color2);
+}
+
+.xr-section-summary-in + label:before {
+  display: inline-block;
+  content: '►';
+  font-size: 11px;
+  width: 15px;
+  text-align: center;
+}
+
+.xr-section-summary-in:disabled + label:before {
+  color: var(--xr-disabled-color);
+}
+
+.xr-section-summary-in:checked + label:before {
+  content: '▼';
+}
+
+.xr-section-summary-in:checked + label > span {
+  display: none;
+}
+
+.xr-section-summary,
+.xr-section-inline-details {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.xr-section-inline-details {
+  grid-column: 2 / -1;
+}
+
+.xr-section-details {
+  display: none;
+  grid-column: 1 / -1;
+  margin-bottom: 5px;
+}
+
+.xr-section-summary-in:checked ~ .xr-section-details {
+  display: contents;
+}
+
+.xr-array-wrap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 20px auto;
+}
+
+.xr-array-wrap > label {
+  grid-column: 1;
+  vertical-align: top;
+}
+
+.xr-preview {
+  color: var(--xr-font-color3);
+}
+
+.xr-array-preview,
+.xr-array-data {
+  padding: 0 5px !important;
+  grid-column: 2;
+}
+
+.xr-array-data,
+.xr-array-in:checked ~ .xr-array-preview {
+  display: none;
+}
+
+.xr-array-in:checked ~ .xr-array-data,
+.xr-array-preview {
+  display: inline-block;
+}
+
+.xr-dim-list {
+  display: inline-block !important;
+  list-style: none;
+  padding: 0 !important;
+  margin: 0;
+}
+
+.xr-dim-list li {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.xr-dim-list:before {
+  content: '(';
+}
+
+.xr-dim-list:after {
+  content: ')';
+}
+
+.xr-dim-list li:not(:last-child):after {
+  content: ',';
+  padding-right: 5px;
+}
+
+.xr-has-index {
+  font-weight: bold;
+}
+
+.xr-var-list,
+.xr-var-item {
+  display: contents;
+}
+
+.xr-var-item > div,
+.xr-var-item label,
+.xr-var-item > .xr-var-name span {
+  background-color: var(--xr-background-color-row-even);
+  margin-bottom: 0;
+}
+
+.xr-var-item > .xr-var-name:hover span {
+  padding-right: 5px;
+}
+
+.xr-var-list > li:nth-child(odd) > div,
+.xr-var-list > li:nth-child(odd) > label,
+.xr-var-list > li:nth-child(odd) > .xr-var-name span {
+  background-color: var(--xr-background-color-row-odd);
+}
+
+.xr-var-name {
+  grid-column: 1;
+}
+
+.xr-var-dims {
+  grid-column: 2;
+}
+
+.xr-var-dtype {
+  grid-column: 3;
+  text-align: right;
+  color: var(--xr-font-color2);
+}
+
+.xr-var-preview {
+  grid-column: 4;
+}
+
+.xr-var-name,
+.xr-var-dims,
+.xr-var-dtype,
+.xr-preview,
+.xr-attrs dt {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.xr-var-name:hover,
+.xr-var-dims:hover,
+.xr-var-dtype:hover,
+.xr-attrs dt:hover {
+  overflow: visible;
+  width: auto;
+  z-index: 1;
+}
+
+.xr-var-attrs,
+.xr-var-data {
+  display: none;
+  background-color: var(--xr-background-color) !important;
+  padding-bottom: 5px !important;
+}
+
+.xr-var-attrs-in:checked ~ .xr-var-attrs,
+.xr-var-data-in:checked ~ .xr-var-data {
+  display: block;
+}
+
+.xr-var-data > table {
+  float: right;
+}
+
+.xr-var-name span,
+.xr-var-data,
+.xr-attrs {
+  padding-left: 25px !important;
+}
+
+.xr-attrs,
+.xr-var-attrs,
+.xr-var-data {
+  grid-column: 1 / -1;
+}
+
+dl.xr-attrs {
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 125px auto;
+}
+
+.xr-attrs dt,
+.xr-attrs dd {
+  padding: 0;
+  margin: 0;
+  float: left;
+  padding-right: 10px;
+  width: auto;
+}
+
+.xr-attrs dt {
+  font-weight: normal;
+  grid-column: 1;
+}
+
+.xr-attrs dt:hover span {
+  display: inline-block;
+  background: var(--xr-background-color);
+  padding-right: 10px;
+}
+
+.xr-attrs dd {
+  grid-column: 2;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.xr-icon-database,
+.xr-icon-file-text2 {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1.5em !important;
+  stroke-width: 0;
+  stroke: currentColor;
+  fill: currentColor;
+}
+</style><pre class='xr-text-repr-fallback'>&lt;xarray.Dataset&gt;
+Dimensions:      (C: 3, F: 51, L: 4, lat: 181, lon: 360)
+Coordinates:
+  * lat          (lat) float32 90.0 89.0 88.0 87.0 ... -87.0 -88.0 -89.0 -90.0
+  * L            (L) float32 1.0 2.0 3.0 4.0
+  * lon          (lon) float32 -180.0 -179.0 -178.0 -177.0 ... 177.0 178.0 179.0
+  * F            (F) object 2017-03-16 00:00:00 ... 2021-05-16 00:00:00
+    spatial_ref  int64 ...
+Dimensions without coordinates: C
+Data variables:
+    prob         (F, L, C, lat, lon) float64 ...
+Attributes:
+    grid_mapping:  spatial_ref</pre><div class='xr-wrap' hidden><div class='xr-header'><div class='xr-obj-type'>xarray.Dataset</div></div><ul class='xr-sections'><li class='xr-section-item'><input id='section-2375c2d7-fd26-4a41-a87e-c33538092787' class='xr-section-summary-in' type='checkbox' disabled ><label for='section-2375c2d7-fd26-4a41-a87e-c33538092787' class='xr-section-summary'  title='Expand/collapse section'>Dimensions:</label><div class='xr-section-inline-details'><ul class='xr-dim-list'><li><span>C</span>: 3</li><li><span class='xr-has-index'>F</span>: 51</li><li><span class='xr-has-index'>L</span>: 4</li><li><span class='xr-has-index'>lat</span>: 181</li><li><span class='xr-has-index'>lon</span>: 360</li></ul></div><div class='xr-section-details'></div></li><li class='xr-section-item'><input id='section-f037ccbe-7956-4226-bcdd-a4bfea0c51dc' class='xr-section-summary-in' type='checkbox'  checked><label for='section-f037ccbe-7956-4226-bcdd-a4bfea0c51dc' class='xr-section-summary' >Coordinates: <span>(5)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>lat</span></div><div class='xr-var-dims'>(lat)</div><div class='xr-var-dtype'>float32</div><div class='xr-var-preview xr-preview'>90.0 89.0 88.0 ... -89.0 -90.0</div><input id='attrs-72f01f26-6b48-4c08-889c-a465894eaeaa' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-72f01f26-6b48-4c08-889c-a465894eaeaa' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-faa58427-fa81-495a-a364-ddd0085c5885' class='xr-var-data-in' type='checkbox'><label for='data-faa58427-fa81-495a-a364-ddd0085c5885' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>pointwidth :</span></dt><dd>1.0</dd><dt><span>standard_name :</span></dt><dd>latitude</dd><dt><span>gridtype :</span></dt><dd>0</dd><dt><span>units :</span></dt><dd>degree_north</dd></dl></div><div class='xr-var-data'><pre>array([ 90.,  89.,  88.,  87.,  86.,  85.,  84.,  83.,  82.,  81.,  80.,  79.,
+        78.,  77.,  76.,  75.,  74.,  73.,  72.,  71.,  70.,  69.,  68.,  67.,
+        66.,  65.,  64.,  63.,  62.,  61.,  60.,  59.,  58.,  57.,  56.,  55.,
+        54.,  53.,  52.,  51.,  50.,  49.,  48.,  47.,  46.,  45.,  44.,  43.,
+        42.,  41.,  40.,  39.,  38.,  37.,  36.,  35.,  34.,  33.,  32.,  31.,
+        30.,  29.,  28.,  27.,  26.,  25.,  24.,  23.,  22.,  21.,  20.,  19.,
+        18.,  17.,  16.,  15.,  14.,  13.,  12.,  11.,  10.,   9.,   8.,   7.,
+         6.,   5.,   4.,   3.,   2.,   1.,   0.,  -1.,  -2.,  -3.,  -4.,  -5.,
+        -6.,  -7.,  -8.,  -9., -10., -11., -12., -13., -14., -15., -16., -17.,
+       -18., -19., -20., -21., -22., -23., -24., -25., -26., -27., -28., -29.,
+       -30., -31., -32., -33., -34., -35., -36., -37., -38., -39., -40., -41.,
+       -42., -43., -44., -45., -46., -47., -48., -49., -50., -51., -52., -53.,
+       -54., -55., -56., -57., -58., -59., -60., -61., -62., -63., -64., -65.,
+       -66., -67., -68., -69., -70., -71., -72., -73., -74., -75., -76., -77.,
+       -78., -79., -80., -81., -82., -83., -84., -85., -86., -87., -88., -89.,
+       -90.], dtype=float32)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>L</span></div><div class='xr-var-dims'>(L)</div><div class='xr-var-dtype'>float32</div><div class='xr-var-preview xr-preview'>1.0 2.0 3.0 4.0</div><input id='attrs-833edc6f-6293-4bee-8f92-8b963d6e40b7' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-833edc6f-6293-4bee-8f92-8b963d6e40b7' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-e831d31d-e842-409f-bd3d-d4999130a69a' class='xr-var-data-in' type='checkbox'><label for='data-e831d31d-e842-409f-bd3d-d4999130a69a' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>pointwidth :</span></dt><dd>1.0</dd><dt><span>gridtype :</span></dt><dd>0</dd><dt><span>units :</span></dt><dd>months</dd></dl></div><div class='xr-var-data'><pre>array([1., 2., 3., 4.], dtype=float32)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>lon</span></div><div class='xr-var-dims'>(lon)</div><div class='xr-var-dtype'>float32</div><div class='xr-var-preview xr-preview'>-180.0 -179.0 ... 178.0 179.0</div><input id='attrs-920fc669-e655-4326-aca6-e288e05b420c' class='xr-var-attrs-in' type='checkbox' disabled><label for='attrs-920fc669-e655-4326-aca6-e288e05b420c' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-aefa16e7-faba-4cc3-aa47-409829297c3f' class='xr-var-data-in' type='checkbox'><label for='data-aefa16e7-faba-4cc3-aa47-409829297c3f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'></dl></div><div class='xr-var-data'><pre>array([-180., -179., -178., ...,  177.,  178.,  179.], dtype=float32)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span class='xr-has-index'>F</span></div><div class='xr-var-dims'>(F)</div><div class='xr-var-dtype'>object</div><div class='xr-var-preview xr-preview'>2017-03-16 00:00:00 ... 2021-05-...</div><input id='attrs-2fa0bada-8e28-421f-8272-5e7b589ad79c' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-2fa0bada-8e28-421f-8272-5e7b589ad79c' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-b4ef3543-3ea1-4173-8471-2f4fa6a9ffeb' class='xr-var-data-in' type='checkbox'><label for='data-b4ef3543-3ea1-4173-8471-2f4fa6a9ffeb' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>pointwidth :</span></dt><dd>1</dd><dt><span>defaultvalue :</span></dt><dd>736.5</dd><dt><span>expires :</span></dt><dd>1622530800</dd><dt><span>gridtype :</span></dt><dd>0</dd></dl></div><div class='xr-var-data'><pre>array([cftime.Datetime360Day(2017, 3, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 4, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 5, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 6, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 7, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 8, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 9, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 10, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 11, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2017, 12, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 1, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 2, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 3, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 4, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 5, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 6, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 7, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 8, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 9, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 10, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 11, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2018, 12, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 1, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 2, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 3, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 4, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 5, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 6, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 7, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 8, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 9, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 10, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 11, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2019, 12, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 1, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 2, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 3, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 4, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 5, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 6, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 7, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 8, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 9, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 10, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 11, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2020, 12, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2021, 1, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2021, 2, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2021, 3, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2021, 4, 16, 0, 0, 0, 0),
+       cftime.Datetime360Day(2021, 5, 16, 0, 0, 0, 0)], dtype=object)</pre></div></li><li class='xr-var-item'><div class='xr-var-name'><span>spatial_ref</span></div><div class='xr-var-dims'>()</div><div class='xr-var-dtype'>int64</div><div class='xr-var-preview xr-preview'>...</div><input id='attrs-40e76a75-3f1b-4229-a2d6-c6b979e865ff' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-40e76a75-3f1b-4229-a2d6-c6b979e865ff' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-5256a114-e9fe-4d90-9248-e546a579562f' class='xr-var-data-in' type='checkbox'><label for='data-5256a114-e9fe-4d90-9248-e546a579562f' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>crs_wkt :</span></dt><dd>GEOGCS[&quot;WGS 84&quot;,DATUM[&quot;WGS_1984&quot;,SPHEROID[&quot;WGS 84&quot;,6378137,298.257223563,AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]],AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]],PRIMEM[&quot;Greenwich&quot;,0,AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]],UNIT[&quot;degree&quot;,0.0174532925199433,AUTHORITY[&quot;EPSG&quot;,&quot;9122&quot;]],AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</dd><dt><span>semi_major_axis :</span></dt><dd>6378137.0</dd><dt><span>semi_minor_axis :</span></dt><dd>6356752.314245179</dd><dt><span>inverse_flattening :</span></dt><dd>298.257223563</dd><dt><span>reference_ellipsoid_name :</span></dt><dd>WGS 84</dd><dt><span>longitude_of_prime_meridian :</span></dt><dd>0.0</dd><dt><span>prime_meridian_name :</span></dt><dd>Greenwich</dd><dt><span>geographic_crs_name :</span></dt><dd>WGS 84</dd><dt><span>grid_mapping_name :</span></dt><dd>latitude_longitude</dd><dt><span>spatial_ref :</span></dt><dd>GEOGCS[&quot;WGS 84&quot;,DATUM[&quot;WGS_1984&quot;,SPHEROID[&quot;WGS 84&quot;,6378137,298.257223563,AUTHORITY[&quot;EPSG&quot;,&quot;7030&quot;]],AUTHORITY[&quot;EPSG&quot;,&quot;6326&quot;]],PRIMEM[&quot;Greenwich&quot;,0,AUTHORITY[&quot;EPSG&quot;,&quot;8901&quot;]],UNIT[&quot;degree&quot;,0.0174532925199433,AUTHORITY[&quot;EPSG&quot;,&quot;9122&quot;]],AUTHORITY[&quot;EPSG&quot;,&quot;4326&quot;]]</dd></dl></div><div class='xr-var-data'><pre>array(0)</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-02f785c2-1c15-4a02-b01a-f758fc7c60d6' class='xr-section-summary-in' type='checkbox'  checked><label for='section-02f785c2-1c15-4a02-b01a-f758fc7c60d6' class='xr-section-summary' >Data variables: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><ul class='xr-var-list'><li class='xr-var-item'><div class='xr-var-name'><span>prob</span></div><div class='xr-var-dims'>(F, L, C, lat, lon)</div><div class='xr-var-dtype'>float64</div><div class='xr-var-preview xr-preview'>...</div><input id='attrs-db196710-4049-4c41-b00e-b75952396b8d' class='xr-var-attrs-in' type='checkbox' ><label for='attrs-db196710-4049-4c41-b00e-b75952396b8d' title='Show/Hide attributes'><svg class='icon xr-icon-file-text2'><use xlink:href='#icon-file-text2'></use></svg></label><input id='data-bc8652d1-ecaf-4686-a222-afadc1098723' class='xr-var-data-in' type='checkbox'><label for='data-bc8652d1-ecaf-4686-a222-afadc1098723' title='Show/Hide data repr'><svg class='icon xr-icon-database'><use xlink:href='#icon-database'></use></svg></label><div class='xr-var-attrs'><dl class='xr-attrs'><dt><span>pointwidth :</span></dt><dd>1</dd><dt><span>defaultvalue :</span></dt><dd>736.5</dd><dt><span>units :</span></dt><dd>percent</dd><dt><span>long_name :</span></dt><dd>Tercile Probability</dd><dt><span>expires :</span></dt><dd>1622530800</dd><dt><span>scale_min :</span></dt><dd>0.0</dd><dt><span>ncolor :</span></dt><dd>254</dd><dt><span>scale_max :</span></dt><dd>100.0</dd><dt><span>colormap :</span></dt><dd>[null 16777215 16777184 [16777184 44] 15658671 [15658671 13] 13153410 [13153410 12] 11834980 [11834980 13] 12632256 12632256 2019940 [2019940 10] 59045 [59045 13] 65480 [65480 12] 65535 [65535 13] 54015 [54015 12] 2139647 [2139647 13] 2115034 [2115034 12] [6303920 83] 6303920]</dd><dt><span>colorscalename :</span></dt><dd>tercileclassesscale</dd><dt><span>maxncolor :</span></dt><dd>254</dd><dt><span>CS :</span></dt><dd>0</dd><dt><span>CE :</span></dt><dd>100</dd><dt><span>grid_mapping :</span></dt><dd>spatial_ref</dd></dl></div><div class='xr-var-data'><pre>[39877920 values with dtype=float64]</pre></div></li></ul></div></li><li class='xr-section-item'><input id='section-e5991767-ea6f-45e1-bf84-8877a58c8569' class='xr-section-summary-in' type='checkbox'  checked><label for='section-e5991767-ea6f-45e1-bf84-8877a58c8569' class='xr-section-summary' >Attributes: <span>(1)</span></label><div class='xr-section-inline-details'></div><div class='xr-section-details'><dl class='xr-attrs'><dt><span>grid_mapping :</span></dt><dd>spatial_ref</dd></dl></div></li></ul></div></div></div></div>
+</div>
+<p>Below the raw forecast data of below-average rainfall with <span class="pasted-text">3</span> month leadtime, published in March</p>
+<!-- and July  -->
+<p>is shown.</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">g</span><span class="o">=</span><span class="n">iri_clip</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">iri_clip</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="mi">3</span><span class="p">]),</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span><span class="n">C</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">prob</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">col</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">,</span>
+    <span class="n">col_wrap</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="n">mpl</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">YlOrRd</span><span class="p">,</span>
+    <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;orientation&quot;</span><span class="p">:</span> <span class="s2">&quot;horizontal&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shrink&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+        <span class="s2">&quot;aspect&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+        <span class="s2">&quot;pad&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">df_bound</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">adm1_bound_path</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">df_bound</span><span class="o">.</span><span class="n">boundary</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+<span class="c1"># fig.tight_layout()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/bfa_seas_bavg_iriforecast_13_0.png" src="_images/bfa_seas_bavg_iriforecast_13_0.png" />
+</div>
+</div>
+<p>We can also inspect the dominant tercile, which is shown below. This is similair to <a class="reference external" href="https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html">the figure on the IRI Maproom</a>, except that the bins are defined slightly differently</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dom_ds</span><span class="o">=</span><span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">glb_data_exploration_dir</span><span class="p">,</span><span class="s2">&quot;iri&quot;</span><span class="p">,</span><span class="s2">&quot;iri_seasfor_tercile_dominant.nc&quot;</span><span class="p">),</span> <span class="n">decode_times</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">drop_variables</span><span class="o">=</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+<span class="n">dom_ds</span><span class="o">=</span><span class="n">dom_ds</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s2">&quot;X&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="s2">&quot;Y&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">})</span>
+<span class="c1">#often IRI latitude is flipped so check for that and invert if needed</span>
+<span class="n">dom_ds</span> <span class="o">=</span> <span class="n">invert_latlon</span><span class="p">(</span><span class="n">dom_ds</span><span class="p">)</span>
+<span class="n">dom_ds</span> <span class="o">=</span> <span class="n">change_longitude_range</span><span class="p">(</span><span class="n">dom_ds</span><span class="p">)</span>
+<span class="n">dom_ds</span> <span class="o">=</span> <span class="n">fix_calendar</span><span class="p">(</span><span class="n">dom_ds</span><span class="p">,</span> <span class="n">timevar</span><span class="o">=</span><span class="s1">&#39;F&#39;</span><span class="p">)</span>
+<span class="n">dom_ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">decode_cf</span><span class="p">(</span><span class="n">dom_ds</span><span class="p">)</span>
+<span class="n">dom_clip</span><span class="o">=</span><span class="n">dom_ds</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">set_spatial_dims</span><span class="p">(</span><span class="n">x_dim</span><span class="o">=</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span><span class="n">y_dim</span><span class="o">=</span><span class="s2">&quot;lat&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">write_crs</span><span class="p">(</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gdf_adm1</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">mapping</span><span class="p">),</span> <span class="n">dom_ds</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">all_touched</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span><span class="o">-</span><span class="mi">70</span><span class="p">,</span><span class="o">-</span><span class="mi">60</span><span class="p">,</span><span class="o">-</span><span class="mi">50</span><span class="p">,</span><span class="o">-</span><span class="mi">45</span><span class="p">,</span><span class="o">-</span><span class="mi">40</span><span class="p">,</span><span class="mi">40</span><span class="p">,</span><span class="mi">45</span><span class="p">,</span><span class="mi">50</span><span class="p">,</span><span class="mi">60</span><span class="p">,</span><span class="mi">70</span><span class="p">,</span><span class="mi">100</span><span class="p">]</span>
+<span class="c1"># levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]</span>
+<span class="n">colors</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;#783200&#39;</span><span class="p">,</span><span class="s1">&#39;#ab461e&#39;</span><span class="p">,</span><span class="s1">&#39;#ab461e&#39;</span><span class="p">,</span><span class="s1">&#39;#e8b832&#39;</span><span class="p">,</span><span class="s1">&#39;#fafa02&#39;</span><span class="p">,</span><span class="s1">&#39;#ffffff&#39;</span><span class="p">,</span><span class="s1">&#39;#d1f8cc&#39;</span><span class="p">,</span><span class="s1">&#39;#acf8a0&#39;</span><span class="p">,</span><span class="s1">&#39;#73bb6e&#39;</span><span class="p">,</span><span class="s1">&#39;#3a82b3&#39;</span><span class="p">,</span><span class="s1">&#39;#0e3bf4&#39;</span><span class="p">]</span>
+<span class="n">g</span><span class="o">=</span><span class="n">dom_clip</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">dom_clip</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="mi">3</span><span class="p">]),</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">dominant</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">col</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">,</span>
+    <span class="n">col_wrap</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<span class="c1">#     cmap=mpl.cm.RdBu,</span>
+    <span class="n">levels</span><span class="o">=</span><span class="n">levels</span><span class="p">,</span>
+    <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span>
+    <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;orientation&quot;</span><span class="p">:</span> <span class="s2">&quot;horizontal&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shrink&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+        <span class="s2">&quot;aspect&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+        <span class="s2">&quot;pad&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">df_bound</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">adm1_bound_path</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">flat</span><span class="p">:</span>
+    <span class="n">df_bound</span><span class="o">.</span><span class="n">boundary</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/bfa_seas_bavg_iriforecast_15_0.png" src="_images/bfa_seas_bavg_iriforecast_15_0.png" />
+</div>
+</div>
+<p>we select the region of interest, shown below</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#testing if correct area</span>
+<span class="n">iri_interp_reg</span><span class="o">=</span><span class="n">iri_clip_interp</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">set_spatial_dims</span><span class="p">(</span><span class="n">x_dim</span><span class="o">=</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span><span class="n">y_dim</span><span class="o">=</span><span class="s2">&quot;lat&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gdf_reg</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">mapping</span><span class="p">),</span> <span class="n">iri_clip_interp</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">crs</span><span class="p">,</span> <span class="n">all_touched</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">g</span><span class="o">=</span><span class="n">iri_interp_reg</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">C</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">F</span><span class="o">=</span><span class="s2">&quot;2018-03&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">prob</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">cmap</span><span class="o">=</span><span class="n">mpl</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">YlOrRd</span><span class="p">,</span> 
+    <span class="n">cbar_kwargs</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;orientation&quot;</span><span class="p">:</span> <span class="s2">&quot;horizontal&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shrink&quot;</span><span class="p">:</span> <span class="mf">0.8</span><span class="p">,</span>
+        <span class="s2">&quot;aspect&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+        <span class="s2">&quot;pad&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">df_bound</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">adm1_bound_path</span><span class="p">)</span>
+<span class="n">df_bound</span><span class="o">.</span><span class="n">boundary</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">g</span><span class="o">.</span><span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/bfa_seas_bavg_iriforecast_23_0.png" src="_images/bfa_seas_bavg_iriforecast_23_0.png" />
+</div>
+</div>
+<p>And compute the statistics over this region, see a subset below</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">stats_region</span><span class="p">[(</span><span class="n">stats_region</span><span class="o">.</span><span class="n">C</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">stats_region</span><span class="o">.</span><span class="n">L</span><span class="o">==</span><span class="n">leadtime</span><span class="p">)</span><span class="o">&amp;</span><span class="p">(</span><span class="n">stats_region</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">==</span><span class="mi">3</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>C</th>
+      <th>F</th>
+      <th>L</th>
+      <th>mean_cell</th>
+      <th>min_cell</th>
+      <th>max_cell</th>
+      <th>std_cell</th>
+      <th>10quant_cell</th>
+      <th>quantile</th>
+      <th>40percth_cell</th>
+      <th>month</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>2017-03-16</td>
+      <td>3.0</td>
+      <td>36.902973</td>
+      <td>31.727321</td>
+      <td>41.107882</td>
+      <td>2.372418</td>
+      <td>40.120128</td>
+      <td>0.9</td>
+      <td>11.586207</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>0</td>
+      <td>2018-03-16</td>
+      <td>3.0</td>
+      <td>31.016802</td>
+      <td>27.604931</td>
+      <td>35.812745</td>
+      <td>2.516681</td>
+      <td>34.336678</td>
+      <td>0.9</td>
+      <td>0.000000</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>0</td>
+      <td>2019-03-16</td>
+      <td>3.0</td>
+      <td>36.896040</td>
+      <td>34.852292</td>
+      <td>38.713420</td>
+      <td>0.937665</td>
+      <td>38.090315</td>
+      <td>0.9</td>
+      <td>0.000000</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>146</th>
+      <td>0</td>
+      <td>2020-03-16</td>
+      <td>3.0</td>
+      <td>29.905985</td>
+      <td>27.643195</td>
+      <td>34.985227</td>
+      <td>1.864129</td>
+      <td>31.348212</td>
+      <td>0.9</td>
+      <td>0.000000</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>194</th>
+      <td>0</td>
+      <td>2021-03-16</td>
+      <td>3.0</td>
+      <td>25.743573</td>
+      <td>19.647599</td>
+      <td>38.699588</td>
+      <td>4.716883</td>
+      <td>30.255154</td>
+      <td>0.9</td>
+      <td>0.000000</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+</div></div></div>
+</div>
+</div>
+<div class="section" id="analyze-statistics-probability-below-average">
+<h2>Analyze statistics probability below average<a class="headerlink" href="#analyze-statistics-probability-below-average" title="Permalink to this headline">¶</a></h2>
+<p>Below the distribution of probability values is shown per month. <br />
+This only includes the values for the below-average tercile, with a leadtime of <span class="pasted-text">3</span>. <br />
+It should be noted that since we only have data from Mar 2017, these distributions contain maximum 5 values. <br />
+From the distribution, it can be seen that a probability of 50% has never been reached since Mar 2017.</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#plot distribution for forecasts with C=0 (=below average) for all months</span>
+<span class="n">fig</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">g</span><span class="o">=</span><span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">stats_region_bavg_lt</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;month&quot;</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="s2">&quot;max_cell&quot;</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;#007CE0&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Probability&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;right&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s1">&#39;top&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">set_visible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Publication month&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/bfa_seas_bavg_iriforecast_35_0.png" src="_images/bfa_seas_bavg_iriforecast_35_0.png" />
+</div>
+</div>
+<p>More specifically we are interested in March</p>
+<!-- and July.  -->
+<p>The maximum values across all cells for the March forecasts has been <span class="pasted-text">41.11</span>%</p>
+<!-- , and for the July forecasts {glue:text}`max_prob_jul:.2f`%  -->
+<p>This would mean that if we would take the max cell as aggregation method, the threshold of <span class="pasted-text">40</span> for March would have been reached <span class="pasted-text">1</span> times <span class="pasted-text"> in 2017</span>.</p>
+<!-- For July the threshold of {glue:text}`threshold_jul` would have been reached {glue:text}`num_trig_jul` times{glue:text}`year_trig_jul`." --><p>To check if these below 50% and below 40% probabilities depend on the part of the country, we also compute the maximum values in the whole country across all years.</p>
+<!-- While the values can be slightly higher in other regions, the 50% threshold is never reached.  --><p>The maximum value for the March forecast in the whole country was <span class="pasted-text">42.18</span>%. \</p>
+<!-- For July this was {glue:text}`max_prob_jul_country:.2f`%" --><p>Across all months, <span class="pasted-text">33.33</span>% of the forecasts with 1 month leadtime had a &gt;=40% probability of below average rainfall in at least one cell across the <strong>whole</strong> country</p>
+<div class="section" id="methods-of-aggregation">
+<h3>Methods of aggregation<a class="headerlink" href="#methods-of-aggregation" title="Permalink to this headline">¶</a></h3>
+<p>Note: all these computations only cover the region of interest</p>
+<p>While taking the max cell is the most extreme method of aggregation, we have many other possiblities. Such as looking at the mean, or at a percentage of cells.</p>
+<!-- For the July forecast we wouldn't trigger with any method of aggregation, since we already didn't trigger with the max methodology.  -->
+<p>For March, when using the mean method aggregation, the trigger would have been met <span class="pasted-text">0</span> times<span class="pasted-text"></span>.</p>
+<p>Below the distribution of the percentage of the area with &gt;=40% probability is shown for March. From here it can be seen that the maximum percentage is <span class="pasted-text">11.59</span>%.
+We look at the distribution of the percentage of the area with &gt;=40% probability of below avg rainfall for the admins of interest, across all forecasts with a leadtime of <span class="pasted-text">3</span>.
+When requiring 10% of cells to be above 40% this would be met <span class="pasted-text">1</span> times<span class="pasted-text"> in 2017</span>.</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#plot distribution for forecasts with C=0 (=below average) and L=1, for March</span>
+<span class="n">g</span><span class="o">=</span><span class="n">sns</span><span class="o">.</span><span class="n">displot</span><span class="p">(</span><span class="n">stats_region_bavg_lt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">stats_region_bavg_lt</span><span class="p">[</span><span class="s2">&quot;month&quot;</span><span class="p">]</span><span class="o">==</span><span class="mi">3</span><span class="p">,</span><span class="s2">&quot;40percth_cell&quot;</span><span class="p">],</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;#007CE0&quot;</span><span class="p">,</span><span class="n">binwidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/bfa_seas_bavg_iriforecast_46_0.png" src="_images/bfa_seas_bavg_iriforecast_46_0.png" />
+</div>
+</div>
+<p>The plot below shows the occurences across all months where at least 1% of the cells had a probability of at least 40% for below average rainfall. We can see that the occurrence of this is pretty rare.</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#plot distribution for forecasts with C=0 (=below average) and L=1, for all months</span>
+<span class="n">g</span><span class="o">=</span><span class="n">sns</span><span class="o">.</span><span class="n">displot</span><span class="p">(</span><span class="n">stats_region_bavg_lt</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">stats_region_bavg_lt</span><span class="p">[</span><span class="s2">&quot;40percth_cell&quot;</span><span class="p">]</span><span class="o">&gt;=</span><span class="mi">1</span><span class="p">,</span><span class="s2">&quot;40percth_cell&quot;</span><span class="p">],</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;#007CE0&quot;</span><span class="p">,</span><span class="n">binwidth</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/bfa_seas_bavg_iriforecast_48_0.png" src="_images/bfa_seas_bavg_iriforecast_48_0.png" />
+</div>
+</div>
+<p>While we can include the spatial severity in the trigger threshold, we should also take into account that the spatial uncertainty of seasonal forecasts is large.</p>
+<p>Given the size of the area of interest, it might therefore be better to only focus on whether any cell within that region reached the probability threshold. However, in this case 40% might be too sensitive of a trigger</p>
+</div>
+</div>
+<div class="section" id="examine-dominant-tercile">
+<h2>Examine dominant tercile<a class="headerlink" href="#examine-dominant-tercile" title="Permalink to this headline">¶</a></h2>
+<p>Besides knowing if the below average tercile reaches a certain threshold, it is also important to understand if the below average tercile is the dominant tercile. Where dominant indicates the tercile with the highes probability. Else, it wouldn’t be logical to anticipate based on the likelihood of below average rainfall.</p>
+<p>Since we are working with aggregation we have to determine what method we use to set the probability of below average, normal, and above average precipitation.
+For this analysis we look at the cell with the maximum probability for each tercile</p>
+<!-- For this analysis we look at the 10% percentile boundary, meaning that 10% of the area has a probability of at least x% for the given tercile. -->
+<!-- This threshold was set since we want a substantial part of the region to meet the threshold. It wasn't set at a higher percentage, because from the above analysis we saw that this barely occurred in the past 4 years. However, this threshold and method of aggregation is still open for discussion. 
+ -->
+<p>Note: all these computations only cover the region of interest</p>
+<!-- Below all publication months are shown, where the numbers indicate the 10% boundary for each tercile. Those that have a probability of at least 40 are marked in red. We can see that for only 3 months this occurred for the below average tercile. For the above average tercile this is a more common phenomenon. 
+
+We can see that for all occurrences that there was an at least 40% probability, this only occurred in one tercile, i.e. this is also the dominant tercile.  However, the differences can be quite small, for example in March 2018 and March 2021. 
+
+Especially around March 2021 we can see an interesting pattern, where in February and April the forecast indicates a higher probability of above average instead of below average precipitation. Note however that these are forecasting different periods. I.e. the forecast of March is projecting for AMJ while the one in April is projecting for MJJ.
+
+When focussing on our months of interest, namely March and July, we can see that for March in 4 out of 5 years the below average was the dominant tercile. The opposite for July is true, where all years so far showed the above average as dominant tercile. -->
+<p>Below all publication months are shown, where the numbers indicate the cell with the maximum probability touching the region of interest for each tercile. Those that have a probability of at least 40% are marked in red. We can see that this occurs more often for above than below average. Moreover, it does occurr that both the below and above average tercile meet the threshold.</p>
+<p>Questions</p>
+<ul class="simple">
+<li><p>should there be a minimum gap in probabilities between the terciles?</p></li>
+<li><p>should we somehow check that the forecast is consistent across leadtimes?</p>
+<ul>
+<li><p>currently only displaying values for leadtime=1 month!</p></li>
+</ul>
+</li>
+</ul>
+<p>Note: the NaNs in the table indicate a dry mask during those months</p>
+<div class="cell tag_output_scroll docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">stats_region_aggrmeth_lt</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;L&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s2">&quot;publication_month&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;color: red&quot;</span> <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;=</span><span class="mi">40</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_precision</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style  type="text/css" >
+#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row0_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row1_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row1_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row2_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row3_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row4_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row9_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row10_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row11_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row12_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row13_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row14_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row15_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row16_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row19_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row22_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row23_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row25_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row26_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row27_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row28_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row34_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row35_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row36_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row37_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row39_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row40_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row45_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row47_col0,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row47_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row48_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row49_col2,#T_eb31a344_c9df_11eb_ba95_b29c4ac23876row50_col2{
+            color:  red;
+        }</style><table id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876" ><thead>    <tr>        <th class="blank level0" ></th>        <th class="col_heading level0 col0" >bel_avg</th>        <th class="col_heading level0 col1" >normal</th>        <th class="col_heading level0 col2" >abv_avg</th>    </tr>    <tr>        <th class="index_name level0" >publication_month</th>        <th class="blank" ></th>        <th class="blank" ></th>        <th class="blank" ></th>    </tr></thead><tbody>
+                <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row0" class="row_heading level0 row0" >2017-03</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row0_col0" class="data row0 col0" >41.11</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row0_col1" class="data row0 col1" >31.12</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row0_col2" class="data row0 col2" >37.16</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row1" class="row_heading level0 row1" >2017-04</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row1_col0" class="data row1 col0" >40.23</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row1_col1" class="data row1 col1" >30.30</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row1_col2" class="data row1 col2" >43.28</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row2" class="row_heading level0 row2" >2017-05</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row2_col0" class="data row2 col0" >40.20</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row2_col1" class="data row2 col1" >31.39</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row2_col2" class="data row2 col2" >39.75</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row3" class="row_heading level0 row3" >2017-06</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row3_col0" class="data row3 col0" >35.59</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row3_col1" class="data row3 col1" >31.31</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row3_col2" class="data row3 col2" >41.05</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row4" class="row_heading level0 row4" >2017-07</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row4_col0" class="data row4 col0" >35.27</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row4_col1" class="data row4 col1" >31.41</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row4_col2" class="data row4 col2" >41.63</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row5" class="row_heading level0 row5" >2017-08</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row5_col0" class="data row5 col0" >36.87</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row5_col1" class="data row5 col1" >30.41</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row5_col2" class="data row5 col2" >37.98</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row6" class="row_heading level0 row6" >2017-09</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row6_col0" class="data row6 col0" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row6_col1" class="data row6 col1" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row6_col2" class="data row6 col2" >nan</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row7" class="row_heading level0 row7" >2017-10</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row7_col0" class="data row7 col0" >34.30</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row7_col1" class="data row7 col1" >32.04</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row7_col2" class="data row7 col2" >35.98</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row8" class="row_heading level0 row8" >2017-11</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row8_col0" class="data row8 col0" >38.07</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row8_col1" class="data row8 col1" >30.83</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row8_col2" class="data row8 col2" >39.00</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row9" class="row_heading level0 row9" >2017-12</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row9_col0" class="data row9 col0" >43.56</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row9_col1" class="data row9 col1" >30.42</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row9_col2" class="data row9 col2" >38.48</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row10" class="row_heading level0 row10" >2018-01</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row10_col0" class="data row10 col0" >37.45</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row10_col1" class="data row10 col1" >30.63</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row10_col2" class="data row10 col2" >41.37</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row11" class="row_heading level0 row11" >2018-02</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row11_col0" class="data row11 col0" >35.77</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row11_col1" class="data row11 col1" >31.11</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row11_col2" class="data row11 col2" >43.44</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row12" class="row_heading level0 row12" >2018-03</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row12_col0" class="data row12 col0" >35.81</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row12_col1" class="data row12 col1" >31.39</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row12_col2" class="data row12 col2" >42.03</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row13" class="row_heading level0 row13" >2018-04</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row13_col0" class="data row13 col0" >34.55</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row13_col1" class="data row13 col1" >30.90</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row13_col2" class="data row13 col2" >42.62</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row14" class="row_heading level0 row14" >2018-05</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row14_col0" class="data row14 col0" >35.02</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row14_col1" class="data row14 col1" >30.99</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row14_col2" class="data row14 col2" >44.66</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row15" class="row_heading level0 row15" >2018-06</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row15_col0" class="data row15 col0" >32.02</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row15_col1" class="data row15 col1" >30.53</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row15_col2" class="data row15 col2" >47.90</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row16" class="row_heading level0 row16" >2018-07</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row16_col0" class="data row16 col0" >32.83</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row16_col1" class="data row16 col1" >29.87</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row16_col2" class="data row16 col2" >48.18</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row17" class="row_heading level0 row17" >2018-08</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row17_col0" class="data row17 col0" >37.40</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row17_col1" class="data row17 col1" >30.93</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row17_col2" class="data row17 col2" >35.84</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row18" class="row_heading level0 row18" >2018-09</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row18_col0" class="data row18 col0" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row18_col1" class="data row18 col1" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row18_col2" class="data row18 col2" >nan</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row19" class="row_heading level0 row19" >2018-10</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row19_col0" class="data row19 col0" >47.98</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row19_col1" class="data row19 col1" >30.97</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row19_col2" class="data row19 col2" >35.80</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row20" class="row_heading level0 row20" >2018-11</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row20_col0" class="data row20 col0" >38.77</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row20_col1" class="data row20 col1" >31.57</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row20_col2" class="data row20 col2" >34.33</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row21" class="row_heading level0 row21" >2018-12</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row21_col0" class="data row21 col0" >37.02</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row21_col1" class="data row21 col1" >31.42</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row21_col2" class="data row21 col2" >36.37</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row22" class="row_heading level0 row22" >2019-01</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row22_col0" class="data row22 col0" >36.23</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row22_col1" class="data row22 col1" >30.30</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row22_col2" class="data row22 col2" >40.76</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row23" class="row_heading level0 row23" >2019-02</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row23_col0" class="data row23 col0" >37.70</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row23_col1" class="data row23 col1" >31.56</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row23_col2" class="data row23 col2" >40.32</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row24" class="row_heading level0 row24" >2019-03</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row24_col0" class="data row24 col0" >38.71</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row24_col1" class="data row24 col1" >30.75</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row24_col2" class="data row24 col2" >35.55</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row25" class="row_heading level0 row25" >2019-04</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row25_col0" class="data row25 col0" >42.49</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row25_col1" class="data row25 col1" >30.63</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row25_col2" class="data row25 col2" >35.32</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row26" class="row_heading level0 row26" >2019-05</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row26_col0" class="data row26 col0" >42.98</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row26_col1" class="data row26 col1" >31.33</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row26_col2" class="data row26 col2" >35.98</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row27" class="row_heading level0 row27" >2019-06</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row27_col0" class="data row27 col0" >33.61</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row27_col1" class="data row27 col1" >31.16</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row27_col2" class="data row27 col2" >41.22</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row28" class="row_heading level0 row28" >2019-07</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row28_col0" class="data row28 col0" >33.78</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row28_col1" class="data row28 col1" >30.18</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row28_col2" class="data row28 col2" >44.54</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row29" class="row_heading level0 row29" >2019-08</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row29_col0" class="data row29 col0" >36.31</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row29_col1" class="data row29 col1" >31.14</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row29_col2" class="data row29 col2" >35.95</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row30" class="row_heading level0 row30" >2019-09</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row30_col0" class="data row30 col0" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row30_col1" class="data row30 col1" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row30_col2" class="data row30 col2" >nan</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row31" class="row_heading level0 row31" >2019-10</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row31_col0" class="data row31 col0" >39.80</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row31_col1" class="data row31 col1" >31.07</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row31_col2" class="data row31 col2" >36.33</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row32" class="row_heading level0 row32" >2019-11</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row32_col0" class="data row32 col0" >39.59</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row32_col1" class="data row32 col1" >31.57</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row32_col2" class="data row32 col2" >35.70</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row33" class="row_heading level0 row33" >2019-12</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row33_col0" class="data row33 col0" >37.50</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row33_col1" class="data row33 col1" >31.12</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row33_col2" class="data row33 col2" >35.70</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row34" class="row_heading level0 row34" >2020-01</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row34_col0" class="data row34 col0" >37.34</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row34_col1" class="data row34 col1" >30.62</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row34_col2" class="data row34 col2" >40.11</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row35" class="row_heading level0 row35" >2020-02</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row35_col0" class="data row35 col0" >38.90</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row35_col1" class="data row35 col1" >30.95</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row35_col2" class="data row35 col2" >42.16</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row36" class="row_heading level0 row36" >2020-03</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row36_col0" class="data row36 col0" >34.99</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row36_col1" class="data row36 col1" >30.83</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row36_col2" class="data row36 col2" >43.33</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row37" class="row_heading level0 row37" >2020-04</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row37_col0" class="data row37 col0" >37.52</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row37_col1" class="data row37 col1" >31.20</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row37_col2" class="data row37 col2" >43.33</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row38" class="row_heading level0 row38" >2020-05</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row38_col0" class="data row38 col0" >37.08</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row38_col1" class="data row38 col1" >31.07</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row38_col2" class="data row38 col2" >38.77</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row39" class="row_heading level0 row39" >2020-06</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row39_col0" class="data row39 col0" >41.33</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row39_col1" class="data row39 col1" >31.29</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row39_col2" class="data row39 col2" >35.76</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row40" class="row_heading level0 row40" >2020-07</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row40_col0" class="data row40 col0" >43.19</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row40_col1" class="data row40 col1" >31.28</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row40_col2" class="data row40 col2" >31.05</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row41" class="row_heading level0 row41" >2020-08</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row41_col0" class="data row41 col0" >34.37</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row41_col1" class="data row41 col1" >30.77</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row41_col2" class="data row41 col2" >38.71</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row42" class="row_heading level0 row42" >2020-09</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row42_col0" class="data row42 col0" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row42_col1" class="data row42 col1" >nan</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row42_col2" class="data row42 col2" >nan</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row43" class="row_heading level0 row43" >2020-10</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row43_col0" class="data row43 col0" >36.31</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row43_col1" class="data row43 col1" >30.98</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row43_col2" class="data row43 col2" >38.42</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row44" class="row_heading level0 row44" >2020-11</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row44_col0" class="data row44 col0" >37.35</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row44_col1" class="data row44 col1" >31.02</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row44_col2" class="data row44 col2" >37.69</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row45" class="row_heading level0 row45" >2020-12</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row45_col0" class="data row45 col0" >40.66</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row45_col1" class="data row45 col1" >30.94</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row45_col2" class="data row45 col2" >36.95</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row46" class="row_heading level0 row46" >2021-01</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row46_col0" class="data row46 col0" >36.71</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row46_col1" class="data row46 col1" >30.45</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row46_col2" class="data row46 col2" >39.87</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row47" class="row_heading level0 row47" >2021-02</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row47_col0" class="data row47 col0" >42.63</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row47_col1" class="data row47 col1" >30.50</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row47_col2" class="data row47 col2" >43.50</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row48" class="row_heading level0 row48" >2021-03</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row48_col0" class="data row48 col0" >38.70</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row48_col1" class="data row48 col1" >28.28</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row48_col2" class="data row48 col2" >56.79</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row49" class="row_heading level0 row49" >2021-04</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row49_col0" class="data row49 col0" >29.37</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row49_col1" class="data row49 col1" >29.48</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row49_col2" class="data row49 col2" >51.26</td>
+            </tr>
+            <tr>
+                        <th id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876level0_row50" class="row_heading level0 row50" >2021-05</th>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row50_col0" class="data row50 col0" >34.63</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row50_col1" class="data row50 col1" >32.49</td>
+                        <td id="T_eb31a344_c9df_11eb_ba95_b29c4ac23876row50_col2" class="data row50 col2" >41.85</td>
+            </tr>
+    </tbody></table></div></div>
+</div>
+<p>The probabilities for March</p>
+<!-- and July  -->
+<p>are shown below, where the dominant tercile is highlighted</p>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">highlight_max</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    highlight the maximum in a Series yellow.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">is_max</span> <span class="o">=</span> <span class="n">s</span> <span class="o">==</span> <span class="n">s</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;color: red&#39;</span> <span class="k">if</span> <span class="n">v</span> <span class="k">else</span> <span class="s1">&#39;black&#39;</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">is_max</span><span class="p">]</span>
+
+<span class="n">stats_region_aggrmeth_lt</span><span class="p">[</span><span class="n">stats_region_aggrmeth_lt</span><span class="o">.</span><span class="n">publication_month</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">month</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="mi">3</span><span class="p">])]</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;L&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s2">&quot;publication_month&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">highlight_max</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">set_precision</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html"><style  type="text/css" >
+#T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row0_col0,#T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row1_col2,#T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row2_col0,#T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row3_col2,#T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row4_col2{
+            color:  red;
+        }</style><table id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876" ><thead>    <tr>        <th class="blank level0" ></th>        <th class="col_heading level0 col0" >bel_avg</th>        <th class="col_heading level0 col1" >normal</th>        <th class="col_heading level0 col2" >abv_avg</th>    </tr>    <tr>        <th class="index_name level0" >publication_month</th>        <th class="blank" ></th>        <th class="blank" ></th>        <th class="blank" ></th>    </tr></thead><tbody>
+                <tr>
+                        <th id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876level0_row0" class="row_heading level0 row0" >2017-03</th>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row0_col0" class="data row0 col0" >41.11</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row0_col1" class="data row0 col1" >31.12</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row0_col2" class="data row0 col2" >37.16</td>
+            </tr>
+            <tr>
+                        <th id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876level0_row1" class="row_heading level0 row1" >2018-03</th>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row1_col0" class="data row1 col0" >35.81</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row1_col1" class="data row1 col1" >31.39</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row1_col2" class="data row1 col2" >42.03</td>
+            </tr>
+            <tr>
+                        <th id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876level0_row2" class="row_heading level0 row2" >2019-03</th>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row2_col0" class="data row2 col0" >38.71</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row2_col1" class="data row2 col1" >30.75</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row2_col2" class="data row2 col2" >35.55</td>
+            </tr>
+            <tr>
+                        <th id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876level0_row3" class="row_heading level0 row3" >2020-03</th>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row3_col0" class="data row3 col0" >34.99</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row3_col1" class="data row3 col1" >30.83</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row3_col2" class="data row3 col2" >43.33</td>
+            </tr>
+            <tr>
+                        <th id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876level0_row4" class="row_heading level0 row4" >2021-03</th>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row4_col0" class="data row4 col0" >38.70</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row4_col1" class="data row4 col1" >28.28</td>
+                        <td id="T_eb3a8752_c9df_11eb_ba95_b29c4ac23876row4_col2" class="data row4 col2" >56.79</td>
+            </tr>
+    </tbody></table></div></div>
+</div>
+<div class="cell tag_hide_input docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># stats_region_aggrmeth_lt[stats_region_aggrmeth_lt.publication_month.dt.month.isin([7])].drop(&quot;L&quot;,axis=1).set_index([&quot;publication_month&quot;]).style.apply(highlight_max,axis=1).set_precision(2)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+</div>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "antact"
+        },
+        kernelOptions: {
+            kernelName: "antact",
+            path: "./."
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'antact'</script>
+
+              </div>
+              
+        
+        <div class='prev-next-bottom'>
+            
+    <a class='right-next' id="next-link" href="bfa_seas_bavg_precip_corr_obsfor.html" title="next page">Correlation of forecasted and observed lower tercile precipitation</a>
+
+        </div>
+        
+        </div>
+    </div>
+    <footer class="footer mt-5 mt-md-0">
+    <div class="container">
+      <p>
+        
+          By Tinka Valentijn, Centre for Humanitarian data<br/>
+        
+            &copy; Copyright 2020.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

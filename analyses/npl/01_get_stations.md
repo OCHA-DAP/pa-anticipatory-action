@@ -14,6 +14,8 @@ from bs4 import BeautifulSoup
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / 'public/exploration'
+DATA_DIR_PRIVATE = Path(os.environ["AA_DATA_DIR"]) / 'private'
+
 
 GLOFAS_STATION_FILE = DATA_DIR / 'glb/glofas/station_list.pdf'
 GLOFAS_STATION_OUTPUT = DATA_DIR / 'npl/glofas/npl_glofas_stations.gpkg'
@@ -34,6 +36,19 @@ DHM_STATION_FILENAME = GOV_DIR / 'npl_dhm_stations.gpkg'
 # Station list to share
 STATION_OUTPUT = GOV_DIR / 'station_list_glofas_final.xlsx'
 STATION_OUTPUT_YAML = GOV_DIR / 'station_list_glofas_final.yml'
+
+# From Ragindra
+RCO_DIR = DATA_DIR_PRIVATE / 'exploration/npl/unrco'
+BASINS_SHAPEFILE = RCO_DIR / 'shapefiles/Major_River_Basins.shp'
+
+# Final stations file
+STATIONS_FINAL = {
+    'glofas': DATA_DIR / 'npl/glofas/npl_glofas_stations_final.gpkg',
+    'dhm': GOV_DIR / 'npl_dhm_stations_final.gpkg'
+}
+
+# Coordinate system
+CRS = "EPSG:4326"
 ```
 
 ## Read in Nepal GloFAS stations
@@ -75,7 +90,7 @@ for i in range(2):
             table['lon'], table['lat']))
     table_list.append(table)
     
-df_glofas = pd.concat(table_list, ignore_index=True).set_crs("EPSG:4326")
+df_glofas = pd.concat(table_list, ignore_index=True).set_crs(CRS)
 # Fix a parsing error
 df_glofas = df_glofas.replace({'DCrHoMss': 'DHM'})
 
@@ -87,6 +102,7 @@ df_glofas.to_file(GLOFAS_STATION_OUTPUT, driver="GPKG", index=False)
 ## Scrape stations from government website
 
 ```python
+import time
 if SCRAPE_GOV_STATIONS:
 
     df_gov = gpd.GeoDataFrame(columns=['web_id', 'station_index', 'name', 'lat', 'lon'])
@@ -100,7 +116,7 @@ if SCRAPE_GOV_STATIONS:
     print('...done')
     
     station_elements = []
-    while len(stations) == 0:
+    while len(station_elements) == 0:
         print('Stations list empty, retrying')
         station_elements = browser.find_elements_by_class_name('basin-station')
         time.sleep(5)
@@ -108,7 +124,7 @@ if SCRAPE_GOV_STATIONS:
     for station in station_elements:
         # Navigate to link
         print(f'Going to station {station.text}')
-        url = element.get_attribute("href")
+        url = station.get_attribute("href")
         browser.get(url)    
         table = browser.find_elements_by_class_name("table")[0].text.split('\n')
         station_info = {
@@ -118,12 +134,13 @@ if SCRAPE_GOV_STATIONS:
             'lat': table[1].split(' ')[-1],
             'lon': table[2].split(' ')[-1],
         }
+        time.sleep(5)
         df_gov = df_gov.append(station_info, ignore_index=True)
     df_gov['geometry'] = gpd.points_from_xy(df_gov['lon'], df_gov['lat'])
     df_gov.to_file(GOV_STATION_FILENAME, driver="GPKG", index=False)
    
     # Get the basin - station relations
-    browser.get(BASE_URL)
+    browser.get(GOV_BASE_URL)
     e = browser.find_elements_by_class_name("FolderHierarchy")
     basin_station_list = e[0].text.split('\n')
     df_basin_station = pd.DataFrame({'name': basin_station_list})
@@ -132,8 +149,44 @@ if SCRAPE_GOV_STATIONS:
     browser.close()
     
 else:
-    df_gov = gpd.read_file(GOV_STATION_FILENAME)
+    df_gov = gpd.read_file(GOV_STATION_FILENAME, layer='npl_dhm_hydrology_stations')
     basin_station_list = pd.read_csv(GOV_BASIN_FILENAME, header=None)[0].to_list()
+```
+
+```python
+# Add the basins to df_gov
+
+basin_list = [
+    'Mahakali',
+    'Karnali',
+    'Babai',
+    'West Rapti',
+    'Narayani',
+    'Bagmati',
+    'Kamala',
+    'Koshi', 
+    'Kankai', 
+    'Biring'
+]
+basin_station_dict = {}
+active_basin = ''
+for station in basin_station_list:
+    if station in basin_list:
+        active_basin = station
+        basin_station_dict[active_basin] = []
+    else:
+        basin_station_dict[active_basin].append(station)
+
+def invert_dict(d): 
+    inverse = dict() 
+    for key in d: 
+        for item in d[key]:
+            inverse[item] = key
+    return inverse
+station_basin_dict = invert_dict(basin_station_dict)
+
+df_gov['basin'] = df_gov['name'].map(station_basin_dict)
+
 ```
 
 ### Count stations requested by partners
@@ -145,7 +198,7 @@ Ragindra suggested using all stations in the Koshi basin south of Chatara, and a
 df_koshi = df_gov[df_gov['basin'] == 'Koshi']
 n_koshi = len(df_koshi)
 # Get all south of Chautara
-max_lat = df_gov[df_gov['name'] == "Chautara"]['geometry'][0].y
+max_lat = df_gov[df_gov['name'] == "Chautara"]['geometry'].iloc[0].y
 df_koshi = df_koshi.cx[:, :max_lat]
 n_koshi_chautara = len(df_koshi)
 
@@ -185,7 +238,7 @@ for q in ['lat', 'lon']:
     df_dhm[q] = df_dhm[q].apply(dms2dd)
 df_dhm['geometry'] = gpd.points_from_xy(df_dhm['lon'], df_dhm['lat'])
 
-df_dhm = df_dhm.set_crs("EPSG:4326")
+df_dhm = df_dhm.set_crs(CRS)
 
 df_dhm.to_file(DHM_STATION_FILENAME, driver="GPKG", index=False)
 
@@ -218,19 +271,22 @@ df_dhm.loc[idx, 'geometry'] = df_dhm.loc[idx, 'geometry_dhm']
 df_dhm = gpd.GeoDataFrame(df_dhm, geometry=df_dhm['geometry'])
 ```
 
-## Use shapefile from gov website
+## Use shapefile from Ragindra
 
 ```python
-basin_list = ["koshi", "karnali"]
-
-gpd.io.file.fiona.drvsupport.supported_drivers['KML'] = 'rw'
-df_basins = gpd.read_file(GOV_BASIN_SHAPEFILE, driver='kml')
+basin_list = [
+    'koshi', 
+    'karnali', 
+    'west rapti', 
+    'babai', 
+    'bagmati'
+]
+df_basins = gpd.read_file(BASINS_SHAPEFILE)
 
 basin_shape_dict = {
-    basin : df_basins[df_basins['Name'] == f'{basin.capitalize()} Basin']['geometry'].iloc[0]
+    basin : df_basins[df_basins['Major_Basi'] == f'{basin.title()} River Basin']['geometry'].iloc[0]
     for basin in basin_list
 }
-
 ```
 
 ```python
@@ -247,7 +303,7 @@ with pd.ExcelWriter(STATION_OUTPUT) as writer:
 # Based on email exchange with Ragindra
 # Using GloFAS ID since two stations in Koshi have exactly the same name
 stations_final = {
-    'koshi': [4475, 4619, 4425],
+    'koshi': [4475, 4619, 4425, 4403],
     'karnali': [4385, 915, 4469, 4393],
     'rapti': [4456],
     'bagmati': [4399],
@@ -265,6 +321,26 @@ for basin in stations_final.values():
         
 with open(STATION_OUTPUT_YAML, 'w') as f:
     yaml.dump(stations_final_yaml, f)
+```
+
+### Create final points shapefile for making map visuals
+
+```python
+sheet_id = "1I3vszdCDDxFnlhieywY2C9MbU-0TmGVn"
+url = "https://docs.google.com/spreadsheets/d/{0}/gviz/tq?tqx=out:csv&sheet={1}"
+
+
+  
+for source in ['glofas', 'dhm']:
+    df_final = gpd.GeoDataFrame()
+    for sheet_name in ['Koshi', 'Karnali', 'West_Rapti', 'Bagmati', 'Babai']:
+        df = pd.read_csv(url.format(sheet_id, sheet_name)).dropna(subset=['name_glofas'])
+        df = gpd.GeoDataFrame(df[[f'name_{source}', f'lat_{source}', f'lon_{source}']])
+        df_final = df_final.append(df, ignore_index=True)
+    df_final['geometry'] = gpd.points_from_xy(df_final[f'lon_{source}'], df_final[f'lat_{source}'])
+    df_final = df_final.set_crs(CRS)
+    df_final.to_file(STATIONS_FINAL[source], driver="GPKG", index=False)
+
 ```
 
 # Appendix
@@ -301,8 +377,6 @@ match_dict = {
     'Rasnalu': 'KhimtiKhola at Rasnalu',
     'Chatara': 'Saptakoshi at Chatara (old)'
 }
-is_null = df_dhm['gov_name'] == ''
-df_dhm['gov_name'][is_null] = df_dhm['name'][is_null].map(match_dict)
 ```
 
 I give up, will find another way to get the basin
