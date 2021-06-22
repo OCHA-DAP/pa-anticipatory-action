@@ -94,6 +94,13 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 month_season_mapping={1:"NDJ",2:"DJF",3:"JFM",4:"FMA",5:"MAM",6:"AMJ",7:"MJJ",8:"JJA",9:"JAS",10:"ASO",11:"SON",12:"OND"}
 ```
 
+```{code-cell} ipython3
+hdx_red="#F2645A"
+hdx_blue="#66B0EC"
+hdx_green="#1EBFB3"
+grey_med="#CCCCCC"
+```
+
 ## Analyzing observed precipitation patterns
 Before we compare the forecasts and observations, we first have a look at the observational data to better understand the precipitation patterns in Burkina Faso. 
 
@@ -514,27 +521,101 @@ The forecasted and observed values don't show a great overlap for our threshold 
 One limitation of these numbers is the low statistical significance due to very limited data availability.   
 If we want to continue understanding the suitability of this trigger, we therefore might want to look for ideas on how we could make them statistically significant. One idea could be to do the analysis at the raster cell level instead of aggregating to the area of interst.
 
-+++ {"tags": ["remove_cell"]}
++++
 
-## Archive
+### Historical observed values
+Better understand the historical trend and which years had extreme below average rainfall
+
+```{code-cell} ipython3
+from scipy.interpolate import interp1d
+```
+
+```{code-cell} ipython3
+def get_return_period_function(df_stats_reg):
+    df_rp=df_stats_reg.sort_values(by="bavg_cell",ascending=False)
+    n=len(df_stats_reg)
+    #rank most extreme occurrences
+    df_rp['rank'] = np.arange(n) + 1
+    df_rp['exceedance_probability'] = df_rp['rank'] / (n+1)
+    #rp=return period
+    df_rp['rp'] = 1 / df_rp['exceedance_probability']
+    return interp1d(df_rp['rp'], df_rp['bavg_cell'])
+
+rp_dict = {}
+
+f_rp = get_return_period_function(df_stats_reg)#[df_stats_reg.rainy_seas==1])
+for year in [1.5, 2, 3, 4, 5, 10, 20]:
+    #round the percentages to multiples of 5 (not sure if this is too generalizing)
+    val = 5*np.round(f_rp(year) / 5)
+    rp_dict[year] = val
+```
+
+```{code-cell} ipython3
+#% of area bavg return periods
+rp_dict
+```
+
+```{code-cell} ipython3
+#average perc of occurrences reaching 5 rp
+len(df_stats_reg[df_stats_reg.bavg_cell>=rp_dict[5]])/len(df_stats_reg)
+```
+
+```{code-cell} ipython3
+#perc of occcurrences reaching 5rp since 2017
+len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)&(df_stats_reg.bavg_cell>=rp_dict[5])])/len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)])
+```
+
+```{code-cell} ipython3
+#perc of occcurrences reaching 5rp since 2017
+len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)&(df_stats_reg.bavg_cell>=rp_dict[3])])/len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)])
+```
+
+```{code-cell} ipython3
+df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
+df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
+df_stats_reg["rainy_seas"]=np.where((df_stats_reg.start_month.dt.month>=5)&(df_stats_reg.start_month.dt.month<=9),1,0)
+df_stats_reg=df_stats_reg.sort_values("start_month")
+df_stats_reg["rainy_seas_str"]=df_stats_reg["rainy_seas"].replace({0:"outside rainy season",1:"rainy season"})
+```
 
 ```{code-cell} ipython3
 :tags: [hide_input]
 
 #determine historically below average rainy seasons, observed data
-fig, ax = plt.subplots(figsize=(40,15))
-df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
-df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
-df_stats_reg["rainy_seas"]=np.where((df_stats_reg.start_month.dt.month>=5)&(df_stats_reg.end_month.dt.month<=11),1,0)
-df_stats_reg=df_stats_reg.sort_values("start_month")
-sns.barplot(x='seas_year', y='bavg_cell', data=df_stats_reg[df_stats_reg.start_month.dt.year>=2000], hue="rainy_seas",ax=ax)
+fig, ax = plt.subplots(figsize=(20,8))
+
+stats_byear=df_stats_reg[df_stats_reg.start_month.dt.year>=2017]
+
+# plt.bar(stats_byear["seas_year"],stats_byear["bavg_cell"])
+sns.barplot(x='seas_year', y='bavg_cell', data=stats_byear, hue="rainy_seas_str",ax=ax,palette={"outside rainy season":grey_med,"rainy season":hdx_blue})
 sns.despine(fig)
-x_dates = df_stats_reg[df_stats_reg.start_month.dt.year>=2000].seas_year.unique()
+x_dates = stats_byear.seas_year.unique()
+# x_dates=stats_byear.end_month.dt.year
 ax.set_xticklabels(labels=x_dates, rotation=45, ha='right');
-ax.set_ylabel("Percentage of area")
+ax.set_ylabel("Percentage of area",size=16)
+ax.set_xlabel("Season",size=16)
 ax.set_ylim(0,100)
-ax.set_title("Percentage of area meeting criteria for observed and forecasted below average precipitation");
+ax.set_title("Percentage of area with observed below average precipitation",size=20);
+ax.axhline(y=rp_dict[5], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
+ax.axhline(y=rp_dict[3], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
+plt.legend()
 ```
+
+Most drought-related CERF funding since 2006 was released in 2008, 2012, 2014, 2018. 
+We would expect the rainy season in that year or the year before to be bad, we can see that 2008, 2011, and 2017 were relatively worse seasons though definitely not as bad as was seen between 2000 and 2004. 
+Based on this a 1 in 3 year return period threshold, might be what we are looking for
+
+```{code-cell} ipython3
+df_stats_reg["year"]=df_stats_reg.end_month.dt.year
+g = sns.catplot(data=df_stats_reg[df_stats_reg.year>=2000], x="season",y="bavg_cell",col="year", hue="rainy_seas_str", col_wrap=4, kind="bar",
+                  palette={"outside rainy season":grey_med,"rainy season":hdx_blue}, height=4, aspect=2)
+g.map(plt.axhline, y=rp_dict[5], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
+g.map(plt.axhline,y=rp_dict[3], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
+```
+
++++ {"tags": ["remove_cell"]}
+
+## Archive
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
