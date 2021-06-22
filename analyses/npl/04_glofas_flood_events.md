@@ -200,7 +200,7 @@ for station in FINAL_STATIONS:
 
 ```python
 rp = 1.5
-leadtimes = [2, 1]
+leadtimes = [7, 3] # Longer first
 station = 'Chatara'
 forecast_prob = 50
 
@@ -267,16 +267,4 @@ leadtimes = [1, 3, 5, 7, 10]
 for station in ['Asaraghat', 'Chisapani']:
     df = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp) & (df_station_stats.leadtime.isin(leadtimes))]
     print(np.round(100 * (1-df['recall'])))
-```
-
-```python
-df_station_stats
-```
-
-```python
-
-```
-
-```python
-
 ```
