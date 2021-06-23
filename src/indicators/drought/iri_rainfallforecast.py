@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 import rasterio
 import xarray as xr
+import rioxarray
 
 from src.indicators.drought.config import Config
 from src.utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar

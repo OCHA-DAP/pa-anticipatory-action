@@ -125,14 +125,20 @@ Based on this confusion matrix and the other analyses, we conclude that the occu
 ![seasonal below average precipitation confusion matrix](`r paste0(plot_dir,'/seasonal/seasonal_below_average_confusionmatrix.png')`)
 
 #### Total seasonal precipitation
-As we saw dry spells are more extreme than below-average precipitaiton. Therefore, a better correlation might be found if we define a threshold ourselves of the maximum precipitation (in mm) instead. We investigated different thresholds and the ability to detect dry spells. By solely looking at the distribution, grouped by the occurence of a dry spell, we can see that 
+As we saw dry spells are more extreme than below-average precipitation. Therefore, another approach could be to set an absolute threshold of the maximum seasonal precipitation (in mm) ourselves. All seasons with less precipitation than that threshold would be identified as having a higher chance of a dry spell while those seasons with more precipitation would be cateogrized as having a lower chance for a dry spell.
 
-1) Seasons with a dry spell do on average have less seasonal precipitation, where almost all seasons with a dry spell didn't receive more than 800mms of rains. 
-2) Many seasons with no dry spell also have precipitation in the same range as those seasons with a dry spell. It will therefore be difficult to distinguish those. 
+We investigated different thresholds and the ability to classify dry spells based on these thresholds. The figure below shows the distribution of seasonal precipitation, grouped by the occurrence of a dry spell. From this figure we can see that
 
-This is confirmed by .. [Include graph showing %dry spells detected and % false alarms as threshold is increased]
+1) Seasons with a dry spell do on average have less seasonal precipitation than the seasons during which no dry spell occurred
+2) Nevertheless, many seasons with no dry spell also have precipitation in the same range as those seasons with a dry spell. 
+
+It will therefore be difficult to distinguish the seasons with and without a dry spell based on the total received seasonal precipitation. 
 
 ![seasonal total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_seasonal_precipitation_distribution.png')`)
+
+This is confirmed by the graph below, where we can see the percentage of seasons with and without a dry spell that would be correctly categorized based on the threshold. While the optimal threshold depends on the preferred trade-off for sensitivity vs selectivity, it can be seen that there is never a real good trade-off. The lines intersect at a threshold of 590 millimeter. 63% of the seasons with a dry spell received less than these 590 millimeters, but simeltaneously 59% of those seasons with no dry spell also received less than 590 millimeters of precipitation. It is important to note that the number of seasons with no dry spell is tremendously larger than those with a dry spell, and therefore there would be many false alarms (727 to be precise, versus 59 correctly classified seasons).
+
+![seasonal total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_seasonal_precipitation_threshold_categorized.png')`)
 
 #### Total monthly precipitation
 TODO: about same story as seasonal
