@@ -61,6 +61,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
+from src.utils_general.statistics import _get_return_period_function_analytical, _get_return_period_function_empirical
 ```
 
 ```{code-cell} ipython3
@@ -527,47 +528,79 @@ If we want to continue understanding the suitability of this trigger, we therefo
 Better understand the historical trend and which years had extreme below average rainfall
 
 ```{code-cell} ipython3
-from scipy.interpolate import interp1d
+def get_return_periods(
+    df: pd.DataFrame,
+    rp_var: str,
+    years: list = None,
+    method: str = "analytical",
+    show_plots: bool = False,
+) -> pd.DataFrame:
+    """
+    :param df: Dataframe with data to compute rp on
+    :param rp_var: column name to compute return period on
+    :param years: Return period years to compute
+    :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV distribution overlaid
+    :return: Dataframe with return period years as index and stations as columns
+    """
+    if years is None:
+        years = [1.5, 2, 3, 5]#, 10]#, 20]
+    df_rps = pd.DataFrame(columns=["rp"],index=years)
+    if method == "analytical":
+        f_rp = _get_return_period_function_analytical(
+            df_rp=df, rp_var=rp_var, show_plots=show_plots
+        )
+    elif method == "empirical":
+        f_rp = _get_return_period_function_empirical(
+            df_rp=df, rp_var=rp_var,
+        )
+    else:
+        logger.error(f"{method} is not a valid keyword for method")
+        return None
+    df_rps["rp"] = np.round(f_rp(years))
+    return df_rps
 ```
 
 ```{code-cell} ipython3
-def get_return_period_function(df_stats_reg):
-    df_rp=df_stats_reg.sort_values(by="bavg_cell",ascending=False)
-    n=len(df_stats_reg)
-    #rank most extreme occurrences
-    df_rp['rank'] = np.arange(n) + 1
-    df_rp['exceedance_probability'] = df_rp['rank'] / (n+1)
-    #rp=return period
-    df_rp['rp'] = 1 / df_rp['exceedance_probability']
-    return interp1d(df_rp['rp'], df_rp['bavg_cell'])
-
-rp_dict = {}
-
-f_rp = get_return_period_function(df_stats_reg)#[df_stats_reg.rainy_seas==1])
-for year in [1.5, 2, 3, 4, 5, 10, 20]:
-    #round the percentages to multiples of 5 (not sure if this is too generalizing)
-    val = 5*np.round(f_rp(year) / 5)
-    rp_dict[year] = val
+years = np.arange(1.5, 9, 0.5)
+df_rps_analytical = get_return_periods(df_stats_reg, rp_var="bavg_cell",years=years, method="analytical", show_plots=True)
 ```
 
 ```{code-cell} ipython3
-#% of area bavg return periods
-rp_dict
+years = np.arange(1.5, 20.5, 0.5)
+df_rps_empirical = get_return_periods(df_stats_reg, rp_var="bavg_cell",years=years, method="empirical")
+```
+
+The analytical method seems to assign too high values to lower return periods. This might be due to the long tail distribution, which might cause difficulty for the GEV fitting. 
+Since the empirical is looking good, using that one for now. 
+
+```{code-cell} ipython3
+fig, ax = plt.subplots()
+ax.plot(df_rps_empirical.index, df_rps_empirical["rp"], label='empirical')
+ax.plot(df_rps_analytical.index, df_rps_analytical["rp"], label='analytical')
+ax.legend()
+ax.set_xlabel('Return period [years]')
+ax.set_ylabel('% below average')
+```
+
+```{code-cell} ipython3
+#round to multiples of 5
+df_rps_empirical["rp_round"]=5*np.round(df_rps_empirical["rp"] / 5)
 ```
 
 ```{code-cell} ipython3
 #average perc of occurrences reaching 5 rp
-len(df_stats_reg[df_stats_reg.bavg_cell>=rp_dict[5]])/len(df_stats_reg)
+len(df_stats_reg[df_stats_reg.bavg_cell>=df_rps_empirical.loc[5,"rp_round"]])/len(df_stats_reg)
 ```
 
 ```{code-cell} ipython3
 #perc of occcurrences reaching 5rp since 2017
-len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)&(df_stats_reg.bavg_cell>=rp_dict[5])])/len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)])
+len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)&(df_stats_reg.bavg_cell>=df_rps_empirical.loc[5,"rp_round"])])/len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)])
 ```
 
 ```{code-cell} ipython3
 #perc of occcurrences reaching 5rp since 2017
-len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)&(df_stats_reg.bavg_cell>=rp_dict[3])])/len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)])
+len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)&(df_stats_reg.bavg_cell>=df_rps_empirical.loc[3,"rp_round"])])/len(df_stats_reg[(df_stats_reg.start_month.dt.year>=2017)])
 ```
 
 ```{code-cell} ipython3
@@ -596,8 +629,8 @@ ax.set_ylabel("Percentage of area",size=16)
 ax.set_xlabel("Season",size=16)
 ax.set_ylim(0,100)
 ax.set_title("Percentage of area with observed below average precipitation",size=20);
-ax.axhline(y=rp_dict[5], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
-ax.axhline(y=rp_dict[3], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
+ax.axhline(y=df_rps_empirical.loc[5,"rp_round"], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
+ax.axhline(y=df_rps_empirical.loc[3,"rp_round"], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
 plt.legend()
 ```
 
@@ -609,8 +642,8 @@ Based on this a 1 in 3 year return period threshold, might be what we are lookin
 df_stats_reg["year"]=df_stats_reg.end_month.dt.year
 g = sns.catplot(data=df_stats_reg[df_stats_reg.year>=2000], x="season",y="bavg_cell",col="year", hue="rainy_seas_str", col_wrap=4, kind="bar",
                   palette={"outside rainy season":grey_med,"rainy season":hdx_blue}, height=4, aspect=2)
-g.map(plt.axhline, y=rp_dict[5], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
-g.map(plt.axhline,y=rp_dict[3], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
+g.map(plt.axhline, y=df_rps_empirical.loc[5,"rp_round"], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
+g.map(plt.axhline,y=df_rps_empirical.loc[3,"rp_round"], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
 ```
 
 +++ {"tags": ["remove_cell"]}
