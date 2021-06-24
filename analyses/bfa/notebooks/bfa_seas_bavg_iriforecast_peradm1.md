@@ -14,6 +14,8 @@ kernelspec:
 ---
 
 # IRI forecast as a trigger for drought in Burkina Faso - per ADMIN1
+### Note: while this was an experiment, we decided for the trigger to not go down to admin1 level, since this is meteorologically unsound. Seasonal forecasts are designed to analyze patterns at larger spatial scales and have a high geographical uncertainty. 
+
 This notebook explores the option of using IRI's seasonal forecast as the indicator for a drought-related trigger in Burkina Faso. 
 From the country team the proposed trigger is:
 - Trigger #1 in March covering June-July-August. Threshold desired: 40%.
@@ -284,7 +286,7 @@ glue("num_for_dates", num_for_dates)
 
 Below the distribution of probability values is shown per admin area. \
 This only includes the values for the below-average tercile, with a leadtime of {glue:text}`leadtime_mar` and {glue:text}`leadtime_jul`. \
-Since we have data from Mar 2017, each distribution contains {glue:text}`num_for_dates` datapoints. 
+Since we have data from Mar 2017, each distribution contains {glue:text}`num_for_dates` datapoints.
 
 ```{code-cell} ipython3
 :tags: [hide_input]
@@ -412,7 +414,7 @@ g=sns.displot(stats_per_adm_bavg.loc[stats_per_adm_bavg["40percth_cell"]>=1,"40p
 
 +++
 
-Below we examine the 10 percentile boundary across admins, publication months, and leadtimes. We can see small differences. However, it is really hard to quantify these differences because of the limited data. It seems some conditions give a bit more probability of the 10 percentile boundary being >=40% but this is hard to judge properly. 
+Below we examine the 10 percentile boundary across admins, publication months, and leadtimes. We can see small differences. However, it is really hard to quantify these differences because of the limited data. It seems some conditions give a bit more probability of the 10 percentile boundary being >=40% but this is hard to judge properly.
 
 ```{code-cell} ipython3
 :tags: [hide_input]
