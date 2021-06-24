@@ -164,7 +164,7 @@ df_fs_bar <- ggplot(df_fs_month)+
   # facet_wrap(~ADM1_EN,ncol = 3)+
   facet_grid(rows=vars(ADM1_EN))+
   theme_bw()+
-  labs(x='Date', y='Precipitation anomaly (mm)')+
+  labs(x='Date', y='Mean flooded fraction (%)')+
   theme(legend.position = 'bottom',
         axis.text.y = element_text(size=10),
         axis.text.x = element_text(angle=90),

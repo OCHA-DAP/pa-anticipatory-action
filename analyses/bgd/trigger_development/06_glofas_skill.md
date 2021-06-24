@@ -283,8 +283,6 @@ for version in [2,3]:
             })
         df_bias[version] = df_bias[version].append([
                                append_dict], ignore_index=True)
-        
-
     
 ```
 
