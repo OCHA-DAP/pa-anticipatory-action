@@ -38,6 +38,7 @@ GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 
 COUNTRY_ISO3 = 'npl'
 DURATION = 1
+MAIN_RP = 2
 
 STATIONS = [
     'Chatara',
@@ -47,6 +48,7 @@ STATIONS = [
 LEVEL_TYPES = ['warning', 'danger']
 RP_LIST = [1.5, 2, 5]
 WL_DAYS = [1, 2, 3, 4, 5] # How many days earlier the warning level is reached
+LEADTIMES = [x+1 for x in range(10)]
 ```
 
 ```python
@@ -56,6 +58,13 @@ df_wl = pd.read_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index_col='date')
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
+
+ds_glofas_reforecast = utils.get_glofas_reforecast(
+    country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
+    interp=True
+)
+ds_glofas_forecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
+
 df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 
 ```
@@ -78,6 +87,18 @@ for station in STATIONS:
            )
     # Fill in the gaps so that the group finding works
     data = data.reindex(pd.date_range(data.index.min(), data.index.max()))
+    # Add in the forecast data
+    for leadtime in LEADTIMES:
+        forecast = (ds_glofas_forecast_summary[station]
+                    .sel(leadtime=leadtime, percentile=50)
+                    .to_dataframe()
+                    .drop(columns=['surface', 'leadtime', 'percentile']))
+        data = (pd.merge(data, forecast,
+                        how='left',
+                        left_index=True,
+                        right_index=True,
+                        )
+               .rename(columns={station: f"forecast_{leadtime}"}))
     # Get the water level events
     for level_type in LEVEL_TYPES:
         level_val = df_station_info.at[station, f'{level_type}_level']
@@ -95,7 +116,7 @@ for station in STATIONS:
     # Get water at warning level n days previously events
     # Only do 2 year RP for now
     for wl_day in WL_DAYS:
-        rp = 2
+        rp = MAIN_RP
         rp_val = df_return_period.loc[rp, station]
         condition = data.shift(wl_day)['water_level'] >  df_station_info.at[station, f'warning_level']
         events = utils.get_groups_above_threshold(data['river_discharge'], rp_val, min_duration=DURATION,
@@ -103,15 +124,52 @@ for station in STATIONS:
         event_start_indices = [event[0] for event in events]
         data[f"event_rp{rp}_wl{wl_day}"] = False
         data[f"event_rp{rp}_wl{wl_day}"].iloc[event_start_indices] = True
-
+    # Get forecast events
+    for leadtime in LEADTIMES:
+        rp = MAIN_RP
+        events = utils.get_groups_above_threshold(data[f'forecast_{leadtime}'], rp_val, min_duration=DURATION)
+        event_start_indices = [event[0] for event in events]
+        data[f"event_forecast{leadtime}"] = False
+        data[f"event_forecast{leadtime}"].iloc[event_start_indices] = True
     df_station_dict[station] = data
+data
+```
+
+```python
+
+```
+
+```python
+import xarray as xr
+def get_da_glofas_summary(ds_glofas_reforecast):
+    da_glofas = ds_glofas_reforecast
+    percentiles =  np.arange(0, 105, 5)
+    coord_names = ["percentile", "leadtime", "time"]
+    data_vars_dict = {
+        station: (coord_names, np.percentile(ds_glofas_reforecast[station], percentiles, axis=1))
+        for station in ds_glofas_reforecast.keys()
+    }
+    x = np.percentile(ds_glofas_reforecast[station], percentiles, axis=1)
+    return xr.Dataset(
+        data_vars=data_vars_dict,
+        coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime, percentile=percentiles),
+    )
+
+summary = get_da_glofas_summary(ds_glofas_reforecast)
+
+```
+
+```python
+# Plot river dischage against WL
+for station in STATIONS:    
+    data = df_station_dict[station]
     fig, ax = plt.subplots()
     ax.plot(data.water_level, data.river_discharge, '.')
     idx = data['event_warning'] == True
     ax.plot(data.water_level[idx], data.river_discharge[idx], 'xr')
 ```
 
-## Compare events
+### Compare water danger level events to GloFAS RP exceedanc
 
 Want to check how many years with events for a given level type or RP
 to make sure we're comparing similar types of events
@@ -137,7 +195,7 @@ For chisapani, warning level is closer to 1 in 2 year (probably more like 1 in 3
 
 ```python
 # Settle on RP and level type
-rp = 2
+rp = MAIN_RP
 event_level_type = 'danger'
 ```
 
@@ -228,6 +286,9 @@ for station in STATIONS:
 
 ### Check difference when using additional warning level condition
 
+To reduce FPs we add the condition that the water level has to be at the warning level
+N days prior, and check the results for various N
+
 ```python
 for istation, station in enumerate(STATIONS):
     qs = ['TP', 'FP', 'FN']
@@ -270,6 +331,8 @@ for station, df_station in df_station_dict.items():
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_ylabel('Number of events')
 ```
+
+## Compare to forecast
 
 ```python
 

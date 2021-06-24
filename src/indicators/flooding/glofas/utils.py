@@ -108,6 +108,26 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
     )
 
 
+def get_glofas_forecast_summary(ds_glofas_forecast):
+    percentiles = np.arange(0, 105, 5)
+    coord_names = ["percentile", "leadtime", "time"]
+    data_vars_dict = {
+        station: (
+            coord_names,
+            np.percentile(ds_glofas_forecast[station], percentiles, axis=1),
+        )
+        for station in ds_glofas_forecast.keys()
+    }
+    return xr.Dataset(
+        data_vars=data_vars_dict,
+        coords=dict(
+            time=ds_glofas_forecast.time,
+            leadtime=ds_glofas_forecast.leadtime,
+            percentile=percentiles,
+        ),
+    )
+
+
 def get_return_periods(ds_reanalysis: xr.Dataset, years=None) -> pd.DataFrame:
     if years is None:
         years = [1.5, 2, 5, 10, 20]
@@ -199,9 +219,7 @@ def get_groups_above_threshold(
     condition = observations >= threshold
     if additional_condition is not None:
         condition = condition & additional_condition
-    groups = np.where(np.diff(condition, prepend=False, append=False))[
-        0
-    ].reshape(-1, 2)
+    groups = np.where(np.diff(condition, prepend=False, append=False))[0].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
