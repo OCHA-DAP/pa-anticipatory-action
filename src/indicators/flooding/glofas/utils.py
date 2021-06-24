@@ -4,13 +4,11 @@ import logging
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.interpolate import interp1d
-from scipy.stats import genextreme as gev
 from scipy.stats import rankdata
 import xskillscore as xs
-import matplotlib.pyplot as plt
 
 from src.indicators.flooding.glofas import glofas
+from src.utils_general.statistics import _get_return_period_function_analytical, _get_return_period_function_empirical
 
 
 logger = logging.getLogger(__name__)
@@ -108,7 +106,6 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
         .rename({"step": "leadtime"})
     )
 
-
 def get_return_periods(
     ds_reanalysis: xr.Dataset,
     years: list = None,
@@ -127,49 +124,20 @@ def get_return_periods(
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
+        df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
         if method == "analytical":
             f_rp = _get_return_period_function_analytical(
-                ds_reanalysis=ds_reanalysis, station=station, show_plots=show_plots
+                df_rp=df_rp, rp_var="discharge", show_plots=show_plots, plot_title=station
             )
         elif method == "empirical":
             f_rp = _get_return_period_function_empirical(
-                ds_reanalysis=ds_reanalysis, station=station
+                df_rp=df_rp, rp_var="discharge",
             )
         else:
             logger.error(f"{method} is not a valid keyword for method")
             return None
         df_rps[station] = np.round(f_rp(years))
     return df_rps
-
-
-def _get_return_period_function_analytical(
-    ds_reanalysis: xr.Dataset, station: str, show_plots: bool
-):
-    df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
-    discharge = df_rp["discharge"]
-    shape, loc, scale = gev.fit(
-        discharge, loc=discharge.median(), scale=discharge.median() / 2
-    )
-    x = np.linspace(discharge.min(), discharge.max(), 100)
-    if show_plots:
-        fig, ax = plt.subplots()
-        ax.hist(discharge, density=True, bins=20)
-        ax.plot(x, gev.pdf(x, shape, loc, scale))
-        ax.set_title(station)
-        plt.show()
-    y = gev.cdf(x, shape, loc, scale)
-    y = 1 / (1 - y)
-    return interp1d(y, x)
-
-
-def _get_return_period_function_empirical(ds_reanalysis: xr.Dataset, station: str):
-    df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
-    n = len(df_rp)
-    df_rp["rank"] = np.arange(n) + 1
-    df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
-    df_rp["rp"] = 1 / df_rp["exceedance_probability"]
-    return interp1d(df_rp["rp"], df_rp["discharge"])
-
 
 def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     df_rp = (
