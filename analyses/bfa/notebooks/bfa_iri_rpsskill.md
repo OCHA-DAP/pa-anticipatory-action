@@ -36,7 +36,7 @@ import rioxarray
 from shapely.geometry import mapping
 import numpy as np
 
-path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[0]}/"
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.utils_general.plotting import plot_raster_boundaries_clip
@@ -93,29 +93,48 @@ ds_clipped
 ```python
 #create bins for plotting
 bins_clipped=np.linspace(ds_clipped["RPSS"].min(),ds_clipped["RPSS"].max(),10)
+bins_iri=[-1,0,0.1,0.2,0.3,0.4,0.5,0.6,1]
+colors_iri=["#ebebeb","#feeda3","#d4e19a","#a3d384","#6dc66f","#3ca153","#214a94","#4d1264"]
 #season mapping for plot titles
 seasons={1:"JFM",2:"FMA",3:"MAM",4:"AMJ",5:"MJJ",6:"JJA",7:"JAS",8:"ASO",9:"SON",10:"OND",11:"NDJ",12:"DJF"}
 ```
 
 ```python
-#plot for specific months of interest
+#plot selection of months and leadtimes with IRI colors
+#months to be plotted
 start_months=[6,8]
-for l in ds_clipped.leadtime.values:
+adm_sel=["Boucle du Mouhoun","Nord","Centre-Nord","Sahel"]
+gdf_adm1=gpd.read_file(adm1_bound_path)
+gdf_reg=gdf_adm1[gdf_adm1.ADM1_FR.isin(adm_sel)]
+for l in [1,3]:#ds_clipped.leadtime.values:
     start_months_lt=[m-l for m in start_months]
     ds_sel=ds_clipped.sel(leadtime=l,T=ds_clipped.T.dt.month.isin(start_months_lt))
-    ds_list_sel=[ds_sel.sel(T=m) for m in ds_sel["T"]]
     list_seasons=[(m+l)%12 if (m+l)%12!=0 else 12 for m in ds_sel["T"].dt.month.values]
     title_list_clipped=[f'{seasons[s]} (issued in {m})' for s,m in zip(list_seasons,ds_sel["T"].dt.strftime("%b").values)]
-    fig_clip = plot_raster_boundaries_clip(ds_list_sel, 
-                                       adm1_bound_path, 
-                                       figsize=(20,3),
-                                       title_list=title_list_clipped, 
-                                       forec_val="RPSS", 
-                                       colp_num=4,
-                                       clipped=False,
-                                       predef_bins=bins_clipped,
-                                       cmap="YlOrRd",
-                                       suptitle=f"Leadtime = {l} months")
+    g=ds_sel.RPSS.plot(
+        col="T",
+    #     row="leadtime",
+        col_wrap=5,
+        levels=bins_iri,
+        colors=colors_iri,
+        cbar_kwargs={
+            "orientation": "horizontal",
+            "shrink": 0.8,
+            "aspect": 40,
+            "pad": 0.1,
+            'ticks': bins_iri,
+        },
+        figsize=(25,7)
+    )
+    df_bound = gpd.read_file(adm1_bound_path)
+    for ax,t in zip(g.axes.flat,title_list_clipped):
+        df_bound.boundary.plot(linewidth=1, ax=ax, color="grey")
+        gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
+        ax.axis("off")
+        ax.set_title(t)
+
+    g.fig.suptitle(f"Leadtime = {l} months")
+
 ```
 
 ```python
@@ -147,4 +166,26 @@ for l in ds_clipped.leadtime.values:
 # ds_list=[comb_lt.sel(T=m) for m in comb_lt["T"]]
 # bins=np.arange(comb_lt['RPSS'].min(),comb_lt['RPSS'].max(),0.05)
 # fig_clip = plot_raster_boundaries_clip(ds_list, adm1_bound_path, figsize=(20,30),title_list=comb_lt["T"].values, forec_val="RPSS", colp_num=2,clipped=False,predef_bins=bins)
+```
+
+```python
+# #plot with cmap instead of iri colors
+# #plot for specific months of interest
+# start_months=[6,8]
+# for l in [1,3]:#ds_clipped.leadtime.values:
+#     start_months_lt=[m-l for m in start_months]
+#     ds_sel=ds_clipped.sel(leadtime=l,T=ds_clipped.T.dt.month.isin(start_months_lt))
+#     ds_list_sel=[ds_sel.sel(T=m) for m in ds_sel["T"]]
+#     list_seasons=[(m+l)%12 if (m+l)%12!=0 else 12 for m in ds_sel["T"].dt.month.values]
+#     title_list_clipped=[f'{seasons[s]} (issued in {m})' for s,m in zip(list_seasons,ds_sel["T"].dt.strftime("%b").values)]
+#     fig_clip = plot_raster_boundaries_clip(ds_list_sel, 
+#                                        adm1_bound_path, 
+#                                        figsize=(20,5),
+#                                        title_list=title_list_clipped, 
+#                                        forec_val="RPSS", 
+#                                        colp_num=4,
+#                                        clipped=False,
+#                                        predef_bins=bins_clipped,
+#                                        cmap="YlOrRd",
+#                                        suptitle=f"Leadtime = {l} months")
 ```
