@@ -19,23 +19,16 @@ This notebook explores the correlation of observed dry spells and the 15-day for
 
 
 The observed dry spells are computed in the R script `malawi/scripts/mwi_chirps_dry_spell_detection.R`. That script uses different methodologies to define a dry spell. This notebook assumes one is chosen, which is indicated by the filename of `dry_spells_list_path`
-The CHIRPS-GEFS data is downloaded from [here](https://data.chc.ucsb.edu/products/EWX/data/forecasts/CHIRPS-GEFS_precip_v12/15day/Africa/precip_mean/) and processed in notebook `mwi_chirps_gefs.ipynb`. This notebook returns several statistics per ADMIN2 per forecast date from 2000 till 2020. 
+The CHIRPS-GEFS data is downloaded and processed in `src/indicators/drought/chirpsgefs_rainfallforecast.py` 
 
-The format CHIRPS-GEFS is produced is the 15 cumulative sum per raster cell. We take the mean of all the values within each admin2 in the `mwi_chirps_gefs.ipynb`. In this notebook several thresholds for this mean value are tested, as sometimes forecasts have the tendency to overestimate precipitation.
+The format CHIRPS-GEFS is produced is the 15 cumulative sum per raster cell. Several statistics per admin region are computed. 
+
+We focus on the mean value per admin area. In this notebook several thresholds for this mean value are tested, as 1) sometimes forecasts have the tendency to overestimate precipitation and 2) the forecast predicts for 15 days while a dry spell only covers 14 days. .
 
 We are mainly focussing on the overlap between observed dry spell and forecasted dry spell. From the analysis you can see that this performance is already pretty bad. We shortly also explore a more strict definition where the start date of the observed dry spell has to be forecasted, but as could be expected this performance is even worse. 
 
-Questions
-- Is the processing of the data correct?
-- Is any analysis missing?
-- Is there a better way to visualize the results?
-    - For the presentation I am planning to use the density polot of observations vs chirps-gefs, the heatmap, and some table showing precision/recall
-
 Data limitations
 - No CHIRPS-GEFS data is available from 01-01-2020 till 05-10-2020
-
-Thoughts
-- dry spell is at least 14 days while forecast 15 day cumulative sum --> might occur that 15 day sum is larger, but well from this analysis we see that even with higher threshold it is bad..
 <!-- #endregion -->
 
 ```python
@@ -83,7 +76,7 @@ chirpsgefs_processed_dir=os.path.join(country_data_processed_dir,"chirpsgefs")
 
 #we have different methodologies of computing dryspells and rainy season
 #this notebook chooses one, which is indicated by the files being used
-chirpsgefs_stats_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
+chirpsgefs_stats_path=os.path.join(country_data_processed_dir,"chirpsgefs","mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
 rainy_season_path = os.path.join(dry_spells_processed_dir, "rainy_seasons_detail_2000_2020_mean_back.csv")
 chirps_rolling_sum_path=os.path.join(dry_spells_processed_dir,"data_mean_values_long.csv")
 
@@ -94,6 +87,10 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 ds_meth="mean_2mm"
 # ds_meth="consecutive_days_2mm"
 # ds_meth="consecutive_days_4mm"
+```
+
+```python
+adm_col="ADM2_EN"
 ```
 
 ```python
@@ -110,10 +107,15 @@ elif ds_meth=="consecutive_days_4mm":
 #### Load CHIRPS-GEFS data
 
 ```python
-all_files=glob.glob(os.path.join(chirpsgefs_processed_dir, "mwi_chirpsgefs_stats_*.csv"))
+all_files=glob.glob(os.path.join(chirpsgefs_processed_dir, "mwi_chirpsgefs_stats_adm2_15days_*.csv"))
 ```
 
 ```python
+# df = pd.concat(map(pd.read_csv, all_files), ignore_index=True)
+# df["date"]=pd.to_datetime(df["date"])
+```
+
+```python tags=[]
 #combine files of all dates into one
 #takes a minute
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
@@ -121,6 +123,10 @@ df_chirpsgefs_all = pd.concat(df_from_each_file, ignore_index=True)
 ```
 
 ```python
+df_chirpsgefs_all
+```
+
+```python tags=[]
 #filter out dates that are outside the rainy season for each admin
 onset_col="onset_date"
 cessation_col="cessation_date"
@@ -130,8 +136,8 @@ df_rain = pd.read_csv(rainy_season_path, parse_dates=[onset_col, cessation_col])
  #remove entries where there is no onset and no cessation date, i.e. no rainy season
 df_rain=df_rain[(df_rain.onset_date.notnull())|(df_rain.cessation_date.notnull())]
 #if onset date or cessation date is missing, set it to Nov 1/Jul1 to make sure all data of that year is downloaded. This happens if e.g. the rainy season hasn't ended yet
-df_rain[df_rain.onset_date.isnull()]=df_rain[df_rain.onset_date.isnull()].assign(onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-11-01"))
-df_rain[df_rain.cessation_date.isnull()]=df_rain[df_rain.cessation_date.isnull()].assign(cessation_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]+1}-07-01"))
+df_rain.loc[df_rain.onset_date.isnull()]=df_rain[df_rain[onset_col].isnull()].assign(onset_date=lambda x: pd.to_datetime(f"{x.season_approx.values[0]}-11-01"))
+df_rain.loc[df_rain.cessation_date.isnull()]=df_rain[df_rain[cessation_col].isnull()].assign(cessation_date=lambda x: pd.to_datetime(f"{x.season_approx.values[0]+1}-07-01"))
 
 df_rain_adm = df_rain.groupby([rainy_adm_col, "season_approx"], as_index=False).agg({onset_col: np.min, cessation_col: np.max})
     
@@ -143,7 +149,7 @@ for a in df_chirpsgefs_all[adm_col].unique():
         df_rain_seladm_seas = df_rain_seladm[df_rain_seladm.season_approx == i]
         seas_range = pd.date_range(df_rain_seladm_seas.onset_date.values[0],df_rain_seladm_seas.cessation_date.values[0])
         dates_adm = dates_adm.union(seas_range)
-    list_hist_rain_adm.append(df_chirpsgefs[(df_chirpsgefs_all[adm_col] == a) & (df_chirpsgefs_all.date.isin(dates_adm))])
+    list_hist_rain_adm.append(df_chirpsgefs_all[(df_chirpsgefs_all[adm_col] == a) & (df_chirpsgefs_all.date.isin(dates_adm))])
 df_chirpsgefs = pd.concat(list_hist_rain_adm)
 ```
 
@@ -165,10 +171,6 @@ df_chirpsgefs[(df_chirpsgefs.date=="2019-01-01")&(df_chirpsgefs.ADM2_EN=="Balaka
 
 ```python
 len(df_chirpsgefs)
-```
-
-```python
-df_chirpsgefs.tail()
 ```
 
 ```python
@@ -215,8 +217,7 @@ for i, s in enumerate(cg_stats):
 ```
 
 ### Understand performance CHIRPS-GEFS
-Question: 
-- date reported of the rolling sum is the last day of the 15 days, so the start date should be -14 days, right?
+Compare values with those of CHIRPS observational data
 
 ```python
 df_bound_adm2=gpd.read_file(adm2_bound_path)
@@ -224,7 +225,7 @@ df_bound_adm2=gpd.read_file(adm2_bound_path)
 
 ```python
 #read historically observed 15 day rolling sum for all dates (so not only those with dry spells), derived from CHIRPS
-#this sometimes gives a not permitted error --> move the chirps_rolling_sum_path file out of the folder and back in to get it to work (dont ask me why)
+#this sometimes gives a not permitted error --> move the chirps_rolling_sum_path file out of the folder and back in to get it to work (don't know why)
 df_histobs=pd.read_csv(chirps_rolling_sum_path)
 df_histobs.date=pd.to_datetime(df_histobs.date)
 
@@ -286,7 +287,7 @@ g.ax_joint.legend()
 ```
 
 ```python
-#plot the observed vs forecast-observed for obs<=2mm
+#plot the observed vs forecast-observed for obs<=30mm
 df_sel=df_histformerg[df_histformerg.rollsum_15d<=30].sort_values("rollsum_15d")
 g=sns.jointplot(data=df_sel,y="diff_forecobs",x="rollsum_15d", kind="hex",height=16,joint_kws={ 'bins':'log'})
 #compute the average value of the difference between the forecasted and observed values
@@ -306,6 +307,7 @@ g.ax_joint.legend()
 ```
 
 ```python
+# #plot values per month
 # # is ugly, lots of space, so comment out
 # #however, couldnt find a better way cause jointplot is a facetgrid itself so becomes messy
 
@@ -315,17 +317,9 @@ g.ax_joint.legend()
 ```
 
 ```python
-df_histformerg
-```
-
-```python
-# #look at values per adm1
+# #plot values per adm1
 # g = sns.FacetGrid(df_histformerg, col="ADM1_PCODE")
 # g.map(sns.jointplot, "rollsum_15d","diff_forecobs",kind="hex",height=10,joint_kws={ 'bins':'log'})
-```
-
-```python
-len(df_histformerg)
 ```
 
 ```python
@@ -335,15 +329,6 @@ len(df_histformerg[df_histformerg.rollsum_15d<=2])
 ```python
 #decently close number of occurences of below 2mm of obs and forecasted, but apparently not at the same times..
 len(df_histformerg[df_histformerg.mean_cell<=2])
-```
-
-```python
-#TODO
-# #hehh would expect to not have any with during_rainy_season_bin=0?
-# #using old definition of rainy season in current rolling sum file --> update and check again (cause rainy season should only become stricter so still strange). 
-# #Could also be that end date is outside rainy season but start date isnt..
-# df_histformerg.groupby("during_rainy_season_bin").count()
-# df_histformerg[df_histformerg.during_rainy_season_bin==0]
 ```
 
 #### Load observed dry spells
@@ -378,15 +363,6 @@ sns.histplot(df_ds,x="dry_spell_duration")
 ```
 
 ```python
-#get a feeling for where the dry spells occured
-df_ds_adm2=df_ds.groupby(["ADM2_EN"],as_index=False).count()
-df_bound_adm2=gpd.read_file(adm2_bound_path)
-gdf_ds_adm2=df_bound_adm2.merge(df_ds_adm2,how="left")
-fig=plot_spatial_columns(gdf_ds_adm2, ["pcode"], title="Number of dry spells", predef_bins=None,cmap='YlOrRd',colp_num=1)
-
-```
-
-```python
 #check correlation with size of area and number of dry spells
 g=sns.regplot(data=gdf_ds_adm2,y="pcode",x="Shape_Area",scatter_kws = {'alpha' : 1/3},fit_reg=False)
 ax=g.axes
@@ -412,6 +388,8 @@ df_ds_daterange=df_ds_res[["ADM2_EN","ID_obs"]].join(pd.DataFrame(a)).set_index(
 df_ds_daterange.rename(columns={0:"date"},inplace=True)
 #all dates in this dataframe had an observed dry spell, so add that information
 df_ds_daterange["dryspell_obs"]=1
+#due to definition can have overlapping dry spells
+df_ds_daterange.drop_duplicates("date",inplace=True)
 ```
 
 ```python
@@ -476,10 +454,6 @@ for i, s in enumerate(cg_stats):
     ax.set_title(s)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-```
-
-```python
-
 ```
 
 ```python
@@ -657,7 +631,7 @@ df_obsid["days_late"]=(df_obsid.start_date_forec-df_obsid.start_date_obs).dt.day
 ```
 
 ```python
-df_obsid.sort_values("start_date_obs")
+df_obsid.sort_values("start_date_obs").head()
 ```
 
 ```python
@@ -881,12 +855,13 @@ df_dates_viz_filled=df_dates_viz_filled[df_dates_viz_filled.date.dt.year<=2020]
 Of CHIRPS-GEFS for dates where an observed dry spell started --> goal to better understand the patterns at those dates and if there would be a better way of aggregation. Conclusion that there doesnt seem to be a consistent pattern :( 
 
 ```python
-chirpsgefs_dir = os.path.join(config.DROUGHTDATA_DIR,"chirps_gefs")
+chirpsgefs_ras_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"chirpsgefs")
 #load the raster data
 ds_list=[]
 for d in df_ds.dry_spell_first_date.unique():
     d_str=pd.to_datetime(d).strftime("%Y%m%d")
-    filename=f"chirpsgefs_africa_{d_str}.tif"
+    filename=f"chirpsgefs_africa_15days_{d_str}.tif"
+    print(filename)
     try:
         rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
         rds=rds.assign_coords({"time":pd.to_datetime(d)})
@@ -898,10 +873,6 @@ for d in df_ds.dry_spell_first_date.unique():
 ds_drys=xr.concat(ds_list,dim="time")
 
 ds_drys=ds_drys.sortby("time")
-```
-
-```python
-# ds_list[0]
 ```
 
 ```python
@@ -1012,6 +983,7 @@ for i,a in enumerate(df_numadm1.ADM1_EN.unique()):
 ```
 
 ### 5 day forecast
+Quick test to see if the 5 day instead of 15 day forecast gives better performance
 
 ```python
 chirpsgefs_5day_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back_adm2_5day.csv")
