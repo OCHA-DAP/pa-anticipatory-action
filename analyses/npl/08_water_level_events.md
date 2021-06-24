@@ -14,11 +14,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
+import matplotlib.gridspec as gridspec
+
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
 
-from src.indicators.flooding.glofas import utils, glofas
+from src.indicators.flooding.glofas import utils
 reload(utils)
 
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -136,30 +138,6 @@ data
 ```
 
 ```python
-
-```
-
-```python
-import xarray as xr
-def get_da_glofas_summary(ds_glofas_reforecast):
-    da_glofas = ds_glofas_reforecast
-    percentiles =  np.arange(0, 105, 5)
-    coord_names = ["percentile", "leadtime", "time"]
-    data_vars_dict = {
-        station: (coord_names, np.percentile(ds_glofas_reforecast[station], percentiles, axis=1))
-        for station in ds_glofas_reforecast.keys()
-    }
-    x = np.percentile(ds_glofas_reforecast[station], percentiles, axis=1)
-    return xr.Dataset(
-        data_vars=data_vars_dict,
-        coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime, percentile=percentiles),
-    )
-
-summary = get_da_glofas_summary(ds_glofas_reforecast)
-
-```
-
-```python
 # Plot river dischage against WL
 for station in STATIONS:    
     data = df_station_dict[station]
@@ -194,20 +172,19 @@ For Chatara, it seems that warning level corresponds to 1 in 1.5 year, and dange
 For chisapani, warning level is closer to 1 in 2 year (probably more like 1 in 3 year) and danger level to 1 in 5 year. 
 
 ```python
+
 # Settle on RP and level type
 rp = MAIN_RP
 event_level_type = 'danger'
-```
 
-```python
-days_before_buffer = 5 # How many days the true event can occur before the GloFAS event
+days_before_buffer = 3 # How many days the true event can occur before the GloFAS event
 days_after_buffer = 30 # How many days the tru event can occur after the GloFAS event
 
 df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN', 'wl_days'])
 
 for station in STATIONS:
+    df_station = df_station_dict[station]
     for wl_days in [None] + WL_DAYS:
-        df_station = df_station_dict[station]
         df_true_events = df_station[df_station[f"event_{event_level_type}"]]
         df_true_events['detections'] = 0
         TP = 0
@@ -224,7 +201,7 @@ for station in STATIONS:
         for glofas_event in glofas_events:
             # Check if any events are around that date
             days_offset = (df_true_events.index - glofas_event) /  np.timedelta64(1, 'D')
-            detected = (days_offset > -1 * days_before_buffer) & (days_offset < days_after_buffer)
+            detected = (days_offset >= -1 * days_before_buffer) & (days_offset <= days_after_buffer)
             df_true_events.loc[detected, 'detections'] += 1
             # If there were any detections, it's  a TP. Otherwise a FP
             if sum(detected):
@@ -334,6 +311,119 @@ for station, df_station in df_station_dict.items():
 
 ## Compare to forecast
 
-```python
+As previously, compute the TP, FP, and FN fore the different forecast leadtimes.
+Modify the days before buffer to not exceed the forecast length.
 
+```python
+# Settle on RP and level type
+rp = MAIN_RP
+event_level_type = 'danger'
+
+days_before_buffer = 3 # How many days the true event can occur before the GloFAS event
+days_after_buffer = 30 # How many days the tru event can occur after the GloFAS event
+
+df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN', 'leadtime'])
+
+for station in STATIONS:
+    df_station = df_station_dict[station]
+    df_station = df_station.dropna(subset=[f'forecast_{leadtime}' for leadtime in LEADTIMES])
+    for leadtime in [0] + LEADTIMES:
+
+        df_true_events = df_station[df_station[f"event_{event_level_type}"]]
+        df_true_events['detections'] = 0
+        TP = 0
+        FP = 0
+        
+        if leadtime == 0:
+            glofas_cname = f"event_rp{rp}"
+        else:
+            glofas_cname = f"event_forecast{leadtime}"
+        glofas_events = df_station[df_station[glofas_cname]].index
+    
+        for glofas_event in glofas_events:
+            # Check if any events are around that date
+            days_offset = (df_true_events.index - glofas_event) /  np.timedelta64(1, 'D')
+            # When using forecast, we want the days before buffer to be at least 1 day offset from the forecast,
+            # otherwise it is not use
+            days_before_buffer_to_use = min(days_before_buffer, leadtime) if leadtime > 0 else days_before_buffer
+            detected = (days_offset >= -1 * days_before_buffer_to_use) & (days_offset <= days_after_buffer)
+            df_true_events.loc[detected, 'detections'] += 1
+            # If there were any detections, it's  a TP. Otherwise a FP
+            if sum(detected):
+                TP += 1
+            else:
+                FP += 1
+        df_station_stats = df_station_stats.append({
+            'station': station,
+            'TP': TP,
+            'FP': FP,
+            'FN': len(df_true_events[df_true_events['detections'] == 0]),
+            'leadtime': leadtime
+        }, ignore_index=True)
+
+```
+
+```python
+# Plot TP, FP, FN
+for istation, station in enumerate(STATIONS):
+    qs = ['TP', 'FP', 'FN']
+    fig, ax = plt.subplots()
+    data = df_station_stats[(df_station_stats['station'] == station)]
+    for iq, q in enumerate(qs):
+        ax.plot(data['leadtime'], data[q], label=q)
+    ax.set_title(station)
+    ax.set_xlabel('Lead time [days]')
+    ax.set_ylabel('Number')
+    # Make legend
+    ax.legend()
+
+```
+
+```python
+rp = 2
+leadtimes = [7, 3] # Longer first
+
+for station in STATIONS:
+
+    df_station = df_station_dict[station]
+    df_station = df_station.dropna(subset=[f'forecast_{leadtime}' for leadtime in LEADTIMES])
+
+    observations = df_station['water_level']
+    model = df_station['river_discharge']
+    forecast_1 = df_station[f'forecast_{leadtimes[0]}']
+    forecast_2 = df_station[f'forecast_{leadtimes[1]}']
+
+
+
+
+    fig = plt.figure(figsize=(10,8))
+    gs= fig.add_gridspec(ncols=1, nrows=4, hspace=0.05, top=0.93, bottom=0.08)
+
+    fig.supylabel('River dischange [m$^3$ s$^{-1}$]')
+    fig.supxlabel('Year')
+    fig.suptitle(station)
+    x = df_station.index
+
+
+    for i, q in enumerate([forecast_1, forecast_2, model, observations]):
+        ax =  plt.subplot(gs[i])
+        if i == 3:
+            c1 = 'k'
+            c2 = 'C3'
+            thresh = df_station_info.at[station, f'{level_type}_level']
+            ax.set_ylabel('Water level [m]')
+        else:
+            if i == 2:
+                c1 = 'C0'
+            else:
+                c1 = 'C4'
+            c2 = 'C1'
+            ax.set_xticklabels([])
+            thresh = df_return_period.loc[rp, station]
+            ax.set_ylim(0, thresh*1.2)
+        ax.plot(x, q, '-', c=c1, lw=0.5)
+        ax.minorticks_on()
+        ax.axhline(thresh, c=c2, lw=0.5)
+        for detection in utils.get_groups_above_threshold(q, thresh, DURATION):
+            ax.plot(x[detection[0]], q[detection[0]], 'o', c=c2, lw=2, mfc='none')
 ```
