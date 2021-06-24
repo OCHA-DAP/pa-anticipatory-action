@@ -5,8 +5,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
+from scipy.stats import genextreme as gev
 from scipy.stats import rankdata
 import xskillscore as xs
+import matplotlib.pyplot as plt
 
 from src.indicators.flooding.glofas import glofas
 
@@ -30,7 +32,9 @@ def get_glofas_forecast(
     glofas_forecast = glofas.GlofasForecast()
     ds_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=country_iso3, leadtime=leadtime, version=version,
+            country_iso3=country_iso3,
+            leadtime=leadtime,
+            version=version,
         )
         for leadtime in leadtimes
     }
@@ -47,7 +51,9 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     ds_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=country_iso3, version=version, leadtime=leadtime,
+            country_iso3=country_iso3,
+            version=version,
+            leadtime=leadtime,
         )
         for leadtime in leadtimes
     }
@@ -103,18 +109,69 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
     )
 
 
-def get_return_periods(ds_reanalysis: xr.Dataset, years=None) -> pd.DataFrame:
+def get_return_periods(
+    ds_reanalysis: xr.Dataset,
+    years: list = None,
+    method: str = "analytical",
+    show_plots: bool = False,
+) -> pd.DataFrame:
+    """
+    :param ds_reanalysis: GloFAS reanalysis dataset
+    :param years: Return period years to compute
+    :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV distribution overlaid
+    :return: Dataframe with return period years as index and stations as columns
+    """
     if years is None:
         years = [1.5, 2, 3, 5, 10, 20]
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
-        f_rp = _get_return_period_function(ds_reanalysis=ds_reanalysis, station=station)
+        if method == "analytical":
+            f_rp = _get_return_period_function_analytical(
+                ds_reanalysis=ds_reanalysis, station=station, show_plots=show_plots
+            )
+        elif method == "empirical":
+            f_rp = _get_return_period_function_empirical(
+                ds_reanalysis=ds_reanalysis, station=station
+            )
+        else:
+            logger.error(f"{method} is not a valid keyword for method")
+            return None
         df_rps[station] = np.round(f_rp(years))
     return df_rps
 
 
-def _get_return_period_function(ds_reanalysis: xr.Dataset, station: str):
+def _get_return_period_function_analytical(
+    ds_reanalysis: xr.Dataset, station: str, show_plots: bool
+):
+    df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
+    discharge = df_rp["discharge"]
+    shape, loc, scale = gev.fit(
+        discharge, loc=discharge.median(), scale=discharge.median() / 2
+    )
+    x = np.linspace(discharge.min(), discharge.max(), 100)
+    if show_plots:
+        fig, ax = plt.subplots()
+        ax.hist(discharge, density=True, bins=20)
+        ax.plot(x, gev.pdf(x, shape, loc, scale))
+        ax.set_title(station)
+        plt.show()
+    y = gev.cdf(x, shape, loc, scale)
+    y = 1 / (1 - y)
+    return interp1d(y, x)
+
+
+def _get_return_period_function_empirical(ds_reanalysis: xr.Dataset, station: str):
+    df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
+    n = len(df_rp)
+    df_rp["rank"] = np.arange(n) + 1
+    df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
+    df_rp["rp"] = 1 / df_rp["exceedance_probability"]
+    return interp1d(df_rp["rp"], df_rp["discharge"])
+
+
+def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     df_rp = (
         ds_reanalysis.to_dataframe()[[station]]
         .rename(columns={station: "discharge"})
@@ -123,12 +180,7 @@ def _get_return_period_function(ds_reanalysis: xr.Dataset, station: str):
         .sort_values(by="discharge", ascending=False)
     )
     df_rp["year"] = df_rp.index.year
-
-    n = len(df_rp)
-    df_rp["rank"] = np.arange(n) + 1
-    df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
-    df_rp["rp"] = 1 / df_rp["exceedance_probability"]
-    return interp1d(df_rp["rp"], df_rp["discharge"])
+    return df_rp
 
 
 def get_crps(
