@@ -12,11 +12,10 @@ import xarray as xr
 from matplotlib.ticker import MaxNLocator
 
 
-
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
 
-from src.indicators.flooding.glofas import utils, glofas
+from src.indicators.flooding.glofas import utils
 ```
 
 ```python
@@ -37,34 +36,16 @@ DURATION = 1
 ```
 
 ```python
-
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
     country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
     interp=True
 )
+ds_glofas_reforecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
 #df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
 df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
-
-```
-
-```python
-def get_da_glofas_summary(da_glofas):
-    nsig_max = 3
-    percentile_dict = {
-        percentile: percentile for percentile in np.arange(0, 105, 5)
-    }
-    coord_names = ["leadtime", "time"]
-    data_vars_dict = {
-        var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
-        for var_name, percentile_value in percentile_dict.items()
-    }
-    return xr.Dataset(
-        data_vars=data_vars_dict,
-        coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime),
-    )
 
 ```
 
@@ -83,7 +64,7 @@ for station in df_return_period.columns:
     for rp in rp_list:
         rp_val = df_return_period.loc[rp, station]
         observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station].values
-        forecast = get_da_glofas_summary(ds_glofas_reforecast[station])[forecast_prob]
+        forecast = ds_glofas_reforecast_summary[station].sel(percentile=forecast_prob)
 
         # The GlofAS event takes place on the Nth day (since for an event)
         # you require N days in a row
@@ -102,7 +83,7 @@ for station in df_return_period.columns:
                 # Check if any events are around that date
                 days_offset = forecast_dates - event_date
 
-                detected = (days_offset > -1 * days_before_buffer) & (days_offset < days_after_buffer)
+                detected = (days_offset >= -1 * days_before_buffer) & (days_offset <= days_after_buffer)
                 
 
                 # If there were any detections, it's  a TP. Otherwise a FP
