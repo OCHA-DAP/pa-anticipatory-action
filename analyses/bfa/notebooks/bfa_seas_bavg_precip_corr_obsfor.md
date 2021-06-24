@@ -561,23 +561,16 @@ def get_return_periods(
     return df_rps
 ```
 
-```{code-cell} ipython3
-years = np.arange(1.5, 9, 0.5)
-df_rps_analytical = get_return_periods(df_stats_reg, rp_var="bavg_cell",years=years, method="analytical", show_plots=True)
-```
+Not using the analytical method since for GEV fitting to work the integral of the PDF should be 1. The empirical fitting is looking good though
 
 ```{code-cell} ipython3
 years = np.arange(1.5, 20.5, 0.5)
 df_rps_empirical = get_return_periods(df_stats_reg, rp_var="bavg_cell",years=years, method="empirical")
 ```
 
-The analytical method seems to assign too high values to lower return periods. This might be due to the long tail distribution, which might cause difficulty for the GEV fitting. 
-Since the empirical is looking good, using that one for now. 
-
 ```{code-cell} ipython3
 fig, ax = plt.subplots()
 ax.plot(df_rps_empirical.index, df_rps_empirical["rp"], label='empirical')
-ax.plot(df_rps_analytical.index, df_rps_analytical["rp"], label='analytical')
 ax.legend()
 ax.set_xlabel('Return period [years]')
 ax.set_ylabel('% below average')
