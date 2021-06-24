@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 ```
 
 ```python
@@ -73,14 +74,18 @@ df_wl.loc[df_wl.index.year.isin([1980, 1981]), 'Chatara'] = np.nan
 df_wl.loc[df_wl.index.year < 1985, 'Chisapani'] = np.nan
 df_wl.loc[df_wl.index.year == 1989, 'Chisapani'] = np.nan
 
+# For Asaraghat, remove data above year 2011
+df_wl.loc[df_wl.index.year > 2011, 'Asaraghat'] = np.nan
 
+```
+
+```python
+# Plot again to take a lok at changes
+for station in STATIONS:
+    plot_wl(df_wl, df_station_info, station)
 ```
 
 ```python
 # Write out the station files:, 'Chepang']:, 'Chepang']
 df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME)
-```
-
-```python
-
 ```
