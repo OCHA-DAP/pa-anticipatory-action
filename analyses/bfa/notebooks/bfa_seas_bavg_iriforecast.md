@@ -651,11 +651,15 @@ len(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)])/len(s
 ```
 
 ```{code-cell} ipython3
+stats_dom[(stats_dom["10quant_cell"]>=10)&(stats_dom.L==leadtime_mar)]
+```
+
+```{code-cell} ipython3
 stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_mar)]
 ```
 
 ```{code-cell} ipython3
-# stats_region[(stats_region.F.isin(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)].F.unique()))&(stats_region.L==leadtime_jul)]
+stats_region[(stats_region.F.isin(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)].F.unique()))&(stats_region.L==leadtime_jul)]
 ```
 
 ## OLD: Examine dominant tercile region
