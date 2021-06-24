@@ -110,12 +110,16 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
 
 
 def get_return_periods(
-    ds_reanalysis: xr.Dataset, years=None, method="analytical", show_plot=False
+    ds_reanalysis: xr.Dataset,
+    years: list = None,
+    method: str = "analytical",
+    show_plots: bool = False,
 ) -> pd.DataFrame:
     """
     :param ds_reanalysis: GloFAS reanalysis dataset
     :param years: Return period years to compute
     :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV distribution overlaid
     :return: Dataframe with return period years as index and stations as columns
     """
     if years is None:
@@ -125,7 +129,7 @@ def get_return_periods(
     for station in stations:
         if method == "analytical":
             f_rp = _get_return_period_function_analytical(
-                ds_reanalysis=ds_reanalysis, station=station, show_plot=show_plot
+                ds_reanalysis=ds_reanalysis, station=station, show_plots=show_plots
             )
         elif method == "empirical":
             f_rp = _get_return_period_function_empirical(
@@ -139,7 +143,7 @@ def get_return_periods(
 
 
 def _get_return_period_function_analytical(
-    ds_reanalysis: xr.Dataset, station: str, show_plot: bool
+    ds_reanalysis: xr.Dataset, station: str, show_plots: bool
 ):
     df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
     discharge = df_rp["discharge"]
@@ -147,7 +151,7 @@ def _get_return_period_function_analytical(
         discharge, loc=discharge.median(), scale=discharge.median() / 2
     )
     x = np.linspace(discharge.min(), discharge.max(), 100)
-    if show_plot:
+    if show_plots:
         fig, ax = plt.subplots()
         ax.hist(discharge, density=True, bins=20)
         ax.plot(x, gev.pdf(x, shape, loc, scale))
