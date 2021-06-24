@@ -1,14 +1,9 @@
-import logging
-
 import numpy as np
 import pandas as pd
-import xarray as xr
 from scipy.interpolate import interp1d
 
 from scipy.stats import genextreme as gev
 import matplotlib.pyplot as plt
-
-logger = logging.getLogger(__name__)
 
 def _get_return_period_function_analytical(
     df_rp: pd.DataFrame, rp_var: str, show_plots: bool, plot_title = "",
