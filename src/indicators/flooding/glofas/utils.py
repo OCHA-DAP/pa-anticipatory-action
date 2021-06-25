@@ -8,7 +8,7 @@ from scipy.stats import rankdata
 import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
-from src.utils_general.statistics import _get_return_period_function_analytical, _get_return_period_function_empirical
+from src.utils_general.statistics import get_return_period_function_analytical, get_return_period_function_empirical
 
 
 logger = logging.getLogger(__name__)
@@ -106,6 +106,7 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
         .rename({"step": "leadtime"})
     )
 
+
 def get_return_periods(
     ds_reanalysis: xr.Dataset,
     years: list = None,
@@ -126,11 +127,11 @@ def get_return_periods(
     for station in stations:
         df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
         if method == "analytical":
-            f_rp = _get_return_period_function_analytical(
+            f_rp = get_return_period_function_analytical(
                 df_rp=df_rp, rp_var="discharge", show_plots=show_plots, plot_title=station
             )
         elif method == "empirical":
-            f_rp = _get_return_period_function_empirical(
+            f_rp = get_return_period_function_empirical(
                 df_rp=df_rp, rp_var="discharge",
             )
         else:
@@ -138,6 +139,7 @@ def get_return_periods(
             return None
         df_rps[station] = np.round(f_rp(years))
     return df_rps
+
 
 def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     df_rp = (
