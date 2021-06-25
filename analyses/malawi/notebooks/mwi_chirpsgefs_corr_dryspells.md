@@ -58,6 +58,7 @@ import os
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
+from src.utils_general.plotting import plot_spatial_columns
 ```
 
 #### Set config values
@@ -110,11 +111,6 @@ elif ds_meth=="consecutive_days_4mm":
 all_files=glob.glob(os.path.join(chirpsgefs_processed_dir, "mwi_chirpsgefs_stats_adm2_15days_*.csv"))
 ```
 
-```python
-# df = pd.concat(map(pd.read_csv, all_files), ignore_index=True)
-# df["date"]=pd.to_datetime(df["date"])
-```
-
 ```python tags=[]
 #combine files of all dates into one
 #takes a minute
@@ -156,17 +152,6 @@ df_chirpsgefs = pd.concat(list_hist_rain_adm)
 ```python
 #when initial analysis was done, 12-03 was the last date, so selecting those to keep the numbers the same
 df_chirpsgefs=df_chirpsgefs[df_chirpsgefs.date<="2021-03-12"]
-```
-
-```python
-# #ccontains several statistics per adm2-date combination since 2000
-# df_chirpsgefs=pd.read_csv(chirpsgefs_stats_path)
-# df_chirpsgefs["date"]=pd.to_datetime(df_chirpsgefs["date"])
-# df_chirpsgefs["date_forec_end"]=pd.to_datetime(df_chirpsgefs["date_forec_end"])
-```
-
-```python
-df_chirpsgefs[(df_chirpsgefs.date=="2019-01-01")&(df_chirpsgefs.ADM2_EN=="Balaka")]
 ```
 
 ```python
@@ -360,6 +345,14 @@ len(df_ds[df_ds.dry_spell_first_date.dt.year==2020])
 
 ```python
 sns.histplot(df_ds,x="dry_spell_duration")
+```
+
+```python
+#get a feeling for where the dry spells occured
+df_ds_adm2=df_ds.groupby(["ADM2_EN"],as_index=False).count()
+df_bound_adm2=gpd.read_file(adm2_bound_path)
+gdf_ds_adm2=df_bound_adm2.merge(df_ds_adm2,how="left")
+fig=plot_spatial_columns(gdf_ds_adm2, ["pcode"], title="Number of dry spells", predef_bins=None,cmap='YlOrRd',colp_num=1)
 ```
 
 ```python
@@ -791,8 +784,10 @@ Thus, transform the data such that it can be given as input to the R script
 On the GDrive you can find the outputted heatmap from the R script that shows the observed and forecasted dry spells clearly over time
 
 ```python
+#add pcode
+df_chirpsgefs_pcode=df_chirpsgefs.merge(df_bound_adm2[["ADM2_EN","ADM2_PCODE"]],on="ADM2_EN",how="left")
 #create dataframe with all dates for which we got chirpsgefs data
-df_dates_viz=df_chirpsgefs[["date","ADM2_EN","ADM2_PCODE"]].sort_values(["ADM2_EN","date"])
+df_dates_viz=df_chirpsgefs_pcode[["date","ADM2_EN","ADM2_PCODE"]].sort_values(["ADM2_EN","date"])
 df_dates_viz.rename(columns={"ADM2_PCODE":"pcode"},inplace=True)
 #merge the observed dry spells
 #merge on outer instead of left for visualization
@@ -855,41 +850,46 @@ df_dates_viz_filled=df_dates_viz_filled[df_dates_viz_filled.date.dt.year<=2020]
 Of CHIRPS-GEFS for dates where an observed dry spell started --> goal to better understand the patterns at those dates and if there would be a better way of aggregation. Conclusion that there doesnt seem to be a consistent pattern :( 
 
 ```python
-chirpsgefs_ras_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"chirpsgefs")
-#load the raster data
-ds_list=[]
-for d in df_ds.dry_spell_first_date.unique():
-    d_str=pd.to_datetime(d).strftime("%Y%m%d")
-    filename=f"chirpsgefs_africa_15days_{d_str}.tif"
-    print(filename)
-    try:
-        rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_dir,filename))
-        rds=rds.assign_coords({"time":pd.to_datetime(d)})
-        rds=rds.sel(band=1)
-        ds_list.append(rds)
-    except:
-        print(f"no data for {d}")
-
-ds_drys=xr.concat(ds_list,dim="time")
-
-ds_drys=ds_drys.sortby("time")
-```
-
-```python
 #create df where forecast start date is merged with dry spell start date
 df_comb=df_ds.merge(df_chirpsgefs[["ADM2_EN","date","date_forec_end"]+cg_stats],how="right",left_on=["dry_spell_first_date","ADM2_EN"],right_on=["date","ADM2_EN"])
 df_comb["dryspell_obs"]=np.where(df_comb.dry_spell_first_date.notna(),1,0)
 ```
 
 ```python
+# import rioxarray
+# import xarray as xr
+# from shapely.geometry import mapping
+```
+
+```python
+# chirpsgefs_ras_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"chirpsgefs")
+# #load the raster data
+# ds_list=[]
+# for d in df_ds.dry_spell_first_date.unique():
+#     d_str=pd.to_datetime(d).strftime("%Y%m%d")
+#     filename=f"chirpsgefs_africa_15days_{d_str}.tif"
+#     try:
+#         rds=rioxarray.open_rasterio(os.path.join(chirpsgefs_ras_dir,filename))
+#         rds=rds.assign_coords({"time":pd.to_datetime(d)})
+#         rds=rds.sel(band=1)
+#         ds_list.append(rds)
+#     except:
+#         print(f"no data for {d}")
+
+# ds_drys=xr.concat(ds_list,dim="time")
+
+# ds_drys=ds_drys.sortby("time")
+```
+
+```python
 # #plot the rasters. Plot per adm2
-# ds_drys_clip = ds_drys.rio.clip(df_bound_adm2.geometry.apply(mapping), df_bound_adm2.crs, all_touched=True)
+# ds_drys_clip = ds_drys.rio.clip(df_bound_adm2.geometry.apply(mapping), all_touched=True)
 # bins=np.arange(0,101,10)
 
 # df_comb_ds=df_comb[df_comb.dryspell_obs==1]
 # for a in df_comb_ds.ADM2_EN.unique():
 #     df_bound_sel_adm=df_bound_adm2[df_bound_adm2.ADM2_EN==a]
-#     ds_drys_clip_adm = ds_drys.rio.clip(df_bound_sel_adm.geometry.apply(mapping), df_bound_sel_adm.crs, all_touched=True)
+#     ds_drys_clip_adm = ds_drys.rio.clip(df_bound_sel_adm.geometry.apply(mapping), all_touched=True)
 #     ds_drys_clip_adm_dates=ds_drys_clip_adm.sel(time=ds_drys_clip_adm.time.isin(df_comb_ds[df_comb_ds.ADM2_EN==a].date.unique()))
 #     #cannot make the facetgrid if only one occurence. For now leave them out since just exploration, but for completeness should somehow include them
 #     if len(ds_drys_clip_adm_dates.time)>1:
@@ -986,18 +986,50 @@ for i,a in enumerate(df_numadm1.ADM1_EN.unique()):
 Quick test to see if the 5 day instead of 15 day forecast gives better performance
 
 ```python
-chirpsgefs_5day_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back_adm2_5day.csv")
+all_files_5day=glob.glob(os.path.join(chirpsgefs_processed_dir, "mwi_chirpsgefs_stats_adm2_5days_*.csv"))
+```
+
+```python tags=[]
+#combine files of all dates into one
+#takes a minute
+df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files_5day)
+df_chirpsgefs_5day = pd.concat(df_from_each_file, ignore_index=True)
 ```
 
 ```python
-#ccontains several statistics per adm2-date combination since 2000
-df_cg_fd=pd.read_csv(chirpsgefs_5day_path)
-df_cg_fd["date"]=pd.to_datetime(df_cg_fd["date"])
-df_cg_fd["date_forec_end"]=pd.to_datetime(df_cg_fd["date_forec_end"])
+df_chirpsgefs_5day
+```
+
+```python tags=[]
+#filter out dates that are outside the rainy season for each admin
+onset_col="onset_date"
+cessation_col="cessation_date"
+rainy_adm_col="ADM2_EN"
+
+df_rain = pd.read_csv(rainy_season_path, parse_dates=[onset_col, cessation_col])
+ #remove entries where there is no onset and no cessation date, i.e. no rainy season
+df_rain=df_rain[(df_rain.onset_date.notnull())|(df_rain.cessation_date.notnull())]
+#if onset date or cessation date is missing, set it to Nov 1/Jul1 to make sure all data of that year is downloaded. This happens if e.g. the rainy season hasn't ended yet
+df_rain.loc[df_rain.onset_date.isnull()]=df_rain[df_rain[onset_col].isnull()].assign(onset_date=lambda x: pd.to_datetime(f"{x.season_approx.values[0]}-11-01"))
+df_rain.loc[df_rain.cessation_date.isnull()]=df_rain[df_rain[cessation_col].isnull()].assign(cessation_date=lambda x: pd.to_datetime(f"{x.season_approx.values[0]+1}-07-01"))
+
+df_rain_adm = df_rain.groupby([rainy_adm_col, "season_approx"], as_index=False).agg({onset_col: np.min, cessation_col: np.max})
+    
+list_hist_rain_adm = []
+for a in df_chirpsgefs_5day[adm_col].unique():
+    dates_adm = pd.Index([])
+    df_rain_seladm = df_rain_adm[df_rain_adm[rainy_adm_col] == a]
+    for i in df_rain_seladm.season_approx.unique():
+        df_rain_seladm_seas = df_rain_seladm[df_rain_seladm.season_approx == i]
+        seas_range = pd.date_range(df_rain_seladm_seas.onset_date.values[0],df_rain_seladm_seas.cessation_date.values[0])
+        dates_adm = dates_adm.union(seas_range)
+    list_hist_rain_adm.append(df_chirpsgefs_5day[(df_chirpsgefs_5day[adm_col] == a) & (df_chirpsgefs_5day.date.isin(dates_adm))])
+df_cg_fd = pd.concat(list_hist_rain_adm)
 ```
 
 ```python
-df_bound_adm2=gpd.read_file(adm2_bound_path)
+#when initial analysis was done, 12-03 was the last date, so selecting those to keep the numbers the same
+df_cg_fd=df_cg_fd[df_cg_fd.date<="2021-03-12"]
 ```
 
 ```python
@@ -1050,4 +1082,8 @@ plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so c
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
+```
+
+```python
+
 ```
