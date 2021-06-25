@@ -37,7 +37,7 @@ DAYS_AHEAD = 15
 ADM_LEVEL = 2
 
 
-def main(download=False, process=True):
+def main(download=True, process=True):
     if download:
         rainy_dates = get_rainy_season_dates(RAINY_SEASON_PATH)
         for d in rainy_dates:
