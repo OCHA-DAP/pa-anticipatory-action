@@ -35,10 +35,10 @@ The pages below hold documented examples of some of the analyses that are held i
 - [Forecasting dry spells](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/mwi_technical_background_pilot.html)
 
 #### Bangladesh
-- [Analysis of satellite imagery to identify past flooding](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bangladesh/validation/summary_flooding.html)
+- [Analysis of satellite imagery to identify past flooding](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bgd/validation/summary_flooding.html)
 
 #### Burkina Faso
-- [Baseline overview of risk and vulnerability](https://ocha-dap.github.io/pa-anticipatory-action/analyses/burkina_faso/notebooks/bfa_risk_overview.html)
+- [Baseline overview of risk and vulnerability](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bfa/notebooks/bfa_risk_overview.html)
 
 ## Getting started
 
