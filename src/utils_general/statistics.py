@@ -5,9 +5,20 @@ from scipy.interpolate import interp1d
 from scipy.stats import genextreme as gev
 import matplotlib.pyplot as plt
 
+
 def get_return_period_function_analytical(
-    df_rp: pd.DataFrame, rp_var: str, show_plots: bool, plot_title = "",
+    df_rp: pd.DataFrame,
+    rp_var: str,
+    show_plots: bool = False,
+    plot_title: str = "",
 ):
+    """
+    :param df_rp: DataFrame where the index is the year, and the rp_var column contains the maximum value per year
+    :param rp_var: The column with the quantity to be evaluated
+    :param show_plots: Show the histogram with GEV distribution overlaid
+    :param plot_title: The title of the plot
+    :return: Interpolated function that gives the quantity for a give return period
+    """
     df_rp = df_rp.sort_values(by=rp_var, ascending=False)
     rp_var_values = df_rp[rp_var]
     shape, loc, scale = gev.fit(
@@ -26,9 +37,15 @@ def get_return_period_function_analytical(
 
 
 def get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
+    """
+    :param df_rp: DataFrame where the index is the year, and the rp_var column contains the maximum value per year
+    :param rp_var: The column with the quantity to be evaluated
+    :return: Interpolated function that gives the quantity for a give return period
+    """
     df_rp = df_rp.sort_values(by=rp_var, ascending=False)
     n = len(df_rp)
     df_rp["rank"] = np.arange(n) + 1
     df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
     df_rp["rp"] = 1 / df_rp["exceedance_probability"]
+    print(df_rp)
     return interp1d(df_rp["rp"], df_rp[rp_var])
