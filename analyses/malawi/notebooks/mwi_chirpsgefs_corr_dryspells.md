@@ -15,6 +15,8 @@ jupyter:
 
 <!-- #region -->
 ### Observed dryspells and correlation with forecasted dry spells in Malawi
+**Note: this analysis was done at the beginning of the dry spell pilot project. Along the way some definitions and ideas changed, which might have to be updated in this notebook as well if revisited later on**    
+
 This notebook explores the correlation of observed dry spells and the 15-day forecast provided by CHIRPS-GEFS. The goal of this analysis is to understand the performance of CHIRPS-GEFS for predicting dry spells in order to judge whether it is a suitable indicator to base anticipatory action for dry spells in Malawi on. 
 
 
