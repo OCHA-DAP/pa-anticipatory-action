@@ -101,22 +101,25 @@ df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME)
 
 ```python
 major_stations = ['Chatara', 'Chisapani']
-rps = np.linspace(1.5, 25, 100)
+rps = np.linspace(1.5, 25, 1000)
 
-reload(statistics)
 for station in major_stations:
-    
+    # Get the max value per year
     df = (df_wl[[station]]
           .dropna()
           .resample(rule='A', kind='period')
           .max()
           .dropna()
          )
-    rp_analytical = statistics.get_return_period_function_analytical(df, station, 
-                                                                     show_plots=True, plot_title=station)
+    rp_analytical = statistics.get_return_period_function_analytical(df, station, show_plots=True, plot_title=station)
     rp_empirical = statistics.get_return_period_function_empirical(df, station)    
+    
+    # Get the RP of the warning and danger levels
     warning_level = df_station_info.at[station, 'warning_level']
     danger_level = df_station_info.at[station, 'danger_level']
+    print(f"RP warning: {np.round(rps[np.argmin(np.abs(rp_analytical(rps) - warning_level))], 1)}")
+    print(f"RP danger: {np.round(rps[np.argmin(np.abs(rp_analytical(rps) - danger_level))], 1)}")
+
     fig, ax = plt.subplots()
     ax.plot(rps, rp_analytical(rps), label='Analytical')
     ax.plot(rps, rp_empirical(rps), label='Emprical')

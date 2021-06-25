@@ -47,5 +47,4 @@ def get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
     df_rp["rank"] = np.arange(n) + 1
     df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
     df_rp["rp"] = 1 / df_rp["exceedance_probability"]
-    print(df_rp)
     return interp1d(df_rp["rp"], df_rp[rp_var])
