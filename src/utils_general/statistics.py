@@ -5,7 +5,7 @@ from scipy.interpolate import interp1d
 from scipy.stats import genextreme as gev
 import matplotlib.pyplot as plt
 
-def _get_return_period_function_analytical(
+def get_return_period_function_analytical(
     df_rp: pd.DataFrame, rp_var: str, show_plots: bool, plot_title = "",
 ):
     df_rp = df_rp.sort_values(by=rp_var, ascending=False)
@@ -25,7 +25,7 @@ def _get_return_period_function_analytical(
     return interp1d(y, x)
 
 
-def _get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
+def get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
     df_rp = df_rp.sort_values(by=rp_var, ascending=False)
     n = len(df_rp)
     df_rp["rank"] = np.arange(n) + 1

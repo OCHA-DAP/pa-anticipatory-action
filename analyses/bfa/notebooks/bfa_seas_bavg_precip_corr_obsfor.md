@@ -61,7 +61,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
-from src.utils_general.statistics import _get_return_period_function_analytical, _get_return_period_function_empirical
+from src.utils_general.statistics import get_return_period_function_analytical, get_return_period_function_empirical
 ```
 
 ```{code-cell} ipython3
@@ -294,11 +294,11 @@ def get_return_periods(
         years = [1.5, 2, 3, 5]#, 10]#, 20]
     df_rps = pd.DataFrame(columns=["rp"],index=years)
     if method == "analytical":
-        f_rp = _get_return_period_function_analytical(
+        f_rp = get_return_period_function_analytical(
             df_rp=df, rp_var=rp_var, show_plots=show_plots
         )
     elif method == "empirical":
-        f_rp = _get_return_period_function_empirical(
+        f_rp = get_return_period_function_empirical(
             df_rp=df, rp_var=rp_var,
         )
     else:
