@@ -48,6 +48,7 @@ from rasterstats import zonal_stats
 from IPython.display import Markdown as md
 from myst_nb import glue
 import cftime
+import re
 
 from pathlib import Path
 import sys
@@ -67,6 +68,7 @@ from src.utils_general.raster_manipulation import invert_latlon,change_longitude
 :tags: [remove_cell]
 
 adm_sel=["Boucle du Mouhoun","Nord","Centre-Nord","Sahel"]
+adm_sel_str=re.sub(r"[ -]", "", "".join(adm_sel)).lower()
 threshold_mar=40
 threshold_jul=50
 ```
@@ -90,7 +92,7 @@ country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country)
 glb_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration","glb")
 iri_exploration_dir=os.path.join(country_data_exploration_dir,"iri")
-stats_reg_path=os.path.join(country_data_exploration_dir,f"{country}_iri_seasonal_forecast_stats_{''.join(adm_sel)}.csv")
+stats_reg_path=os.path.join(iri_exploration_dir,f"{country}_iri_seasonal_forecast_stats_{''.join(adm_sel_str)}.csv")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
@@ -738,7 +740,7 @@ Questions
 Note: the NaNs in the table indicate a dry mask during those months
 
 ```{code-cell} ipython3
-stats_region_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).to_csv(os.path.join(iri_exploration_dir,f"bfa_tercile_prob_l{leadtime}_{aggr_meth}.csv"))
+# stats_region_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).to_csv(os.path.join(iri_exploration_dir,f"bfa_tercile_prob_l{leadtime}_{aggr_meth}.csv"))
 ```
 
 ```{code-cell} ipython3
