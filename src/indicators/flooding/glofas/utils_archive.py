@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
-from scipy.stats import rankdata
+from scipy.stats import norm
 import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
@@ -57,6 +57,25 @@ def get_glofas_reforecast(
     return _convert_dict_to_ds(ds_glofas_reforecast_dict)
 
 
+def get_da_glofas_summary(da_glofas):
+    nsig_max = 3
+    percentile_dict = {
+        **{"median": 50.0},
+        **{f"{n}sig+": norm.cdf(n) * 100 for n in range(1, nsig_max + 1)},
+        **{f"{n}sig-": (1 - norm.cdf(n)) * 100 for n in range(1, nsig_max + 1)},
+    }
+    coord_names = ["leadtime", "time"]
+    data_vars_dict = {
+        var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
+        for var_name, percentile_value in percentile_dict.items()
+    }
+
+    return xr.Dataset(
+        data_vars=data_vars_dict,
+        coords=dict(time=da_glofas.time, leadtime=da_glofas.leadtime),
+    )
+
+
 def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
     return {
         leadtime: ds.assign_coords(time=ds.time.values + np.timedelta64(leadtime, "D"))
@@ -103,29 +122,9 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
     )
 
 
-def get_glofas_forecast_summary(ds_glofas_forecast):
-    percentiles = np.arange(0, 105, 5)
-    coord_names = ["percentile", "leadtime", "time"]
-    data_vars_dict = {
-        station: (
-            coord_names,
-            np.percentile(ds_glofas_forecast[station], percentiles, axis=1),
-        )
-        for station in ds_glofas_forecast.keys()
-    }
-    return xr.Dataset(
-        data_vars=data_vars_dict,
-        coords=dict(
-            time=ds_glofas_forecast.time,
-            leadtime=ds_glofas_forecast.leadtime,
-            percentile=percentiles,
-        ),
-    )
-
-
 def get_return_periods(ds_reanalysis: xr.Dataset, years=None) -> pd.DataFrame:
     if years is None:
-        years = [1.5, 2, 3, 5, 10, 20]
+        years = [1.5, 2, 5, 10, 20]
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
@@ -200,55 +199,4 @@ def get_groups_above_threshold(observations, threshold, min_duration=1):
     groups = np.where(np.diff(observations > threshold, prepend=False, append=False))[
         0
     ].reshape(-1, 2)
-    return [group for group in groups if group[1] - group[0] >= min_duration]
-
-
-def get_glofas_activations(da_glofas, thresh, ndays):
-    vals = da_glofas.values
-    groups = get_groups_above_threshold(vals, thresh, ndays)
-    df_glofas_act = pd.DataFrame(groups, columns=["start_index", "end_index"])
-    df_glofas_act["num_days"] = (
-        df_glofas_act["end_index"] - df_glofas_act["start_index"]
-    )
-    df_glofas_act["start_date"] = df_glofas_act["start_index"].apply(
-        lambda x: da_glofas.time[x].values
-    )
-    df_glofas_act["end_date"] = df_glofas_act["end_index"].apply(
-        lambda x: da_glofas.time[x].values
-    )
-    return df_glofas_act
-
-
-def get_rank(observations: np.array, forecast: np.array) -> np.array:
-    # Create array of both obs and forecast
-    rank_array = np.concatenate(([observations], forecast))
-    # Calculate rank and take 0th array, which should be the obs
-    rank = rankdata(rank_array, axis=0)[0]
-    return rank
-
-
-def calc_mpe(observations: np.array, forecast: np.array) -> float:
-    mean_forecast = forecast.mean(axis=0)
-    denominator = observations
-    return (
-        ((mean_forecast - observations) / denominator).sum()
-        / len(observations.time)
-        * 100
-    )
-
-
-def get_same_obs_and_forecast(
-    da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
-) -> (xr.DataArray, xr.DataArray):
-    """
-    For the GloFAS reanalysis and reforecast at a particular station, get matching data
-    ranges for the two datasets
-    :param da_observations: GloFAS reanalysis at a particular station
-    :param da_forecast: GloFAS reforecast at a particular station
-    :param leadtime: Leadtime
-    :return: Observations and forecast with overlapping values only
-    """
-    forecast = da_forecast.sel(leadtime=leadtime).dropna(dim="time")
-    observations = da_observations.reindex({"time": forecast.time}).dropna(dim="time")
-    forecast = forecast.reindex({"time": observations.time})
-    return observations, forecast
+    return [group for group in groups if group[1] - group[0] > min_duration]
