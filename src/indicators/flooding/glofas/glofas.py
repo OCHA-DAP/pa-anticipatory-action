@@ -199,7 +199,14 @@ class Glofas:
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / GLOFAS_DIR / filename
+        return (
+            DATA_DIR
+            / PUBLIC_DATA_DIR
+            / PROCESSED_DATA_DIR
+            / country_iso3
+            / GLOFAS_DIR
+            / filename
+        )
 
     def read_processed_dataset(
         self, country_iso3: str, version: int = DEFAULT_VERSION, leadtime: int = None,
