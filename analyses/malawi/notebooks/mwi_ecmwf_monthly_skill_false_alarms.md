@@ -140,6 +140,7 @@ df_forobs=df_forobs.merge(df_10dds[["date_month","with_10d_10mm"]],how="left",on
 ```
 
 #### Load MVAC data
+This data was shared privately, and therefore not published in our public data directory. By not showing intermediate outputs, but only showing final results, we keep the detailed privately, as agreed upon.
 
 ```python
 def ab_ify(row):
