@@ -1,18 +1,3 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,md
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.10.3
-  kernelspec:
-    display_name: antact
-    language: python
-    name: antact
----
-
 ### Compute dry spells based on pixels
 This notebook computes the occurrences of dry spells per admin. As input a list of dry spells at pixel level is taken, where a dry spell is defined as 14 days with <=2mm cumulative rainfall. This notebook tests different threshold for the percentage of pixels, i.e. cells, that should be in a dry spell in order to classify the admin as experiencing a dry spell. These results are thereafter saved to use in a R script to create a heatmap of dry spells across time
 
