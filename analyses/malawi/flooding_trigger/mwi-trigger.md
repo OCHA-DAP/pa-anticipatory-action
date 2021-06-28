@@ -21,7 +21,7 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
-from src.indicators.flooding.glofas import utils
+from src.indicators.flooding.glofas import utils_archive as utils
 
 reload(utils)
 config = Config()
@@ -32,8 +32,9 @@ EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 LEADTIMES = [5, 10, 15, 20, 25, 30]
-SAVE_PLOT = True
-EVENT = 'rco' # or 'floodscan'
+SAVE_PLOT = False
+EVENT = 'combined' # 'rco' or 'floodscan' or 'combined'
+COUNTRY_ISO3 = 'mwi'
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -44,20 +45,21 @@ stations_adm2 = {
 ### Read in GloFAS data
 
 ```python
-da_glofas_reanalysis = {}
-da_glofas_reforecast = {}
-da_glofas_reforecast_interp = {}
-da_glofas_forecast = {}
-da_glofas_forecast_summary = {}
-da_glofas_reforecast_summary = {}
+ds_glofas_reanalysis = {}
+ds_glofas_reforecast = {}
+ds_glofas_reforecast_interp = {}
+ds_glofas_forecast = {}
+ds_glofas_forecast_summary = {}
+ds_glofas_reforecast_summary = {}
 
 for station in STATIONS: 
-    da_glofas_reanalysis[station] = utils.get_glofas_reanalysis('mwi', version=GLOFAS_VERSION)[station]
-    da_glofas_reforecast[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=False, version=GLOFAS_VERSION)[station]
-    da_glofas_reforecast_interp[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=True, version=GLOFAS_VERSION)[station]
-    da_glofas_forecast[station] = utils.get_glofas_forecast('mwi', LEADTIMES, version=GLOFAS_VERSION)[station]
-    da_glofas_forecast_summary[station] = utils.get_da_glofas_summary(da_glofas_forecast[station])
-    da_glofas_reforecast_summary[station] = utils.get_da_glofas_summary(da_glofas_reforecast_interp[station])
+    ds_glofas_reanalysis[station] = utils.get_glofas_reanalysis('mwi', version=GLOFAS_VERSION)[station]
+    ds_glofas_reforecast[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=False, version=GLOFAS_VERSION)[station]
+    ds_glofas_reforecast_interp[station] = utils.get_glofas_reforecast('mwi', LEADTIMES, interp=True, version=GLOFAS_VERSION)[station]
+    ds_glofas_forecast[station] = utils.get_glofas_forecast('mwi', LEADTIMES, version=GLOFAS_VERSION)[station]
+    ds_glofas_forecast_summary[station] = utils.get_da_glofas_summary(ds_glofas_forecast[station])
+    ds_glofas_reforecast_summary[station] = utils.get_da_glofas_summary(ds_glofas_reforecast_interp[station])
+
 ```
 
 ### Read in the baseline impact data
@@ -94,14 +96,14 @@ def get_return_period_function(observations, station):
 rp_dict = {}
 
 for code, station in stations_adm2.items(): 
-    f_rp = get_return_period_function(da_glofas_reanalysis[code], code)
+    f_rp = get_return_period_function(ds_glofas_reanalysis[code], code)
     rp_dict[station] = {}
     for year in [1.5, 2, 3, 4, 5, 10, 20]:
         val = 10*np.round(f_rp(year) / 10)
         rp_dict[station][year] = val
 
 df_rps = pd.DataFrame(rp_dict).reset_index().rename(columns={'index': 'rp'})
-df_rps.to_csv(EXPLORE_DIR / 'glofas_rps.csv')
+#df_rps.to_csv(EXPLORE_DIR / 'glofas_rps.csv')
 ```
 
 ### Overview of historical discharge
@@ -109,13 +111,13 @@ df_rps.to_csv(EXPLORE_DIR / 'glofas_rps.csv')
 ```python
 # Return periods to focus on, with display colours
 rps = {
-    3: '#32a852',
-    5: '#9c2788'
+    2: '#32a852',
+    3: '#9c2788'
 }
 
 for code, station in stations_adm2.items(): 
-    da_plt = da_glofas_reanalysis[code].sel(time=slice('1980-01-01','2019-12-31'))
-    df_event = filter_event_dates(events[station],'1980-01-01', '2019-12-31') 
+    da_plt = ds_glofas_reanalysis[code].sel(time=slice('1998-01-01','2019-12-31'))
+    df_event = filter_event_dates(events[station],'1998-01-01', '2019-12-31') 
 
     fig, ax = plt.subplots()
     da_plt.plot(x='time', add_legend=True, ax=ax)
@@ -127,7 +129,7 @@ for code, station in stations_adm2.items():
         ax.axvspan(np.datetime64(df_event['start_date'][i]), np.datetime64(df_event['end_date'][i]), alpha=0.5, color='#FE5E1E')
     
     for key, value in rps.items():
-        ax.axhline(rp_dict[station][key], 0, 1, color=value, label=f'{str(key)} return period')
+        ax.axhline(rp_dict[station][key], 0, 1, color=value, label=f'1 in {str(key)}-year return period')
         
     ax.legend()
     
@@ -219,10 +221,10 @@ detection_stats_all = {}
 for code, station in stations_adm2.items(): 
     
     detection_stats = {}
-    df_event = filter_event_dates(events[station],'1980-01-01', '2019-12-31') 
+    df_event = filter_event_dates(events[station],'1998-01-01', '2019-12-31') 
 
     for rp, thresh in rp_dict[station].items():        
-        df_glofas_act = get_glofas_activations(da_glofas_reanalysis[code], thresh, THRESH_DAYS)
+        df_glofas_act = get_glofas_activations(ds_glofas_reanalysis[code], thresh, THRESH_DAYS)
         rp_stats = get_clean_stats_dict(df_glofas_act, df_event, BUFFER)
         detection_stats[rp] = rp_stats
 
@@ -250,15 +252,15 @@ Compare GloFAS reforecast against historical events
 
 ```python
 THRESH_DAYS = 3
-RP_ARR = [2,3, 5]
+RP_ARR = [2,3]
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 df_detect_stats = pd.DataFrame(columns=['TP', 'FP', 'FN', 'precision', 'recall', 'f1', 'station', 'lead_time', 'return_period'])
 
 for code, station in stations_adm2.items():  
     
-    end = da_glofas_reforecast_summary[code].time[-1].values
-    start = da_glofas_reforecast_summary[code].time[0].values
+    end = ds_glofas_reforecast_summary[code].time[-1].values
+    start = ds_glofas_reforecast_summary[code].time[0].values
     df_event = filter_event_dates(events[station], start, end)
 
     # Calculate the detection performance
@@ -267,7 +269,8 @@ for code, station in stations_adm2.items():
         for rp in RP_ARR:
 
             thresh = rp_dict[station][rp] 
-            da_glofas = da_glofas_reforecast_summary[code].sel(leadtime=lt)[['median']].to_array()[0]
+            da_glofas = ds_glofas_reforecast_summary[code].sel(leadtime=lt)[['median']].to_array()[0]
+            #da_glofas = ds_glofas_reforecast_summary[code].sel(leadtime=lt).sel(percentile=50)
 
             detection_stats = {}
             df_glofas_act = get_glofas_activations(da_glofas, thresh, THRESH_DAYS)
@@ -316,11 +319,12 @@ for code, station in stations_adm2.items():
         for rp in RP_ARR:
 
             thresh = rp_dict[station][rp] 
-            da_glofas = da_glofas_reforecast_summary[code].sel(leadtime=lt)[['median']].to_array()[0]
+            #da_glofas = ds_glofas_reforecast_summary[code].sel(leadtime=lt).sel(percentile=50)
+            da_glofas = ds_glofas_reforecast_summary[code].sel(leadtime=lt)[['median']].to_array()[0]
             
             detection_stats = {}
             df_glofas_act = get_glofas_activations(da_glofas, thresh, THRESH_DAYS)
-            df_event = get_glofas_activations(da_glofas_reanalysis[code], thresh, THRESH_DAYS)
+            df_event = get_glofas_activations(ds_glofas_reanalysis[code], thresh, THRESH_DAYS)
             stats = get_clean_stats_dict(df_glofas_act, df_event, 0)
             stats['station'] = station
             stats['lead_time'] = lt
@@ -361,7 +365,7 @@ def summarize_trigger(df_events, station, code, rp, leadtime, duration, buffer):
 ```python
 STATION = 'Chikwawa'
 CODE = 'glofas_2'
-RP = 2
+RP = 3
 LT = 5
 DUR = 3
 ```

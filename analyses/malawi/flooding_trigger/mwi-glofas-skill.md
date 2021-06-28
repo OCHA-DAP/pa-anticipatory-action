@@ -1,3 +1,7 @@
+### Exploring GloFAS forecast skill
+
+This notebook evaluates GloFAS forecast skill at stations in Chikwawa and Nsanje. We are looking specifically at skill in predicting extreme streamflow values across various leadtimes.
+
 ```python
 from datetime import datetime
 
