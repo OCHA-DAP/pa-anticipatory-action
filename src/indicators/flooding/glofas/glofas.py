@@ -18,7 +18,7 @@ DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
-GLOFAS_DIR = Path("glofas")
+GLOFAS_DIR = "glofas"
 DEFAULT_VERSION = 3
 HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
