@@ -2,7 +2,6 @@ from typing import List, Dict
 import logging
 
 import numpy as np
-from numpy.typing import ArrayLike
 import pandas as pd
 import xarray as xr
 from scipy.interpolate import interp1d
@@ -202,10 +201,10 @@ def get_crps(
 
 
 def get_groups_above_threshold(
-    observations: ArrayLike,
+    observations: np.array,
     threshold: float,
     min_duration: int = 1,
-    additional_condition: ArrayLike = None,
+    additional_condition: np.array = None,
 ) -> List:
     """
     Get indices where consecutive values are equal to or above a threshold
