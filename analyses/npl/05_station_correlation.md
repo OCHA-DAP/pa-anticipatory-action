@@ -16,6 +16,8 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
+
+mpl.rcParams['figure.dpi'] = 300
 ```
 
 ```python
@@ -23,7 +25,7 @@ COUNTRY_ISO3 = 'npl'
 
 DURATION = 1 # Number of days that the GloFAS threshold should be exceeded
 
-RP_LIST = [1.5, 2, 3, 5, 10, 20] # List of return period values to compare
+RP_LIST = [2, 3, 5] # List of return period values to compare
 
 STATIONS = {
     'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
@@ -36,12 +38,23 @@ STATIONS_BY_MAJOR_BASIN = {
     'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan'],
     'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang'],
 }
+
+STATIONS_SEL = {
+    'Karnali': ['Chisapani', 'Asaraghat'],
+    'Rapti': ['Kusum'],
+    'Babai': ['Chepang']
+}
+
+DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
+GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
+GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 ```
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
+df_return_period_glofas = pd.read_excel(GLOFAS_RP_FILENAME)
 ```
 
 ## When do activations occur at the different stations
@@ -77,17 +90,11 @@ for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
     events_all[basin] = station_events
 ```
 
-```python
-x = np.array([1, 2, 3, 4, 4, 3, 2, 3, 4, 3, 2])
-g = utils.get_groups_above_threshold(x, 3.5)
-
-```
-
 ### Plot river discharge vs time for all stations
 
 ```python
 rp_list = RP_LIST
-for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in STATIONS_SEL.items():
     fig, axs = plt.subplots(len(stations), figsize=(10,2*len(stations)), squeeze=False)
     fig.suptitle(basin)
     #fig.supylabel('Discharge [m$^3$ s$^{-1}$]')
@@ -112,7 +119,6 @@ for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
             for rp in rp_list:
                 ax.plot([], [], c=cdict[rp], label=rp)
             ax.legend(title=legend_title)
-
 ```
 
 ### Plot RP exceedance
@@ -129,16 +135,16 @@ year_ranges = [
 ]
 
 #year_ranges = [[x, x+1] for x in range(1979, 2020)]
-#year_ranges = [[1979, 2020]]
+year_ranges = [[1979, 2020]]
 
 buffer = 5 # Buffer to make sure the lines show up
-rp_list = [1.5, 2, 5, 20]
+rp_list = RP_LIST
 cmap = mpl.cm.get_cmap('plasma_r')
 clist = cmap(np.linspace(0, 1, len(rp_list)))
 
 all_events = {}
 
-for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in STATIONS_SEL.items():
     
     basin_events = {}
 
