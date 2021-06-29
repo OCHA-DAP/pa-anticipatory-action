@@ -41,18 +41,18 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
 ```
 
 ### Data Source
-We chose to use CHIRPS as data source of historical precipitation. Different data sets exist, but among those that we had access to CHIRPS generally shows good accuracy in Malawi [@zhao2019evaluating]. A caveat of CHIRPS, and many other observational precipitation datasets is that they tend to overpedict precipitation below 1mm [@dinku2011challenges,@dembele2016evaluation]. We used the CHIRPS data between 1 Jan 2000 and 31 Dec 2020 at 0.05-degree resolution.
+We chose to use CHIRPS as data source of historical precipitation. Different data sets exist, but among those that we had access to CHIRPS generally shows good accuracy in Malawi [@zhao2019evaluating]. A caveat of CHIRPS, and many other observational precipitation datasets is that they tend to overpedict precipitation below 1mm [@dinku2011challenges; @dembele2016evaluation]. We used the CHIRPS data between 1 Jan 2000 and 31 Dec 2020 at 0.05-degree resolution.
 
 ### Definitions
 Many different definitions of a dry spell, rainy day, rainy season onset, and rainy season cessation exist. The following definitions were used in the current analysis, based on literature and consultation with partners.
 
 **Dry spells:** At least 14 consecutive days with a cumulative rainfall of no more than 2 mm during the rainy season in an ADMIN2 region.
 
-**Rainy day:** At least 4mm of rainfall on a calendar day (DCCMS 2008).
+**Rainy day:** At least 4mm of rainfall on a calendar day (DCCMS, according to @kimaro2008).
 
-**Rainy season onset:** First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
+**Rainy season onset:** First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, according to @kimaro2008).
 
-**Rainy season cessation:** First day of a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008). The cessation date is the first day of this 15 day period. 
+**Rainy season cessation:** First day of a 15-day period after 15 March with 25mm or less of rain (DCCMS, according to @kimaro2008). The cessation date is the first day of this 15 day period. 
 
 **Rainy season duration:** Rainy season cessation date minus rainy season onset (in days).
 
@@ -197,6 +197,8 @@ rainy_seasons_summary_per_region %>%
 &nbsp;
 
 The boxplot below shows the duration across districts per rainy season. We can see clear differences in average rainy season duration across districts between the year. Moreover, some years very different patterns were observed across districts, indicated by a longer bar.
+
+
 ```{r duration-boxplot, include = T,fig.height=3} 
 ggplot(rainy_seasons_detail %>% filter(season_approx %in% 2000:2019), aes(x=factor(season_approx), y=rainy_season_duration)) + 
   geom_boxplot()+
@@ -272,7 +274,7 @@ rainy_season_dry_spells_summary_per_region %>%
 
 &nbsp;
 
-#### Frequency
+#### Frequency    
 
 ```{r ds-frequency-stats}
 nbr_distr <- length(unique(rainy_season_dry_spells_summary_per_region$ADM2_EN))
@@ -305,10 +307,10 @@ We note some similarities, but also differences  between these results and the A
 
 #### Duration
 ```{r ds-duration-stats}
-max_dur <- max(rainy_season_dry_spells_summary_per_region$max_ds_duration)
-mean_dur <-mean(rainy_season_dry_spells_summary_per_region$mean_ds_duration)
-min_mean_dur <-min(rainy_season_dry_spells_summary_per_region$mean_ds_duration)
-max_mean_dur <-max(rainy_season_dry_spells_summary_per_region$mean_ds_duration)
+max_dur <- max(rainy_season_dry_spells_summary_per_region$max_ds_duration, na.rm = T)
+mean_dur <-round(mean(rainy_season_dry_spells_summary_per_region$mean_ds_duration, na.rm = T),0)
+min_mean_dur <-min(rainy_season_dry_spells_summary_per_region$mean_ds_duration, na.rm = T)
+max_mean_dur <-max(rainy_season_dry_spells_summary_per_region$mean_ds_duration, na.rm = T)
 # dry_spells_during_rainy_season_list %>%
 #                                                 group_by(region, pcode, ADM2_EN, season_approx ) %>%
 #                                                 summarise(nbr_dry_spells = n(),
