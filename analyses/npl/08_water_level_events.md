@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
-
+from matplotlib.ticker import MaxNLocator
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 sys.path.append(path_mod)
@@ -282,15 +282,19 @@ for istation, station in enumerate(STATIONS):
 
 ```
 
+Check time between warning and danger level, and how often warning level is reached without reaching danger level
+
 ```python
-# Check time between warning and danger level
-from matplotlib.ticker import MaxNLocator
 
 for station, df_station in df_station_dict.items():
     warning_level = df_station_info.at[station, f'warning_level']
     danger_level = df_station_info.at[station, f'danger_level']
     events = df_station[df_station['event_warning']]
     date_diff = []
+    n_danger_reached = 0
+    n_danger_not_reached = 0
+    true_warning_dates = []
+    false_warning_dates = []
     #rint('warning and danger', warning_level, danger_level)
     for date_warning, _ in events.iterrows():
         #rint('event', date_warning)
@@ -299,8 +303,28 @@ for station, df_station in df_station_dict.items():
             #rint(date_danger, row_danger['water_level'])
             if row_danger['water_level'] >= danger_level:
                 date_diff.append((date_danger - date_warning) / np.timedelta64(1, 'D'))
-            elif row_danger['water_level'] < warning_level:
+                true_warning_dates.append(date_warning)
+                n_danger_reached += 1
                 break
+            elif row_danger['water_level'] < warning_level:
+                false_warning_dates.append(date_warning)
+                n_danger_not_reached +=1 
+                break
+    print(f'{station}')
+    print(f'Number of times danger level reached: {n_danger_reached}')
+    print(f'Number of times danger level not reached: {n_danger_not_reached}')
+    # Plot true and false warnings
+    fig, ax = plt.subplots(figsize=(10,2))
+    ax.set_title(station)
+    ax.plot(df_station.index, df_station['water_level'], lw=0.5, c='k', alpha=0.5)
+    ax.set_ylabel('Water level [m]')
+    ax.plot(true_warning_dates, len(true_warning_dates) * [warning_level], '^C2', alpha=0.5, label='True')
+    ax.plot(false_warning_dates, len(false_warning_dates) * [warning_level], 'xC0', label='False')
+    ax.axhline(warning_level, c='C1', alpha=0.5)
+    ax.axhline(danger_level, c='C3', alpha=0.5)
+    ax.legend()
+    
+    # Plot time between warning and danger
     fig, ax = plt.subplots()
     ax.set_title(station)
     ax.hist(date_diff, bins=np.arange(0, 6, 1)-0.5)
@@ -426,4 +450,12 @@ for station in STATIONS:
         ax.axhline(thresh, c=c2, lw=0.5)
         for detection in utils.get_groups_above_threshold(q, thresh, DURATION):
             ax.plot(x[detection[0]], q[detection[0]], 'o', c=c2, lw=2, mfc='none')
+```
+
+```python
+
+```
+
+```python
+
 ```
