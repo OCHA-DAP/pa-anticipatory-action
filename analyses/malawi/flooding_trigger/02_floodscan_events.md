@@ -95,6 +95,10 @@ df_floodscan = df_floodscan[df_floodscan['ADM2_EN'].isin(stations_adm2.values())
 df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
 ```
 
+```python
+df_floodscan['date'].max()
+```
+
 Calculate the 5-day rolling average to smooth out potential noise and create simple plots to show the changes in flooding fraction over time.
 
 ```python

@@ -4,12 +4,15 @@ import logging
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.interpolate import interp1d
 from scipy.stats import rankdata
 import xskillscore as xs
 from datetime import timedelta
 
 from src.indicators.flooding.glofas import glofas
+from src.utils_general.statistics import (
+    get_return_period_function_analytical,
+    get_return_period_function_empirical,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -124,18 +127,44 @@ def get_glofas_forecast_summary(ds_glofas_forecast):
     )
 
 
-def get_return_periods(ds_reanalysis: xr.Dataset, years=None) -> pd.DataFrame:
+def get_return_periods(
+    ds_reanalysis: xr.Dataset,
+    years: list = None,
+    method: str = "analytical",
+    show_plots: bool = False,
+) -> pd.DataFrame:
+    """
+    :param ds_reanalysis: GloFAS reanalysis dataset
+    :param years: Return period years to compute
+    :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV distribution overlaid
+    :return: Dataframe with return period years as index and stations as columns
+    """
     if years is None:
         years = [1.5, 2, 3, 5, 10, 20]
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
-        f_rp = _get_return_period_function(ds_reanalysis=ds_reanalysis, station=station)
+        df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
+        if method == "analytical":
+            f_rp = get_return_period_function_analytical(
+                df_rp=df_rp,
+                rp_var="discharge",
+                show_plots=show_plots,
+                plot_title=station,
+            )
+        elif method == "empirical":
+            f_rp = get_return_period_function_empirical(
+                df_rp=df_rp, rp_var="discharge",
+            )
+        else:
+            logger.error(f"{method} is not a valid keyword for method")
+            return None
         df_rps[station] = np.round(f_rp(years))
     return df_rps
 
 
-def _get_return_period_function(ds_reanalysis: xr.Dataset, station: str):
+def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     df_rp = (
         ds_reanalysis.to_dataframe()[[station]]
         .rename(columns={station: "discharge"})
@@ -144,12 +173,7 @@ def _get_return_period_function(ds_reanalysis: xr.Dataset, station: str):
         .sort_values(by="discharge", ascending=False)
     )
     df_rp["year"] = df_rp.index.year
-
-    n = len(df_rp)
-    df_rp["rank"] = np.arange(n) + 1
-    df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
-    df_rp["rp"] = 1 / df_rp["exceedance_probability"]
-    return interp1d(df_rp["rp"], df_rp["discharge"])
+    return df_rp
 
 
 def get_crps(
@@ -197,10 +221,25 @@ def get_crps(
     return df_crps
 
 
-def get_groups_above_threshold(observations, threshold, min_duration=1):
-    groups = np.where(np.diff(observations > threshold, prepend=False, append=False))[
-        0
-    ].reshape(-1, 2)
+def get_groups_above_threshold(
+    observations: np.array,
+    threshold: float,
+    min_duration: int = 1,
+    additional_condition: np.array = None,
+) -> List:
+    """
+    Get indices where consecutive values are equal to or above a threshold
+    :param observations: The array of values to search for groups (length N)
+    :param threshold: The threshold above which the values must be
+    :param min_duration: The minimum group size (default 1)
+    :param additional_condition: (optional) Any additional condition the values must satisfy
+    (array-like of bools, length N)
+    :return: list of arrays with indices
+    """
+    condition = observations >= threshold
+    if additional_condition is not None:
+        condition = condition & additional_condition
+    groups = np.where(np.diff(condition, prepend=False, append=False))[0].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 

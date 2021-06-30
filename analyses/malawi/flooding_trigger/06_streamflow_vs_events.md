@@ -41,7 +41,9 @@ event_sources = ['combined', 'rco', 'emdat', 'floodscan']
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
-df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
+
+# TODO: Rerun with return period values that are specified by GloFAS
+df_return_period = utils.get_return_periods(ds_glofas_reanalysis, method='analytical')
 
 events = {}
 for station in stations_adm2.values():
@@ -92,6 +94,8 @@ For each of the event sources, compare the detection statistics against GloFAS f
 ```python
 days_before_buffer = 30
 days_after_buffer = 30
+start_slice = '1998-01-01'
+end_slice = '2019-12-31'
 
 rp_list = [1.5, 2, 5]
 
@@ -99,17 +103,20 @@ df_detection_stats = pd.DataFrame(columns=['station', 'return_period', 'source',
 
 # TODO: Here we're limiting the time window to 1998-2019. 
 # Could better tailor this to be more specific to each source.
+# Floodscan starts 1998-01-12 and ends 2020-12-31
+# EM-DAT starts in 2000 (when geocoding events started) and goes until 2020
+# RCO has events as early as 1973 and ends 2020
 for code, station in stations_adm2.items():
     
     for rp in rp_list:
         rp_val = df_return_period.loc[rp, code]
-        df_glofas_event = utils.get_glofas_activations(ds_glofas_reanalysis[code].sel(time=slice('1998-01-01','2019-12-31')), rp_val, DURATION)
+        df_glofas_event = utils.get_glofas_activations(ds_glofas_reanalysis[code].sel(time=slice(start_slice, end_slice)), rp_val, DURATION)
         
         detection_stats = {}
         
         for source in event_sources: 
             
-            df_event = filter_event_dates(events[station][source],'1998-01-01', '2019-12-31') 
+            df_event = filter_event_dates(events[station][source], start_slice, end_slice) 
             dict_performance = utils.get_clean_stats_dict(df_glofas_event, df_event, days_before_buffer, days_after_buffer)
             dict_performance['return_period'] = rp
             dict_performance['station'] = station
@@ -138,7 +145,7 @@ for istation, station in enumerate(stations_adm2.values()):
         
         # Add to the legend
         ax.plot([], [], label=source.capitalize(), color=f'C{isource}')
-    ax.plot([], [], color='k', marker='o', label='Precision')
+    ax.plot([], [], color='k', marker='o', label='Precision', ls='--')
     ax.plot([], [], color='k', marker='x', label='Recall')        
 
     ax.legend()
