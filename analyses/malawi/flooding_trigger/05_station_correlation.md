@@ -17,7 +17,7 @@ import numpy as np
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
-from src.indicators.flooding.glofas import utils, glofas
+from src.indicators.flooding.glofas import utils
 from src.indicators.flooding.config import Config
 
 config = Config()
@@ -180,5 +180,5 @@ for station in primary_stations:
             hist_title, 
             save_title_line,
             save_title_hist,
-            True)
+            SAVE_FIG)
 ```

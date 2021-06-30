@@ -16,14 +16,14 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
-from src.indicators.flooding.glofas import utils as utils
+from src.indicators.flooding.glofas import utils
 
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
-SAVE_PLOT = True
+SAVE_PLOT = False
 COUNTRY_ISO3 = 'mwi'
 
 stations_adm2 = {

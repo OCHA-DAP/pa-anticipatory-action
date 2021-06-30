@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sys
 from datetime import timedelta
+import re
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -20,6 +21,7 @@ config = Config()
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
+SAVE_DATA = False
 
 stations_adm2 = {
     'glofas_1': 'Nsanje',
@@ -113,5 +115,6 @@ for station in stations_adm2.values():
     df_end = df_district.groupby('flood_id')['end_date'].max().to_frame().reset_index()
     
     df_events = df_start.merge(df_end, on='flood_id')
-    df_events.to_csv((EXPLORE_DIR / f'{station}_rco_event_summary.csv'), index=False)
+    
+    if SAVE_DATA: df_events.to_csv((EXPLORE_DIR / f'{station}_rco_event_summary.csv'), index=False)
 ```

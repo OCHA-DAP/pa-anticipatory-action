@@ -31,9 +31,10 @@ mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
-GLOFAS_VERSION = 3
-SAVE_FIG = True
+
+SAVE_FIG = False
 LEADTIMES = [5, 10, 15, 20, 25, 30]
+
 stations_adm2 = {
     'glofas_1': 'Nsanje',
     'glofas_2': 'Chikwawa'
@@ -65,8 +66,7 @@ for code, station in stations_adm2.items():
     ax.set_ylabel('River discharge [m$^3$ s$^{-1}$]')
     ax.legend()
     
-    if SAVE_FIG: 
-        plt.savefig(PLOT_DIR / f'{station}_return_periods.png')
+    if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_return_periods.png')
 ```
 
 Look into forecast skill by calculating the CRPS. We'll first do this by looking at all discharge values, and then recalculate looking specifically at extreme discharge values (eg. at the 3-year return period level). 
@@ -97,8 +97,7 @@ df_crps = utils.get_crps(ds_glofas_reanalysis,
                         normalization="mean")
 plot_crps(df_crps * 100, title_suffix=" -- all discharge values")
 
-if SAVE_FIG: 
-        plt.savefig(PLOT_DIR / f'{station}_ncrps_all.png')
+if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_ncrps_all.png')
 ```
 
 ```python
@@ -109,8 +108,7 @@ df_crps = utils.get_crps(ds_glofas_reanalysis,
                          thresh=df_return_period.loc[rp].to_dict())
 plot_crps(df_crps * 100, title_suffix=f" -- values > RP 1 in {rp} y", ylog=False)
 
-if SAVE_FIG: 
-        plt.savefig(PLOT_DIR / f'{station}_ncrps_{rp}_rp.png')
+if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_ncrps_{rp}_rp.png')
 ```
 
 We'll also look at the forecast bias, again specifically at extreme water discharge levels. 
@@ -150,8 +148,7 @@ for code, station in stations_adm2.items():
     if len(o) > 50:
         plot_hist(o, da_forecast, station, leadtimes=leadtimes, rp=rp)
         
-        if SAVE_FIG: 
-            plt.savefig(PLOT_DIR / f'{station}_rank_hist_{rp}_rp.png')
+        if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_rank_hist_{rp}_rp.png')
 ```
 
 ```python
@@ -181,6 +178,5 @@ for code, station in stations_adm2.items():
     ax.set_ylabel('% bias')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     
-    if SAVE_FIG: 
-        plt.savefig(PLOT_DIR / f'{station}_perc_bias.png')
+    if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_perc_bias.png')
 ```

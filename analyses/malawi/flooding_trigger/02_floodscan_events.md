@@ -45,6 +45,7 @@ mpl.rcParams['figure.dpi'] = 300
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 SAVE_PLOT = False
+SAVE_DATA = False
 GLOFAS_VERSION = 3
 STATIONS = ['glofas_1', 'glofas_2']
 
@@ -178,57 +179,5 @@ for station in stations_adm2.values():
     df_floods_summary = get_flood_summary(df_floods_summary)
     
     df_summary_clean = merge_events(df_floods_summary)
-    df_summary_clean.to_csv(EXPLORE_DIR / f'{station}_floodscan_event_summary.csv', index=False)   
-```
-
-### Archive 
-
-Validate Floodscan events against EM-DAT
-
-```python
-# df_emdat = pd.read_csv(EXPLORE_DIR / 'emdat.csv')
-
-# df_emdat = df_emdat[(df_emdat['Disaster Subtype']=='Riverine flood') | (df_emdat['Disaster Subtype'].isnull())]
-
-# df_emdat['Start Day'] = df_emdat['Start Day'].fillna(1).astype(int)
-# df_emdat['End Day'] = df_emdat['End Day'].fillna(1).astype(int)
-
-# df_emdat['start_date'] = pd.to_datetime(dict(year=df_emdat['Start Year'], month=df_emdat['Start Month'], day=df_emdat['Start Day']))
-# df_emdat['end_date'] = pd.to_datetime(dict(year=df_emdat['End Year'], month=df_emdat['End Month'], day=df_emdat['End Day']))
-```
-
-Look for a match in timing between EM-DAT events and those from our Floodscan analysis. We'll add a 1-month buffer on either end of the Floodscan dates to check for a match.
-
-```python
-# BUFFER = 30
-
-# for station in stations_adm2.values():
-
-#     df_emdat_sel = df_emdat[df_emdat['Geo Locations'].str.contains(station)]
-#     print(f'{len(df_emdat_sel.index)} events in {station}')
-#     df_floodscan = flooding[station]
-#     df_floodscan['emdat_match'] = 0
-#     df_floodscan['start_date_buffer'] = pd.to_datetime(df_floodscan["start_date"]) - timedelta(days=BUFFER)
-#     df_floodscan['end_date_buffer'] = pd.to_datetime(df_floodscan["end_date"]) + timedelta(days=BUFFER)
-
-#     for fs_index, fs_row in df_floodscan.iterrows():
-
-#         fs_dates = np.array(pd.date_range(fs_row['start_date_buffer'], fs_row['end_date_buffer']))
-
-#         for em_index, em_row in df_emdat_sel.iterrows():
-#             em_dates = np.array(pd.date_range(em_row['start_date'], em_row['end_date']))
-
-#             if (set(fs_dates) & set(em_dates)):
-#                 df_floodscan.loc[fs_index, 'emdat_match'] =+1
-    
-#     flooding[station] = df_floodscan
-```
-
-Remove events that don't have a match with EM-DAT. 
-
-```python
-# for station in stations_adm2.values():
-#     df = flooding[station]
-#     flooding[station] = df[df['emdat_match']==1]
-#     #flooding[station].to_csv(EXPLORE_DIR / f'{station}_floodscan_event_summary.csv')
+    if SAVE_DATA: df_summary_clean.to_csv(EXPLORE_DIR / f'{station}_floodscan_event_summary.csv', index=False)   
 ```
