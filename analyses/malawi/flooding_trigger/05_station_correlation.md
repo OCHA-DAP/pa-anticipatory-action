@@ -13,6 +13,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
+from scipy.signal import correlate
+from scipy.interpolate import interp1d
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -181,4 +183,43 @@ for station in primary_stations:
             save_title_line,
             save_title_hist,
             SAVE_FIG)
+```
+
+Calculate the time lag in hours between stations.
+
+```python
+time = ds_glofas_reanalysis.time.data
+day_range = int((time[-1] - time[0]) / np.timedelta64(1,'D'))
+x = np.arange(-day_range, day_range + 1)
+# Number of days around the offset interpolation
+interp_offset = 100
+
+stations = ['glofas_1', 'glofas_2']
+
+offset_df = pd.DataFrame(index=stations, columns=stations)
+offset_df.index.name = 'station'
+
+corr_df = pd.DataFrame(index=stations, columns=stations)
+corr_df.index.name = 'station'
+
+
+# Get the discharge for each station
+discharge_s1 = ds_glofas_reanalysis[stations[0]] 
+discharge_s2 = ds_glofas_reanalysis[stations[1]]
+corr = correlate(discharge_s1, discharge_s2)
+imax = np.argmax(corr)
+offset_crude = x[imax]
+
+# Do interpolation to get offset in hours
+x_sub = x[imax - interp_offset:imax + interp_offset + 1] * 24
+corr_sub = corr[imax - interp_offset:imax + interp_offset + 1]
+corr_interp_func = interp1d(x_sub, corr_sub, kind='cubic')
+x_hours_sub = np.arange(x_sub[0], x_sub[-1] + 1)
+corr_hours = corr_interp_func(x_hours_sub)
+offset = int(x_hours_sub[np.argmax(corr_hours)])
+offset_df.at[stations[0], stations[1]] = int(offset) 
+```
+
+```python
+offset_df
 ```
