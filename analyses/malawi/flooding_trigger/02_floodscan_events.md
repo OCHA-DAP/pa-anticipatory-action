@@ -1,17 +1,3 @@
----
-jupyter:
-  jupytext:
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.11.1
-  kernelspec:
-    display_name: Python [conda env:anact] *
-    language: python
-    name: conda-env-anact-py
----
-
 ### Estimating flood events from Floodscan data
 
 This notebook analyzes pre-processed data on average daily surface water coverage for Chikwawa and Nsanje in Malawi. A dataset of estimated historical flood events is output.

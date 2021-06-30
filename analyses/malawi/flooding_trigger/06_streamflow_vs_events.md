@@ -23,7 +23,7 @@ mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
-SAVE_PLOT = False
+SAVE_PLOT = True
 COUNTRY_ISO3 = 'mwi'
 
 stations_adm2 = {
@@ -57,6 +57,8 @@ Plot out the historical streamflow against the timing of each of the historical 
 
 ```python
 rp_list = [1.5, 2, 5]
+start_slice = '1998-01-01'
+end_slice = '2019-12-31'
 
 def filter_event_dates(df_event, start, end):
     return df_event[(df_event['start_date']<str(end)) & (df_event['start_date']>str(start))].reset_index()
@@ -68,8 +70,8 @@ for code, station in stations_adm2.items():
     
     for isource, source in enumerate(event_sources):
                
-        da_plt = ds_glofas_reanalysis[code].sel(time=slice('1998-01-01','2019-12-31'))
-        df_event = filter_event_dates(events[station][source],'1998-01-01', '2019-12-31') 
+        da_plt = ds_glofas_reanalysis[code].sel(time=slice(start_slice, end_slice))
+        df_event = filter_event_dates(events[station][source],start_slice, end_slice) 
         
         observations = da_plt.values
         x = da_plt.time
