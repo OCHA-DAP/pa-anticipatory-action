@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.11.2
+      jupytext_version: 1.10.3
   kernelspec:
     display_name: antact_netcdf
     language: python
@@ -18,8 +18,9 @@ jupyter:
 
 This notebook retrieves the data, computes dry spells, and merges it with observed dry spells in the CHIRPS dataset in order to compare the two. 
 
-TODO:
-- Find a way to quickly incorporate new values, since computing on the whole dataset takes several hours
+Note that this notebook is in a very experimental state. However, since after exploration it was decided to not use ARC2 as a data source as of now, we don't invest time in improving this. The reason of not using ARC2 was because it is observational data and a preference was given for forecast data. 
+
+If later on it is decided to use ARC2, a part of this notebook should be converted into a .py script, and a faster method for computing the statistics should be sought after. 
 
 ```python
 %load_ext autoreload
@@ -46,31 +47,24 @@ import sys
 import os
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
-# print(path_mod)
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
-from src.utils_general.raster_manipulation import invert_latlon, change_longitude_range
 ```
 
 ```python
 country="malawi"
 config=Config()
 parameters = config.parameters(country)
-country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, country)
-country_data_raw_dir = os.path.join(config.DATA_DIR,config.RAW_DIR,country)
-country_data_processed_dir = os.path.join(config.DATA_DIR,config.PROCESSED_DIR,country)
-country_data_exploration_dir = os.path.join(config.DATA_DIR,"exploration",country)
-drought_data_exploration_dir = os.path.join(config.DATA_DIR,"exploration","drought")
+country_iso3=parameters["iso3_code"]
+country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,country_iso3)
+country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,country_iso3)
+country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
 dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
-chirpsgefs_processed_dir = os.path.join(dry_spells_processed_dir,"chirpsgefs")
 
-#we have different methodologies of computing dryspells and rainy season
-#this notebook chooses one, which is indicated by the files being used
-chirpsgefs_stats_path=os.path.join(chirpsgefs_processed_dir,"mwi_chirpsgefs_rainyseas_stats_mean_back.csv")
-chirps_rolling_sum_path=os.path.join(dry_spells_processed_dir,"data_mean_values_long.csv")
+arc2_dir = os.path.join(country_data_exploration_dir,"arc2")
+arc2_filepath = os.path.join(arc2_dir, "arc2_20002020_approxmwi.nc")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
-adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 ```
 
 ### Download the data
@@ -83,10 +77,6 @@ arc2_mwi_url="https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Af
 ```
 
 ```python
-arc2_dir = os.path.join(drought_data_exploration_dir,"arc2")
-# arc2_dir= "../../../Experiments/drought/Data/arc2"
-Path(arc2_dir).mkdir(parents=True, exist_ok=True)
-arc2_filepath = os.path.join(arc2_dir, "arc2_2000_2020_approxmwi.nc")
 # strange things happen when just overwriting the file, so delete it first if it already exists
 if os.path.exists(arc2_filepath):
     os.remove(arc2_filepath)
@@ -106,7 +96,7 @@ with open(arc2_filepath, "wb") as fd:
 
 ```python
 #open the data
-ds=rioxarray.open_rasterio(os.path.join(drought_data_exploration_dir,"arc2","arc2_20002020_approxmwi.nc"),masked=True).squeeze()
+ds=rioxarray.open_rasterio(arc2_filepath,masked=True).squeeze()
 #convert to dataset instead of datarray --> makes selection of variables easier
 ds=ds.to_dataset()
 #fix units attribute
@@ -158,26 +148,17 @@ def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thres
                 zonal_stats(vectors=df, raster=forecast_binary, affine=raster_transform, stats=['count', 'sum'],
                             nodata=np.nan))
             df[f'perc_se{thres}'] = bin_zonal['sum'] / bin_zonal['count'] * 100
-
-            #         #same but then also including cells that only touch the admin region, i.e. don't have their cell within that region
-            #         bin_zonal_touched = pd.DataFrame(
-            #             zonal_stats(vectors=df, raster=forecast_binary, affine=raster_transform, all_touched=True, stats=['count', 'sum'],nodata=np.nan))
-            #         df['perc_threshold_touched'] = bin_zonal_touched['sum'] / bin_zonal_touched['count'] * 100
-
         
         df["date"]=pd.to_datetime(date.strftime("%Y-%m-%d"))
   
         df_list.append(df)
     df_hist=pd.concat(df_list)
     df_hist=df_hist.sort_values(by="date")
-   
-    # df_hist["date_str"]=df_hist["date"].dt.strftime("%Y-%m")
-    # df_hist['date_month']=df_hist.date.dt.to_period("M")
         
     return df_hist
 ```
 
-```python jupyter={"outputs_hidden": true}
+```python tags=[]
 # #only needed if not computed yet
 # #This takes several hours --> better do it in a .py script
 # #compute statistics on adm2 level per date
@@ -193,12 +174,12 @@ def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thres
 ```python
 #load the above 
 #only show column names, since this is quick to load, and full dataframe isn't
-pd.read_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_precip_long.csv"),nrows=1)
+pd.read_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long.csv"),nrows=1)
 ```
 
 ```python
 #load the data. Faster if only choosing a selection of columns
-df=pd.read_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_precip_long.csv"),usecols=["date","ADM2_PCODE","mean_cell","perc_se2"])# ,nrows=10000)
+df=pd.read_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long.csv"),usecols=["date","ADM2_PCODE","mean_cell","perc_se2"])# ,nrows=10000)
 df.date=pd.to_datetime(df.date)
 df.rename(columns={"ADM2_PCODE":"pcode"},inplace=True)
 ```
@@ -208,7 +189,7 @@ df
 ```
 
 ```python
-# df.to_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_precip_long_sel.csv"))
+# df.to_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long_sel.csv"))
 ```
 
 ```python
@@ -311,7 +292,7 @@ df_ds_chirps_res=df_ds_chirps.reset_index(drop=True)
 #create datetimeindex per row
 a = [pd.date_range(*r, freq='D') for r in df_ds_chirps_res[['dry_spell_first_date', 'dry_spell_last_date']].values]
 #join the daterange with the adm2, which create a column per date, then stack to have each adm2-date combination
-df_ds_chirps_daterange=df_ds_chirps_res[["pcode","ID_obs"]].join(pd.DataFrame(a)).set_index(["pcode","ID_obs"]).stack().droplevel(-1).reset_index()
+df_ds_chirps_daterange=df_ds_chirps_res[["pcode"]].join(pd.DataFrame(a)).set_index(["pcode"]).stack().droplevel(-1).reset_index()
 df_ds_chirps_daterange.rename(columns={0:"date"},inplace=True)
 #all dates in this dataframe had an observed dry spell, so add that information
 df_ds_chirps_daterange["dry_spell_chirps"]=1
@@ -357,7 +338,7 @@ df_ds_both_filled
 ```
 
 ```python
-df_ds_both_filled.to_csv(os.path.join(country_data_exploration_dir,"dryspells",f"dryspells_arc2_dates_viz_th2.csv"))
+# df_ds_both_filled.to_csv(os.path.join(country_data_exploration_dir,"dryspells",f"dryspells_arc2_dates_viz_th2.csv"))
 ```
 
 ```python
