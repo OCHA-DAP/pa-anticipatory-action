@@ -69,5 +69,4 @@ ggplot(world_map, aes(x = long, y = lat, group = group)) +
   )
 
 # save plot ## NOTE Programmatically saving the image distorts it. Better save through the GUI for now until we figure out the issue. Saved with dimensions of 1426 x 744px
-#ggsave(paste0(plot_path, "/aa_countries_map.png"), width = 1426, height = 744, units = "px", dpi = 300)
-
+ggsave(paste0(plot_path, "/aa_countries_map.png"), dpi = 600)
