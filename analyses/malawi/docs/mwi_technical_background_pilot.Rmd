@@ -22,7 +22,7 @@ This work uses a list of historical dry spells and rainy seasons, that was also 
 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
-source("historical_dry_spells_description_setup.R")
+source("mwi_rmd_setup.R")
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
