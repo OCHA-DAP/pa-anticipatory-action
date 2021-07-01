@@ -1,18 +1,3 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,Rmd,md
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.10.3
-  kernelspec:
-    display_name: antact
-    language: python
-    name: antact
----
-
 ### The correlation of monthly precipitation with dry spells
 
 
@@ -201,10 +186,6 @@ for ax in g.axes.flatten():
 ```
 
 ```python
-
-```
-
-```python
 #plot distribution monthly precip with and without ds, boxplot
 fig,ax=plt.subplots(figsize=(10,10))
 g=sns.boxplot(data=df_southern_countmonth_labels_decjanfeb,x=" month",y="mean_cell",ax=ax,color="#66B0EC",hue="dry_spell",order=["December","January","February"],palette={"no":"#CCE5F9","yes":'#F2645A'})
@@ -309,10 +290,6 @@ fig.tight_layout()
 ```
 
 ##### Compute misses/false alarms per month
-
-```python
-df_pr.loc[t,["month_ds","month_no_ds","month_miss_rate","month_false_alarm_rate"]]=tp/(tp+fn)*100,tn/(tn+fp)*100,fn/(tp+fn)*100,fp/(tn+fp)*100
-```
 
 ```python
 def compute_miss_false_thresholds_permonth(df):
