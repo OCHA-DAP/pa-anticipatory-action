@@ -229,7 +229,7 @@ def plot_arrow(ax, x, y, c):
                      xy=(x, y+y*0.3),
                      xytext=(x, y+y*0.5),
                     arrowprops=dict(facecolor=c, shrink=0.05, headlength=3,
-                               width=1, headwidth=3, lw=0.5))
+                               width=1, headwidth=3, lw=0.5, alpha=0.5))
     
 for station in STATIONS:
     df = df_station_dict[station]
@@ -360,7 +360,8 @@ for station in STATIONS:
             'FN': len(df_true_events[df_true_events['detections'] == 0]),
             'leadtime': leadtime
         }, ignore_index=True)
-
+        
+df_station_stats[df_station_stats['leadtime'].isin([3, 7])]
 ```
 
 ```python
