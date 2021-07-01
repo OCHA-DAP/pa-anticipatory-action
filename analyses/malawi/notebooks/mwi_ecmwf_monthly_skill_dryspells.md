@@ -73,7 +73,7 @@ monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspe
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 all_dry_spells_list_path=os.path.join(country_data_processed_dir,"dry_spells","full_list_dry_spells.csv")
-monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal","chirps_monthly_total_precipitation_admin1.csv")
+monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
 ```
 
 ```python
@@ -441,6 +441,7 @@ fig.tight_layout(rect=(0,0,1,0.9))
 
 ```python
 print("point of intersection")
+#this is across all leadtimes, so might not be the best point for leadtimes of interest
 df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
 ```
 
@@ -520,10 +521,17 @@ df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_
 # df_pr_sep_lt_m_sel.to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_detect_falsealarm_thresholds_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
 ```
 
+#### Set threshold and compute performance
+Now that we have a rough feel of the performance across thresholds, we can set a threshold and more thoroughly inspect the performance for that threshold. 
+In first instance, the threshold was set by using the intersection point between the percentage of hits, and months with no dry spell and no precipitation <=threshold. 
+
+However, this intersection point is computed across all leadtimes. After closer inspection per leadtime, it was decided to also manually test thresholds. Of which 210 and 180 mm give relatively the best performance (still poor) for leadtimes 2 and 4, depending on whether precision or recall is optimized. 
+
 ```python
-threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
+#threshold based on intersection point of the two lines
+# threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
 #for easily testing different thresholds
-# threshold_perc=180
+threshold_perc=210 #180
 ```
 
 ```python
@@ -532,6 +540,10 @@ threshold_perc
 
 ```python
 df_ds_for["for_below_th"]=np.where(df_ds_for.mean_cell<=threshold_perc,1,0)
+```
+
+```python
+# df_ds_for[["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th"]].to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_list_dsobs_forblw_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
 ```
 
 ```python
@@ -570,6 +582,8 @@ df_pr_sel[df_pr_sel.leadtime.isin([2,4])]
 ```
 
 ### Determine skill based on set threshold, with varying probability
+From here on different methods of defining the threshold and probability are experimented with. However, we chose to go with the first method that was presented above.    
+
 Threshold is set based on the analysis of observed monthly precipitation and dry spells. 
 The probability is set by equalling the forecasted months that the threshold would have been met, equal to the number of months the observed precip was below the threshold
 
