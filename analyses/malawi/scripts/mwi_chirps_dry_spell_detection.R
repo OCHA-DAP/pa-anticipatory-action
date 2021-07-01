@@ -752,7 +752,7 @@ fa <- data_long_mean_values %>%
 # was there a day within a 10d period with a rolling sum <= 10?
 fa$with_10d_10mm <- ifelse(fa$min_10d_sum <= 10, 1, 0)
 
-write.csv(fa, file = paste0(dry_spell_processed_path, "false_alarms_deep_dive.csv"), row.names = FALSE)
+write.csv(fa, file = paste0(dry_spell_processed_path, "mwi_chirps_10days_le10mm.csv"), row.names = FALSE)
 
 # descriptive stats of max_10d_sum and min_10d_sum for Jan and Feb
 fa %>% 
