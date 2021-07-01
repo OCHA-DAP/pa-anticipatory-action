@@ -38,12 +38,12 @@ world_map$aa_country <- as.factor(world_map$aa_country)
 world_map %>% filter(aa_country == 1) %>% summarise(unique(region)) # check that every aa country is in world map with same spelling as above
 
 world_map <- world_map %>% # add shock info to map info
-              left_join(aa_countries_list, by = c('region' = 'country'))
+  left_join(aa_countries_list, by = c('region' = 'country'))
 
 world_map$shock <- as.factor(world_map$shock) # formatting
 
 aa_countries_map <-  world_map %>% filter(!is.na(shock)) # subset mapping + shock info for aa countries
-  
+
 ###
 # map AA countries
 ###
@@ -59,7 +59,7 @@ ggplot(world_map, aes(x = long, y = lat, group = group)) +
   labs(title = 'Countries with Anticipatory Action Frameworks'
        ,subtitle = "Active and under development frameworks") +
   theme(legend.position="bottom"
-        ,plot.title = element_text(size = 24)
+        ,plot.title = element_text(size = 20)
         ,plot.subtitle = element_text(size = 12)
         ,axis.text = element_blank()
         ,axis.title = element_blank()
@@ -68,6 +68,6 @@ ggplot(world_map, aes(x = long, y = lat, group = group)) +
         ,panel.grid = element_blank()
   )
 
-# save plot ## NOTE Programmatically saving the image distorts it. Better save through the GUI for now until we figure out the issue.
-ggsave(paste0(plot_path, "/aa_countries_map.png"), width = 1426, height = 744, units = "px", dpi = 300)
+# save plot ## NOTE Programmatically saving the image distorts it. Better save through the GUI for now until we figure out the issue. Saved with dimensions of 1426 x 744px
+#ggsave(paste0(plot_path, "/aa_countries_map.png"), width = 1426, height = 744, units = "px", dpi = 300)
 
