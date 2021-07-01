@@ -1,18 +1,3 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,md
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.10.3
-  kernelspec:
-    display_name: antact_netcdf
-    language: python
-    name: antact_netcdf
----
-
 ## Compute dry spells detected by ARC2
 [ARC2](https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Africa/.DAILY/.ARC2/.daily/.est_prcp/) is a data set of daily observed precipitation data that is updated relatively quickly compared to other data sets. 
 
@@ -158,7 +143,7 @@ def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thres
     return df_hist
 ```
 
-```python tags=[]
+```python
 # #only needed if not computed yet
 # #This takes several hours --> better do it in a .py script
 # #compute statistics on adm2 level per date
@@ -406,11 +391,11 @@ remote_data
 df_bound=gpd.read_file(adm1_bound_path)
 ```
 
-```python jupyter={"outputs_hidden": true} tags=[]
+```python
 ds=remote_data.sel(T="2021-03-28").rio.set_spatial_dims(x_dim=config.LONGITUDE, y_dim=config.LATITUDE).rio.write_crs("EPSG:4326").rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
 ```
 
-```python jupyter={"outputs_hidden": true} tags=[]
+```python
 remote_data = xr.open_dataset("http://iridl.ldeo.columbia.edu/SOURCES/.OSU/.PRISM/.monthly/dods",
                               decode_times=False)
 tmax = remote_data["tmax"][:500, ::3, ::3]
