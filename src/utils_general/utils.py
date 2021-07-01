@@ -67,8 +67,9 @@ def unzip(zip_file_path, save_path):
     with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
         zip_ref.extractall(save_path)
 
-def download_ftp(url, save_path):
-    logger.info(f'Downloading "{url}" to "{save_path}"')
+def download_ftp(url, save_path, logger_info=True):
+    if logger_info:
+        logger.info(f'Downloading "{url}" to "{save_path}"')
     urlretrieve(url, filename=save_path)
 
 def download_url(url, save_path, chunk_size=128):
