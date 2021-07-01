@@ -47,6 +47,8 @@ import seaborn as sns
 from rasterstats import zonal_stats
 from IPython.display import Markdown as md
 from myst_nb import glue
+import cftime
+import re
 
 from pathlib import Path
 import sys
@@ -60,16 +62,13 @@ from src.indicators.drought.iri_rainfallforecast import get_iri_data
 from src.utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar
 ```
 
-```{code-cell} ipython3
-import cftime
-```
-
 ## Inspect forecasts
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
 adm_sel=["Boucle du Mouhoun","Nord","Centre-Nord","Sahel"]
+adm_sel_str=re.sub(r"[ -]", "", "".join(adm_sel)).lower()
 threshold_mar=40
 threshold_jul=50
 ```
@@ -93,7 +92,7 @@ country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country)
 glb_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration","glb")
 iri_exploration_dir=os.path.join(country_data_exploration_dir,"iri")
-stats_reg_path=os.path.join(country_data_exploration_dir,f"{country}_iri_seasonal_forecast_stats_{''.join(adm_sel)}.csv")
+stats_reg_path=os.path.join(iri_exploration_dir,f"{country}_iri_seasonal_forecast_stats_{''.join(adm_sel_str)}.csv")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
@@ -494,7 +493,7 @@ Note: all these computations only cover the region of interest
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-max_prob_mar=stats_region_bavg_lt.loc[stats_region_bavg_lt.F.dt.month==3,'max_cell'].max()
+max_prob_mar=stats_mar['max_cell'].max()
 num_trig_mar_mean=len(stats_mar.loc[stats_mar['mean_cell']>=threshold_mar])
 year_trig_mar_mean=comb_list_string([str(y) for y in stats_mar.loc[stats_mar['mean_cell']>=threshold_mar].F.dt.year.unique()])
 num_trig_mar_perc10=len(stats_mar.loc[stats_mar['10quant_cell']>=threshold_mar])
@@ -538,10 +537,10 @@ Given the size of the area of interest, it might therefore be better to only foc
 
 +++
 
-### Examine dominant tercile pixel
-TODO: elaborate this section
+### Examine dominant tercile and 40% threshold
 Besides setting a threshold on the below average tercile, we also want to be sure that the below average tercile is the dominant tercile. We therefore require, at the pixel level that 
 probability below average >= (probability above average + 5%)
+Here we check how often this occurs, for the months of interest and across all months
 
 +++
 
@@ -553,6 +552,116 @@ stats_mar[stats_mar["40th_bavg_cell"]>=10]
 
 ```{code-cell} ipython3
 stats_jul[stats_jul["40th_bavg_cell"]>=10]
+```
+
+```{code-cell} ipython3
+#across all months with leadtime_mar
+stats_region_bavg_ltmar=stats_region_bavg.loc[(stats_region_bavg.L==leadtime_mar)]
+stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"]>=10]
+```
+
+```{code-cell} ipython3
+#percentage of forecasts that met requirement
+len(stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"]>=10])/len(stats_region_bavg_ltmar.F.unique())*100
+```
+
+```{code-cell} ipython3
+#across all months with leadtime_jul
+stats_region_bavg_ltjul=stats_region_bavg.loc[(stats_region_bavg.L==leadtime_jul)]
+stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"]>=10]
+```
+
+```{code-cell} ipython3
+#percentage of forecasts that met requirement
+len(stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"]>=10])/len(stats_region_bavg_ltjul.F.unique())*100
+```
+
+### Examine ONLY dominant region
+Understand how often it occurrs that the 10 percentile threshold is at least x% higher for below than above average
+
+As can be seen this occurs the same number of times as when below average probability is at least 40%, but the dates don't fully overlap
+
+```{code-cell} ipython3
+diff_threshold=5
+```
+
+```{code-cell} ipython3
+stats_region_aavg=stats_region[stats_region.C==2]
+stats_region_aavg_ltmar=stats_region_aavg[stats_region_aavg.L==leadtime_mar]
+```
+
+```{code-cell} ipython3
+stats_region_merged=stats_region_bavg.merge(stats_region_aavg,on=["F","L"],suffixes=("_bavg","_aavg"))
+```
+
+```{code-cell} ipython3
+stats_region_merged["diff_bel_abv"]=stats_region_merged["10quant_cell_bavg"]-stats_region_merged["10quant_cell_aavg"]
+```
+
+```{code-cell} ipython3
+stats_region_merged_ltmar=stats_region_merged[stats_region_merged.L==leadtime_mar]
+```
+
+```{code-cell} ipython3
+stats_region_merged_ltmar[stats_region_merged_ltmar["diff_bel_abv"]>=diff_threshold]
+```
+
+```{code-cell} ipython3
+stats_region_merged_ltjul=stats_region_merged[stats_region_merged.L==leadtime_jul]
+```
+
+```{code-cell} ipython3
+stats_region_merged_ltjul[stats_region_merged_ltjul["diff_bel_abv"]>=diff_threshold]
+```
+
+### Examine ONLY dominant pixel
+Understand how often it occurrs that at least 10% of the pixels have x% higher probability for below than above average
+
+As can be seen this occurrs much more often
+
+```{code-cell} ipython3
+def compute_zonal_stats_xarray_dominant(raster,shapefile,lon_coord="lon",lat_coord="lat",var_name="prob"):
+    raster_clip=raster.rio.set_spatial_dims(x_dim=lon_coord,y_dim=lat_coord).rio.clip(shapefile.geometry.apply(mapping),raster.rio.crs,all_touched=False)
+    raster_diff_bel_abv=raster_clip.sel(C=0)-raster_clip.sel(C=2)
+    grid_quant90 = raster_diff_bel_abv.quantile(0.9,dim=[lon_coord,lat_coord]).rename({var_name: "10quant_cell"})
+    zonal_stats_xr = xr.merge([grid_quant90])
+    zonal_stats_df=zonal_stats_xr.to_dataframe()
+    zonal_stats_df=zonal_stats_df.reset_index()
+    return zonal_stats_df
+```
+
+```{code-cell} ipython3
+stats_dom=compute_zonal_stats_xarray_dominant(iri_clip_interp,gdf_reg)
+stats_dom["F"]=pd.to_datetime(stats_dom["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
+stats_dom["month"]=stats_dom.F.dt.month
+```
+
+```{code-cell} ipython3
+len(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_mar)])
+```
+
+```{code-cell} ipython3
+len(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_mar)])/len(stats_dom.F.unique())
+```
+
+```{code-cell} ipython3
+len(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)])
+```
+
+```{code-cell} ipython3
+len(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)])/len(stats_dom.F.unique())
+```
+
+```{code-cell} ipython3
+stats_dom[(stats_dom["10quant_cell"]>=10)&(stats_dom.L==leadtime_mar)]
+```
+
+```{code-cell} ipython3
+stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_mar)]
+```
+
+```{code-cell} ipython3
+stats_region[(stats_region.F.isin(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)].F.unique()))&(stats_region.L==leadtime_jul)]
 ```
 
 ## OLD: Examine dominant tercile region
@@ -631,7 +740,7 @@ Questions
 Note: the NaNs in the table indicate a dry mask during those months
 
 ```{code-cell} ipython3
-stats_region_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).to_csv(os.path.join(iri_exploration_dir,f"bfa_tercile_prob_l{leadtime}_{aggr_meth}.csv"))
+# stats_region_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).to_csv(os.path.join(iri_exploration_dir,f"bfa_tercile_prob_l{leadtime}_{aggr_meth}.csv"))
 ```
 
 ```{code-cell} ipython3

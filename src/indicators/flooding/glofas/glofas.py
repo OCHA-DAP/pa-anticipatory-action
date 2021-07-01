@@ -18,7 +18,7 @@ DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
-GLOFAS_DIR = Path("glofas")
+GLOFAS_DIR = "glofas"
 DEFAULT_VERSION = 3
 HYDROLOGICAL_MODELS = {2: "htessel_lisflood", 3: "lisflood"}
 
@@ -209,7 +209,7 @@ class Glofas:
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / GLOFAS_DIR / filename
+        return DATA_DIR / PUBLIC_DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / GLOFAS_DIR / filename
 
     def read_processed_dataset(
         self,
