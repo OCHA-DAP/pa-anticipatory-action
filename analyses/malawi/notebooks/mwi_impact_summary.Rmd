@@ -156,15 +156,15 @@ The figure below tells us about the relationship between dry spells and various 
 - **Total population in IPC Phase 3 or higher** for the year following the start of a given growing season (total_ipc3plus)
 - **Maximum ASI in an Admin 1** for a given growing season (max_asi)
 - **Minimum WRSI in an Admin 1** for a given growing season (min_wrsi)
+- **Total rainfall in an Admin 1** for a given growing season (total_season_precip)
+- **Average temperature in an Admin 1** for a given growing season (avg_season_temp)
 
-```{r cor-all, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=3, fig.align="center", fig.cap='Correlation matrix of variables across all regions'}
+```{r cor-all, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=5, fig.align="center", fig.cap='Correlation matrix of variables across all regions'}
 
 plt_cor_all
 ```
 
-We only see weak correlations when comparing against our measure of dry spells. More dry spells occurring at a given time is weakly correlated with higher populations in a food security crisis in the following year. Contrary to what would be expected, our dry spells measure is negatively correlated (although very weakly) with ASI. 
-
-These results suggest that perhaps our definition of dry spells is not capturing the kind of impact that we are interested in responding to.
+This figure is showing only the correlations significant at p<0.05. When measured in this way, dry spell prevalence in a region is positively correlated with the average temperature for that season, and negatively correlated with the minimum WRSI experienced that season and the total precipitation. The max ASI and total IPC 3+ population don't have significant correlations against this dry spell measure.
 
 We should consider these results with a number of limitations in mind: 
 
