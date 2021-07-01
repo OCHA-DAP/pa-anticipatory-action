@@ -64,10 +64,11 @@ ft
 
 # Graphs
 #plot the ONI value per year per season
+# factor(m_enso_dryspell_sel$season, levels = season_order)
 plt_oniseas <- ggplot(enso_oni, aes(fill=enso_state, y=anom, x=year)) +
     geom_bar(position="dodge", stat="identity") +
     scale_fill_manual(values=enso_fill)+
-    facet_wrap(~season) +
+    facet_wrap(~factor(season, levels= season_order)) +
     theme(legend.position="none") +
     xlab("")
 plt_oniseas
