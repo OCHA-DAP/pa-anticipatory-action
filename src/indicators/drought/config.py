@@ -152,3 +152,4 @@ class Config:
         Path(DATA_DIR) / PUBLIC_DIR / RAW_DIR / GLOBAL_ISO3 / CHIRPSGEFS_DIR
     )
     CHIRPSGEFS_RAW_FILENAME = "chirpsgefs_africa_{days_ahead}days_{date}.tif"
+    CHIRPSGEFS_DATE_STR_FORMAT="%Y%m%d"
