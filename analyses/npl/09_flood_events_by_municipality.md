@@ -54,7 +54,7 @@ PAST_EVENTS_FILENAME = RCO_DIR / 'HistoricalReportedIncident_Municipality Level_
 GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
 GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 
-
+MUNICIPALITIES_OUTPUT_GEOPACKAGE = RCO_DIR / 'shapefiles/municipalities_of_interest.gpkg'
 ```
 
 ### Read in and clean data
@@ -90,6 +90,10 @@ df_admin = (gpd.read_file(f'zip://{ADMIN_SHAPEFILE}!{ADMIN2_SHAPEFILE}')
             .rename(columns={'ADM2_PCODE': 'pcode'}))
 
 df_events = pd.merge(df_admin, df_events, how='right', left_on='pcode', right_on='pcode')
+```
+
+```python
+
 ```
 
 Read in Basin and Watershed to get areas of interest
@@ -249,8 +253,43 @@ for basin, station in STATIONS.items():
                 
 ```
 
-```python
+## Make a shapefile of the municipalities of interest
 
+Not super related but I didn't want to make a new notebook for this
+
+```python
+municipalities_list = [
+'Bhokraha Narshingh',
+'Harinagar',
+'Inaruwa',
+'Koshi',
+'Chhinnamasta',
+'Hanumannagar Kankalini',
+'Kanchanrup',
+'Mahadeva',
+'Rajbiraj',
+'Tilathi Koiladi',
+'Tirahut',
+'Duduwa',
+'Narainapur',
+'Nepalgunj',
+'Rapti Sonari',
+'Bansagadhi',
+'Barbardiya',
+'Geruwa',
+'Gulariya',
+'Rajapur',
+'Thakurbaba',
+'Lamkichuha',
+'Tikapur',
+]
+
+    
+(df_admin[
+    df_admin['ADM2_EN']
+    .isin(municipalities_list)]
+     .to_file(MUNICIPALITIES_OUTPUT_GEOPACKAGE, layer='municipalities', driver="geopackage")
+)
 ```
 
 ```python
