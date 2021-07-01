@@ -32,25 +32,33 @@ RAINY_SEASON_PATH = (
 )
 CHIRPSGEFS_PROCESSED_DIR = COUNTRY_DATA_PROCESSED_DIR / CONFIG.CHIRPSGEFS_DIR
 
-# how many days ahead the forecast predicts. Can be 5, 10, or 15
-DAYS_AHEAD = 15
+# list of how many days ahead the forecast predicts. Can be 5, 10, or 15
+DAYS_AHEAD = [5,15]
 ADM_LEVEL = 2
+#list of thresholds to compute percentage of cells below the given threshold for.
+THRESHOLD_LIST = [2, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+EARLIEST_ONSET_MONTH = 11
+LATEST_CESSATION_MONTH = 7
 
 
-def main(download=True, process=True):
-    if download:
-        rainy_dates = get_rainy_season_dates(RAINY_SEASON_PATH)
-        for d in rainy_dates:
-            download_chirpsgefs(pd.to_datetime(d), CONFIG, DAYS_AHEAD)
-    if process:
-        compute_stats_rainyseason(
-            COUNTRY_NAME,
-            CONFIG,
-            ADM_LEVEL,
-            DAYS_AHEAD,
-            CHIRPSGEFS_PROCESSED_DIR,
-            RAINY_SEASON_PATH,
-        )
+def main(download=False, process=True):
+    for days in DAYS_AHEAD:
+        if download:
+            rainy_dates = get_rainy_season_dates(RAINY_SEASON_PATH)
+            for d in rainy_dates:
+                download_chirpsgefs(pd.to_datetime(d), CONFIG, days)
+        if process:
+            compute_stats_rainyseason(
+                COUNTRY_NAME,
+                CONFIG,
+                ADM_LEVEL,
+                days,
+                CHIRPSGEFS_PROCESSED_DIR,
+                RAINY_SEASON_PATH,
+                THRESHOLD_LIST,
+                EARLIEST_ONSET_MONTH,
+                LATEST_CESSATION_MONTH
+            )
 
 
 if __name__ == "__main__":
