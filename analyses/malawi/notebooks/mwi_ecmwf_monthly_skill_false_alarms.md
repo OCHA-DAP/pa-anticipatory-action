@@ -38,6 +38,7 @@ import geopandas as gpd
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
+from src.utils_general.statistics import get_return_periods_dataframe
 ```
 
 #### Set config values
@@ -57,7 +58,7 @@ monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspe
 dry_spell_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
-monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal","chirps_monthly_total_precipitation_admin1.csv")
+monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
 mvac_path=os.path.join(private_country_data_raw_dir,"mvac","wfp_dryspells.csv")
 tenday_dryspell_path=os.path.join(dry_spell_processed_dir,"false_alarms_deep_dive.csv")
 ```
@@ -77,7 +78,7 @@ aggr_meth="mean_cell"
 ```
 
 ```python
-#these are determined before in the other notebook
+#these are determined before in the notebook mwi_ecmwf_monthly_skill_dryspells
 #meaning that forecast is classified as predicting a dry spell if >=probability of the members predict <=threshold_perc mm
 threshold_perc=210
 probability=0.5
@@ -88,6 +89,7 @@ for_data_path=os.path.join(monthly_precip_exploration_dir,f"mwi_list_dsobs_forbl
 ```
 
 #### load forecast data
+The forecast is the monthly forecast by ECMWF, which is further explained in the `mwi_ecmwf_monthly_skill_dryspells` notebook. The data loaded here is already processed data. 
 
 ```python
 df=pd.read_csv(for_data_path,parse_dates=["date_month"])
@@ -121,6 +123,9 @@ df_forobs=df_sel.merge(df_total_month[["date_month","ADM1_EN","obs_below_th"]],h
 ```
 
 #### load 10 day dry spell data
+The definition used to classify a dry spell (14 consecutive days with <=2mm cumulative rainfall) is rather strict. We therefore analyse the occurrence of 10 days with <=10mm rainfall. This is a definition also commonly used and thus might already signify significant damage to crops.   
+
+However, it is hard to determine what exactly the kind of phenomenon is that we would want to anticapate to. But by exploring a looser definition, we can get a better indication of the usefulness of the current trigger. 
 
 ```python
 df_10dds=pd.read_csv(tenday_dryspell_path)
@@ -193,6 +198,7 @@ df_mvac_year[df_mvac_year.ADM1_EN=="Southern"].plot(x="season_approx",y="perc",k
 
 ```python
 #start month of the rainy season
+#the start month is based on FewsNet's calendar (https://fews.net/sites/default/files/styles/large/public/seasonal-calendar-malawi.png)
 start_rainy_seas=10
 #season approx indicates the year during which the rainy season started
 #this is done because it can start during one year and continue the next calendar year
@@ -211,33 +217,19 @@ df_forobs_seas.rename(columns={"perc":"perc_ds_mvac"},inplace=True)
 ```
 
 ```python
-#note: a neater version of computing the rp period will be implemented in utils_general/statistics.py soon
-from scipy.interpolate import interp1d
-def get_return_period_function(df,var):
-    df_rp=df.sort_values(by=var,ascending=False)
-    n=len(df)
-    #rank most extreme occurrences
-    df_rp['rank'] = np.arange(n) + 1
-    df_rp['exceedance_probability'] = df_rp['rank'] / (n+1)
-    #rp=return period
-    df_rp['rp'] = 1 / df_rp['exceedance_probability']
-    return interp1d(df_rp['rp'], df_rp[var])
-
-rp_dict = {}
-
-f_rp = get_return_period_function(df_forobs_seas.loc[df_forobs_seas.perc_ds_mvac.notnull()],"perc_ds_mvac")#[df_stats_reg.rainy_seas==1])
-for year in [1.5, 2, 3, 4, 5, 10]:
-    #round the percentages to multiples of 5 (not sure if this is too generalizing)
-    val = 5*np.round(f_rp(year) / 5)
-    rp_dict[year] = val
+df_rp_emp=get_return_periods_dataframe(df_forobs_seas.loc[df_forobs_seas.perc_ds_mvac.notnull()],"perc_ds_mvac",[1.5, 2, 3, 4, 5, 10],method="empirical",show_plots=True)
 ```
 
 ```python
-rp_dict
+df_rp_emp["rp_round"]=5*np.round(df_rp_emp["rp"]/5)
 ```
 
 ```python
-df_forobs_seas.loc[df_forobs_seas.perc_ds_mvac.notnull(),"mvac_rp3"]=np.where(df_forobs_seas[df_forobs_seas.perc_ds_mvac.notnull()].perc_ds_mvac>=rp_dict[3],1,0)
+df_rp_emp
+```
+
+```python
+df_forobs_seas.loc[df_forobs_seas.perc_ds_mvac.notnull(),"mvac_rp3"]=np.where(df_forobs_seas[df_forobs_seas.perc_ds_mvac.notnull()].perc_ds_mvac>=df_rp_emp.loc[3,"rp_round"],1,0)
 ```
 
 ```python
@@ -247,6 +239,7 @@ df_forobs_mvac=df_forobs_seas[df_forobs_seas.mvac_rp3.notnull()]
 
 ### Analyse false alarms
 Compare the false alarms to the occurrence of <=210 mm observed precipitation and 10 consecutive days with cumulative <=10mm on a monthly frequency. Compare the false alarms with the MVAC data on a yearly frequency. 
+The goal of this analysis is to better understand if those false alarms were events where the situation was detoriating, even though it didn't correspond with the set definition of a dry spell (<=2mm cumulative rainfall during 14 days). 
 
 ```python
 df_forobs_seas[df_forobs_seas.leadtime==2].tail()
@@ -286,7 +279,7 @@ df_metrics_lt
 ### Written summary
 
 
-Leadtime=4 months
+Leadtime=4 months, forecasting for Jan and Feb (leadtime of 4 months means that the forecast released mid-Oct is projecting the situation for January)
 - 22/40 (55%) of the months the trigger was met
 - 19/22 (86%) of the times the trigger was met, it was a false alarm. 
 - 14/19 (74%) false alarms occurred during february, 5 during January (26%)
@@ -297,7 +290,7 @@ Leadtime=4 months
 - 3/6 (50%) of these years with a false alarm did occurr during years where more than 85% of the region experienced a dry spell according to MVAC
 
 
-Leadtime=2 months
+Leadtime=2 months, forecasting for Jan and Feb (leadtime of 2 months means that the forecast released mid-Dec is projecting the situation for January)
 - 13/40 (33%) of the months the trigger was met
 - 11/13 (85%) of the times the trigger was met, it was a false alarm. 
 - 8/11 (73%) false alarms occurred during february, 3 during January (27%)
@@ -306,3 +299,7 @@ Leadtime=2 months
 - The false alarms were spread across 9 years
 - 4 of the years with a false alarm occurred during years MVAC data was available
 - 2/4 (50%) of these years with a false alarm did occurr during years where more than 85% of the region experienced a dry spell according to MVAC
+
+```python
+
+```
