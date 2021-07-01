@@ -18,7 +18,7 @@ The AA frameworks that are implemented and/or currently under development are di
 Three of these frameworks have had at least one activation as of June 2021:
 - [Bangladesh, flood](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/)
 - [Ethiopia, drought-related food insecurity](https://centre.humdata.org/predicting-drought-related-food-insecurity-in-ethiopia/)
-- Somalia, food insecurity
+- [Somalia, food insecurity](https://www.unocha.org/story/un-central-emergency-response-fund-supports-anticipatory-action-ethiopia-and-somalia)
 
 The other countries with frameworks under development as of June 2021 are:
 - Malawi, dry spells & floods
