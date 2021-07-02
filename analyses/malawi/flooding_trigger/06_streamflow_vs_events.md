@@ -22,13 +22,15 @@ config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
-EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
+PRIVATE_DIR = config.DATA_PRIVATE_DIR
+EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
+
 SAVE_PLOT = True
 COUNTRY_ISO3 = 'mwi'
 
 stations_adm2 = {
-    'glofas_1': 'Nsanje',
-    'glofas_2': 'Chikwawa'
+   # 'G1724': 'Nsanje',
+    'G2001': 'Chikwawa'
 }
 
 DURATION = 3
@@ -37,7 +39,8 @@ DURATION = 3
 Read in the historical GloFAS data (reanalysis) and the various event datasets.
 
 ```python
-event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+#event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+event_sources = ['rco']
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
@@ -49,7 +52,8 @@ events = {}
 for station in stations_adm2.values():
     sources = {}
     for source in event_sources:
-        sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        #sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv') # Using the combined dataset for Nsanje and Chikwawa
     events[station] = sources
 ```
 
@@ -65,7 +69,7 @@ def filter_event_dates(df_event, start, end):
 
 for code, station in stations_adm2.items(): 
     
-    fig, axs = plt.subplots(len(event_sources), figsize=(10,10), squeeze=False, sharex=True, sharey=True)
+    fig, axs = plt.subplots(len(event_sources), figsize=(10,5 * len(stations_adm2.values())), squeeze=False, sharex=True, sharey=True)
     fig.suptitle(f'Historical streamflow at {station}')
     
     for isource, source in enumerate(event_sources):
@@ -82,7 +86,7 @@ for code, station in stations_adm2.items():
         ax.set_title(source.upper())
 
         for i in range(0,len(df_event['start_date'])):
-            ax.axvspan(np.datetime64(df_event['start_date'][i]), np.datetime64(df_event['end_date'][i]), alpha=0.5, color='#3ea7f7')
+            ax.axvspan(np.datetime64(df_event['start_date'][i]), np.datetime64(df_event['end_date'][i]), alpha=0.25, color='#3ea7f7')
         for irp, rp in enumerate(rp_list):
             ax.axhline(df_return_period.loc[rp, code],  0, 1, color=f'C{irp+1}', alpha=1, lw=0.75, label=f'1 in {str(rp)}-year return period')
 
@@ -134,11 +138,14 @@ for code, station in stations_adm2.items():
 Plot out the results.
 
 ```python
-fig, axs = plt.subplots(2, figsize=(10, 10), sharex=True, sharey=True)
+fig, axs = plt.subplots(len(stations_adm2.values()), figsize=(10, 5 * len(stations_adm2.values())), sharex=True, sharey=True)
 
 for istation, station in enumerate(stations_adm2.values()):
     
-    ax = axs[istation]
+    if len(stations_adm2.values())>1:
+        ax = axs[istation]
+    else:
+        ax = axs
     
     for isource, source in enumerate(event_sources): 
         df_sel = df_detection_stats[(df_detection_stats['station'] == station) & (df_detection_stats['source'] == source)]

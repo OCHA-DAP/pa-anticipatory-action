@@ -24,12 +24,14 @@ config = Config()
 
 SAVE_PLOT = False
 SAVE_DATA = False
+
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
-EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
+EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
+
 stations_adm2 = {
-    'glofas_1': 'Nsanje',
-    'glofas_2': 'Chikwawa'
+    'G1724': 'Nsanje',
+    'G2001': 'Chikwawa'
 }
 ```
 

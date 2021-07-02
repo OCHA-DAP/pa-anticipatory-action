@@ -23,17 +23,17 @@ config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
-EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
-GLOFAS_VERSION = 3
-STATIONS = ['glofas_1', 'glofas_2']
+PRIVATE_DIR = config.DATA_PRIVATE_DIR
+EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
+
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 SAVE_PLOT = True
-EVENT = 'combined' # 'rco', 'floodscan', 'combined'
+EVENT = 'RCO' # 'rco', 'floodscan', 'combined'
 COUNTRY_ISO3 = 'mwi'
 
 stations_adm2 = {
-    'glofas_1': 'Nsanje',
-    'glofas_2': 'Chikwawa'
+    #'G1724': 'Nsanje',
+    'G2001': 'Chikwawa'
 }
 
 DURATION = 3
@@ -174,12 +174,14 @@ for code, station in stations_adm2.items():
 Now we'll see how the GloFAS forecast performs in detecting historical flood events as defined in our event dataset (eg. from the RCO, Floodscan, EM-DAT or combined). We'll first read in all of the historical event datasets.
 
 ```python
-event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+#event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+event_sources = ['rco']
 events = {}
 for station in stations_adm2.values():
     sources = {}
     for source in event_sources:
-        sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        #sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv')
     events[station] = sources
 ```
 
@@ -240,13 +242,15 @@ for code, station in stations_adm2.items():
 Plot out the results.
 
 ```python
-fig, axs = plt.subplots(2, len(rp_list), figsize=(15, 10), sharex=True, sharey=True)
+fig, axs = plt.subplots(len(stations_adm2.values()), len(rp_list), figsize=(15, 5 * len(stations_adm2.values())), sharex=True, sharey=True)
 
 for istation, station in enumerate(stations_adm2.values()):
     
     for irp, rp in enumerate(rp_list):
-    
-        ax = axs[istation, irp]
+        if len(stations_adm2.values()) > 1: 
+            ax = axs[istation, irp]
+        else: 
+            ax = axs[irp]
 
         for isource, source in enumerate(event_sources): 
             df_sel = df_detection_stats[(df_detection_stats['station'] == station) & (df_detection_stats['source'] == source) & (df_detection_stats['return_period'] == rp)]

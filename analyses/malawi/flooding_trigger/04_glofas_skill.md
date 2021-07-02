@@ -30,14 +30,15 @@ config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
-EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
+PRIVATE_DIR = config.DATA_PRIVATE_DIR
+EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-SAVE_FIG = False
+SAVE_FIG = True
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 stations_adm2 = {
-    'glofas_1': 'Nsanje',
-    'glofas_2': 'Chikwawa'
+    'G1724': 'Nsanje',
+    'G2001': 'Chikwawa'
 }
 COUNTRY_ISO3 = 'mwi'
 ```
@@ -152,7 +153,7 @@ for code, station in stations_adm2.items():
 ```
 
 ```python
-rp = 3
+rp = 2
 for code, station in stations_adm2.items():
     fig, ax = plt.subplots()
     

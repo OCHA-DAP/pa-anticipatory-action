@@ -29,15 +29,15 @@ config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
-EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
+PRIVATE_DIR = config.DATA_PRIVATE_DIR
+EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
+
 SAVE_PLOT = False
 SAVE_DATA = False
-GLOFAS_VERSION = 3
-STATIONS = ['glofas_1', 'glofas_2']
 
 stations_adm2 = {
-    'glofas_1': 'Nsanje',
-    'glofas_2': 'Chikwawa'
+    'G1724': 'Nsanje',
+    'G2001': 'Chikwawa'
 }
 ```
 
@@ -79,10 +79,6 @@ df_floodscan = pd.read_csv(df_floodscan_path)
 df_floodscan = df_floodscan[['ADM2_EN','date', 'mean_cell', 'max_cell', 'min_cell']]
 df_floodscan = df_floodscan[df_floodscan['ADM2_EN'].isin(stations_adm2.values())]
 df_floodscan['date'] = pd.to_datetime(df_floodscan['date'])
-```
-
-```python
-df_floodscan['date'].max()
 ```
 
 Calculate the 5-day rolling average to smooth out potential noise and create simple plots to show the changes in flooding fraction over time.

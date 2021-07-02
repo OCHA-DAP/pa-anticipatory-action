@@ -27,13 +27,16 @@ config = Config()
 mpl.rcParams['figure.dpi'] = 300
 
 COUNTRY_ISO3 = 'mwi'
+
 PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
-EXPLORE_DIR = config.DATA_DIR / 'exploration' / 'mwi' / 'flooding'
-SAVE_FIG = False
+PRIVATE_DIR = config.DATA_PRIVATE_DIR
+EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
+
+SAVE_FIG = True
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 stations_adm2 = {
-    'glofas_1': 'Nsanje',
-    'glofas_2': 'Chikwawa'
+    'G1724': 'Nsanje',
+    'G2001': 'Chikwawa'
 }
 ```
 
@@ -149,10 +152,10 @@ def visualize_station_overlay(
 ```
 
 ```python
-rp_event = 3 
-rp_secondary = 3 
-primary_stations = ['glofas_2']
-secondary_stations = ['glofas_1']
+rp_event = 2 
+rp_secondary = 2 
+primary_stations = ['G2001']
+secondary_stations = ['G1724']
 primary_label = 'Chikwawa'
 secondary_label = 'Nsanje'
 DURATION = 3
@@ -194,7 +197,7 @@ x = np.arange(-day_range, day_range + 1)
 # Number of days around the offset interpolation
 interp_offset = 100
 
-stations = ['glofas_1', 'glofas_2']
+stations = ['G1724', 'G2001']
 
 offset_df = pd.DataFrame(index=stations, columns=stations)
 offset_df.index.name = 'station'
