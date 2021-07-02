@@ -30,6 +30,8 @@ STATIONS = {
     'Koshi': 'Chatara',
     'Karnali': 'Chisapani'
 }
+# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
+VERSION_LOC = "_v3"
 
 KARNALI_BASINS = [
     'Karnali', 'West Rapti', 'Babai'
@@ -92,10 +94,6 @@ df_admin = (gpd.read_file(f'zip://{ADMIN_SHAPEFILE}!{ADMIN2_SHAPEFILE}')
 df_events = pd.merge(df_admin, df_events, how='right', left_on='pcode', right_on='pcode')
 ```
 
-```python
-
-```
-
 Read in Basin and Watershed to get areas of interest
 
 ```python
@@ -104,7 +102,10 @@ df_watershed = gpd.read_file(WATERSHED_SHAPEFILE)
 ```
 
 ```python
-karnali = df_basins[df_basins['Major_Basi'].isin([f'{basin} River Basin' for basin in KARNALI_BASINS])].dissolve()
+df_basins['Karnali'] = 0
+idx = df_basins['Major_Basi'].isin([f'{basin} River Basin' for basin in KARNALI_BASINS])
+df_basins.loc[idx, 'Karnali']= 1
+karnali = df_basins[idx].dissolve(by='Karnali')
 koshi = df_watershed[df_watershed['WSH_NME'] == f'{KOSHI_WATERSHED} Watershed']
 ```
 
@@ -192,7 +193,7 @@ for basin, station in STATIONS.items():
         TP = 0
         FP = 0
         rp_val = df_return_period.loc[rp, station]
-        observations = ds_glofas_reanalysis[station].values
+        observations = ds_glofas_reanalysis[station + VERSION_LOC].values
         groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=ndays)
         for group in groups:
             # The GlofAS event takes place on the Nth day (since for an event)
@@ -234,7 +235,7 @@ for basin, station in STATIONS.items():
         df_events_sub = df_events_high_impact[
             (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
         ]
-        observations = ds_glofas_reanalysis[station].values
+        observations = ds_glofas_reanalysis[station + VERSION_LOC].values
         x = ds_glofas_reanalysis.time
         ax = axs[i]
         ax.plot(x, observations, lw=0.5)
@@ -288,10 +289,6 @@ municipalities_list = [
 (df_admin[
     df_admin['ADM2_EN']
     .isin(municipalities_list)]
-     .to_file(MUNICIPALITIES_OUTPUT_GEOPACKAGE, layer='municipalities', driver="geopackage")
+     .to_file(MUNICIPALITIES_OUTPUT_GEOPACKAGE, layer='municipalities', driver="GPKG")
 )
-```
-
-```python
-
 ```
