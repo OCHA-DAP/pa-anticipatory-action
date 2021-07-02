@@ -41,6 +41,7 @@ GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 COUNTRY_ISO3 = 'npl'
 DURATION = 1
 MAIN_RP = 2
+FORECAST_PERCENTILE = 50
 
 STATIONS = [
     'Chatara',
@@ -73,10 +74,6 @@ df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 
 ```
 
-```python
-ds_glofas_reforecast
-```
-
 ### Create dataframe with both water level and river discharge
 
 ```python
@@ -101,7 +98,7 @@ for station in STATIONS:
     # Add in the forecast data
     for leadtime in LEADTIMES:
         forecast = (ds_glofas_forecast_summary[station + VERSION_LOC]
-                    .sel(leadtime=leadtime, percentile=50)
+                    .sel(leadtime=leadtime, percentile=FORECAST_PERCENTILE)
                     .to_dataframe()
                     .drop(columns=['surface', 'leadtime', 'percentile'])
                     .rename(columns={f"{station+VERSION_LOC}": station}))
@@ -230,9 +227,6 @@ df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station
 df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
 df_station_stats[df_station_stats['wl_days'].isnull()]
 ```
-
-# 
-
 
 ## Make plots for presentation
 
@@ -395,7 +389,7 @@ for istation, station in enumerate(STATIONS):
 ```
 
 ```python
-rp = 2
+rp = MAIN_RP
 leadtimes = [7, 3] # Longer first
 
 for station in STATIONS:
@@ -407,10 +401,7 @@ for station in STATIONS:
     model = df_station['river_discharge']
     forecast_1 = df_station[f'forecast_{leadtimes[0]}']
     forecast_2 = df_station[f'forecast_{leadtimes[1]}']
-
-
-
-
+    
     fig = plt.figure(figsize=(10,8))
     gs= fig.add_gridspec(ncols=1, nrows=4, hspace=0.05, top=0.93, bottom=0.08)
 
