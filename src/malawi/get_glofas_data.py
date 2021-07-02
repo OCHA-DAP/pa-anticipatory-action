@@ -32,10 +32,10 @@ SHAPEFILE_DIR = (
     / parameters["path_admin0_shp"]
 )
 
-# TODO: Figure out how to get this from how it's stored in the config.yml
 STATIONS = {
-    "glofas_1": Station(lat=-16.55, lon=35.15),
-    "glofas_2": Station(lat=-16.25, lon=34.95),
+    "G5694": Station(lat=-16.05, lon=34.85),
+    "G2001": Station(lat=-16.25, lon=34.95),
+    "G1724": Station(lat=-16.45, lon=35.05),
 }
 
 

@@ -40,13 +40,4 @@ climate:
   rainy_end_month: 4
 
 glofas:
-  stations:
-    1:
-      name: "glofas_1"
-      lat: -16.55
-      long: 35.15
-    2:
-      name: "glofas_2"
-      lat: -16.25
-      long: 34.95
   leadtimes: [5, 10, 15, 20, 25, 30]
