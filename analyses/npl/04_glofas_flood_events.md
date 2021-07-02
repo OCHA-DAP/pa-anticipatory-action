@@ -26,13 +26,15 @@ LEADTIMES = [x + 1 for x in range(20)]
 COUNTRY_ISO3 = 'npl'
 
 FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
+# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
+VERSION_LOC = "_v3"
+    
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
 GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
 GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 
 DURATION = 1
-
 ```
 
 ```python
@@ -63,8 +65,8 @@ for station in df_return_period.columns:
     #for rp in df_return_period.index:
     for rp in rp_list:
         rp_val = df_return_period.loc[rp, station]
-        observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station].values
-        forecast = ds_glofas_reforecast_summary[station].sel(percentile=forecast_prob)
+        observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + VERSION_LOC].values
+        forecast = ds_glofas_reforecast_summary[station + VERSION_LOC].sel(percentile=forecast_prob)
 
         # The GlofAS event takes place on the Nth day (since for an event)
         # you require N days in a row
@@ -182,39 +184,41 @@ for station in FINAL_STATIONS:
 ```python
 rp = 1.5
 leadtimes = [7, 3] # Longer first
-station = 'Chatara'
 forecast_prob = 50
 
-thresh = df_return_period.loc[rp, station]
-fig, axs = plt.subplots(3, figsize=(8,6))
-observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station]
-forecast = get_da_glofas_summary(ds_glofas_reforecast[station])[forecast_prob]
-forecast_1 = forecast.sel(leadtime=leadtimes[0])
-forecast_2 = forecast.sel(leadtime=leadtimes[1])
-fig.supylabel('River dischange [m$^3$ s$^{-1}$]')
-fig.supxlabel('Year')
-fig.suptitle(station)
-for i, q in enumerate([forecast_1, forecast_2, observations]):
-    ax = axs[i]
-    if i == 2:
-        c1 = 'k'
-        c2 = 'C3'
-        title = 'Modelled'
-    else:
-        c1 = 'C0'
-        c2 = 'C1'
-        title = f'{leadtimes[i]}-day lead time'
-        ax.set_xticklabels([])
-    x = q.time
-    y = q.values
-    ax.plot(x, y, '-', c=c1, lw=0.5)
-    ax.set_ylim(0, 8000)
-    #ax.set_xlim(0, 120000)
-    ax.minorticks_on()
-    ax.axhline(thresh, c=c2, lw=0.5)
-    ax.set_title(title)
-    for detection in utils.get_groups_above_threshold(y, thresh, DURATION):
-        ax.plot(x[detection[0]], y[detection[0]], 'o', c=c2, lw=2, mfc='none')
+
+for station in FINAL_STATIONS:
+
+    thresh = df_return_period.loc[rp, station]
+    fig, axs = plt.subplots(3, figsize=(8,6))
+    observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + VERSION_LOC]
+    forecast = utils.get_glofas_forecast_summary(ds_glofas_reforecast)[station + VERSION_LOC].sel(percentile=forecast_prob)
+    forecast_1 = forecast.sel(leadtime=leadtimes[0])
+    forecast_2 = forecast.sel(leadtime=leadtimes[1])
+    fig.supylabel('River dischange [m$^3$ s$^{-1}$]')
+    fig.supxlabel('Year')
+    fig.suptitle(station)
+    for i, q in enumerate([forecast_1, forecast_2, observations]):
+        ax = axs[i]
+        if i == 2:
+            c1 = 'k'
+            c2 = 'C3'
+            title = 'Modelled'
+        else:
+            c1 = 'C0'
+            c2 = 'C1'
+            title = f'{leadtimes[i]}-day lead time'
+            ax.set_xticklabels([])
+        x = q.time
+        y = q.values
+        ax.plot(x, y, '-', c=c1, lw=0.5)
+        ax.set_ylim(0, 8000)
+        #ax.set_xlim(0, 120000)
+        ax.minorticks_on()
+        ax.axhline(thresh, c=c2, lw=0.5)
+        ax.set_title(title)
+        for detection in utils.get_groups_above_threshold(y, thresh, DURATION):
+            ax.plot(x[detection[0]], y[detection[0]], 'o', c=c2, lw=2, mfc='none')
 ```
 
 ### Compare Chisapani to Asaraghat

@@ -305,14 +305,6 @@ df_glofas_events = df_glofas_events.drop_duplicates(subset={'date', 'basin', 'st
 df_glofas_events.to_excel(EVENTS_FOR_RAGINDRA, index=False)
 ```
 
-```python
-
-```
-
-```python
-
-```
-
 # Appendix
 
 
@@ -332,8 +324,4 @@ for basin, station_list in STATIONS.items():
         ax.plot(x, observations)
         for i, row in df_events_basin.iterrows():
             ax.axvline(x=i, c='r', alpha=0.1)
-```
-
-```python
-
 ```

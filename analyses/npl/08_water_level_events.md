@@ -46,6 +46,8 @@ STATIONS = [
     'Chatara',
     'Chisapani',
 ]
+# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
+VERSION_LOC = "_v3"
 
 LEVEL_TYPES = ['warning', 'danger']
 RP_LIST = [1.5, 2, 5]
@@ -71,13 +73,20 @@ df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 
 ```
 
+```python
+ds_glofas_reforecast
+```
+
 ### Create dataframe with both water level and river discharge
 
 ```python
 df_station_dict = {}
 for station in STATIONS:
     wl = df_wl[[station]]
-    rd = ds_glofas_reanalysis[station].to_dataframe().drop(columns=['step', 'surface', 'valid_time'])
+    rd = (ds_glofas_reanalysis[station + VERSION_LOC]
+              .to_dataframe()
+              .drop(columns=['step', 'surface', 'valid_time'])
+              .rename(columns={f"{station+VERSION_LOC}": station}))
     data = (pd.merge(wl, rd, 
                      how='inner', 
                      left_index=True, 
@@ -91,10 +100,11 @@ for station in STATIONS:
     data = data.reindex(pd.date_range(data.index.min(), data.index.max()))
     # Add in the forecast data
     for leadtime in LEADTIMES:
-        forecast = (ds_glofas_forecast_summary[station]
+        forecast = (ds_glofas_forecast_summary[station + VERSION_LOC]
                     .sel(leadtime=leadtime, percentile=50)
                     .to_dataframe()
-                    .drop(columns=['surface', 'leadtime', 'percentile']))
+                    .drop(columns=['surface', 'leadtime', 'percentile'])
+                    .rename(columns={f"{station+VERSION_LOC}": station}))
         data = (pd.merge(data, forecast,
                         how='left',
                         left_index=True,
@@ -215,6 +225,9 @@ for station in STATIONS:
             'FN': len(df_true_events[df_true_events['detections'] == 0]),
             'wl_days': wl_days
         }, ignore_index=True)
+        
+df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
+df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
 df_station_stats[df_station_stats['wl_days'].isnull()]
 ```
 
@@ -360,6 +373,7 @@ for station in STATIONS:
             'FN': len(df_true_events[df_true_events['detections'] == 0]),
             'leadtime': leadtime
         }, ignore_index=True)
+
         
 df_station_stats[df_station_stats['leadtime'].isin([3, 7])]
 ```
