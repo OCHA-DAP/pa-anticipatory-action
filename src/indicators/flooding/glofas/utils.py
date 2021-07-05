@@ -107,7 +107,6 @@ def _convert_dict_to_ds(ds_glofas_dict) -> xr.Dataset:
     )
 
 
-<<<<<<< HEAD
 def get_glofas_forecast_summary(ds_glofas_forecast):
     percentiles = np.arange(0, 105, 5)
     coord_names = ["percentile", "leadtime", "time"]
