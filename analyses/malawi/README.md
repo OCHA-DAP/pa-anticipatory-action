@@ -1,4 +1,4 @@
-# CERF Anticipatory Action framework in Bangladesh
+# CERF Anticipatory Action framework in Malawi
 
 As of June 2021 this framework is under development and further information will be added here later. 
 
