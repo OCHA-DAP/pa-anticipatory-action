@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 def main(download=False, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis()
-    glofas_forecast = glofas.GlofasForecast()
     glofas_reforecast = glofas.GlofasReforecast()
 
     if download:
@@ -46,12 +45,6 @@ def main(download=False, process=True):
         glofas_reanalysis.download(
             country_iso3=COUNTRY_ISO3,
             area=area,
-            version=VERSION,
-        )
-        glofas_forecast.download(
-            country_iso3=COUNTRY_ISO3,
-            area=area,
-            leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.download(
@@ -66,12 +59,6 @@ def main(download=False, process=True):
         glofas_reanalysis.process(
             country_iso3=COUNTRY_ISO3,
             stations=stations,
-            version=VERSION,
-        )
-        glofas_forecast.process(
-            country_iso3=COUNTRY_ISO3,
-            stations=stations,
-            leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.process(
