@@ -60,7 +60,7 @@ dry_spell_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
 mvac_path=os.path.join(private_country_data_raw_dir,"mvac","wfp_dryspells.csv")
-tenday_dryspell_path=os.path.join(dry_spell_processed_dir,"false_alarms_deep_dive.csv")
+tenday_dryspell_path=os.path.join(dry_spell_processed_dir,"mwi_chirps_10days_le10mm.csv")
 ```
 
 ```python
