@@ -44,7 +44,7 @@ LATEST_CESSATION_MONTH = 7
 def main(download=False, process=True):
     for days in DAYS_AHEAD:
         if download:
-            rainy_dates = get_rainy_season_dates(RAINY_SEASON_PATH)
+            rainy_dates = get_rainy_season_dates(RAINY_SEASON_PATH, EARLIEST_ONSET_MONTH, LATEST_CESSATION_MONTH)
             for d in rainy_dates:
                 download_chirpsgefs(pd.to_datetime(d), CONFIG, days)
         if process:
