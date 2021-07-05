@@ -1,3 +1,4 @@
+#largely copied from https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/
 repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v2.4.0
