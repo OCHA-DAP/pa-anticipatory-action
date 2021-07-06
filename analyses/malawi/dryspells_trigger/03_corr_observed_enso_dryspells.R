@@ -7,7 +7,7 @@ data_dir <- Sys.getenv("AA_DATA_DIR")
 dry_spell_dir <- paste0(data_dir, '/public/processed/mwi/dry_spells/')
 enso_dir <- paste0(data_dir,'/public/raw/glb/enso/')
 # filenames depend on aggregation methodology of dry spells from raster to admin/
-plot_dir <-paste0(data_dir, '/public/processed/malawi/plots/dry_spells/enso/mean_back/')
+plot_dir <-paste0(data_dir, '/public/processed/mwi/plots/dry_spells/enso/')
 dry_spells_list_path <- paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean_back.csv')
 
 ############################# Definitions ##############################################
@@ -248,17 +248,19 @@ flextable(enso_year_dryspell)
 
 ### Graphs
 #plot the percentage of rainy seasons with a dry spell per enso state and per season (3months)
-ggplot(data = enso_year_dryspell, aes(y = perc_enso_ds, x =enso_state, fill=enso_state )) +
-  geom_bar(width=0.5, stat = "identity")+
+plt_enso_ds <-ggplot(data = enso_year_dryspell, aes(y = perc_enso_ds, x =enso_state, fill=enso_state )) +
+  geom_bar(width=0.5, stat = "identity", show.legend = F )+
   theme_minimal()+
   scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
   labs(title = "Percentage of rainy seasons with a dry spell", subtitle="by ENSO state per 3month period",
        x = "ENSO State",
        y = "Percentage of rainy seasons (%)")
+plt_enso_ds
+# ggsave(paste0(plot_dir, 'mwi_percentage_enso_state_dryspell.png'),plot=plt_enso_ds)
 
 #plot the percentage of rainy seasons with NO dry spell per enso state and per season (3months)
-ggplot(data = enso_year_dryspell, aes(y = perc_enso_no_ds, x =enso_state, fill=enso_state )) +
+plt_enso_no_ds <- ggplot(data = enso_year_dryspell, aes(y = perc_enso_no_ds, x =enso_state, fill=enso_state )) +
   geom_bar(width=0.5, stat = "identity")+
   theme_minimal()+
   scale_fill_manual(values=enso_fill)+
@@ -268,15 +270,17 @@ ggplot(data = enso_year_dryspell, aes(y = perc_enso_no_ds, x =enso_state, fill=e
        y = "Percentage of rainy seasons (%)")
 
 #plot which percentage of dry spells occured in each enso state
-ggplot(data = enso_year_dryspell, aes(y = perc_ds_per_enso, x =enso_state, fill=enso_state )) +
+plt_ds_enso <- ggplot(data = enso_year_dryspell, aes(y = perc_ds_per_enso, x =enso_state, fill=enso_state)) +
   geom_bar(width=0.5, stat = "identity")+
   theme_minimal()+
   scale_fill_manual(values=enso_fill)+
   ylim(0,100)+
-  labs(title = "The ENSO state during rainy seasons with a dry spell", caption="The ENSO state is the state that had the most occurences during the rainy season",
+  labs(title = "The ENSO state during rainy seasons with a dry spell", 
+       # caption="The ENSO state is the state that had the most occurences during the rainy season",
        x = "ENSO State",
        y = "Percentage of rainy seasons (%)")
 
+#ggsave(paste0(plot_dir, 'mwi_percentage_dryspell_enso_state.png'),plot=plt_ds_enso)
 
 #3: ONI values and dry spells
 ########################################################################################
