@@ -29,15 +29,16 @@ SHAPEFILE = (
     / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
 )
 VERSION = 3
+USE_INCORRECT_COORDS = False
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=False, process=True):
+def main(download=True, process=True):
 
-    glofas_reanalysis = glofas.GlofasReanalysis()
-    glofas_reforecast = glofas.GlofasReforecast()
+    glofas_reanalysis = glofas.GlofasReanalysis(use_incorrect_area_coords=USE_INCORRECT_COORDS)
+    glofas_reforecast = glofas.GlofasReforecast(use_incorrect_area_coords=USE_INCORRECT_COORDS)
 
     if download:
         df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
