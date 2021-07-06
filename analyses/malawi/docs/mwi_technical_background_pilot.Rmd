@@ -1,5 +1,5 @@
 ---
-title: "Forecasting dry Spells in Malawi"
+title: "Forecasting dry spells in Malawi"
 author: "By Centre for Humanitarian Data"
 date: "`r Sys.Date()`"
 output:
@@ -16,30 +16,30 @@ link-citations: true
 ---
 
 ## Background
-This document summaries the data work that has been done to correlate the occurence of a dry spell with different climatological indicators. This work has been done for OCHA's Anticipatory Action pilot in Malawi related to dry spells. It explores the relations with seasonal observed indicators, the skill of short-term forecast to predict these dry spells, and the ability to observe dry spells in almost real-time. All work presented here has been done by the Centre for Humanitarian Data, but with indispensable help from technical partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action), and will regularly be referred to in this document. 
+This document summaries the data work that has been done to correlate the occurrence of a dry spell with different climatological indicators. This work has been done for OCHA's Anticipatory Action pilot in Malawi related to dry spells. It explores the relations with seasonal observed indicators, the skill of a seasonal and 15-day forecast to predict these dry spells, and the ability to observe dry spells in almost real-time. All work presented here has been done by the Centre for Humanitarian Data, but with indispensable help from technical partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action), and will regularly be referred to in this document. 
 
-This work uses a list of historical dry spells and rainy seasons, that was also created as part of this project. Further information and analyses of the detection of these historical dry spells can be found [here](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/develop/analyses/malawi/notebooks/historical_dry_spells_description_mean.html)
+This work uses a list of historical dry spells and rainy seasons, that was also created as part of this project. Further information and analyses of the detection of these historical dry spells can be found [here](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/develop/analyses/malawi/notebooks/historical_dry_spells_description_mean.html) and this list of historical events can be [downloaded on HDX](https://data.humdata.org/dataset/historical-dry-spells-in-malawi). 
 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("mwi_rmd_setup.R")
+source("../dryspells_trigger/03_corr_observed_enso_dryspells.R")
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
 
 ```{r data-load-formatting}
 data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
-plot_dir <-paste0(data_dir,'/processed/malawi/plots/dry_spells')
-rainy_seasons_detail <- read.csv(file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_mean_back.csv"))
-dry_spells_during_rainy_season_list <- read.csv(file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"))
+plot_dir <-paste0(data_dir,'/public/processed/mwi/plots/dry_spells')
+enso_plot_dir <- paste0(plot_dir,'/enso')
 
-rainy_seasons_detail$onset_date <- as.Date(rainy_seasons_detail$onset_date, format = "%Y-%m-%d")
-rainy_seasons_detail$cessation_date <- as.Date(rainy_seasons_detail$cessation_date, format = "%Y-%m-%d")
-
-rainy_seasons_detail <- rainy_seasons_detail %>%
-  mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 ```
-
+### Definitions/methodology/caveats
+- Low statistical significance
+- Focus on Southern Region
+- Rainy season (SON to MAM)
+- Later on focus only on Jan and Feb
+- CHIRPS for observed precipitation
 <!-- ### Data Source -->
 <!-- We chose to use CHIRPS as data source of historical precipitation. Different data sets exist, but among those that we had access to CHIRPS generally shows good accuracy in Malawi [@zhao2019evaluating]. We used the CHIRPS data between 1 Jan 2000 and 31 Dec 2020 at 0.05-degree resolution.  -->
 
@@ -56,19 +56,23 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
 
 <!-- **Rainy season duration:** Rainy season cessation date minus rainy season onset (in days). -->
 
-## Correlation of dry spells and seasonal indicators
+## Correlation of **observed** indicators and dry spells
 Optimally the pre-alert of the trigger could be based on indicators with a long lead time, preferable 3 to 6 months. This would give the possibility of a wider range of anticipatory actions to be implemented by the organizations in country. Most information provided with such a long lead time doesn't report directly the probability of dry spells in a certain location. They report a more general pattern, such as the ENSO state or the total precipitation over a 3 month period. Therefore, we explored whether these more broad properties that are forecasted well-ahead of the rainy season, do have a correlation with the occurrence of a dry spell. This analysis is thus solely looking at **observational** data, not at forecasts. If the correlations between these observed data sources turn out to be significant, we move to forecasts. This with the assumption that if there is no such correlation in the observed data, there won't be any in the forecasted data. 
 
 ### Previous work
-The body of literature on the relation between long-term meteorological indicators and the occurence of dry spells in Malawi is rather limited. We are aware of two articles who investigated the correlation of dry spells in Malawi with ENSO, and 3-monthly precipitation, as well as temperature, wind speed, and wind direction. 
+The body of literature on the relation between long-term meteorological indicators and the occurrence of dry spells in Malawi is rather limited. We are aware of two articles who investigated the correlation of dry spells in Malawi with ENSO, and 3-monthly precipitation, as well as temperature, wind speed, and wind direction. 
 @mittal2021co investigated the correlation with total precipitation in a 3-month period and the occurrence of a prolonged dry spell in Malawi. This work defines a dry spell as 14 consecutive dry days, where a dry day is a day with <=2mm of precipitation. They found that there was only a weak correlation between the occurrence of a dry spell and the total 3-monthly precipitation, where again the strength of the correlation heavily depended on the location. 
 @streefkerk2020linking looked at the correlation between 5-day long dry spells and the meteorological indicators of temperature, wind speed, wind direction and ENSO strength. It should be noted that 5-day long dry spells is a significantly different phenomenon than 14-day long dry spells, and thus results might not be transferable.  She showed that the chosen indicators do have some predictive value for the occurrence of the 5-day dry spells, while these correlations heavily depend on the location. Moreover, the analysis suggests that the while the ENSO phenomenon has predictive value for overall drought, it is less decisive for the occurrence of dry spells, as these are more local events. 
 
 ### ENSO state
-A commonly used long-term meteorological indicator is the El Niño Southern Oscillation (ENSO) state. This state is a global phenomenon, that causes seasonal climatological fluctuations and is related to Sea Surface Temperatures (SSTs). More background on the ENSO phenomenon can be found [here](https://iri.columbia.edu/our-expertise/climate/enso/). Our analysis explores the correlation with the observed ENSO state and the occurence of a prolonged dry spell. 
+A commonly used long-term meteorological indicator is the El Niño Southern Oscillation (ENSO) state. This state is a global phenomenon, that causes seasonal climatological fluctuations and is related to Sea Surface Temperatures (SSTs). More background on the ENSO phenomenon can be found [here](https://iri.columbia.edu/our-expertise/climate/enso/). Our analysis explores the correlation with the observed ENSO state and the occurrence of a dry spell. 
 
 Several different indicators exist to measure the ENSO state, of which most are indicated [here](https://www.psl.noaa.gov/enso/dashboard.html). The two indicators most commonly used are the NINO3.4 index and ONI. They use slightly different sources of data and aggregation methodologies, but show similar historical patterns. For our analysis it was chosen to use ONI, as their data is commonly used to keep track of the current ENSO state. 
-<!-- Nevertheless, both indicators could be used here but no large differences in results are expected.  -->
+Nevertheless, both indicators could be used here but no large differences in results are expected.
+
+Malawi is at a transition zone, where the impact of the ENSO phenomenon is mainly observed in the Southern region. In this region El Nino generally marks dryer weather, while La Nina generally causes wetter weather. This is shown in the figure below, which is adapted [from IRI](https://iri.columbia.edu/our-expertise/climate/enso/) by Ileen Streefkerk. The hypothesis would therefore be that the El Nino state increases the likelihood of a dry spell occurring. 
+
+![](`r paste0(enso_plot_dir,'/enso_effects_mwi_streefkerk.png')`){ width=70% }
 
 #### Data source
 [ONI](https://origin.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php) is reported as a running mean over a 3-month period. Open data exists from 1950 till present. Warm periods are defined as an ONI larger or equal to 0.5, while cold periods are defined as an ONI smaller or equal to -0.5. If 5 or more consecutive overlapping periods reach the threshold for a warm period, these seasons are defined as experiencing El Niño state. As you might guessed, 5 or more consecutive overlapping periods that reach the threshold for a cold period, are defined as experiencing La Niña state. All other seasons are defined as the neutral state. 
@@ -76,106 +80,96 @@ Several different indicators exist to measure the ENSO state, of which most are 
 #### Methodology
 For each 3 month period, an ENSO state was assigned to the ONI data based on the definition as described above. 
 A 3-month period was marked as having experienced a dry spell if a dry spell started during the middle-month of that 3-month period. I.e. if a dry spell started on 15-03-2010, the FMA 2010 season was indicated to have experienced a dry spell. 
-Moreover, for part of the analysis the dominant ENSO state over the rainy season was computed, which was defined as the most common state from the SON till MAM season
-TODO: might want to change this to months where some time in the past a dry spell occured!! 
+Since our main period of interest is the rainy season, this is the focus of this analysis. The rainy season was defined quite broadly, including all seasons from SON to MAM. 
+Lastly, since the main effect of the ENSO phenomenon is expected in the Southern region, we only included the dry spells that occurred in this region (which is the largest fraction of all dry spells).
 
 #### Analysis
-TODO have to clean-up code to do this properly but
-- Include plot of dominant state and percentage of seasons experiencing a dry spell
-- same plot but per 3month period
-- boxplot with ONI anomaly
+Below the ONI values per rainy season are shown, where a red bar indicates the occurrence of a dry spell. From here we can already see that it isn't the case that all dry spells occur during an extreme ONI state, and not all extreme ONI states co-occurred with a dry spell. 
+![](`r paste0(enso_plot_dir,'/mwi_plot_oni_year_dryspell.png')`)
+We now classify the ONI values into the three states: El Nino, La Nina and Neutral. We then analyze which percentage of the occurrences of each state co-occurred with a dry spell (first graph), and the division of the occurrences of the dry spells across the states (second graph). This could be translated to false alarms and rate of detection respectively.  
+```{r, figures-side, fig.show="hold", out.width="50%",include=T}
+plt_enso_ds
+plt_ds_enso
 
-![historical oni values dry spell](`r paste0(plot_dir,'/enso/mean_back/mwi_plot_oni_year_dryspell.png')`)
 
+```
 
-#### Forecasts
+From these graphs we can conclude that:
+- Two thirds (67%) of Neutral ENSO states co-occurred with dry spells. 
+- However more than half (56%) of dry spells occurred in El Niño or La Niña ENSO states.
+Due to this division of dry spells across ENSO state, we conclude that the ENSO state is not a reliable indicator of the presence of dry spells. It is especially surprising that the Neutral state shows the most correspondence with dry spells, while from literature the Nino state is expected to show a higher correlation. 
+
+We also further analyzed if more extreme ONI values, instead of only the ENSO state, showed a higher correlation, but this was not the case. Moreover, we analyzed the results per 3month period, but not large differences were seen here either. 
+
 Due to not seeing a relationship between observed ENSO state and dry spells, we didn't move on to analyze the forecasts with the assumption that this relationship will only be weaker. For those interested in the forecasts, the most commonly used forecasts is the one [produced by IRI](https://iri.columbia.edu/our-expertise/climate/forecasts/enso/current/), of which the [historical data](https://iri.columbia.edu/~forecast/ensofcst/Data/) can also be downloaded. 
 
-<!-- #### Data used -->
-<!-- [ONI data](https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt) -->
-<!-- Observed dry spells -->
 
 <!-- #### Scripts -->
 <!-- Due to circumstances, we derived the values manually from [NOAA's table](https://origin.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php), but they are also [available as txt for download](https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt).  -->
-<!-- Processing script -->
 
 
-### Seasonal precipitation
+### Below-average seasonal precipitation
 Another commonly used forecast source with a long lead time are the so-called seasonal forecasts. Here a season is defined as a 3 month period. Seasonal precipitation forecasts are an often used product for informing predictions related to seasonal drought, and depending on the source include forecasts for 1 to 6 months ahead. 
 
 Seasonal precipitation forecasts exist in different formats. The most common format is that of a tercile-based forecasts,where the three terciles are referred to as below-average, normal, and above-average precipitation. These tercile-based forecasts report the probability for the precipitation to be in each tercile, per raster cell. See [here] for a clear resource on the definition of a tercile-based forecast. The Malawi Met services (DCCMS) provide their forecast in this format, as well as global organizations such as IRI and NMME. While we do investigate the relationship of dry spells with seasonal below-average precipitation, by definition the occurrence of below-average precipitation is not expected to have a strong relation with dry spells. This is the case for two reasons, namely 1) below-average precipitation occurs on average once every three years, while dry spells are a more extreme event (as we saw in the historical dry spell analysis) and 2) the amount of rainfall that is classified as "below-average" depends on the average rainfall for the given location. The tercile is thus location dependent, whereas the definition of a dry spell is based on an absolute number of millimeters and thus doesn't depend on the location. 
 
-Some organizations also provide absolute forecasted amounts, either as an expected amount per day or per month. The main organizations providing this data are ECMWF and the UK Met office. From the daily projected amounts, one could in theory directly forecast the occurrence of a dry spell. However, since those forecasts have such a large uncertainty, it is very unlikely that the forecast will predict the occurrence of a dry spell by calendar day. Nevertheless, you can come up with other aggregated measures that might correlate with the occurrence of a dry spell. In this analysis we investigated the relationship of dry spells with total monthly and total seasonal precipitation. 
-
 #### Data source
-CHIRPS was used as data source to compute the monthly and 3-monthly total precipitation, and the occurrences of 3-monthly below-average precipitation. CHIRPS was chosen as data source, since this is the same source as was used to detect observed dry spells and thus thereby we eliminate any weakening of relationship due to biases in different sources. See for more information about CHIRPS the section on defining observed dry spells. 
+CHIRPS was used as data source to compute the monthly and 3-monthly total precipitation, and the occurrences of 3-monthly below-average precipitation. CHIRPS was chosen as data source, since this is the same source as was used to detect observed dry spells and thus thereby we eliminate any weakening of relationship due to biases in different sources. See for more information about CHIRPS the documentation on defining observed dry spells. 
 
 #### Methodology
-We work with the monthly sum of precipitations as directly provided by CHC on their FTP server. We compute the 3-monthly sum from this per raster cell and aggregate this to admin2 level by [.... set aggregation method]. Whether a cell had below-average precipitation, is information that is not readily available, and thus we had to compute this ourselves. [This notebook] shows and explains all the steps taken to do so. Once we had the information whether a raster cell had below-average precipitation or not in a given season, we also aggregated this information to admin2 level.
+We work with the monthly sum of precipitations as directly provided by CHC on their FTP server. We then compute the 3-monthly sum from this per raster cell. Thereafter we compute for each cell whether it experienced below-average precipitation. The code and further explanation can be found [here].
+Once we had the information whether a raster cell had below-average precipitation during a given season, we also aggregated this information to admin2 level.
 
-For the aggregation to admin2 level, we used a percentage-based approach since whether a raster cell had below-average precipitation is a binary variable, and thus taking the mean would not be approriate here. We therefore classified an admin2 having observed below-average precipitaiton if at least 50% of the raster cells received below-average precipitation
+For the aggregation to admin2 level, we used a percentage-based approach since whether a raster cell had below-average precipitation is a binary variable, and thus taking the mean would not be appropriate here. We therefore classified an admin2 having observed below-average precipitation if at least 50% of the raster cells received below-average precipitation
 
-A 3-month period was assigned as having experienced a dry spell if a dry spell started during any of the 3 months in the given admin2.  
+A 3-month period was assigned as having experienced a dry spell if a dry spell started during any of the 3 months in the given admin2. Thus this methodology is slightly different than the one used in the ENSO analysis, where a dry spell was only assigned to a season if it started during the middle month of that season.  
 
-#### Seasonal below-average precipitation
-Below the confusion matrix is shown, which indicates the co-occurence of dry spells and below-average precipitation. As can be seen this co-occurence is not great. Only 55% (52/94) of the seasons with a dry spell also had below-average precipitation. Moreover, there were many 3-month periods with below-average precipitation but during which no dry spell occured. To be more precise this was the case in 89% of the below-average periods. Further analysis was done to determine if better correlations occur in certain admin2's or during specific periods. This analysis didn't show a significantly stronger signal, but for the curiously-minded the full analysis can be found here. 
+#### Analysis
+Below the confusion matrix is shown, which indicates the co-occurrence of dry spells and below-average precipitation. As can be seen this co-occurrence is not great. Only 55% (52/94) of the seasons with a dry spell also had below-average precipitation. Moreover, in 89% of the 3-month periods with below-average precipitation, no dry spell occurred. Further analysis was done to determine if better correlations occur in certain admin2's or during specific periods. This analysis didn't show a significantly stronger signal. 
 
-Based on this confusion matrix and the other analyses, we conclude that the occurence of below-average precipitation is not a good indicator for the likelihood of a dry spell occuring. We therefore didn't move on to analyze the performance of seasonal forecasts instead of observations. 
+Based on this confusion matrix and the other analyses, we conclude that the occurrence of below-average precipitation is not a good indicator for the likelihood of a dry spell occurring. We therefore didn't move on to analyze the performance of seasonal forecasts instead of observations. 
 
 ![seasonal below average precipitation confusion matrix](`r paste0(plot_dir,'/seasonal/seasonal_below_average_confusionmatrix.png')`)
 
-#### Total seasonal precipitation
-As we saw dry spells are more extreme than below-average precipitation. Therefore, another approach could be to set an absolute threshold of the maximum seasonal precipitation (in mm) ourselves. All seasons with less precipitation than that threshold would be identified as having a higher chance of a dry spell while those seasons with more precipitation would be cateogrized as having a lower chance for a dry spell.
 
-We investigated different thresholds and the ability to classify dry spells based on these thresholds. The figure below shows the distribution of seasonal precipitation, grouped by the occurrence of a dry spell. From this figure we can see that
+### Total monthly precipitation
+Besides the long-term tercile forecasts, some organizations also provide absolute forecasted rainfall (in mm) with several months leadtime. This rainfall is forecasted either as an expected amount per day or per month. The main organizations providing this data are ECMWF and the UK Met office. From the daily projected amounts, one could in theory directly forecast the occurrence of a dry spell. However, since those forecasts have such a large uncertainty, it is very unlikely that the forecast will predict the occurrence of a dry spell by calendar day. Nevertheless, you can come up with other aggregated measures that might correlate with the occurrence of a dry spell. In this analysis we investigate the relationship of dry spells with total monthly precipitation. 
 
-1) Seasons with a dry spell do on average have less seasonal precipitation than the seasons during which no dry spell occurred
-2) Nevertheless, many seasons with no dry spell also have precipitation in the same range as those seasons with a dry spell. 
+#### Data source
+CHIRPS was used as data source, for the same reasons it was used to compute the seasonal precipitation.
+ 
+#### Methodology
+The CHIRPS data directly contained observed monthly rainfall. This was aggregated from raster cell to admin1 by taking the mean value of all cells within the admin1. The reason we aggregated to admin1 and not admin2 was because of the high spatial uncertainty in forecasts. This means that these forecasts are meant to indicate general regional patterns, but are not able to predict whether the rain will fall in the one city or the next. Therefore admin1 is a more proper spatial area to analyze if observed rainfall is a decent indicator for dry spells, as this is the information we need if we would move to forecasted data. 
 
-It will therefore be difficult to distinguish the seasons with and without a dry spell based on the total received seasonal precipitation. 
+Moreover, we had to aggregate the dry spell data, which is at admin2, to admin1. We assigned an admin1 as experiencing a dry spell if at least 3 admin2's experienced a dry spell during that time. 
 
-![seasonal total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_seasonal_precipitation_distribution.png')`)
+Lastly, we had to convert the daily dry spell data to monthly dry spell data. We assigned a month as experiencing a dry spell, if at least 7 days of that month were part of a dry spell. 
 
-This is confirmed by the graph below, where we can see the percentage of seasons with and without a dry spell that would be correctly categorized based on the threshold. While the optimal threshold depends on the preferred trade-off for sensitivity vs selectivity, it can be seen that there is never a real good trade-off. The lines intersect at a threshold of 590 millimeter. 63% of the seasons with a dry spell received less than these 590 millimeters, but simeltaneously 59% of those seasons with no dry spell also received less than 590 millimeters of precipitation. It is important to note that the number of seasons with no dry spell is tremendously larger than those with a dry spell, and therefore there would be many false alarms (727 to be precise, versus 59 correctly classified seasons).
+When this analysis was done, we were already in a further stage of the project, where we decided to 
+1) only focus on the Southern region.
+2) only focus on the months of December, January and February. This because according to experts during these months the impact of dry spells is most felt. 
 
-![seasonal total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_seasonal_precipitation_threshold_categorized.png')`)
+#### Analysis
+Before looking at the correlations, it is important to note the methodological choices significantly decreased the occurrences of dry spells. This is caused by the fact that we only look at a part of the country, aggregated to admin1, and focus on 3/12 months in the year. This leaves us with 3 dry spells in December, 1 in January, and 3 in February from 2000 till 2020. This is very little, and therefore it is important to note that the results presented below are not statistically significant. However, it is the best we can do with the data we have. 
 
-#### Total monthly precipitation
-TODO: about same story as seasonal
-<!-- #### Scripts -->
-<!-- Computing the below average and aggregating -->
-<!-- Correlations below average -->
-<!-- Correlations total rainfall -->
+Below the distribution of monthly precipitation, with and without dry spells is shown
 
-<!-- #### Data sources used -->
-<!-- CHIRPS -->
-<!-- Shapefiles -->
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds73_adm1.png')`)
 
-<!-- #### TODO -->
-<!-- Check format UK Met office (paper, email, ECMWF) -> same as ECMWF but Met office generally wants to adjust their products to the use case.. -->
-<!-- Add flexible forecast IRI once understood better -->
+We can see that the distinction of rainfall for months with and without a dry spell is pretty high, especially during January and February. During December this distinction is less clear, this is largely due to the fact that the rainy season often only starts in December. We therefore decided to only focus on January and February. 
 
-![monthly total precipitation distribution](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_distribution.png')`)
+We investigated different thresholds of monthly precipitation and the ability to classify dry spells based on these thresholds. The figure below shows the misses and false alarms of dry spells for different thresholds. We can see that the distinction is pretty good, though we are only working with 4 events of dry spells here so the statistical significance is very low. 
 
-#### Future
-Number of dry days during a month
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_janfeb_southern_ds73.png')`)
 
-<!-- ### Monthly precipitation forecasts -->
-<!-- Besides forecasted quantities over a 3-month period, one can also look at these quantities over a monthly period. This quantity is reported by a few seasonal forecasts, and might be a better indicator for the occurence of a dry spell than the precipitation over a 3-month period  -->
-<!-- We are not aware of any suitable, openly available subseasonal forecasts, but we could possibly use the seasonal forecasts that also provide values per month.  -->
+Based on that figure, we computed the confusion matrix at a threshold of 170mm, since this is where the lines of misses and false alarms cross. We can see that all occurrences of dry spells had <=170 mm. However, 6 months without a dry spell also saw <=170 mm rainfall, which would mean a false alarm rate of 17% (6/36). 
+
+![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_confusionmatrix_janfeb_southern_ds73_th170.png')`)
+
+Due to this pretty good correlation, we decided to also analyze the skill of monthly forecasts and its ability to detect dry spells. This is explained in the next section. 
 
 
-<!-- List of available forecasts -->
-<!-- Seasonal timescale -->
-<!-- Seasonal tercile - IRI, NMME, ECMWF, NMA -->
-<!-- Daily seasonal - ECMWF -->
-<!-- Monthly seasonal - ECMWF -->
-
-<!-- Monthly timescale -->
-<!-- SubX - too experimental  -->
-<!-- S2S - Ask IRI -- dont see precipitation on ECMWF website? -->
-
-## Forecasting of dry spells
+## Corrlation of **forecasts** and dry spells
 As described in the previous section, the long-term indicators were shown to not have a strong correlation with the occurrence of a dry spell. We therefore move on to look at forecasts that can directly forecast dry spells, instead of predicting other indicators such as the ENSO state. Since forecasting skill generally decreases as the lead time decreases, the first forecast that was analyzed was that with the shortest lead time, namely 15 days ahead. This would mean that at the start of a dry spell, the alert could be triggered. 
 
 #### Previous work
