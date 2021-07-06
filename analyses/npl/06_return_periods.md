@@ -42,12 +42,13 @@ df_rps_analytical = utils.get_return_periods(ds_glofas_reanalysis, years=years, 
 glofas_rp = pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 
 
-for i, station in enumerate(stations):
+for i, station in enumerate(ds_glofas_reanalysis.keys()):
     fig, ax = plt.subplots()
     ax.plot(df_rps_empirical.index, df_rps_empirical[station], label='empirical')
     ax.plot(df_rps_empirical.index, df_rps_analytical[station], label='analytical')
-    if station in glofas_rp.columns:
-        ax.plot(glofas_rp[station].index, glofas_rp[station], 'o', label='GloFAS')
+    station_name = station.split('_v3')[0]  
+    if station_name in glofas_rp.columns:
+        ax.plot(glofas_rp[station_name].index, glofas_rp[station_name], 'o', label='GloFAS')
     ax.set_title(station)
     ax.legend()
     ax.set_xlabel('Return period [years]')

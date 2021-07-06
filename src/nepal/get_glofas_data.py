@@ -29,16 +29,16 @@ SHAPEFILE = (
     / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
 )
 VERSION = 3
+USE_INCORRECT_COORDS = False
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=False, process=True):
+def main(download=True, process=True):
 
-    glofas_reanalysis = glofas.GlofasReanalysis()
-    glofas_forecast = glofas.GlofasForecast()
-    glofas_reforecast = glofas.GlofasReforecast()
+    glofas_reanalysis = glofas.GlofasReanalysis(use_incorrect_area_coords=USE_INCORRECT_COORDS)
+    glofas_reforecast = glofas.GlofasReforecast(use_incorrect_area_coords=USE_INCORRECT_COORDS)
 
     if download:
         df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
@@ -46,12 +46,6 @@ def main(download=False, process=True):
         glofas_reanalysis.download(
             country_iso3=COUNTRY_ISO3,
             area=area,
-            version=VERSION,
-        )
-        glofas_forecast.download(
-            country_iso3=COUNTRY_ISO3,
-            area=area,
-            leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.download(
@@ -66,12 +60,6 @@ def main(download=False, process=True):
         glofas_reanalysis.process(
             country_iso3=COUNTRY_ISO3,
             stations=stations,
-            version=VERSION,
-        )
-        glofas_forecast.process(
-            country_iso3=COUNTRY_ISO3,
-            stations=stations,
-            leadtimes=LEADTIMES,
             version=VERSION,
         )
         glofas_reforecast.process(
