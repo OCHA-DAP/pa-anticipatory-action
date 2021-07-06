@@ -194,7 +194,7 @@ df_asi_sel_max <- df_asi_sel %>%
 
 # WRSI --------------------------------------------------------------------
 
-# Preprocessed in the mwi_wrsi_process.R file,
+# Preprocessed in the wrsi_process.R file,
 # using the outputs from the GeoWRSI software 
 wrsi_dir <- paste0(exploration_country_dir, 'wrsi/')
 #wrsi_mean <- read.csv(paste0(wrsi_dir, 'wrsi_mean_adm1.csv'))

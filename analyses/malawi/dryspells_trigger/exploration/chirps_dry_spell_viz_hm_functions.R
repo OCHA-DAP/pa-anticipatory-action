@@ -66,7 +66,7 @@ define_theme_hm <- function(yticks_text){
 
 plot_heatmap <- function(df_dry_spells,df_rainy_season, match_values,match_labels,color_scale,y_label,plot_title,ds_flatdata=FALSE,sub_title="",yticks_text=FALSE){
   #ds_flatdata: choose the appropriate preprocessing, depending on the format the data comes in
-  #the output from mwi_chirps_dry_spell_detection.R should use ds_flatdata=FALSE
+  #the output from 01_mwi_chirps_dry_spell_detection.R should use ds_flatdata=FALSE
   #however, some cases the data is preprocessed in python in which case ds_flatdata=TRUE
   if (ds_flatdata) {
     df_ds <- prepare_ggplot(df_dry_spells,"dryspell_match")
@@ -100,7 +100,7 @@ plot_heatmap_without_rainy <- function(df_dry_spells,df_rainy_season, match_valu
   #plot only the months in the df_dry_spells, not the full year where the rainy season is shown
   #this requires a few changes in the plotting structure, and thus needs a separate function
   #ds_flatdata: choose the appropriate preprocessing, depending on the format the data comes in
-  #the output from mwi_chirps_dry_spell_detection.R should use ds_flatdata=FALSE
+  #the output from 01_mwi_chirps_dry_spell_detection.R should use ds_flatdata=FALSE
   #however, some cases the data is preprocessed in python in which case ds_flatdata=TRUE
   if (ds_flatdata) {
     df_ds <- prepare_ggplot(df_dry_spells,"dryspell_match")
