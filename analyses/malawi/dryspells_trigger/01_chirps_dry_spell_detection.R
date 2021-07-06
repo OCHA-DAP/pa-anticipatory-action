@@ -12,7 +12,7 @@ library(sf)
 library(raster)
 
 # load functions
-source("scripts/mwi_chirps_dry_spells_functions.R")
+source("01b_chirps_dry_spells_functions.R")
 
 # set options
 rasterOptions(maxmemory = 1e+09)
