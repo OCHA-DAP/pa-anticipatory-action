@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_glofas_reanalysis(
-    country_iso3: str, version: int = glofas.DEFAULT_VERSION
+    country_iso3: str, version: int = glofas.DEFAULT_VERSION, **kwargs
 ) -> xr.Dataset:
-    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_reanalysis = glofas.GlofasReanalysis(**kwargs)
     ds_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
         country_iso3=country_iso3, version=version
     )
@@ -45,8 +45,9 @@ def get_glofas_reforecast(
     leadtimes: List[int],
     interp: bool = True,
     version: int = glofas.DEFAULT_VERSION,
+    **kwargs
 ) -> xr.Dataset:
-    glofas_reforecast = glofas.GlofasReforecast()
+    glofas_reforecast = glofas.GlofasReforecast(**kwargs)
     ds_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
             country_iso3=country_iso3,

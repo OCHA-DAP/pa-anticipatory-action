@@ -49,6 +49,7 @@ STATIONS = [
 ]
 # Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
 VERSION_LOC = "_v3"
+USE_INCORRECT_AREA_COORDS = False
 
 LEVEL_TYPES = ['warning', 'danger']
 RP_LIST = [1.5, 2, 5]
@@ -62,11 +63,12 @@ df_wl = pd.read_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index_col='date')
 
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=COUNTRY_ISO3, use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS)
 
 ds_glofas_reforecast = utils.get_glofas_reforecast(
     country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
-    interp=True
+    interp=True,
+    use_incorrect_area_coords=True
 )
 ds_glofas_forecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
@@ -432,4 +434,8 @@ for station in STATIONS:
         ax.axhline(thresh, c=c2, lw=0.5)
         for detection in utils.get_groups_above_threshold(q, thresh, DURATION):
             ax.plot(x[detection[0]], q[detection[0]], 'o', c=c2, lw=2, mfc='none')
+```
+
+```python
+
 ```
