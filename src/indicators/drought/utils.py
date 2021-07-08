@@ -17,6 +17,9 @@ def parse_args():
         "-d",
         "--download-data",
         action="store_true",
-        help="Download the raw data. FewsNet and WorldPop are currently implemented",
+        help=(
+            "Download the raw data. FewsNet and WorldPop are currently"
+            " implemented"
+        ),
     )
     return parser.parse_args()

@@ -43,9 +43,10 @@ def compare_adm_names(
     )
     if missing_gipcbound.size > 0:
         logger.warning(
-            f"The following admin {admin_level} regions from the Global IPC file are not found "
-            f"in the boundaries file. You can add a mapping in the globalipc_adm_mapping parameter of the country's config file."
-            f" {missing_gipcbound}"
+            f"The following admin {admin_level} regions from the Global IPC"
+            " file are not found in the boundaries file. You can add a"
+            " mapping in the globalipc_adm_mapping parameter of the country's"
+            f" config file. {missing_gipcbound}"
         )
 
     missing_boundgipc = np.setdiff1d(
@@ -54,9 +55,10 @@ def compare_adm_names(
     )
     if missing_boundgipc.size > 0:
         logger.warning(
-            f"The following admin {admin_level} regions from the boundaries file are not found "
-            f"in the Global IPC file.You can add a mapping in the globalipc_adm_mapping parameter of the country's config file."
-            f" {missing_boundgipc}"
+            f"The following admin {admin_level} regions from the boundaries"
+            " file are not found in the Global IPC file.You can add a mapping"
+            " in the globalipc_adm_mapping parameter of the country's config"
+            f" file. {missing_boundgipc}"
         )
 
 
@@ -134,8 +136,10 @@ def test_mismatch_adminlevels(
                     ]
                 )
                 logger.warning(
-                    f"{c} reported on admin{admin_level} and aggregated from admin2 to {admin_level} differs by more than 5% "
-                    f"for the following date-admin{admin_level} combinations: {dateadm_notmatch_str}"
+                    f"{c} reported on admin{admin_level} and aggregated from"
+                    f" admin2 to {admin_level} differs by more than 5% for the"
+                    f" following date-admin{admin_level} combinations:"
+                    f" {dateadm_notmatch_str}"
                 )
 
 
@@ -236,8 +240,10 @@ def compute_population_admin(df, admin_level, config):
                     ]
                 )
                 logger.warning(
-                    f"{period}: The sum of population in the ipc phases differs from the reported total population by more than 5% "
-                    f"for the following date-admin{admin_level} combinations in {period}: {dateadm_notmatch_str}"
+                    f"{period}: The sum of population in the ipc phases"
+                    " differs from the reported total population by more than"
+                    f" 5% for the following date-admin{admin_level}"
+                    f" combinations in {period}: {dateadm_notmatch_str}"
                 )
     return df
 
@@ -263,7 +269,8 @@ def compute_ml_period(df_ipc_agg, df_ipc):
                 df_ipc_agg.loc[df_ipc_agg["date"] == d, m] = df_ipc_d_per[0]
             elif len(df_ipc_d_per) > 1:
                 logger.warning(
-                    f"Several values for {m} on date {d}. Setting to NaN, but check your data."
+                    f"Several values for {m} on date {d}. Setting to NaN, but"
+                    " check your data."
                 )
                 df_ipc_agg.loc[df_ipc_agg["date"] == d, m] = np.nan
             else:
@@ -480,7 +487,9 @@ def retrieve_globalipc(
             )
     else:
         logger.error(
-            f"File doesn't exist at path {os.path.join(globalipc_dir,config.GLOBALIPC_FILENAME_RAW.format(country=country))}. Download the data first by using the -d args"
+            "File doesn't exist at path"
+            f" {os.path.join(globalipc_dir,config.GLOBALIPC_FILENAME_RAW.format(country=country))}."
+            " Download the data first by using the -d args"
         )
 
 

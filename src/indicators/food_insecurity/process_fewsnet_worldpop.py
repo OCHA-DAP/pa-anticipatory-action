@@ -72,7 +72,10 @@ def fewsnet_validperiod(row):
         period_ML1 = (
             f"{month_abbr[month]} - {month_abbr[(month + 2) % 12]} {year}"
         )
-        period_ML2 = f"{month_abbr[(month + 3) % 12]} - {month_abbr[(month + 5) % 12]} {year_ml2}"
+        period_ML2 = (
+            f"{month_abbr[(month + 3) % 12]} - {month_abbr[(month + 5) % 12]}"
+            f" {year_ml2}"
+        )
     if year > 2015:
         if month == 2:
             year_ml1 = year
@@ -85,7 +88,8 @@ def fewsnet_validperiod(row):
             year_ml2 = year + 1
         else:
             logger.info(
-                f"Period of ML1 and ML2 cannot be added for non-regular publishing date {year}-{month}. Add manually."
+                "Period of ML1 and ML2 cannot be added for non-regular"
+                f" publishing date {year}-{month}. Add manually."
             )
             row["period_ML1"] = np.nan
             row["period_ML2"] = np.nan
@@ -93,7 +97,10 @@ def fewsnet_validperiod(row):
         period_ML1 = (
             f"{month_abbr[month]} - {month_abbr[(month + 3) % 12]} {year_ml1}"
         )
-        period_ML2 = f"{month_abbr[(month + 4) % 12]} - {month_abbr[(month + 7) % 12]} {year_ml2}"
+        period_ML2 = (
+            f"{month_abbr[(month + 4) % 12]} - {month_abbr[(month + 7) % 12]}"
+            f" {year_ml2}"
+        )
     row["period_ML1"] = period_ML1
     row["period_ML2"] = period_ML2
     return row
@@ -132,7 +139,9 @@ def compute_total_admin_population(df_fews, admin_path, pop_path, config):
         date = "".join(df_fews["date"].dt.strftime("%Y-%m").unique())
         if pop_admfews < 95:
             logger.warning(
-                f"For period {period} and date {date} only {pop_admfews:.2f}% of the country's population is included in the region covered by the FewsNet shapefile"
+                f"For period {period} and date {date} only {pop_admfews:.2f}%"
+                " of the country's population is included in the region"
+                " covered by the FewsNet shapefile"
             )
 
         # In some cases a large fraction of the country's population doesn't have an IPC phase assigned (mostly 99).
@@ -145,11 +154,15 @@ def compute_total_admin_population(df_fews, admin_path, pop_path, config):
         )
         if perc_ipcclass < 50:
             logger.warning(
-                f"For period {period} and date {date} only {perc_ipcclass:.2f}% of the population is assigned to an IPC class"
+                f"For period {period} and date {date} only"
+                f" {perc_ipcclass:.2f}% of the population is assigned to an"
+                " IPC class"
             )
         if perc_ipcclass > 110:
             logger.warning(
-                f"For period {period} and date {date} more than 100 ({perc_ipcclass:.2f}%) of the population is assigned to an IPC class. Check your FewsNet source data and processing"
+                f"For period {period} and date {date} more than 100"
+                f" ({perc_ipcclass:.2f}%) of the population is assigned to an"
+                " IPC class. Check your FewsNet source data and processing"
             )
     return df_fews
 
@@ -272,7 +285,8 @@ def process_fewsnet_worldpop(
                 fews_path = fews_region_path
             else:
                 logger.warning(
-                    f"FewsNet file for {d} and {period} not found. Skipping to next date and period."
+                    f"FewsNet file for {d} and {period} not found. Skipping to"
+                    " next date and period."
                 )
 
             # path to population data

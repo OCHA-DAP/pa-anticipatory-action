@@ -67,7 +67,9 @@ def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
     admin2 = gpd.read_file(path_admin)
     if not all(x in admin2.columns for x in [adm0c, adm1c, adm2c]):
         logger.warning(
-            f"Not all admin columns defined in the config were found in the boundary shapefile. The boundary shapefile's columns are {list(admin2.columns)}"
+            "Not all admin columns defined in the config were found in the"
+            " boundary shapefile. The boundary shapefile's columns are"
+            f" {list(admin2.columns)}"
         )
     admin2 = admin2[[adm0c, adm1c, adm2c, "geometry"]]
     overlap = gpd.overlay(admin2, df, how="intersection")
@@ -292,7 +294,10 @@ def check_missingadmins(
     )
     if missing_adm2_popbound.size > 0:
         logger.warning(
-            f"The following admin2 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the pop_bound_adm2_mapping in the config file to include them"
+            "The following admin2 regions of the pop file are not found in"
+            f" the boundaries shapefile: {missing_adm2_popbound}. You can"
+            " adjust the pop_bound_adm2_mapping in the config file to include"
+            " them"
         )
 
     missing_adm2_boundpop = np.setdiff1d(
@@ -300,7 +305,8 @@ def check_missingadmins(
     )
     if missing_adm2_boundpop.size > 0:
         logger.warning(
-            f"The following admin2 regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
+            "The following admin2 regions of the boundaries shapefile are not"
+            f" found in the pop file {missing_adm2_boundpop}"
         )
 
     missing_adm1_popbound = np.setdiff1d(
@@ -308,7 +314,10 @@ def check_missingadmins(
     )
     if missing_adm1_popbound.size > 0:
         logger.warning(
-            f"The following admin1 regions of the pop file are not found in the boundaries shapefile: {missing_adm1_popbound}. You can adjust the pop_bound_adm1_mapping in the config file to include them"
+            "The following admin1 regions of the pop file are not found in"
+            f" the boundaries shapefile: {missing_adm1_popbound}. You can"
+            " adjust the pop_bound_adm1_mapping in the config file to include"
+            " them"
         )
 
     missing_adm1_boundpop = np.setdiff1d(
@@ -316,7 +325,8 @@ def check_missingadmins(
     )
     if missing_adm1_boundpop.size > 0:
         logger.warning(
-            f"The following admin1 regions of the boundaries shapefile are not found in the pop file {missing_adm1_boundpop}"
+            "The following admin1 regions of the boundaries shapefile are not"
+            f" found in the pop file {missing_adm1_boundpop}"
         )
 
 
@@ -469,7 +479,9 @@ def merge_ipcpop(
         != df_pop.Total.sum()
     ):
         logger.warning(
-            f"Population data merged with IPC doesn't match the original population numbers. Original:{df_pop.Total.sum()}, Merged:{df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum()}"
+            "Population data merged with IPC doesn't match the original"
+            f" population numbers. Original:{df_pop.Total.sum()},"
+            f" Merged:{df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum()}"
         )
 
     # add columns with population in each IPC level for CS, ML1 and ML2

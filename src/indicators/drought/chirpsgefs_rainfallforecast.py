@@ -119,7 +119,8 @@ def download_chirpsgefs(date, config, days_ahead, use_cache=True):
     )
     if use_cache and chirpsgefs_filepath.exists():
         logger.debug(
-            f"{chirpsgefs_filepath} already exists and cache is set to True, skipping"
+            f"{chirpsgefs_filepath} already exists and cache is set to True,"
+            " skipping"
         )
         return chirpsgefs_filepath
     Path(config.CHIRPSGEFS_RAW_DIR).mkdir(parents=True, exist_ok=True)
@@ -206,7 +207,8 @@ def compute_stats_rainyseason(
 
         if use_cache and output_path.exists():
             logger.debug(
-                f"{output_path} already exists and cache is set to True, skipping"
+                f"{output_path} already exists and cache is set to True,"
+                " skipping"
             )
         else:
             Path(output_path.parent).mkdir(parents=True, exist_ok=True)
@@ -218,7 +220,8 @@ def compute_stats_rainyseason(
             )
             if not chirpsgefs_raster_filepath.exists():
                 logger.info(
-                    f"CHIRPS-GEFS data for {date_str} was not found, {chirpsgefs_raster_filepath}"
+                    f"CHIRPS-GEFS data for {date_str} was not found,"
+                    f" {chirpsgefs_raster_filepath}"
                 )
             else:
                 logger.debug(f"Retrieving stats for {date_str}")

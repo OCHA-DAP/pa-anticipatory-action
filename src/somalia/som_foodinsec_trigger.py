@@ -1,11 +1,11 @@
-# Compute the trigger information needed for the dashboard. Ugly now for first mock-up, should be improved later on
+# Compute the trigger information needed for the dashboard. Ugly now for
+# first mock-up, should be improved later on
 
-# IPC trigger design as of 01-02-2021:
-# The projected national population in Phase 3 and above exceed20 %, AND
-# (The national population in Phase 3 is projected to increase by 5 percentage points, OR
-# The projected national population in Phase 4 or above is 2.5 %)
+# IPC trigger design as of 01-02-2021: The projected national population
+# in Phase 3 and above exceed20 %, AND (The national population in Phase
+# 3 is projected to increase by 5 percentage points, OR The projected
+# national population in Phase 4 or above is 2.5 %)
 import pandas as pd
-import geopandas as gpd
 import numpy as np
 import warnings
 

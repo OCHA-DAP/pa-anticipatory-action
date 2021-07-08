@@ -32,7 +32,10 @@ def parse_args():
         "-d",
         "--download-data",
         action="store_true",
-        help="Download the raw data. FewsNet and WorldPop are currently implemented",
+        help=(
+            "Download the raw data. FewsNet and WorldPop are currently"
+            " implemented"
+        ),
     )
     return parser.parse_args()
 
@@ -61,7 +64,8 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
             download_url(url_country, zip_filename_country)
         except Exception:
             logger.warning(
-                f"Url of country level FewsNet data for {iso2_code}, {date} is not valid"
+                f"Url of country level FewsNet data for {iso2_code}, {date} is"
+                " not valid"
             )
         try:
             unzip(zip_filename_country, output_dir_country)
@@ -73,7 +77,8 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
         except Exception:
             # indicates that the url returned something that wasn't a zip, happens often and indicates data for the given country - date is not available
             logger.info(
-                f"No country level FewsNet data for {iso2_code}, {date}, using regional data if available"
+                f"No country level FewsNet data for {iso2_code}, {date}, using"
+                " regional data if available"
             )
         os.remove(zip_filename_country)
 
@@ -88,7 +93,8 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
                     download_url(url_region, zip_filename_region)
             except Exception:
                 logger.warning(
-                    f"Url of regional level FewsNet data for {region}, {date} is not valid"
+                    f"Url of regional level FewsNet data for {region}, {date}"
+                    " is not valid"
                 )
             try:
                 unzip(zip_filename_region, output_dir_region)
@@ -99,7 +105,8 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
             except Exception:
                 # indicates that the url returned something that wasn't a zip, happens often and indicates data for the given country - date is not available
                 logger.warning(
-                    f"No FewsNet data for date {date} found that covers {iso2_code}"
+                    f"No FewsNet data for date {date} found that covers"
+                    f" {iso2_code}"
                 )
             os.remove(zip_filename_region)
 
@@ -118,7 +125,8 @@ def download_worldpop(country_iso3, year, output_dir, config):
             download_ftp(url, output_file)
         except urllib.error.URLError as e:
             logger.warning(
-                f"{e}. Data of the year of interest might not exist on the WorldPop FTP."
+                f"{e}. Data of the year of interest might not exist on the"
+                " WorldPop FTP."
             )
 
 

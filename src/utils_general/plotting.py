@@ -419,7 +419,8 @@ def plot_spatial_binary_column(
     # least one region has a value of 1 for binary_col
     if not isinstance(gdf, gpd.GeoDataFrame):
         logger.error(
-            "Input dataframe has to be a GeoDataFrame, add a geometry column and convert to GeoDatFrame type."
+            "Input dataframe has to be a GeoDataFrame, add a geometry column"
+            " and convert to GeoDatFrame type."
         )
     if only_show_reached:
         gdf_group = gdf.groupby(subplot_col, as_index=False).sum()

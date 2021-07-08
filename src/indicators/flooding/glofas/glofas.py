@@ -146,7 +146,9 @@ class Glofas:
                 str(x + 1).zfill(2) for x in range(31)
             ],
             "area": area.list_for_api(),
-            "system_version": f"version_{version}_{self.system_version_minor[version]}",
+            "system_version": (
+                f"version_{version}_{self.system_version_minor[version]}"
+            ),
             "hydrological_model": HYDROLOGICAL_MODELS[version],
         }
         if leadtime is not None:
@@ -259,7 +261,8 @@ class GlofasReanalysis(Glofas):
         year_min = self.year_min if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reanalysis v{version} for years {year_min} - {year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {year_min} -"
+            f" {year_max}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
@@ -328,7 +331,8 @@ class GlofasForecast(Glofas):
         year_min = self.year_min[version] if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS forecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
+            f"Downloading GloFAS forecast v{version} for years {year_min} -"
+            f" {year_max} and lead time {leadtimes}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
@@ -403,7 +407,8 @@ class GlofasReforecast(Glofas):
         year_min = self.year_min if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reforecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
+            f"Downloading GloFAS reforecast v{version} for years {year_min} -"
+            f" {year_max} and lead time {leadtimes}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
@@ -495,8 +500,9 @@ class CoordsOutOfBounds(Exception):
         coord_max: float,
     ):
         message = (
-            f"Station {station_name} has out-of-bounds {param_name} value of {coord_station} "
-            f"(GloFAS {param_name} ranges from {coord_min} to {coord_max})"
+            f"Station {station_name} has out-of-bounds {param_name} value of"
+            f" {coord_station} (GloFAS {param_name} ranges from {coord_min} to"
+            f" {coord_max})"
         )
         super().__init__(message)
 

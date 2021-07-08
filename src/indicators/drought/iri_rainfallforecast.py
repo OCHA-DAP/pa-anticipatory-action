@@ -85,7 +85,8 @@ def get_iri_data(config, download=False):
         iri_auth = os.getenv("IRI_AUTH")
         if not iri_auth:
             logger.error(
-                "No authentication file found. Needs the environment variable 'IRI_AUTH'"
+                "No authentication file found. Needs the environment variable"
+                " 'IRI_AUTH'"
             )
         download_iri(iri_auth, config)
     IRI_filepath = os.path.join(

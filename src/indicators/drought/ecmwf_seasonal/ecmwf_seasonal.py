@@ -212,7 +212,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         split_by_month: bool = True,
     ):
         logger.info(
-            f"Downloading ECMWF seasonal forecast v{version} for years {self.year_min} - {self.year_max}"
+            f"Downloading ECMWF seasonal forecast v{version} for years"
+            f" {self.year_min} - {self.year_max}"
         )
         current_date = datetime.datetime.now()
         month_range = range(1, 13) if split_by_month else [None]
@@ -233,7 +234,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                     month_range = range(1, max_month + 1)
                 elif year > current_date.year:
                     logger.info(
-                        f"Cannot download data for {year}, because it is in the future"
+                        f"Cannot download data for {year}, because it is in"
+                        " the future"
                     )
             else:
                 month_range = [None]

@@ -84,5 +84,7 @@ def get_icpac_data(config, pubyear, pubmonth, download=False):
         return icpac_ds, transform
     except UnboundLocalError:
         logger.error(
-            f"ICPAC forecast with regex {config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)} not found"
+            "ICPAC forecast with regex"
+            f" {config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)}"
+            " not found"
         )

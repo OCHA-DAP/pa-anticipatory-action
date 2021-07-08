@@ -96,7 +96,8 @@ def compute_stats_per_admin(
         # If caching is on and file already exists, don't download again
         if use_cache and Path(output_path).exists():
             logger.debug(
-                f"{output_path} already exists and cache is set to True, skipping"
+                f"{output_path} already exists and cache is set to True,"
+                " skipping"
             )
         else:
             print(date)

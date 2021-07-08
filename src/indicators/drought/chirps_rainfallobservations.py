@@ -61,7 +61,8 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
                 ds.rio.write_crs("EPSG:4326").to_netcdf(chirps_filepath_crs)
         except urllib.error.HTTPError as e:
             logging.error(
-                f"{e}. Date might be later than last reported datapoint. URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}"
+                f"{e}. Date might be later than last reported datapoint."
+                f" URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}"
             )
 
 
@@ -78,7 +79,8 @@ def download_chirps_monthly(
     # If caching is on and file already exists, don't download again
     if use_cache and config.CHIRPS_MONTHLY_RAW_PATH.exists():
         logger.debug(
-            f"{config.CHIRPS_MONTHLY_RAW_PATH} already exists and cache is set to True, skipping"
+            f"{config.CHIRPS_MONTHLY_RAW_PATH} already exists and cache is set"
+            " to True, skipping"
         )
         return config.CHIRPS_MONTHLY_RAW_PATH
     Path(config.CHIRPS_MONTHLY_RAW_PATH.parent).mkdir(
@@ -124,7 +126,8 @@ def clip_chirps_monthly_bounds(
     )
     if use_cache and chirps_monthly_country_filepath.exists():
         logger.debug(
-            f"{chirps_monthly_country_filepath} already exists and cache is set to True, skipping"
+            f"{chirps_monthly_country_filepath} already exists and cache is"
+            " set to True, skipping"
         )
         return chirps_monthly_country_filepath
 
@@ -142,7 +145,8 @@ def clip_chirps_monthly_bounds(
     ).rio.clip(gdf_adm1["geometry"], ds.rio.crs, all_touched=True)
     ds_country.to_netcdf(chirps_monthly_country_filepath)
     logger.debug(
-        f"...successfully saved clipped data to {config.CHIRPS_MONTHLY_RAW_PATH}"
+        "...successfully saved clipped data to"
+        f" {config.CHIRPS_MONTHLY_RAW_PATH}"
     )
     return chirps_monthly_country_filepath
 
@@ -180,7 +184,8 @@ def compute_seasonal_lowertercile_raster(
 
     if use_cache and chirps_seasonal_lowertercile_country_filepath.exists():
         logger.debug(
-            f"{chirps_seasonal_lowertercile_country_filepath} already exists and cache is set to True, skipping"
+            f"{chirps_seasonal_lowertercile_country_filepath} already exists"
+            " and cache is set to True, skipping"
         )
         return chirps_seasonal_lowertercile_country_filepath
 

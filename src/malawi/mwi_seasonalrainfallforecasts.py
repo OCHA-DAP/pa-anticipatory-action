@@ -153,7 +153,11 @@ def main(download, config=None):
         [iri_ds_sel, nmme_ds_sel],
         adm_path,
         title_list=["IRI", "NMME"],
-        suptitle=f"Probability of below average rainfall \n for forecasts published in {pubdate_str} with {leadtime} months leadtime and 3 months validity",
+        suptitle=(
+            "Probability of below average rainfall \n for forecasts published"
+            f" in {pubdate_str} with {leadtime} months leadtime and 3 months"
+            " validity"
+        ),
     )
     fig_clip.savefig(
         os.path.join(output_dir, f"IRIICPACNMME_Cbelow_clipped.png"),
