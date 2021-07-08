@@ -385,6 +385,7 @@ for istation, station in enumerate(STATIONS):
     ax.set_title(station)
     ax.set_xlabel('Lead time [days]')
     ax.set_ylabel('Number')
+    ax.set_ylim(-0.5, None)
     # Make legend
     ax.legend()
 
@@ -434,8 +435,4 @@ for station in STATIONS:
         ax.axhline(thresh, c=c2, lw=0.5)
         for detection in utils.get_groups_above_threshold(q, thresh, DURATION):
             ax.plot(x[detection[0]], q[detection[0]], 'o', c=c2, lw=2, mfc='none')
-```
-
-```python
-
 ```

@@ -21,7 +21,7 @@ from src.indicators.flooding.glofas import utils
 ```python
 mpl.rcParams['figure.dpi'] = 200
 
-LEADTIMES = [x + 1 for x in range(20)]
+LEADTIMES = [x + 1 for x in range(10)]
 
 COUNTRY_ISO3 = 'npl'
 
@@ -252,8 +252,4 @@ leadtimes = [1, 3, 5, 7, 10]
 for station in ['Asaraghat', 'Chisapani']:
     df = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp) & (df_station_stats.leadtime.isin(leadtimes))]
     print(np.round(100 * (1-df['recall'])))
-```
-
-```python
-
 ```
