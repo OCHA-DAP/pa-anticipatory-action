@@ -28,6 +28,10 @@ COUNTRY_ISO3 = 'npl'
 FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
 # Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
 VERSION_LOC = "_v3"
+USE_INCORRECT_AREA_COORDS = False
+
+MAIN_RP = 1.5
+MAIN_FORECAST_PROB = 50
     
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
@@ -39,10 +43,11 @@ DURATION = 1
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=COUNTRY_ISO3, use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
     country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
-    interp=True
+    interp=True,
+    use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
 )
 ds_glofas_reforecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
@@ -52,8 +57,6 @@ df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 ```
 
 ```python
-forecast_prob = 50
-
 days_before_buffer = 5
 days_after_buffer = 30
 
@@ -66,7 +69,7 @@ for station in df_return_period.columns:
     for rp in rp_list:
         rp_val = df_return_period.loc[rp, station]
         observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + VERSION_LOC].values
-        forecast = ds_glofas_reforecast_summary[station + VERSION_LOC].sel(percentile=forecast_prob)
+        forecast = ds_glofas_reforecast_summary[station + VERSION_LOC].sel(percentile=MAIN_FORECAST_PROB)
 
         # The GlofAS event takes place on the Nth day (since for an event)
         # you require N days in a row
@@ -113,12 +116,12 @@ df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_st
 ```
 
 ```python
-rp_dict = {
-    1.5: '-', 
-    2: '--',
-    5: ':'
-}
-rp_dict = {1.5: '-'}
+#rp_dict = {
+#    1.5: '-', 
+#    2: '--',
+#    5: ':'
+#}
+rp_dict = {MAIN_RP: '-'}
 plot_numbers = True
 plot_precision_recall = True
 leadtime_range = (1, 10)
@@ -128,7 +131,7 @@ for istation, station in enumerate(FINAL_STATIONS):
         qs = ['TP', 'FP', 'FN']
         fig, ax = plt.subplots()
         for rp, ls in rp_dict.items():
-            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == MAIN_RP)]
             for iq, q in enumerate(qs):
                 ax.plot(data['leadtime'], data[q], ls=ls, c=f'C{iq}')
         ax.set_title(station)
@@ -149,7 +152,7 @@ for istation, station in enumerate(FINAL_STATIONS):
         qs = ['precision', 'recall']
         fig, ax = plt.subplots()
         for rp, ls in rp_dict.items():
-            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == MAIN_RP)]
             for iq, q in enumerate(qs):
                 ax.plot(data['leadtime'], data[q], ls=ls, c=f'C{iq}')
         ax.set_title(station)
@@ -184,15 +187,13 @@ for station in FINAL_STATIONS:
 ```python
 rp = 1.5
 leadtimes = [7, 3] # Longer first
-forecast_prob = 50
-
 
 for station in FINAL_STATIONS:
 
     thresh = df_return_period.loc[rp, station]
     fig, axs = plt.subplots(3, figsize=(8,6))
     observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + VERSION_LOC]
-    forecast = utils.get_glofas_forecast_summary(ds_glofas_reforecast)[station + VERSION_LOC].sel(percentile=forecast_prob)
+    forecast = utils.get_glofas_forecast_summary(ds_glofas_reforecast)[station + VERSION_LOC].sel(percentile=MAIN_FORECAST_PROB)
     forecast_1 = forecast.sel(leadtime=leadtimes[0])
     forecast_2 = forecast.sel(leadtime=leadtimes[1])
     fig.supylabel('River dischange [m$^3$ s$^{-1}$]')
@@ -225,13 +226,12 @@ for station in FINAL_STATIONS:
 
 ```python
 # Want to compare Chisapani to Asaraghat
-rp = 1.5
 ls_list = ['-', '--']
 stations = ['Asaraghat', 'Chisapani']
 fig, ax = plt.subplots()
 for istation, station in enumerate(stations):
     qs = ['precision', 'recall']
-    data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
+    data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == MAIN_RP)]
     for iq, q in enumerate(qs):
         ax.plot(data['leadtime'], data[q], ls=ls_list[istation], c=f'C{iq}')
 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -252,4 +252,8 @@ leadtimes = [1, 3, 5, 7, 10]
 for station in ['Asaraghat', 'Chisapani']:
     df = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp) & (df_station_stats.leadtime.isin(leadtimes))]
     print(np.round(100 * (1-df['recall'])))
+```
+
+```python
+
 ```

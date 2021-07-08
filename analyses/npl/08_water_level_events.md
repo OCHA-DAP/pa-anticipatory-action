@@ -68,7 +68,7 @@ ds_glofas_reanalysis = utils.get_glofas_reanalysis(
 ds_glofas_reforecast = utils.get_glofas_reforecast(
     country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
     interp=True,
-    use_incorrect_area_coords=True
+    use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
 )
 ds_glofas_forecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
