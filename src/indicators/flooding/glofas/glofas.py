@@ -342,12 +342,12 @@ class GlofasForecast(Glofas):
     ):
         year_min = self.year_min[version] if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
-        leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
         logger.info(
             f"Downloading GloFAS forecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
+            leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
             for leadtime in leadtime_range:
                 super()._download(
                     country_iso3=country_iso3,
@@ -364,9 +364,13 @@ class GlofasForecast(Glofas):
         leadtimes: List[int],
         version: int = DEFAULT_VERSION,
         split_by_leadtimes: bool = False,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min[version] if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
+        logger.info(f"Processing GloFAS Forecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}")
         leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
-        logger.info(f"Processing GloFAS Forecast v{version}")
         for leadtime in leadtime_range:
             logger.info(f"For lead time {leadtime}")
             # Get list of files to open
@@ -377,7 +381,7 @@ class GlofasForecast(Glofas):
                     year=year,
                     leadtime=leadtime,
                 )
-                for year in range(self.year_min[version], self.year_max + 1)
+                for year in range(year_min, year_max + 1)
             ]
             # Read in both the control and ensemble perturbed forecast and combine
             logger.info(f"Reading in {len(filepath_list)} files")
@@ -385,7 +389,7 @@ class GlofasForecast(Glofas):
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = _get_station_dataset(
-                stations=stations, ds=ds, coord_names=["number", "time"]
+                stations=stations, ds=ds, coord_names=["number", "time", "step"]
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(
@@ -422,14 +426,14 @@ class GlofasReforecast(Glofas):
     ):
         year_min = self.year_min if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
-        month_range = range(1, 13) if split_by_month else [None]
-        leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
         logger.info(
             f"Downloading GloFAS reforecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
+            month_range = range(1, 13) if split_by_month else [None]
             for month in month_range:
+                leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
                 for leadtime in leadtime_range:
                     super()._download(
                         country_iso3=country_iso3,
@@ -448,11 +452,14 @@ class GlofasReforecast(Glofas):
         version: int = DEFAULT_VERSION,
         split_by_month: bool = False,
         split_by_leadtimes: bool = False,
+        year_min: int = None,
+        year_max: int = None,
     ):
-
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
+        logger.info(f"Processing GloFAS Reforecast v{version} for years {year_min} - {year_max} and lead time {leadtimes}")
         month_range = range(1, 13) if split_by_month else [None]
         leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
-        logger.info(f"Processing GloFAS Reforecast v{version}")
         for leadtime in leadtime_range:
             logger.info(f"For lead time {leadtime}")
             # Get list of files to open
@@ -464,7 +471,7 @@ class GlofasReforecast(Glofas):
                     month=month,
                     leadtime=leadtime,
                 )
-                for year in range(self.year_min, self.year_max + 1)
+                for year in range(year_min, year_max + 1)
                 for month in month_range
             ]
             # Read in both the control and ensemble perturbed forecast and combine
@@ -475,7 +482,7 @@ class GlofasReforecast(Glofas):
             # Create a new dataset with just the station pixels
             logger.info("Looping through stations, this takes some time")
             ds_new = _get_station_dataset(
-                stations=stations, ds=ds, coord_names=["number", "time"]
+                stations=stations, ds=ds, coord_names=["number", "time", "step"]
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(
