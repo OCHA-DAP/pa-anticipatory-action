@@ -36,7 +36,7 @@ class Glofas:
         dataset_variable_name: str,
         system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
-        use_incorrect_area_coords=False,
+        use_incorrect_area_coords: bool = False,
     ):
         """
         Create an instance of a GloFAS object, from which you can download and process raw data, and
