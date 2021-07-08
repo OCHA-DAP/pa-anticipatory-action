@@ -1,7 +1,5 @@
-"""
-Download raster data from GLOFAS and extracts time series of water discharge in selected locations,
-matching the FFWC stations data
-"""
+"""Download raster data from GLOFAS and extracts time series of water discharge
+in selected locations, matching the FFWC stations data."""
 import logging
 
 # TODO: remove this after making top-level
@@ -46,7 +44,9 @@ def main(download=True, process=False):
         # Remove the GloFAS station as it was not used originally
         ffwc_stations_for_download = FFWC_STATIONS.copy()
         del ffwc_stations_for_download["Bahadurabad_glofas"]
-        area = AreaFromStations(stations=ffwc_stations_for_download, buffer=AREA_BUFFER)
+        area = AreaFromStations(
+            stations=ffwc_stations_for_download, buffer=AREA_BUFFER
+        )
         glofas_reanalysis.download(
             country_iso3=COUNTRY_ISO3,
             area=area,

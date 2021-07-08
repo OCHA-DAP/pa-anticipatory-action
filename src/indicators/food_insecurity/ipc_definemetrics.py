@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 # TODO: check that all cols, so CS ML1 ML2 1 to 5 and pop cols are present in input data
 # TODO: quality check that perc cols add up to 100
 
+
 def define_trigger_percentage(row, period, level, perc):
-    """
-    Return 1 if percentage of population in row for period in level "level" or higher, equals or larger than perc
-    """
+    """Return 1 if percentage of population in row for period in level "level"
+    or higher, equals or larger than perc."""
     # range till 6 cause 5 is max level
     cols = [f"{period}_{l}" for l in range(level, 6)]
     if np.isnan(row[f"pop_{period}"]):
@@ -28,6 +28,7 @@ def define_trigger_percentage(row, period, level, perc):
         return 1
     else:
         return 0
+
 
 def define_trigger_increase_rel(row, level, perc):
     """
@@ -43,16 +44,23 @@ def define_trigger_increase_rel(row, level, perc):
     elif row[cols_ml1].sum() > 0 and row[cols_cs].sum() == 0:
         return 1
     elif (
-        round((row[cols_ml1].sum() - row[cols_cs].sum()) / row[cols_cs].sum() * 100)
+        round(
+            (row[cols_ml1].sum() - row[cols_cs].sum())
+            / row[cols_cs].sum()
+            * 100
+        )
         >= perc
     ):
         return 1
     else:
         return 0
 
+
 def define_trigger_increase(row, period, level, perc):
-    """
-    Return 1 for "row", if the expected increase in the percentage of the population in "level" or higher at time "period" compared to currently (CS) is expected to be larger than "perc"
+    """Return 1 for "row", if the expected increase in the percentage of the
+    population in "level" or higher at time "period" compared to currently (CS)
+    is expected to be larger than "perc".
+
     For Global IPC the population analysed in ML2 is sometimes different than in CS. That is why we work dirrectly with percentages and not anymore with (pop period level+ - pop CS level+) / pop CS
     """
     # range till 6 cause 5 is max level

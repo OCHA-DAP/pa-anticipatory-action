@@ -19,7 +19,10 @@ def test_expand_dims():
     ds.coords["z"] = 1
     assert "z" not in ds.dims.keys()
     ds = glofas.expand_dims(
-        ds=ds, dataset_name="var_a", coord_names=["z", "x", "y"], expansion_dim=0
+        ds=ds,
+        dataset_name="var_a",
+        coord_names=["z", "x", "y"],
+        expansion_dim=0,
     )
     assert "z" in ds.dims.keys()
 
@@ -80,7 +83,10 @@ class TestDownload(unittest.TestCase):
             "request": {
                 "variable": "river_discharge_in_the_last_24_hours",
                 "format": "grib",
-                "product_type": ["control_forecast", "ensemble_perturbed_forecasts"],
+                "product_type": [
+                    "control_forecast",
+                    "ensemble_perturbed_forecasts",
+                ],
                 "year": f"{self.year}",
                 "month": self.expected_months,
                 "day": self.expected_days,

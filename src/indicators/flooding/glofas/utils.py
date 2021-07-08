@@ -8,7 +8,10 @@ from scipy.stats import rankdata
 import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
-from src.utils_general.statistics import get_return_period_function_analytical, get_return_period_function_empirical
+from src.utils_general.statistics import (
+    get_return_period_function_analytical,
+    get_return_period_function_empirical,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +28,9 @@ def get_glofas_reanalysis(
 
 
 def get_glofas_forecast(
-    country_iso3: str, leadtimes: List[int], version: int = glofas.DEFAULT_VERSION
+    country_iso3: str,
+    leadtimes: List[int],
+    version: int = glofas.DEFAULT_VERSION,
 ) -> xr.Dataset:
     glofas_forecast = glofas.GlofasForecast()
     ds_glofas_forecast_dict = {
@@ -63,7 +68,9 @@ def get_glofas_reforecast(
 
 def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
     return {
-        leadtime: ds.assign_coords(time=ds.time.values + np.timedelta64(leadtime, "D"))
+        leadtime: ds.assign_coords(
+            time=ds.time.values + np.timedelta64(leadtime, "D")
+        )
         for leadtime, ds in ds_dict.items()
     }
 
@@ -145,14 +152,20 @@ def get_return_periods(
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
-        df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
+        df_rp = _get_return_period_df(
+            ds_reanalysis=ds_reanalysis, station=station
+        )
         if method == "analytical":
             f_rp = get_return_period_function_analytical(
-                df_rp=df_rp, rp_var="discharge", show_plots=show_plots, plot_title=station
+                df_rp=df_rp,
+                rp_var="discharge",
+                show_plots=show_plots,
+                plot_title=station,
             )
         elif method == "empirical":
             f_rp = get_return_period_function_empirical(
-                df_rp=df_rp, rp_var="discharge",
+                df_rp=df_rp,
+                rp_var="discharge",
             )
         else:
             logger.error(f"{method} is not a valid keyword for method")
@@ -192,8 +205,14 @@ def get_crps(
 
     for station in stations:
         for leadtime in leadtimes:
-            forecast = ds_reforecast[station].sel(leadtime=leadtime).dropna(dim="time")
-            observations = ds_reanalysis[station].reindex({"time": forecast.time})
+            forecast = (
+                ds_reforecast[station]
+                .sel(leadtime=leadtime)
+                .dropna(dim="time")
+            )
+            observations = ds_reanalysis[station].reindex(
+                {"time": forecast.time}
+            )
             if normalization == "mean":
                 norm = observations.mean().values
             elif normalization == "std":
@@ -210,7 +229,9 @@ def get_crps(
                 idx = observations > thresh_to_use
                 forecast, observations = forecast[:, idx], observations[idx]
             crps = (
-                xs.crps_ensemble(observations, forecast, member_dim="number").values
+                xs.crps_ensemble(
+                    observations, forecast, member_dim="number"
+                ).values
                 / norm
             )
             df_crps.loc[leadtime, station] = crps
@@ -224,8 +245,8 @@ def get_groups_above_threshold(
     min_duration: int = 1,
     additional_condition: np.array = None,
 ) -> List:
-    """
-    Get indices where consecutive values are equal to or above a threshold
+    """Get indices where consecutive values are equal to or above a threshold.
+
     :param observations: The array of values to search for groups (length N)
     :param threshold: The threshold above which the values must be
     :param min_duration: The minimum group size (default 1)
@@ -236,7 +257,9 @@ def get_groups_above_threshold(
     condition = observations >= threshold
     if additional_condition is not None:
         condition = condition & additional_condition
-    groups = np.where(np.diff(condition, prepend=False, append=False))[0].reshape(-1, 2)
+    groups = np.where(np.diff(condition, prepend=False, append=False))[
+        0
+    ].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
@@ -277,15 +300,17 @@ def calc_mpe(observations: np.array, forecast: np.array) -> float:
 def get_same_obs_and_forecast(
     da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
 ) -> (xr.DataArray, xr.DataArray):
-    """
-    For the GloFAS reanalysis and reforecast at a particular station, get matching data
-    ranges for the two datasets
+    """For the GloFAS reanalysis and reforecast at a particular station, get
+    matching data ranges for the two datasets.
+
     :param da_observations: GloFAS reanalysis at a particular station
     :param da_forecast: GloFAS reforecast at a particular station
     :param leadtime: Leadtime
     :return: Observations and forecast with overlapping values only
     """
     forecast = da_forecast.sel(leadtime=leadtime).dropna(dim="time")
-    observations = da_observations.reindex({"time": forecast.time}).dropna(dim="time")
+    observations = da_observations.reindex({"time": forecast.time}).dropna(
+        dim="time"
+    )
     forecast = forecast.reindex({"time": observations.time})
     return observations, forecast

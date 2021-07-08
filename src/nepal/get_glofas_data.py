@@ -18,10 +18,14 @@ from src.utils_general.utils import parse_yaml
 COUNTRY_ISO3 = "npl"
 LEADTIMES = [x + 1 for x in range(20)]
 
-STATIONS = parse_yaml('src/nepal/config.yml')['glofas']['stations']
+STATIONS = parse_yaml("src/nepal/config.yml")["glofas"]["stations"]
 
 SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
+    Path(os.environ["AA_DATA_DIR"])
+    / "public"
+    / "raw"
+    / COUNTRY_ISO3
+    / "cod_ab"
 )
 SHAPEFILE = (
     SHAPEFILE_BASE_DIR
@@ -55,7 +59,10 @@ def main(download=False, process=True):
         )
 
     if process:
-        stations = {name: Station(lon=coords['lon'], lat=coords['lat']) for name, coords in STATIONS.items()}
+        stations = {
+            name: Station(lon=coords["lon"], lat=coords["lat"])
+            for name, coords in STATIONS.items()
+        }
         glofas_reanalysis.process(
             country_iso3=COUNTRY_ISO3,
             stations=stations,

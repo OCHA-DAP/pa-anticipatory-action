@@ -1,5 +1,4 @@
-"""
-Download CHIRPSGEFS raster data and extract statistics per admin region
+"""Download CHIRPSGEFS raster data and extract statistics per admin region.
 
 [CHIRPS-GEFS](https://chc.ucsb.edu/data/chirps-gefs) is the bias-corrected version of GEFS.
 GEFS is the Global Ensemble Forecast System from NOAA.
@@ -36,6 +35,7 @@ from src.utils_general.utils import download_ftp
 
 logger = logging.getLogger(__name__)
 
+
 def get_rainy_season_dates(
     rainy_season_path,
     earliest_onset_month,
@@ -43,8 +43,8 @@ def get_rainy_season_dates(
     onset_col="onset_date",
     cessation_col="cessation_date",
 ):
-    """
-    Compute a datetimeindex with all dates across all rainy seasons.
+    """Compute a datetimeindex with all dates across all rainy seasons.
+
     This is used to only download data for these dates, since the files are large
     Args:
         rainy_season_path: filepath to csv with end and start dates of the rainy season, possibly per admin
@@ -53,7 +53,9 @@ def get_rainy_season_dates(
         earliest_onset_month: month number of earliest start of rainy season, used if no onset date was in the data
         latest_cessation_month: month number of latest end of rainy season, used if no cessation date was in the data
     """
-    df_rain = pd.read_csv(rainy_season_path, parse_dates=[onset_col, cessation_col])
+    df_rain = pd.read_csv(
+        rainy_season_path, parse_dates=[onset_col, cessation_col]
+    )
 
     # remove entries where there is no onset and no cessation date, i.e. no rainy season
     df_rain = df_rain[
@@ -62,8 +64,12 @@ def get_rainy_season_dates(
     # if onset date or cessation date is missing,
     # set it to earliest_onset_month/latest_cessation month to make sure all data of that year is downloaded.
     # This occurs if e.g. the rainy season hasn't ended yet
-    df_rain[df_rain.onset_date.isnull()] = df_rain[df_rain.onset_date.isnull()].assign(
-        onset_date=lambda df: pd.to_datetime(f"{df.season_approx.values[0]}-{earliest_onset_month}-01")
+    df_rain[df_rain.onset_date.isnull()] = df_rain[
+        df_rain.onset_date.isnull()
+    ].assign(
+        onset_date=lambda df: pd.to_datetime(
+            f"{df.season_approx.values[0]}-{earliest_onset_month}-01"
+        )
     )
     df_rain[df_rain.cessation_date.isnull()] = df_rain[
         df_rain.cessation_date.isnull()
@@ -83,16 +89,20 @@ def get_rainy_season_dates(
     for i in df_rain_seas.season_approx.unique():
         seas_range = pd.date_range(
             df_rain_seas[df_rain_seas.season_approx == i].onset_date.values[0],
-            df_rain_seas[df_rain_seas.season_approx == i].cessation_date.values[0],
+            df_rain_seas[
+                df_rain_seas.season_approx == i
+            ].cessation_date.values[0],
         )
         all_dates = all_dates.union(seas_range)
     return all_dates
 
 
 def download_chirpsgefs(date, config, days_ahead, use_cache=True):
-    """
-    Download the chirps-gefs africa forecast for the given year and day of the year
-    We are focussing on the Africa data, since global data gets massive. Nevertheless, even for Africa it gets massive.
+    """Download the chirps-gefs africa forecast for the given year and day of
+    the year We are focussing on the Africa data, since global data gets
+    massive.
+
+    Nevertheless, even for Africa it gets massive.
     Note that a part of the data for 2020 is missing due to a change in model
     date: date to download data for. should be a datetime object
     config: Config class that contains parameters such as directory names
@@ -103,7 +113,9 @@ def download_chirpsgefs(date, config, days_ahead, use_cache=True):
     date_str = date.strftime(config.CHIRPSGEFS_DATE_STR_FORMAT)
     chirpsgefs_filepath = (
         config.CHIRPSGEFS_RAW_DIR
-        / config.CHIRPSGEFS_RAW_FILENAME.format(days_ahead=days_ahead, date=date_str)
+        / config.CHIRPSGEFS_RAW_FILENAME.format(
+            days_ahead=days_ahead, date=date_str
+        )
     )
     if use_cache and chirpsgefs_filepath.exists():
         logger.debug(
@@ -117,7 +129,9 @@ def download_chirpsgefs(date, config, days_ahead, use_cache=True):
         # start_day is the day of the year for which the forecast starts
         download_ftp(
             config.CHIRPSGEFS_FTP_URL_AFRICA.format(
-                days_ahead=str(days_ahead).zfill(2), year=year, start_day=day_year
+                days_ahead=str(days_ahead).zfill(2),
+                year=year,
+                start_day=day_year,
             ),
             chirpsgefs_filepath,
             logger_info=False,
@@ -175,12 +189,16 @@ def compute_stats_rainyseason(
         / config.SHAPEFILE_DIR
         / parameters[f"path_admin{adm_level}_shp"]
     )
-    rainy_dates = get_rainy_season_dates(rainy_season_path, earliest_onset_month,latest_cessation_month)
+    rainy_dates = get_rainy_season_dates(
+        rainy_season_path, earliest_onset_month, latest_cessation_month
+    )
     gdf_adm = gpd.read_file(adm_bound_path)
 
     # load the tif file for each date and compute the statistics
     for d in rainy_dates:
-        date_str = pd.to_datetime(d).strftime(config.CHIRPSGEFS_DATE_STR_FORMAT)
+        date_str = pd.to_datetime(d).strftime(
+            config.CHIRPSGEFS_DATE_STR_FORMAT
+        )
         output_path = (
             output_dir
             / f"{country_iso3}_chirpsgefs_stats_adm{adm_level}_{days_ahead}days_{date_str}.csv"
@@ -206,7 +224,11 @@ def compute_stats_rainyseason(
                 logger.debug(f"Retrieving stats for {date_str}")
                 rds = rioxarray.open_rasterio(chirpsgefs_raster_filepath)
                 df = _compute_raster_stats(
-                    rds.sel(band=1), rds.rio.transform(), gdf_adm, adm_col, threshold_list
+                    rds.sel(band=1),
+                    rds.rio.transform(),
+                    gdf_adm,
+                    adm_col,
+                    threshold_list,
                 )
                 df.loc[:, "date"] = d
                 df.loc[:, "date_forec_end"] = df.loc[:, "date"] + timedelta(
@@ -235,17 +257,26 @@ def _compute_raster_stats(
     df = gdf.loc[:, [gdf_id_col, "geometry"]]
     df.loc[:, "max_cell"] = pd.DataFrame(
         zonal_stats(
-            vectors=gdf, raster=ds.values, affine=raster_transform, nodata=np.nan
+            vectors=gdf,
+            raster=ds.values,
+            affine=raster_transform,
+            nodata=np.nan,
         )
     )["max"]
     df.loc[:, "min_cell"] = pd.DataFrame(
         zonal_stats(
-            vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan
+            vectors=df,
+            raster=ds.values,
+            affine=raster_transform,
+            nodata=np.nan,
         )
     )["min"]
     df.loc[:, "mean_cell"] = pd.DataFrame(
         zonal_stats(
-            vectors=df, raster=ds.values, affine=raster_transform, nodata=np.nan
+            vectors=df,
+            raster=ds.values,
+            affine=raster_transform,
+            nodata=np.nan,
         )
     )["mean"]
     if threshold_list is not None:
@@ -263,11 +294,8 @@ def _compute_raster_stats(
                     nodata=np.nan,
                 )
             )
-            df[f"perc_se{thresh}"] = bin_zonal["sum"] / bin_zonal["count"] * 100
+            df[f"perc_se{thresh}"] = (
+                bin_zonal["sum"] / bin_zonal["count"] * 100
+            )
 
     return df
-
-
-
-
-

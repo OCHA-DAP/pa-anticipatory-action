@@ -1,6 +1,5 @@
-"""
-Download raster data from GLOFAS and extracts time series of water discharge in selected locations
-"""
+"""Download raster data from GLOFAS and extracts time series of water discharge
+in selected locations."""
 from pathlib import Path
 import logging
 import time
@@ -36,9 +35,9 @@ class Glofas:
         system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
     ):
-        """
-        Create an instance of a GloFAS object, from which you can download and process raw data, and
-        read in the processed data.
+        """Create an instance of a GloFAS object, from which you can download
+        and process raw data, and read in the processed data.
+
         :param year_min: The earliest year that the dataset is available. Can be a single integer,
         or a dictionary with structure {major_version: year_min} if the minimum year depends on the GloFAS
         model version.
@@ -143,7 +142,9 @@ class Glofas:
             ]
             if month is None
             else str(month).zfill(2),
-            f"{self.date_variable_prefix}day": [str(x + 1).zfill(2) for x in range(31)],
+            f"{self.date_variable_prefix}day": [
+                str(x + 1).zfill(2) for x in range(31)
+            ],
             "area": area.list_for_api(),
             "system_version": f"version_{version}_{self.system_version_minor[version]}",
             "hydrological_model": HYDROLOGICAL_MODELS[version],
@@ -155,10 +156,8 @@ class Glofas:
 
     @staticmethod
     def _read_in_ensemble_and_perturbed_datasets(filepath_list: List[Path]):
-        """
-        Read in dataset that has both control and ensemble perturbed forecast
-        and combine them
-        """
+        """Read in dataset that has both control and ensemble perturbed
+        forecast and combine them."""
         ds_list = []
         for data_type in ["cf", "pf"]:
             with xr.open_mfdataset(
@@ -176,7 +175,12 @@ class Glofas:
                     ds = expand_dims(
                         ds=ds,
                         dataset_name="dis24",
-                        coord_names=["number", "time", "latitude", "longitude"],
+                        coord_names=[
+                            "number",
+                            "time",
+                            "latitude",
+                            "longitude",
+                        ],
                         expansion_dim=0,
                     )
                 ds_list.append(ds)
@@ -209,7 +213,14 @@ class Glofas:
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
-        return DATA_DIR / PUBLIC_DATA_DIR / PROCESSED_DATA_DIR / country_iso3 / GLOFAS_DIR / filename
+        return (
+            DATA_DIR
+            / PUBLIC_DATA_DIR
+            / PROCESSED_DATA_DIR
+            / country_iso3
+            / GLOFAS_DIR
+            / filename
+        )
 
     def read_processed_dataset(
         self,
@@ -454,9 +465,11 @@ class GlofasReforecast(Glofas):
 def expand_dims(
     ds: xr.Dataset, dataset_name: str, coord_names: list, expansion_dim: int
 ):
-    """
-    Using expand_dims seems to cause a bug with Dask like the one described here:
-    https://github.com/pydata/xarray/issues/873 (it's supposed to be fixed though)
+    """Using expand_dims seems to cause a bug with Dask like the one described
+    here:
+
+    https://github.com/pydata/xarray/issues/873 (it's supposed to be
+    fixed though)
     """
     coords = {coord_name: ds[coord_name] for coord_name in coord_names}
     coords[coord_names[expansion_dim]] = [coords[coord_names[expansion_dim]]]

@@ -33,8 +33,12 @@ def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
     for d in dates:
         # path to fewsnet data
         # In most cases FewsNet publishes per region, but sometimes also per country, so allow for both
-        shape_region = os.path.join(path,f"{region}{d}/{regionabb}_{d}_{period}.shp")
-        shape_country = os.path.join(path,f"{iso2_code}{d}/{iso2_code}_{d}_{period}.shp")
+        shape_region = os.path.join(
+            path, f"{region}{d}/{regionabb}_{d}_{period}.shp"
+        )
+        shape_country = os.path.join(
+            path, f"{iso2_code}{d}/{iso2_code}_{d}_{period}.shp"
+        )
         if os.path.exists(shape_country):
             gdf = gpd.read_file(shape_country)
             gdf["date"] = pd.to_datetime(d, format="%Y%m")
@@ -61,8 +65,10 @@ def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
         overlap: dataframe with the regions per admin2 for each IPC level
     """
     admin2 = gpd.read_file(path_admin)
-    if not all(x in admin2.columns for x in [adm0c,adm1c,adm2c]):
-        logger.warning(f"Not all admin columns defined in the config were found in the boundary shapefile. The boundary shapefile's columns are {list(admin2.columns)}")
+    if not all(x in admin2.columns for x in [adm0c, adm1c, adm2c]):
+        logger.warning(
+            f"Not all admin columns defined in the config were found in the boundary shapefile. The boundary shapefile's columns are {list(admin2.columns)}"
+        )
     admin2 = admin2[[adm0c, adm1c, adm2c, "geometry"]]
     overlap = gpd.overlay(admin2, df, how="intersection")
     overlap = overlap.drop_duplicates()
@@ -127,8 +133,12 @@ def add_missing_values(df, period, dates, path_admin, adm0c, adm1c, adm2c):
         diff_dates = set(dates_dt) - set(df.date)
 
     if diff_dates:
-        diff_dates_string = ",".join([n.strftime("%d-%m-%Y") for n in diff_dates])
-        logger.warning(f"No FewsNet data found for {period} on {diff_dates_string}")
+        diff_dates_string = ",".join(
+            [n.strftime("%d-%m-%Y") for n in diff_dates]
+        )
+        logger.warning(
+            f"No FewsNet data found for {period} on {diff_dates_string}"
+        )
         df_adm2 = gpd.read_file(path_admin)
         df_admnames = df_adm2[[adm0c, adm1c, adm2c]]
         for d in diff_dates:
@@ -169,7 +179,9 @@ def gen_csml1m2(
     Returns:
         new_df: DataFrame that contains one row per Admin2-date combination, which indicates the IPC level
     """
-    df_ipc = shapefiles_to_df(ipc_path, period, dates, region, regionabb, iso2_code)
+    df_ipc = shapefiles_to_df(
+        ipc_path, period, dates, region, regionabb, iso2_code
+    )
     try:
         overlap = merge_admin2(df_ipc, bound_path, period, adm0c, adm1c, adm2c)
         # replace other values than 1-5 by 0 (these are 99,88,66 and indicate missing values, nature areas or lakes)
@@ -188,7 +200,9 @@ def gen_csml1m2(
         )
 
     except AttributeError:
-        logger.error(f"No FewsNet data for {period} for the given dates was found")
+        logger.error(
+            f"No FewsNet data for {period} for the given dates was found"
+        )
         df_alldates = add_missing_values(
             df_ipc, period, dates, bound_path, adm0c, adm1c, adm2c
         )
@@ -228,15 +242,30 @@ def merge_ipcperiod(inputdf_dict, adm0c, adm1c, adm2c):
         if df.empty:
             df = inputdf_dict[k]
         else:
-            df = df.merge(inputdf_dict[k], on=[adm0c, adm1c, adm2c, "date"], how="left")
+            df = df.merge(
+                inputdf_dict[k], on=[adm0c, adm1c, adm2c, "date"], how="left"
+            )
 
     df["date"] = pd.to_datetime(df["date"])
     df["date"] = df["date"].dt.date
     return df
 
-def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,pop_bound_adm2_mapping,pop_bound_adm1_mapping):
-    """
-    Determine if there is any admin regions that are not in the admin boundaries or population file. This to circumvent part of the population not being assigned to an admin.
+
+def check_missingadmins(
+    adm_path,
+    pop_path,
+    shp_adm1c,
+    shp_adm2c,
+    pop_adm1c,
+    pop_adm2c,
+    pop_col,
+    pop_bound_adm2_mapping,
+    pop_bound_adm1_mapping,
+):
+    """Determine if there is any admin regions that are not in the admin
+    boundaries or population file.
+
+    This to circumvent part of the population not being assigned to an admin.
     Args:
         adm_path:
         pop_path: path to csv with population counts per admin2 region
@@ -249,7 +278,7 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2
         pop_bound_adm1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
     """
     df_adm2 = gpd.read_file(adm_path)
-    df_pop =load_popdata(
+    df_pop = load_popdata(
         pop_path,
         pop_adm1c,
         pop_adm2c,
@@ -258,25 +287,33 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2
         pop_bound_adm1_mapping=pop_bound_adm1_mapping,
     )
 
-    missing_adm2_popbound = np.setdiff1d(list(df_pop[pop_adm2c].dropna()),list(df_adm2[shp_adm2c].dropna()))
+    missing_adm2_popbound = np.setdiff1d(
+        list(df_pop[pop_adm2c].dropna()), list(df_adm2[shp_adm2c].dropna())
+    )
     if missing_adm2_popbound.size > 0:
         logger.warning(
             f"The following admin2 regions of the pop file are not found in the boundaries shapefile: {missing_adm2_popbound}. You can adjust the pop_bound_adm2_mapping in the config file to include them"
         )
 
-    missing_adm2_boundpop = np.setdiff1d(list(df_adm2[shp_adm2c].dropna()),list(df_pop[pop_adm2c].dropna()))
+    missing_adm2_boundpop = np.setdiff1d(
+        list(df_adm2[shp_adm2c].dropna()), list(df_pop[pop_adm2c].dropna())
+    )
     if missing_adm2_boundpop.size > 0:
         logger.warning(
             f"The following admin2 regions of the boundaries shapefile are not found in the pop file {missing_adm2_boundpop}"
         )
 
-    missing_adm1_popbound = np.setdiff1d(list(df_pop[pop_adm1c].dropna()),list(df_adm2[shp_adm1c].dropna()))
+    missing_adm1_popbound = np.setdiff1d(
+        list(df_pop[pop_adm1c].dropna()), list(df_adm2[shp_adm1c].dropna())
+    )
     if missing_adm1_popbound.size > 0:
         logger.warning(
             f"The following admin1 regions of the pop file are not found in the boundaries shapefile: {missing_adm1_popbound}. You can adjust the pop_bound_adm1_mapping in the config file to include them"
         )
 
-    missing_adm1_boundpop = np.setdiff1d(list(df_adm2[shp_adm1c].dropna()),list(df_pop[pop_adm1c].dropna()))
+    missing_adm1_boundpop = np.setdiff1d(
+        list(df_adm2[shp_adm1c].dropna()), list(df_pop[pop_adm1c].dropna())
+    )
     if missing_adm1_boundpop.size > 0:
         logger.warning(
             f"The following admin1 regions of the boundaries shapefile are not found in the pop file {missing_adm1_boundpop}"
@@ -284,7 +321,12 @@ def check_missingadmins(adm_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2
 
 
 def load_popdata(
-    pop_path, pop_adm1c, pop_adm2c, pop_col, pop_bound_adm2_mapping=None, pop_bound_adm1_mapping=None
+    pop_path,
+    pop_adm1c,
+    pop_adm2c,
+    pop_col,
+    pop_bound_adm2_mapping=None,
+    pop_bound_adm1_mapping=None,
 ):
     """
 
@@ -311,11 +353,13 @@ def load_popdata(
         df_pop[pop_adm1c] = df_pop[pop_adm1c].apply(
             lambda x: get_new_name(x, pop_bound_adm1_mapping)
         )
-    no_popdata = df_pop.loc[df_pop[pop_col].isin([0, np.nan]), pop_adm2c].values
+    no_popdata = df_pop.loc[
+        df_pop[pop_col].isin([0, np.nan]), pop_adm2c
+    ].values
     if len(no_popdata) > 0:
         logger.warning(f"No population data for {', '.join(no_popdata)}")
 
-    df_pop[pop_col]=convert_to_numeric(df_pop[pop_col])
+    df_pop[pop_col] = convert_to_numeric(df_pop[pop_col])
     # 0 is here treated as missing data, since it is not realistic that a region has no population and will make calculations later on easier
     df_pop[pop_col] = df_pop[pop_col].replace(0, np.nan)
 
@@ -325,9 +369,7 @@ def load_popdata(
     return df_pop
 
 
-def create_histpopdict(
-    df_data, country, histpop_path
-):
+def create_histpopdict(df_data, country, histpop_path):
     """
     Retrieve the historical national population for the years that are present in df_data
     Args:
@@ -349,7 +391,9 @@ def create_histpopdict(
     # get years that are in df_data
     data_years = [
         str(i)
-        for i in range(df_data["date"].min().year, df_data["date"].max().year + 1)
+        for i in range(
+            df_data["date"].min().year, df_data["date"].max().year + 1
+        )
     ]
 
     # get years that are in df_data but not in df_histpopc
@@ -366,9 +410,8 @@ def create_histpopdict(
 
 
 def get_adjusted(row, perc_dict):
-    """
-    Compute the subnational population, adjusted to the country's national population of that year
-    """
+    """Compute the subnational population, adjusted to the country's national
+    population of that year."""
     year = str(row["date"].year)
     adjustment = perc_dict[year]
     if pd.isna(row["Total"]):
@@ -377,7 +420,16 @@ def get_adjusted(row, perc_dict):
         return int(row["Total"] * adjustment)
 
 
-def merge_ipcpop(df_ipc, df_pop, country, pop_adm1c, pop_adm2c, shp_adm1c, shp_adm2c,histpop_path):
+def merge_ipcpop(
+    df_ipc,
+    df_pop,
+    country,
+    pop_adm1c,
+    pop_adm2c,
+    shp_adm1c,
+    shp_adm2c,
+    histpop_path,
+):
     """
 
     Args:
@@ -400,15 +452,22 @@ def merge_ipcpop(df_ipc, df_pop, country, pop_adm1c, pop_adm2c, shp_adm1c, shp_a
     )
 
     # dict to indicate relative increase in population over the years
-    pop_dict = create_histpopdict(df_ipcp, country=country,histpop_path=histpop_path)
+    pop_dict = create_histpopdict(
+        df_ipcp, country=country, histpop_path=histpop_path
+    )
     # estimate percentage of population at given year in relation to the national population given by the subnational population file
-    pop_tot_subn = df_ipcp[df_ipcp.date == df_ipcp.date.unique()[0]]["Total"].sum()
+    pop_tot_subn = df_ipcp[df_ipcp.date == df_ipcp.date.unique()[0]][
+        "Total"
+    ].sum()
     perc_dict = {k: v / pop_tot_subn for k, v in pop_dict.items()}
 
     df_ipcp["adjusted_population"] = df_ipcp.apply(
         lambda x: get_adjusted(x, perc_dict), axis=1
     )
-    if df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum() != df_pop.Total.sum():
+    if (
+        df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum()
+        != df_pop.Total.sum()
+    ):
         logger.warning(
             f"Population data merged with IPC doesn't match the original population numbers. Original:{df_pop.Total.sum()}, Merged:{df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum()}"
         )
@@ -422,9 +481,9 @@ def merge_ipcpop(df_ipc, df_pop, country, pop_adm1c, pop_adm2c, shp_adm1c, shp_a
                 df_ipcp["adjusted_population"],
                 (np.where(np.isnan(df_ipcp[period]), np.nan, 0)),
             )
-        df_ipcp[f"pop_{period}"] = df_ipcp[[f"{period}_{i}" for i in range(1, 6)]].sum(
-            axis=1, min_count=1
-        )
+        df_ipcp[f"pop_{period}"] = df_ipcp[
+            [f"{period}_{i}" for i in range(1, 6)]
+        ].sum(axis=1, min_count=1)
         df_ipcp[f"pop_{period}"] = df_ipcp[f"pop_{period}"].replace(0, np.nan)
 
     # TODO: sort values and test
@@ -451,18 +510,18 @@ def aggr_admin1(df, adm1c):
         .reset_index()
     )
     for period in ["CS", "ML1", "ML2"]:
-        df_adm[f"pop_{period}"] = df_adm[[f"{period}_{i}" for i in range(1, 6)]].sum(
-            axis=1, min_count=1
-        )
+        df_adm[f"pop_{period}"] = df_adm[
+            [f"{period}_{i}" for i in range(1, 6)]
+        ].sum(axis=1, min_count=1)
 
     return df_adm
 
 
-def main(country, suffix,download, config=None):
-    """
-    This script takes the FEWSNET IPC shapefiles provided by on fews.net and overlays them with an admin2 shapefile, in order
-    to provide an IPC value for each admin2 district. In the case where there are multiple values per district, the IPC value
-    with the maximum area is selected.
+def main(country, suffix, download, config=None):
+    """This script takes the FEWSNET IPC shapefiles provided by on fews.net and
+    overlays them with an admin2 shapefile, in order to provide an IPC value
+    for each admin2 district. In the case where there are multiple values per
+    district, the IPC value with the maximum area is selected.
 
     In FEWSNET IPC, there are 3 possible categories of maps - 'CS' (Current State), 'ML1' (3 months projection), 'ML2' (6 months projection).
     Any one of these is compatible with the script.
@@ -497,27 +556,45 @@ def main(country, suffix,download, config=None):
 
     fewsnet_dates = config.FEWSNET_DATES
     if "fewsnet_dates_add" in parameters["foodinsecurity"].keys():
-        fewsnet_dates = fewsnet_dates + parameters["foodinsecurity"]["fewsnet_dates_add"]
+        fewsnet_dates = (
+            fewsnet_dates + parameters["foodinsecurity"]["fewsnet_dates_add"]
+        )
     if "fewsnet_dates_remove" in parameters["foodinsecurity"].keys():
-        fewsnet_dates = list(set(fewsnet_dates) - set(parameters["foodinsecurity"]["fewsnet_dates_remove"]))
+        fewsnet_dates = list(
+            set(fewsnet_dates)
+            - set(parameters["foodinsecurity"]["fewsnet_dates_remove"])
+        )
 
-    country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower())
-    country_data_processed_dir = os.path.join(config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower())
-    glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, 'glb')
+    country_data_raw_dir = os.path.join(
+        config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower()
+    )
+    country_data_processed_dir = os.path.join(
+        config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower()
+    )
+    glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, "glb")
 
-    pop_path = os.path.join(country_data_raw_dir,config.POPSUBN_DIR,pop_filename)
+    pop_path = os.path.join(
+        country_data_raw_dir, config.POPSUBN_DIR, pop_filename
+    )
     fewsnet_raw_dir = os.path.join(glb_data_raw_dir, config.FEWSNET_DIR)
 
-    admin2bound_path = os.path.join(country_data_raw_dir, config.SHAPEFILE_DIR,
-                                   parameters[f'path_admin2_shp'])
-    histpop_path = os.path.join(glb_data_raw_dir,"worldbank",config.WB_POP_FILENAME)
-    output_dir = os.path.join(country_data_processed_dir, config.FEWSADMPOP_PROCESSED_DIR)
+    admin2bound_path = os.path.join(
+        country_data_raw_dir,
+        config.SHAPEFILE_DIR,
+        parameters[f"path_admin2_shp"],
+    )
+    histpop_path = os.path.join(
+        glb_data_raw_dir, "worldbank", config.WB_POP_FILENAME
+    )
+    output_dir = os.path.join(
+        country_data_processed_dir, config.FEWSADMPOP_PROCESSED_DIR
+    )
     # create output dir if it doesn't exist yet
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     if download:
         for d in fewsnet_dates:
-            download_fewsnet(d,iso2_code,region,regioncode,fewsnet_raw_dir)
+            download_fewsnet(d, iso2_code, region, regioncode, fewsnet_raw_dir)
 
     perioddf_dict = {}
     for period in config.IPC_PERIOD_NAMES:
@@ -535,8 +612,18 @@ def main(country, suffix,download, config=None):
         )
 
     df_allipc = merge_ipcperiod(perioddf_dict, shp_adm0c, shp_adm1c, shp_adm2c)
-    #check whether names of adm regions in boundary and population files don't correspond
-    check_missingadmins(admin2bound_path,pop_path,shp_adm1c,shp_adm2c,pop_adm1c,pop_adm2c,pop_col,pop_bound_adm2_mapping,pop_bound_adm1_mapping)
+    # check whether names of adm regions in boundary and population files don't correspond
+    check_missingadmins(
+        admin2bound_path,
+        pop_path,
+        shp_adm1c,
+        shp_adm2c,
+        pop_adm1c,
+        pop_adm2c,
+        pop_col,
+        pop_bound_adm2_mapping,
+        pop_bound_adm1_mapping,
+    )
     df_pop = load_popdata(
         pop_path,
         pop_adm1c,
@@ -554,20 +641,20 @@ def main(country, suffix,download, config=None):
         pop_adm2c,
         shp_adm1c,
         shp_adm2c,
-        histpop_path
+        histpop_path,
     )
 
     df_ipcpop.to_csv(
-        os.path.join(output_dir,f"{country}_fewsnet_admin2{suffix}.csv")
+        os.path.join(output_dir, f"{country}_fewsnet_admin2{suffix}.csv")
     )
 
     df_adm1 = aggr_admin1(df_ipcpop, shp_adm1c)
     df_adm1.to_csv(
-        os.path.join(output_dir,f"{country}_fewsnet_admin1{suffix}.csv")
+        os.path.join(output_dir, f"{country}_fewsnet_admin1{suffix}.csv")
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country.lower(),args.suffix,args.download_data)
+    main(args.country.lower(), args.suffix, args.download_data)

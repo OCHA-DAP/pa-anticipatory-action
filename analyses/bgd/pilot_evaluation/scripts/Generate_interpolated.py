@@ -14,16 +14,21 @@ import logging
 # 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir' in the config.yml
 # 2) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), located in the config.yml
 
-DATA_DIR = os.environ['AA_DATA_DIR']
+DATA_DIR = os.environ["AA_DATA_DIR"]
 
-dirs = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['DIRS']
-output_dir = os.path.join(DATA_DIR, dirs['data_dir'])
-params = utils.parse_yaml('analyses/bangladesh/pilot_evaluation/config.yml')['PARAMS']
-ADM = os.path.join(params['adm'])
+dirs = utils.parse_yaml("analyses/bangladesh/pilot_evaluation/config.yml")[
+    "DIRS"
+]
+output_dir = os.path.join(DATA_DIR, dirs["data_dir"])
+params = utils.parse_yaml("analyses/bangladesh/pilot_evaluation/config.yml")[
+    "PARAMS"
+]
+ADM = os.path.join(params["adm"])
 
-logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
 # TODO: Move quality checks to separate file
+
 
 def make_data(df, adm_grp):
 
@@ -32,7 +37,7 @@ def make_data(df, adm_grp):
     flood_extents = pd.DataFrame([])
     no_fit = []
 
-    sel_col = adm_grp + '_PCODE'
+    sel_col = adm_grp + "_PCODE"
     for adm in df[sel_col].unique():
 
         # Get the x (time) and y (flooding fraction) data
@@ -47,7 +52,7 @@ def make_data(df, adm_grp):
         # Before attempting to fit to a Gaussian, we need to
         # catch the edge cases where there is no flooding.
         if y.mean() == 0:
-            y_new = np.ones(85)*0
+            y_new = np.ones(85) * 0
             cov = None
             rmse = None
             date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
@@ -71,7 +76,9 @@ def make_data(df, adm_grp):
                 y_new = np.empty(85) * np.nan
                 cov = None
                 rmse = None
-                date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
+                date_actual = datetime.strptime(
+                    utils.get_peak(x, y), "%Y-%m-%d"
+                )
                 date_g = None
                 act_g = None
                 fwhm = None
@@ -84,63 +91,91 @@ def make_data(df, adm_grp):
                 # Convert from seconds (from unix time) to days.
                 cov = np.sqrt(np.diag(pcov)[1]) / 86400
                 rmse = utils.rmse(y_fit, y)
-                date_actual = datetime.strptime(utils.get_peak(x, y), "%Y-%m-%d")
-                date_g = datetime.strptime(utils.get_peak(x_new, y_new), "%Y-%m-%d")
+                date_actual = datetime.strptime(
+                    utils.get_peak(x, y), "%Y-%m-%d"
+                )
+                date_g = datetime.strptime(
+                    utils.get_peak(x_new, y_new), "%Y-%m-%d"
+                )
                 act_g = (date_actual - date_g).days
                 fwhm = utils.get_fwhm(popt[2])
                 max_actual = y.max()
 
         # Create dictionaries to append to the output dataframes
         flood_extent = pd.DataFrame(
-            {'PCODE': adm,
-             'DATE': x_new,
-             'FLOOD_EXTENT': y_new})
+            {"PCODE": adm, "DATE": x_new, "FLOOD_EXTENT": y_new}
+        )
         flood_extents = flood_extents.append(flood_extent, ignore_index=True)
-        result = {'PCODE': adm,
-                  'RMSE': rmse,
-                  'PEAK_SAT': date_actual,
-                  'PEAK_G': date_g,
-                  'DIFF_SAT': act_g,
-                  'FWHM': fwhm,
-                  'COV': cov,
-                  'MAX_SAT': max_actual}
+        result = {
+            "PCODE": adm,
+            "RMSE": rmse,
+            "PEAK_SAT": date_actual,
+            "PEAK_G": date_g,
+            "DIFF_SAT": act_g,
+            "FWHM": fwhm,
+            "COV": cov,
+            "MAX_SAT": max_actual,
+        }
         dates = dates.append(result, ignore_index=True)
 
     # Get the maximum flooding extent and add it to the results dataframe
-    max_flood_G = flood_extents.groupby('PCODE')['FLOOD_EXTENT'].max().reset_index()
-    dates = dates.merge(max_flood_G, on='PCODE')
+    max_flood_G = (
+        flood_extents.groupby("PCODE")["FLOOD_EXTENT"].max().reset_index()
+    )
+    dates = dates.merge(max_flood_G, on="PCODE")
     dates.rename(columns={"FLOOD_EXTENT": "MAX_G"}, inplace=True)
 
     # Save the files to output directory
-    flood_extents['DATE'] = flood_extents['DATE'].apply(lambda x: datetime.utcfromtimestamp(x).strftime("%Y-%m-%d"))
-    dates.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_summary.csv'), index=False)
-    flood_extents.to_csv(os.path.join(output_dir, f'{adm_grp}_flood_extent_interpolated.csv'), index=False)
-    pd.DataFrame(no_fit, columns=['No_Fit']).to_csv(os.path.join(output_dir, f'{adm_grp}_no_fit.csv'), index=False)
-    logging.info(f'Output files saved to {output_dir}')
+    flood_extents["DATE"] = flood_extents["DATE"].apply(
+        lambda x: datetime.utcfromtimestamp(x).strftime("%Y-%m-%d")
+    )
+    dates.to_csv(
+        os.path.join(output_dir, f"{adm_grp}_flood_summary.csv"), index=False
+    )
+    flood_extents.to_csv(
+        os.path.join(output_dir, f"{adm_grp}_flood_extent_interpolated.csv"),
+        index=False,
+    )
+    pd.DataFrame(no_fit, columns=["No_Fit"]).to_csv(
+        os.path.join(output_dir, f"{adm_grp}_no_fit.csv"), index=False
+    )
+    logging.info(f"Output files saved to {output_dir}")
     return flood_extents, dates, no_fit
 
 
 def qc_gaussian(df_interpolated, df_summary, no_fit):
 
-    num_admin = len(df_interpolated['PCODE'].unique())
-    logging.info(f'There are {num_admin} admin units in the results.')
-    logging.info(f'There are {len(no_fit)} admin units with no fit.')
+    num_admin = len(df_interpolated["PCODE"].unique())
+    logging.info(f"There are {num_admin} admin units in the results.")
+    logging.info(f"There are {len(no_fit)} admin units with no fit.")
 
     num_na = df_interpolated.FLOOD_EXTENT.isna().sum()
     if num_na > 0:
-        logging.info(f'There are {num_na} NaN values.')
+        logging.info(f"There are {num_na} NaN values.")
 
     df_summary_copy = df_summary.copy()
-    df_summary_copy['NO_FIT'] = df_summary['FWHM'].isna()
-    df_summary_copy['NEG'] = (df_summary_copy['COV'].isna()) & (df_summary_copy['NO_FIT'] == False)
-    df_summary_copy['RIVER'] = df_summary['MAX_SAT'].isna()
-    df_summary_copy['FWHM_ERR'] = (df_summary['FWHM'] > 200) | (df_summary['FWHM'] < 0)
-    df_summary_copy['MAX_DIFF'] = abs(df_summary_copy['MAX_SAT'] - df_summary_copy['MAX_G']) > 0.5
-    df_summary_copy.to_csv(os.path.join(output_dir, f'{ADM}_flood_summary_QA.csv'), index=False)
+    df_summary_copy["NO_FIT"] = df_summary["FWHM"].isna()
+    df_summary_copy["NEG"] = (df_summary_copy["COV"].isna()) & (
+        df_summary_copy["NO_FIT"] == False
+    )
+    df_summary_copy["RIVER"] = df_summary["MAX_SAT"].isna()
+    df_summary_copy["FWHM_ERR"] = (df_summary["FWHM"] > 200) | (
+        df_summary["FWHM"] < 0
+    )
+    df_summary_copy["MAX_DIFF"] = (
+        abs(df_summary_copy["MAX_SAT"] - df_summary_copy["MAX_G"]) > 0.5
+    )
+    df_summary_copy.to_csv(
+        os.path.join(output_dir, f"{ADM}_flood_summary_QA.csv"), index=False
+    )
 
     try:
-        assert len(df_interpolated[df_interpolated['FLOOD_EXTENT'] > 1]) == 0, 'Flood fraction greater than 1.'
-        assert len(df_interpolated[df_interpolated['FLOOD_EXTENT'] < 0]) == 0, 'Flood fraction less than 0.'
+        assert (
+            len(df_interpolated[df_interpolated["FLOOD_EXTENT"] > 1]) == 0
+        ), "Flood fraction greater than 1."
+        assert (
+            len(df_interpolated[df_interpolated["FLOOD_EXTENT"] < 0]) == 0
+        ), "Flood fraction less than 0."
         assert num_admin * 85 == len(df_interpolated.index)
     except AssertionError as error:
         logging.error(error)
@@ -148,8 +183,12 @@ def qc_gaussian(df_interpolated, df_summary, no_fit):
 
 if __name__ == "__main__":
     try:
-        sentinel = pd.read_csv(os.path.join(output_dir, f'{ADM}_flood_extent_sentinel.csv'))
+        sentinel = pd.read_csv(
+            os.path.join(output_dir, f"{ADM}_flood_extent_sentinel.csv")
+        )
     except FileNotFoundError:
-        logging.error('Input CSV file not found. Run Generate_flood_frac.py to generate the required file.')
+        logging.error(
+            "Input CSV file not found. Run Generate_flood_frac.py to generate the required file."
+        )
     df_flood, df_summary, no_fit = make_data(sentinel, ADM)
     qc_gaussian(df_flood, df_summary, no_fit)

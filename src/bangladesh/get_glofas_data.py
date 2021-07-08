@@ -1,7 +1,5 @@
-"""
-Download raster data from GLOFAS and extracts time series of water discharge in selected locations,
-matching the FFWC stations data
-"""
+"""Download raster data from GLOFAS and extracts time series of water discharge
+in selected locations, matching the FFWC stations data."""
 import logging
 
 # TODO: remove this after making top-level
@@ -57,7 +55,9 @@ def main(download=True, process=True):
         )
 
     if process:
-        glofas_reanalysis.process(country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS)
+        glofas_reanalysis.process(
+            country_iso3=COUNTRY_ISO3, stations=FFWC_STATIONS
+        )
         glofas_forecast.process(
             country_iso3=COUNTRY_ISO3,
             stations=FFWC_STATIONS,

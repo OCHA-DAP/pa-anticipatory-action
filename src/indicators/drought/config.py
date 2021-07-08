@@ -98,7 +98,9 @@ class Config:
     ICPAC_PROBFORECAST_REGEX_RAW = "ForecastProb*.nc"
     # The raw ICPAC data consists of 3 bands: below normal, average, and above normal
     # when adding the crs, only one band can be saved correctly, hence add to the name the tercile we are saving
-    ICPAC_PROBFORECAST_REGEX_CRS = "ForecastProb*{month}{year}_{tercile}_crs.nc"
+    ICPAC_PROBFORECAST_REGEX_CRS = (
+        "ForecastProb*{month}{year}_{tercile}_crs.nc"
+    )
     ICPAC_LOWERTERCILE = "below"
     ICPAC_LON = "x"
     ICPAC_LAT = "y"
@@ -106,9 +108,7 @@ class Config:
     ### NMME
     # date should be string of YYYYMM
     # TODO: in future might want to add support for monthly (and temperature) forecasts
-    NMME_FTP_URL_SEASONAL = (
-        "ftp://ftp.cpc.ncep.noaa.gov/NMME/prob//netcdf/prate.{date}.prob.adj.seas.nc"
-    )
+    NMME_FTP_URL_SEASONAL = "ftp://ftp.cpc.ncep.noaa.gov/NMME/prob//netcdf/prate.{date}.prob.adj.seas.nc"
     NMME_DIR = "nmme"
     NMME_NC_FILENAME_RAW = "nmme_prate_{date}_prob_adj_seas.nc"
     NMME_NC_FILENAME_CRS = "nmme_prate_{date}_prob_adj_seas_{tercile}_crs.nc"
@@ -152,4 +152,4 @@ class Config:
         Path(DATA_DIR) / PUBLIC_DIR / RAW_DIR / GLOBAL_ISO3 / CHIRPSGEFS_DIR
     )
     CHIRPSGEFS_RAW_FILENAME = "chirpsgefs_africa_{days_ahead}days_{date}.tif"
-    CHIRPSGEFS_DATE_STR_FORMAT="%Y%m%d"
+    CHIRPSGEFS_DATE_STR_FORMAT = "%Y%m%d"

@@ -13,15 +13,17 @@ from src.indicators.flooding.floodscan import floodscan
 
 COUNTRY_NAME = "malawi"
 
+
 def main(process=True):
 
-    floodscan_data=floodscan.Floodscan()
+    floodscan_data = floodscan.Floodscan()
 
     if process:
         floodscan_data.process(
             country_name=COUNTRY_NAME,
             adm_level=2,
         )
+
 
 if __name__ == "__main__":
     main()
