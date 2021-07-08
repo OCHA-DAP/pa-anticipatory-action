@@ -1,10 +1,15 @@
 #largely copied from https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/
 repos:
-    - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v2.4.0
-      hooks:
-          - id: flake8
     - repo: https://github.com/psf/black
       rev: stable
       hooks:
           - id: black
+    - repo: https://github.com/myint/docformatter
+      rev: v1.3.1
+      hooks:
+        - id: docformatter
+          args: [ --in-place ]
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v2.4.0
+      hooks:
+          - id: flake8
