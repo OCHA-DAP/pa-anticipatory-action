@@ -10,7 +10,7 @@ library(flextable)
 theme_set(theme_bw())
 
 # load functions
-source("scripts/mwi_chirps_dry_spell_viz_hm_functions.R")
+source("dryspells_trigger/exploration/chirps_dry_spell_viz_hm_functions.R")
 
 # Setting path directories -----------------------------------------------------
 data_dir <- Sys.getenv("AA_DATA_DIR")
