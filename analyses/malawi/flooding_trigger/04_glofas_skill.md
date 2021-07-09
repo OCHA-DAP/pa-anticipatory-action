@@ -33,7 +33,7 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-SAVE_FIG = True
+SAVE_FIG = False
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 stations_adm2 = {

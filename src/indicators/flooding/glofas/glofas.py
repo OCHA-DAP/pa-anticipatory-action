@@ -195,15 +195,11 @@ class Glofas:
         return ds
 
     def _write_to_processed_file(
-<<<<<<< HEAD
-        self, country_iso3: str, version: int, ds: xr.Dataset, leadtime: int = None,
-=======
         self,
         country_iso3: str,
         version: int,
         ds: xr.Dataset,
         leadtime: [int, list] = None,
->>>>>>> feature/glofas-forecast-by-year
     ) -> Path:
         filepath = self._get_processed_filepath(
             country_iso3=country_iso3, version=version, leadtime=leadtime,
@@ -234,14 +230,10 @@ class Glofas:
         )
 
     def read_processed_dataset(
-<<<<<<< HEAD
-        self, country_iso3: str, version: int = DEFAULT_VERSION, leadtime: int = None,
-=======
         self,
         country_iso3: str,
         version: int = DEFAULT_VERSION,
         leadtime: [int, list] = None,
->>>>>>> feature/glofas-forecast-by-year
     ):
         filepath = self._get_processed_filepath(
             country_iso3=country_iso3, version=version, leadtime=leadtime,
@@ -394,9 +386,7 @@ class GlofasForecastBase(Glofas):
             if not split_by_leadtimes:
                 coord_names += ["step"]
             ds_new = _get_station_dataset(
-                stations=stations,
-                ds=ds,
-                coord_names=coord_names,
+                stations=stations, ds=ds, coord_names=coord_names,
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(
