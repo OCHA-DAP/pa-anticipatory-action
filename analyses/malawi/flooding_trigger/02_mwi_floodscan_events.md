@@ -23,7 +23,6 @@ sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
 from src.indicators.flooding.floodscan import floodscan
-from src.indicators.flooding.glofas import utils
 
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
@@ -104,7 +103,7 @@ df_floodscan['month'] = pd.DatetimeIndex(df_floodscan['date']).month
 df_floodscan_rainy = df_floodscan.loc[(df_floodscan['month'] >= 10) | (df_floodscan['month'] <= 4)]
 ```
 
-Now with this cleaned up data we can identify consecutive dates of significantly above average (>3 standard deviations) surface water coverage. We'll consider these to be flood events. 
+Now with this cleaned up data we can identify consecutive dates of significantly above average (>3 standard deviations) surface water coverage. We'll consider these to be flood events. This threshold is set with the intent to capture events that are significant outliers, but could be refined/validated with future work.
 
 ```python
 # Assign an eventID to each flood 
@@ -157,10 +156,12 @@ def merge_events(df):
 ```
 
 ```python
+outlier_thresh = 3
+
 for station in stations_adm2.values():
     df_floodscan_sel = df_floodscan_rainy[df_floodscan_rainy['ADM2_EN']==station]
     df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel['mean_cell'].transform(lambda x: x.rolling(5, 1).mean())
-    df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= 3)]
+    df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= outlier_thresh)]
     df_floods_summary = get_groups_consec_dates(df_floods_summary)
     df_floods_summary = get_flood_summary(df_floods_summary)
     

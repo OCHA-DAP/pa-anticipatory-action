@@ -35,7 +35,9 @@ stations_adm2 = {
 }
 ```
 
-Read in the various event datasets. Both the RCO and Floodscan events are in the same format with defined start and end dates and whereby each event corresponds to a district.
+Read in the various event datasets. Both the RCO and Floodscan events are in the same format with defined start and end dates and whereby each event corresponds to a district. This analysis is conducted at the district level due to operational interest in these two districts, and to have a uniform scale of analysis across all event datasets (some of which only report events at the district level).
+
+EM-DAT data was accessed from (this)[https://www.emdat.be/] site and all other sources were obtained privately.
 
 ```python
 df_emdat = pd.read_csv(EXPLORE_DIR / 'emdat.csv')

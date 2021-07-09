@@ -18,7 +18,6 @@ from src.indicators.flooding.config import Config
 
 config = Config()
 
-PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
@@ -88,7 +87,7 @@ for index,row in df_rco_sel.iterrows():
         print(f'Not a string or datetime.date: {date}')
 ```
 
-Aggregate events to the district level and separate by district. We also need to merge together events that are within 2 months of each other. This aggregation and merging introduces potential inaccuracies as we are likely merging together some events within the same district but in separate TAs. 
+Aggregate events to the district level and separate by district. We want to aggregate by district in this case to keep a standard unit of analysis with other reference impact datasets. We also need to merge together events that are within 2 months of each other. This aggregation and merging introduces potential inaccuracies as we are likely merging together some events within the same district but in separate TAs. 
 
 ```python
 df_rco_grouped = (
