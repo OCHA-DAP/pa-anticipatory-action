@@ -26,7 +26,7 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-LEADTIMES = [5, 10, 15, 20, 25, 30]
+LEADTIMES = [x + 1 for x in range(10)]
 SAVE_PLOT = True
 EVENT = 'RCO' # 'rco', 'floodscan', 'combined'
 COUNTRY_ISO3 = 'mwi'
@@ -121,7 +121,7 @@ rp_dict = {
 
 plot_numbers = True
 plot_precision_recall = True
-leadtime_range = (1, 30)
+leadtime_range = (1, 10)
 
 for code, station in stations_adm2.items():
     if plot_numbers:
@@ -216,7 +216,7 @@ for code, station in stations_adm2.items():
         
         detection_stats = {}
         
-        for lt in lt_list: 
+        for lt in LEADTIMES: 
             df_glofas_event = utils.get_glofas_activations(ds_glofas_reforecast_summary[code]
                                                            .sel(leadtime=lt)
                                                            .sel(percentile=forecast_prob)

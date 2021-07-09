@@ -33,8 +33,8 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-SAVE_FIG = False
-LEADTIMES = [5, 10, 15, 20, 25, 30]
+SAVE_FIG = True
+LEADTIMES = [x + 1 for x in range(10)]
 
 stations_adm2 = {
     'G1724': 'Nsanje',
@@ -50,8 +50,7 @@ ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
     country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
-    interp=False
-)
+    interp=False)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
 ```
 
@@ -134,11 +133,10 @@ def plot_hist(da_observations, da_forecast, station_name, rp=None, leadtimes=Non
     ax.set_title(title)
 
 rp = 3
-leadtimes = [5, 10, 15, 20]
 for code, station in stations_adm2.items():
     da_observations =  ds_glofas_reanalysis[code]
     da_forecast = ds_glofas_reforecast[code]
-    plot_hist(da_observations, da_forecast, station, leadtimes=[5, 10, 15, 20])
+    plot_hist(da_observations, da_forecast, station, leadtimes=LEADTIMES)
     
     if SAVE_FIG: 
         plt.savefig(PLOT_DIR / f'{station}_rank_hist_all.png')
@@ -147,7 +145,7 @@ for code, station in stations_adm2.items():
     o = da_observations[da_observations > rp_val]
     # Needs at least about 50 vals to work, not sure why
     if len(o) > 50:
-        plot_hist(o, da_forecast, station, leadtimes=leadtimes, rp=rp)
+        plot_hist(o, da_forecast, station, leadtimes=LEADTIMES, rp=rp)
         
         if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_rank_hist_{rp}_rp.png')
 ```

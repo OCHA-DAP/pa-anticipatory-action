@@ -14,7 +14,7 @@ from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import AreaFromShape, AreaFromStations, Station
 
 COUNTRY_ISO3 = "mwi"
-LEADTIMES = [5, 10, 15, 20, 25, 30]
+LEADTIMES = [x + 1 for x in range(10)]
 
 STATIONS = {
     "G5694": Station(lat=-16.05, lon=34.85),

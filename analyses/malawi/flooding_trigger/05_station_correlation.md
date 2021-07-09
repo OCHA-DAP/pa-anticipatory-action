@@ -33,7 +33,7 @@ PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
 SAVE_FIG = True
-LEADTIMES = [5, 10, 15, 20, 25, 30]
+LEADTIMES = [x + 1 for x in range(10)]
 stations_adm2 = {
     'G1724': 'Nsanje',
     'G2001': 'Chikwawa'
