@@ -16,7 +16,6 @@ from src.indicators.flooding.floodscan import floodscan
 COUNTRY_NAME = "malawi"
 config = Config()
 parameters = config.parameters(COUNTRY_NAME)
-COUNTRY_ISO3 = parameters["iso3_code"].lower()
 
 
 def main(process=True):

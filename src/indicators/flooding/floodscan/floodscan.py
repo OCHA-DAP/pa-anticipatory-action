@@ -112,7 +112,7 @@ class Floodscan:
         bound_path,
         id_col,
         data_var="SFED_AREA",
-        percentile_list=[2, 4, 6, 8, 10, 20],
+        percentile_list=None,
     ):
         """
         Compute statistics on the raster cells per admin area
@@ -127,6 +127,9 @@ class Floodscan:
         Returns:
             df_hist: dataframe with the statistics per admin
         """
+        if not percentile_list:
+            percentile_list = [2, 4, 6, 8, 10, 20]
+
         # compute statistics on level in adm_path for all dates in ds
         df_list = []
         for date in ds.time.values:
