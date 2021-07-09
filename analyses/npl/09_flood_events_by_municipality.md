@@ -260,15 +260,18 @@ Not super related but I didn't want to make a new notebook for this
 
 ```python
 municipalities_list = [
+"Barahchhetra",
 'Bhokraha Narshingh',
 'Harinagar',
 'Inaruwa',
 'Koshi',
+"Agnisair Krishna Savaran",
 'Chhinnamasta',
 'Hanumannagar Kankalini',
 'Kanchanrup',
 'Mahadeva',
 'Rajbiraj',
+"Shambhunath",
 'Tilathi Koiladi',
 'Tirahut',
 'Duduwa',
@@ -282,10 +285,13 @@ municipalities_list = [
 'Rajapur',
 'Thakurbaba',
 'Lamkichuha',
+"Dhangadhi",
 'Tikapur',
 ]
 
-    
+```
+
+```python
 (df_admin[
     df_admin['ADM2_EN']
     .isin(municipalities_list)]
