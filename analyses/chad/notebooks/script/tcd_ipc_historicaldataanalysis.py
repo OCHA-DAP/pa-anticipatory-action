@@ -2,8 +2,13 @@
 # coding: utf-8
 
 # ## Analysis of historical data of IPC levels
-# For this analysis we use two sources of IPC levels, those produced by FewsNet (https://fews.net) and those producted by Global IPC (http://www.ipcinfo.org).
-# FewsNet has produced these analyses since 2009. Global IPC is a more recent initiative where the timing and coverage of the analysis depends on the country. For Ethiopia currently (Oct 2020) two analyses have been done, one in 2019 and one in 2020.
+# For this analysis we use two sources of IPC levels, those produced by
+# FewsNet (https://fews.net) and those producted by Global IPC
+# (http://www.ipcinfo.org). FewsNet has produced these analyses since
+# 2009. Global IPC is a more recent initiative where the timing and
+# coverage of the analysis depends on the country. For Ethiopia
+# currently (Oct 2020) two analyses have been done, one in 2019 and one
+# in 2020.
 
 # ### No Global IPC data exists for Chad
 
@@ -13,11 +18,7 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import plotly.express as px
-from datetime import timedelta
 import matplotlib.dates as dates
-from sklearn.metrics import accuracy_score
-import geopandas as gpd
 import math
 import matplotlib.ticker as plticker
 import warnings
@@ -102,7 +103,8 @@ print(
 
 
 # ### Analysis of historical IPC values
-# To get a better understanding of the country's typical values and history, both on national and admin1 level
+# To get a better understanding of the country's typical values and
+# history, both on national and admin1 level
 
 
 def plot_ipclevels(
@@ -146,21 +148,21 @@ def plot_ipclevels(
         df_c = df.copy()
         data = df_c.loc[df_c[admc] == region, :]
 
-        p4 = plt.bar(
+        plt.bar(
             data["date"],
             data[f"{perc_str}{status}_5"],
             width=width,
             color=color_map[5],
             label="IPC 5",
         )
-        p4 = plt.bar(
+        plt.bar(
             data["date"],
             data[f"{perc_str}{status}_4"],
             width=width,
             color=color_map[4],
             label="IPC 4",
         )
-        p3 = plt.bar(
+        plt.bar(
             data["date"],
             data[f"{perc_str}{status}_3"],
             width=width,
@@ -170,7 +172,7 @@ def plot_ipclevels(
             ).to_numpy(),
             label="IPC 3",
         )
-        p2 = plt.bar(
+        plt.bar(
             data["date"],
             data[f"{perc_str}{status}_2"],
             width=width,
@@ -182,7 +184,7 @@ def plot_ipclevels(
             ).to_numpy(),
             label="IPC 2",
         )
-        p2 = plt.bar(
+        plt.bar(
             data["date"],
             data[f"{perc_str}{status}_1"],
             width=width,
@@ -204,7 +206,7 @@ def plot_ipclevels(
                 [f"{perc_str}{status}_{i}" for i in range(1, 6)]
             ].sum(axis=1)
             data["pop_miss"] = round(100 - data["perc_analyzed"])
-        p1 = plt.bar(
+        plt.bar(
             data["date"],
             data["pop_miss"],
             width=width,
@@ -253,9 +255,12 @@ def plot_ipclevels(
             )
         else:
             ax.set_ylabel("Percentage of population")
-            #             ax.axhline(y=2.5,label="2.5 %",color="red",alpha=0.5)
-            #             ax.axhline(y=10,label="10 %",color="blue",alpha=0.5)
-            #             ax.axhline(y=20,label="20 %",color="black",alpha=0.5)
+            #             ax.axhline(y=2.5,label="2.5
+            #             %",color="red",alpha=0.5)
+            #             ax.axhline(y=10,label="10
+            #             %",color="blue",alpha=0.5)
+            #             ax.axhline(y=20,label="20
+            #             %",color="black",alpha=0.5)
             loc = plticker.MultipleLocator(
                 base=10
             )  # this locator puts ticks at regular intervals
@@ -274,9 +279,9 @@ def plot_ipclevels(
         )
 
         #         # Draw horizontal axis lines
-        #         vals = ax.get_yticks()
-        #         for tick in vals:
-        #             ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
+        #         vals = ax.get_yticks() for tick in vals:
+        #         ax.axhline(y=tick, linestyle='dashed', alpha=0.4,
+        #         color='#eeeeee', zorder=1)
         ax.legend(bbox_to_anchor=(1.04, 1), frameon=False)
         count += 1
     fig.tight_layout(pad=3.0)
@@ -299,7 +304,9 @@ fig = plot_ipclevels(
     admc="ADMIN0",
     status="CS",
     perc=True,
-    title="Percentage of population per IPC phase in current situation estimates",
+    title=(
+        "Percentage of population per IPC phase in current situation estimates"
+    ),
 )
 fig.savefig("../results/food_insecurity/historical_IPC_FN_CS_perc.png")
 
@@ -322,6 +329,8 @@ fig = plot_ipclevels(
 )
 
 
-# ### TODO: there is something really strange with FN Jun-2018 data. There are duplicate shapes. Removed them in the processing, but now seems they are not equally divided over the admin1's
+# TODO: there is something really strange with FN Jun-2018 data. There are
+# duplicate shapes. Removed them in the processing, but now seems they are not
+# equally divided over the admin1's
 
 fig = plot_ipclevels(df_fadm, figsize=(30, 45))

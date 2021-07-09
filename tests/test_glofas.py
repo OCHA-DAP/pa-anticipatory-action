@@ -63,7 +63,8 @@ class TestDownload(unittest.TestCase):
                 "hydrological_model": "lisflood",
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-historical"
+                f"/tmp/public/raw/{self.country_iso3}"
+                f"/glofas/version_3/cems-glofas-historical"
                 f"/{self.country_iso3}_cems-glofas-historical_v3_2000.grib"
             ),
         }
@@ -96,7 +97,8 @@ class TestDownload(unittest.TestCase):
                 "leadtime_hour": f"{self.expected_leadtime}",
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-forecast"
+                f"/tmp/public/raw/{self.country_iso3}"
+                "/glofas/version_3/cems-glofas-forecast"
                 f"/{self.country_iso3}_cems-glofas-forecast_v3_2000_lt10d.grib"
             ),
         }
@@ -129,8 +131,10 @@ class TestDownload(unittest.TestCase):
                 "leadtime_hour": f"{self.expected_leadtime}",
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-reforecast"
-                f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000_lt10d.grib"
+                f"/tmp/public/raw/{self.country_iso3}"
+                "/glofas/version_3/cems-glofas-reforecast"
+                f"/{self.country_iso3}"
+                "_cems-glofas-reforecast_v3_2000_lt10d.grib"
             ),
         }
         fake_retrieve.assert_called_with(**expected_args)

@@ -4,19 +4,27 @@ import os
 import logging
 import utils_evaluation as utils
 
-# This script takes the flood extent shapefiles output from the GEE Sentinel-1 data processing script
-# and outputs a .csv file that provides a time series of the flooding fraction by admin units in Bangladesh.
+# This script takes the flood extent shapefiles output from the GEE
+# Sentinel-1 data processing script and outputs a .csv file that
+# provides a time series of the flooding fraction by admin units in
+# Bangladesh.
 
 # Required inputs are:
-# 1) The shapefiles of flood extent output from the GEE script, located within the same 'gee_dir'
+# 1) The shapefiles of flood extent output from the GEE script, located
+#    within the same 'gee_dir'
 # 2) Shapefile of admin regions in Bangladesh, located in the 'adm_dir'
-# 3) Shapefile with permanent water bodies in Bangladesh, located in the 'adm_dir' folder
-# 4) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), located in the 'config.yml'
+# 3) Shapefile with permanent water bodies in Bangladesh, located in the
+#    'adm_dir' folder
+# 4) The admin level used to calculate the flood fraction (Eg. ADM2,
+#    ADM3, ADM4), located in the 'config.yml'
 
-# Directory locations for the input and output files should be specified in the 'config.yml' file.
+# Directory locations for the input and output files should be specified
+# in the 'config.yml' file.
 
-# TODO: Look for ways to optimize. Currently is very slow, likely due to the geopandas overlay operations.
-# TODO: Fix variable hard-coding. Currently hard-coded variables include:
+# TODO: Look for ways to optimize. Currently is very slow, likely due to
+# the geopandas overlay operations.
+# TODO: Fix variable hard-coding.
+# Currently hard-coded variables include:
 # - Bangladesh districts in the region of interest
 # - Column names for shapefiles
 # TODO: Move tests to separate file
@@ -78,12 +86,12 @@ def get_adm_shp(shp_admin: str) -> gpd.GeoDataFrame:
 def get_river_area(
     shp_river: str, gdf_admin: gpd.GeoDataFrame
 ) -> gpd.GeoDataFrame:
-    """Subtract the river area from admin units. River area shp comes from JRC
-    Global Surface Water.
+    """Subtract the river area from admin units. River area shp comes
+    from JRC Global Surface Water.
 
-    :param shp_river: shapefile delineating the river area
-    :param gdf_admin: geodataframe with admin areas
-    :return: geodataframe with land area by admin unit
+    :param shp_river: shapefile delineating the river area :param
+    gdf_admin: geodataframe with admin areas :return: geodataframe with
+    land area by admin unit
     """
 
     gdf_river = gpd.read_file(shp_river).to_crs(CRS)
@@ -104,7 +112,8 @@ def get_river_area(
     num_all_river = len(gdf_admin.index) - len(gdf_intersection.index)
     if num_all_river > 0:
         logging.info(
-            f"There are {num_all_river} admin units that are entirely covered by the river"
+            f"There are {num_all_river} admin units that are entirely covered"
+            " by the river"
         )
 
     try:
@@ -129,12 +138,12 @@ def get_river_area(
 def get_flood_area(
     gdf_admin_river: gpd.GeoDataFrame, shp_dir: str
 ) -> gpd.GeoDataFrame:
-    """Calculate the flooded area for each admin region for a given point in
-    time.
+    """Calculate the flooded area for each admin region for a given
+    point in time.
 
-    :param gdf_admin_river: Shapefile with admin boundaries
-    :param shp_dir: Shapefile directory
-    :return: dataframe with the total flooded area by admin region
+    :param gdf_admin_river: Shapefile with admin boundaries :param
+    shp_dir: Shapefile directory :return: dataframe with the total
+    flooded area by admin region
     """
 
     df_output = pd.DataFrame()
@@ -147,8 +156,8 @@ def get_flood_area(
 
             gdf_flood = gpd.read_file(os.path.join(SHP_DIR, fname)).to_crs(CRS)
 
-            # Challenge here is to make sure that both the admin units with 0% flooding and
-            # 100% flooding are accounted for.
+            # Challenge here is to make sure that both the admin units
+            # with 0% flooding and 100% flooding are accounted for.
             gdf_intersection = gpd.overlay(
                 gdf_admin_river, gdf_flood, how="difference"
             )
@@ -181,7 +190,10 @@ def get_flood_area(
             try:
                 assert len(gdf_admin_flooded.index) == len(
                     gdf_admin_river.index
-                ), f"Output from {date} does not have same number of admin units as input"
+                ), (
+                    f"Output from {date} does not have same number of admin"
+                    " units as input"
+                )
                 assert (
                     len(
                         gdf_admin_flooded[
@@ -205,8 +217,8 @@ def get_flood_area(
 
 
 def get_dates(shp_dir):
-    """Get the dates with imagery by parsing the file names in the Google Earth
-    Engine (GEE) output directory.
+    """Get the dates with imagery by parsing the file names in the
+    Google Earth Engine (GEE) output directory.
 
     Assumes the file naming convention specified in the GEE script. Also
     assumes that the GEE output files are the only things in the
@@ -222,15 +234,17 @@ def get_dates(shp_dir):
 
 
 def sentinel_output_qa(df_ts: pd.DataFrame, df_shp: gpd.GeoDataFrame) -> None:
-    """Basic quality checks to validate calculations of flooding fraction by
-    admin unit from the Sentinel-1 derived shapefiles:
+    """Basic quality checks to validate calculations of flooding
+    fraction by admin unit from the Sentinel-1 derived shapefiles:
 
-    Number of unique admin units in the output csv matches those in the shapefile.
-    Flooding fraction is within the [0,1] range.
-    Number of data points for each admin unit is equal to the number of dates with imagery.
+    Number of unique admin units in the output csv matches those in the
+    shapefile. Flooding fraction is within the [0,1] range. Number of
+    data points for each admin unit is equal to the number of dates with
+    imagery.
 
-    Also reports on any admin units that did not experience any flooding.
-    And the number of NA values for flooding in the admin units.
+    Also reports on any admin units that did not experience any
+    flooding. And the number of NA values for flooding in the admin
+    units.
     """
 
     num_dates = len(get_dates(SHP_DIR))
@@ -267,7 +281,8 @@ def sentinel_output_qa(df_ts: pd.DataFrame, df_shp: gpd.GeoDataFrame) -> None:
 
     num_nan = df_ts["flooded_fraction"].isna().sum()
     logging.info(
-        f"There are {num_nan} instances of NaN values in the flooded fraction column"
+        f"There are {num_nan} instances of NaN values in the flooded fraction"
+        " column"
     )
 
 

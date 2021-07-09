@@ -119,8 +119,8 @@ def convert_dict_to_da(da_glofas_dict):
     data = np.array(
         [da_glofas.values for da_glofas in da_glofas_dict.values()]
     )
-    # Create data array with all lead times, as well as ensemble members (number)
-    # and timestep
+    # Create data array with all lead times, as well as ensemble members
+    # (number) and timestep
     return xr.DataArray(
         data=data,
         dims=["leadtime", "number", "time"],

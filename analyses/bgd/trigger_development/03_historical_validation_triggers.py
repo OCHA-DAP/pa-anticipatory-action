@@ -1,6 +1,4 @@
 from datetime import timedelta
-from pathlib import Path
-import os
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -11,26 +9,26 @@ from utils import utils
 
 Water_threshold = 19.5 + 0.85
 ndays_threshold_ffwc = 3
-# Water_threshold=19.5
-# from https://docs.google.com/spreadsheets/d/1J5B9pktZYnlBwAtb8n907A8P6xFVlCCd/edit#gid=1706380269
+# Water_threshold=19.5 from
+# https://docs.google.com/spreadsheets/d/1J5B9pktZYnlBwAtb8n907A8P6xFVlCCd/edit#gid=1706380269
 FFWC_RL_LOG_FILENAME = "Forecast Log Sheet - 2020.xlsx - FFWC.csv"
 # from Hassan
 FFWC_RL_HIS_FILENAME = (
     "2020-06-07 Water level data Bahadurabad Upper danger level.xlsx"
 )
 
-# from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
+# from
+# https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
 Discharge_threshold = 100000
 ndays_threshold_glofas = 2
 
 # def get_ffwc_log_df():
 #     ffwc_rl_name='{}/{}/{}'.format(DIR_PATH,FFWC_RL_FOLDER,FFWC_RL_LOG_FILENAME)
 #     ffwc_df=pd.read_csv(ffwc_rl_name,index_col=0,skiprows=0,header=1)
-#     ffwc_df.index=pd.to_datetime(ffwc_df.index,format='%d/%m/%Y %H:%M')
-#     ffwc_df=ffwc_df['Observed Water Level Today']
-#     ffwc_df.dropna(inplace=True)
-#     ffwc_df = ffwc_df.resample('D').mean()
-#     return ffwc_df
+#     ffwc_df.index=pd.to_datetime(ffwc_df.index,format='%d/%m/%Y
+#     %H:%M') ffwc_df=ffwc_df['Observed Water Level Today']
+#     ffwc_df.dropna(inplace=True) ffwc_df =
+#     ffwc_df.resample('D').mean() return ffwc_df
 
 
 def get_ffwc_his_df():
@@ -51,7 +49,8 @@ def calculate_activations(days_above, ndays_threshold):
             start_group = False
         try:
             next_day = days_above[i + 1]
-        except:
+        except Exception as e:
+            print(e)
             activations = activations.append(
                 {"start_date": start_date, "end_date": day}, ignore_index=True
             )
@@ -100,7 +99,8 @@ ax1_t.scatter(
     color=bar_color(ffwc_his_df["WL"], Water_threshold, "r", "b"),
     label="FFWC Water Depth - Historical data",
 )
-# ffwc_his_df['WL'].plot(c='blue',label='FFWC Water Depth - Historical data',ax=ax1_t)
+# ffwc_his_df['WL'].plot(c='blue',label='FFWC Water Depth - Historical
+# data',ax=ax1_t)
 ax1_t.axhline(
     y=Water_threshold, c="blue", ls="--", label="FFWC water level threshold"
 )

@@ -31,11 +31,9 @@ def get_xy(df):
 def gauss(x, A, x0, sigma):
     """Defines a Gaussian function.
 
-    Adapted from https://gist.github.com/cpascual/a03d0d49ddd2c87d7e84b9f4ad2df466
-    x: x values
-    A: amplitude
-    x0: mean
-    sigma: sigma
+    Adapted from
+    https://gist.github.com/cpascual/a03d0d49ddd2c87d7e84b9f4ad2df466 x:
+    x values A: amplitude x0: mean sigma: sigma
     """
 
     return A * np.exp(-((x - x0) ** 2) / (2 * sigma ** 2))
@@ -44,7 +42,8 @@ def gauss(x, A, x0, sigma):
 def gauss_fit(x, y):
     """Fits a Gaussian function to input x and y data.
 
-    Adapted from https://gist.github.com/cpascual/a03d0d49ddd2c87d7e84b9f4ad2df466
+    Adapted from
+    https://gist.github.com/cpascual/a03d0d49ddd2c87d7e84b9f4ad2df466
     """
 
     mean = sum(x * y) / sum(y)
@@ -61,12 +60,12 @@ def gauss_fit(x, y):
 
 
 def get_fwhm(sigma):
-    """Computes the Full Width at Half Max (FWHM) for the Gaussian curve. This
-    is used as an indication of the length of time that flooding in a given
-    area is at or above 50% of its total extent.
+    """Computes the Full Width at Half Max (FWHM) for the Gaussian
+    curve. This is used as an indication of the length of time that
+    flooding in a given area is at or above 50% of its total extent.
 
-    :param sigma: standard deviation of the Gaussian curve
-    :return: fwhm, rounded to the nearest day
+    :param sigma: standard deviation of the Gaussian curve :return:
+    fwhm, rounded to the nearest day
     """
     return round(sigma * 2.355 / 86400)
 
@@ -92,8 +91,8 @@ def rmse(y_pred, y_true):
 
 
 def get_peak(x, y):
-    """Get the peak flooding date from input x (date) and y (flood extent)
-    arrays."""
+    """Get the peak flooding date from input x (date) and y (flood
+    extent) arrays."""
 
     index, value = max(enumerate(y), key=operator.itemgetter(1))
     return datetime.datetime.fromtimestamp(x[index]).strftime("%Y-%m-%d")
@@ -115,11 +114,11 @@ def parse_yaml(filename):
 
 
 def compare_estimates(data, sel_union):
-    """Return a graph for the selected union, comparing Sentinel-1 estimates
-    with interview estimates.
+    """Return a graph for the selected union, comparing Sentinel-1
+    estimates with interview estimates.
 
-    data = dataframe with the flooding estimates over time for BGD admin-4 regions
-    sel_union = name of ADM4 region
+    data = dataframe with the flooding estimates over time for BGD
+    admin-4 regions sel_union = name of ADM4 region
     """
 
     # Get only the data for the selected union
@@ -138,9 +137,8 @@ def compare_estimates(data, sel_union):
         "Interview_3": "#d096d4",
         "flood_fraction": "#ff9626",
     }
-    # Create simple line plot to compare the satellite estimates and interviewed estimates
-    fig = plt.figure()
-    ax = plt.axes()
+    # Create simple line plot to compare the satellite estimates and
+    # interviewed estimates
     sns.lineplot(
         x="date",
         y="value",
@@ -154,5 +152,5 @@ def compare_estimates(data, sel_union):
     plt.ylim([0, 110])
     plt.title("Estimates of flooding in {}, Bangladesh".format(sel_union))
     plt.legend(loc="lower right", bbox_to_anchor=(1.05, 1))
-    leg = plt.legend()
+    plt.legend()
     plt.tight_layout()

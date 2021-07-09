@@ -10,11 +10,14 @@ import shutil
 
 # TODO: refactor & move to utils_general
 
-# Download raster data from GLOFAS and extracts time series of water discharge in selected locations, matching the FFWC stations
-# data from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
+# Download raster data from GLOFAS and extracts time series of water
+# discharge in selected locations, matching the FFWC stations data from
+# https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
 
-# location of stations on the Jamuna/Brahmaputra river from http://www.ffwc.gov.bd/index.php/googlemap?id=20
-# some lat lon indicated by FFWC are not on the river and have been manually moved to the closest pixel on the river
+# location of stations on the Jamuna/Brahmaputra river from
+# http://www.ffwc.gov.bd/index.php/googlemap?id=20 some lat lon
+# indicated by FFWC are not on the river and have been manually moved to
+# the closest pixel on the river
 FFWC_Stations_lonlat = {
     "Noonkhawa": [89.9509, 25.9496],
     "Chilmari": [89.7476, 25.5451],

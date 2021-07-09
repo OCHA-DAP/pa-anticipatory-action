@@ -5,15 +5,20 @@ import matplotlib.pyplot as plt
 import utils_evaluation as utils
 import logging
 
-# This script takes the output interpolated data from the Generate_interpolated.py script
-# and produces a series of basic choropleth maps to visualize the results
+# This script takes the output interpolated data from the
+# Generate_interpolated.py script and produces a series of basic
+# choropleth maps to visualize the results
 
 # Required inputs are:
-# 1) A shapefile to delineate the admin units, located in the 'adm_dir' folder
-# 2) The flood fractions by admin unit calculated from the satellite image processing. eg. 'ADM4_flood_extent_sentinel.csv'
-# 3) The summary statistics from the interpolated flood fractions. eg. 'ADM4_flood_summary.csv'
+# 1) A shapefile to delineate the admin units, located in the 'adm_dir'
+#    folder
+# 2) The flood fractions by admin unit calculated from the satellite
+#    image processing. eg. 'ADM4_flood_extent_sentinel.csv'
+# 3) The summary statistics from the interpolated flood fractions. eg.
+#    'ADM4_flood_summary.csv'
 
-# Directory locations for the input and output files should be specified in the 'config.yml' file.
+# Directory locations for the input and output files should be specified
+# in the 'config.yml' file.
 
 DATA_DIR = os.environ["AA_DATA_DIR"]
 params = utils.parse_yaml("analyses/bangladesh/pilot_evaluation/config.yml")[
@@ -29,9 +34,11 @@ shp_dir = os.path.join(DATA_DIR, dirs["adm_dir"])
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
-# TODO: Implement functionality to remove outliers from map - (needed for FWHM)
+# TODO: Implement functionality to remove outliers from map - (needed
+# for FWHM)
 # TODO: Reclass admin units with no flooding as zero rather than na?
-# TODO: Fix hard coding with aoi selection, shapefile naming, plot numbers
+# TODO: Fix hard coding with aoi selection, shapefile naming,
+# plot numbers
 
 
 def make_time_series(df_shp, df_data, id_col):

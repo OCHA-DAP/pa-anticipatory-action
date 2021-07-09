@@ -1,6 +1,4 @@
-import os
 from datetime import timedelta
-from pathlib import Path
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,7 +6,8 @@ import numpy as np
 
 from utils import utils
 
-# from https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
+# from
+# https://cds.climate.copernicus.eu/cdsapp#!/dataset/cems-glofas-historical?tab=overview
 GLOFAS_DS_ENSEMBLE_FILENAME = "10daysleadtime_19972018_allensemble.xls"
 
 

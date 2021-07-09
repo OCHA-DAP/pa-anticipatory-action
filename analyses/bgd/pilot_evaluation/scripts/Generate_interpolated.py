@@ -5,14 +5,16 @@ import numpy as np
 import os
 import logging
 
-# This script takes the output file from Generate_flood_frac.py and fits a Gaussian
-# function to the data, to interpolate between dates without Sentinel-1
-# coverage. Note that admin areas with insignificant flooding (zero or near zero)
-# will not fit to the Gaussian distribution.
+# This script takes the output file from Generate_flood_frac.py and fits
+# a Gaussian function to the data, to interpolate between dates without
+# Sentinel-1 coverage. Note that admin areas with insignificant flooding
+# (zero or near zero) will not fit to the Gaussian distribution.
 
 # Required inputs are:
-# 1) The .csv file output from the Generate_flood_frac.py script, located in 'data_dir' in the config.yml
-# 2) The admin level used to calculate the flood fraction (Eg. ADM2, ADM3, ADM4), located in the config.yml
+# 1) The .csv file output from the Generate_flood_frac.py script,
+#    located in 'data_dir' in the config.yml
+# 2) The admin level used to calculate the flood fraction (Eg. ADM2,
+#    ADM3, ADM4), located in the config.yml
 
 DATA_DIR = os.environ["AA_DATA_DIR"]
 
@@ -67,8 +69,9 @@ def make_data(df, adm_grp):
             try:
                 popt, pcov = utils.gauss_fit(x, y)
 
-            # In case the function doesn't converge to estimate the Gaussian parameters,
-            # we will add in empty data to the summary output.
+            # In case the function doesn't converge to estimate the
+            # Gaussian parameters, we will add in empty data to the
+            # summary output.
             except Exception as e:
                 logging.warning(e)
                 no_fit.append(adm)
@@ -87,8 +90,9 @@ def make_data(df, adm_grp):
             else:
                 y_fit = utils.gauss(x, *popt)
                 y_new = utils.gauss(x_new, *popt)
-                # Standard deviation of the errors for the mean (x0) parameter
-                # Convert from seconds (from unix time) to days.
+                # Standard deviation of the errors for the mean (x0)
+                # parameter Convert from seconds (from unix time) to
+                # days.
                 cov = np.sqrt(np.diag(pcov)[1]) / 86400
                 rmse = utils.rmse(y_fit, y)
                 date_actual = datetime.strptime(
@@ -118,7 +122,8 @@ def make_data(df, adm_grp):
         }
         dates = dates.append(result, ignore_index=True)
 
-    # Get the maximum flooding extent and add it to the results dataframe
+    # Get the maximum flooding extent and add it to the results
+    # dataframe
     max_flood_G = (
         flood_extents.groupby("PCODE")["FLOOD_EXTENT"].max().reset_index()
     )
@@ -156,7 +161,7 @@ def qc_gaussian(df_interpolated, df_summary, no_fit):
     df_summary_copy = df_summary.copy()
     df_summary_copy["NO_FIT"] = df_summary["FWHM"].isna()
     df_summary_copy["NEG"] = (df_summary_copy["COV"].isna()) & (
-        df_summary_copy["NO_FIT"] == False
+        ~df_summary_copy["NO_FIT"]
     )
     df_summary_copy["RIVER"] = df_summary["MAX_SAT"].isna()
     df_summary_copy["FWHM_ERR"] = (df_summary["FWHM"] > 200) | (
@@ -188,7 +193,8 @@ if __name__ == "__main__":
         )
     except FileNotFoundError:
         logging.error(
-            "Input CSV file not found. Run Generate_flood_frac.py to generate the required file."
+            "Input CSV file not found. Run Generate_flood_frac.py to generate"
+            " the required file."
         )
     df_flood, df_summary, no_fit = make_data(sentinel, ADM)
     qc_gaussian(df_flood, df_summary, no_fit)
