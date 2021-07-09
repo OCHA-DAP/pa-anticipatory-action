@@ -21,7 +21,7 @@ This document explores the skill of ECMWF's seasonal forecast, to predict dry sp
 ECMWF's forecast is a probabilistic forecast, meaning it consists of several members (=models) each having their projected precipitation. This is what in this document is referred to as *% of members*, and can be interpreted as a probability of the event occurring. 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
-source("historical_dry_spells_description_setup.R")
+source("mwi_rmd_setup.R")
 library(glue)
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default

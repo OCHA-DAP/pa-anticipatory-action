@@ -13,14 +13,11 @@ logger = logging.getLogger(__name__)
 
 def plot_histogram(hist_array, xlabel=None):
     """
-    Plot a generic histogram
-    Args:
-        hist_array (np array): array with the values to be plotted
-    xlabel (str): string to set as xlabel (if None, no label will be
-    shown)
+    Plot a generic histogram Args: hist_array (np array): array with the
+    values to be plotted xlabel (str): string to set as xlabel (if None,
+    no label will be shown)
 
-    Returns:
-        fig (fig): fig object with the histogram
+    Returns: fig (fig): fig object with the histogram
     """
     # initialize empty figure, to circumvent that figures from different
     # functions are overlapping
@@ -101,12 +98,14 @@ def plot_raster_boundaries(
 ):
     # TODO: at some point this function can be deleted/integrated with
     # plot_raster_boundaries_test, but for now keeping for debugging
-    """plot a raster file and a shapefile on top of each other with the goal to
-    see if their coordinate systems match Two plots are made, one with the adm2
-    shapefile of the country and one with the worldmap For some forecast
-    providers a part of the world is masked. This might causes that it seems
-    that the rasterdata and shapefile are not overlapping. But double check
-    before getting confused by the masked values (speaking from experience)
+    """
+    plot a raster file and a shapefile on top of each other with the
+    goal to see if their coordinate systems match Two plots are made,
+    one with the adm2 shapefile of the country and one with the worldmap
+    For some forecast providers a part of the world is masked. This
+    might causes that it seems that the rasterdata and shapefile are not
+    overlapping. But double check before getting confused by the masked
+    values (speaking from experience)
 
     Args: ds_nc (xarray dataset): dataset that should be plotted, all
         bands contained in this dataset will be plotted country (str):
@@ -172,11 +171,11 @@ def plot_raster_boundaries_clip(
 ):
     # compared to plot_raster_boundaries, this function is working with
     # clipped values and a list of datasets
-    """Plot a raster file and a shapefile on top of each other.
-
-    Several datasets can given and for each dataset a separate subplot
-    will be generated Args: ds_nc (xarray dataset): dataset that should
-    be plotted, all bands contained in this dataset will be plotted
+    """
+    Plot a raster file and a shapefile on top of each other. Several
+    datasets can given and for each dataset a separate subplot will be
+    generated Args: ds_nc (xarray dataset): dataset that should be
+    plotted, all bands contained in this dataset will be plotted
     boundary_path (str): path to the shapefile clipped (bool): if True,
     clip the raster extent to the shapefile lon (str): name of the
     longitude coordinate in ds_nc lat (str): name of the latitude
@@ -225,9 +224,7 @@ def plot_raster_boundaries_clip(
         # why yet
         if clipped:
             ds = ds.rio.set_spatial_dims(x_dim=lon, y_dim=lat).rio.clip(
-                df_bound.geometry.apply(mapping),
-                df_bound.crs,
-                all_touched=True,
+                df_bound.geometry.apply(mapping), all_touched=True
             )
         lons = ds.coords[lon]
         lats = ds.coords[lat]

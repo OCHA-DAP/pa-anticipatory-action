@@ -36,7 +36,7 @@ class TestDownload(unittest.TestCase):
         self.area = Area(north=1, south=-2, east=3, west=-4)
         self.year = 2000
         self.leadtime = 10
-        self.expected_area = [1, -4, -2, 3]
+        self.expected_area = [1.05, -4.05, -2.05, 3.05]
         self.expected_months = [str(x + 1).zfill(2) for x in range(12)]
         self.expected_days = [str(x + 1).zfill(2) for x in range(31)]
         self.expected_leadtime = 240

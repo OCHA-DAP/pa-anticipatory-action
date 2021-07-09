@@ -1,5 +1,7 @@
-"""Download raster data from GLOFAS and extracts time series of water
-discharge in selected locations."""
+"""
+Download raster data from GLOFAS and extracts time series of water
+discharge in selected locations
+"""
 from pathlib import Path
 import logging
 import time
@@ -34,10 +36,11 @@ class Glofas:
         dataset_variable_name: str,
         system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
+        use_incorrect_area_coords=False,
     ):
-        """Create an instance of a GloFAS object, from which you can
+        """
+        Create an instance of a GloFAS object, from which you can
         download and process raw data, and read in the processed data.
-
         :param year_min: The earliest year that the dataset is
         available. Can be a single integer, or a dictionary with
         structure {major_version: year_min} if the minimum year depends
@@ -50,7 +53,9 @@ class Glofas:
         minor version of the GloFAS model. Depends on the major version,
         so is given as a dictionary with the format {major_version:
         minor_version} :param date_variable_prefix: Some GloFAS datasets
-        have the prefix "h" in front of some query keys
+        have the prefix "h" in front of some query keys :param
+        use_incorrect_area_coords: Generally not meant to be used,
+        needed for backward compatibility with some historical data
         """
         self.year_min = year_min
         self.year_max = year_max
@@ -59,6 +64,7 @@ class Glofas:
         self.dataset_variable_name = dataset_variable_name
         self.system_version_minor = system_version_minor
         self.date_variable_prefix = date_variable_prefix
+        self.use_incorrect_area_coords = use_incorrect_area_coords
 
     def _download(
         self,
@@ -110,16 +116,22 @@ class Glofas:
         month: int = None,
         leadtime: int = None,
     ):
+        version_dir = f"version_{version}"
+        if self.use_incorrect_area_coords:
+            version_dir += "_incorrect_coords"
         directory = (
             DATA_DIR
             / PUBLIC_DATA_DIR
             / RAW_DATA_DIR
             / country_iso3
             / GLOFAS_DIR
-            / f"version_{version}"
+            / version_dir
             / self.cds_name
         )
-        filename = f"{country_iso3}_{self.cds_name}_v{version}_{year}"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if self.use_incorrect_area_coords:
+            filename += "_incorrect-coords"
+        filename += f"_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
         if leadtime is not None:
@@ -148,7 +160,9 @@ class Glofas:
             f"{self.date_variable_prefix}day": [
                 str(x + 1).zfill(2) for x in range(31)
             ],
-            "area": area.list_for_api(),
+            "area": area.list_for_api(
+                do_not_round=self.use_incorrect_area_coords
+            ),
             "system_version": (
                 f"version_{version}_{self.system_version_minor[version]}"
             ),
@@ -161,8 +175,10 @@ class Glofas:
 
     @staticmethod
     def _read_in_ensemble_and_perturbed_datasets(filepath_list: List[Path]):
-        """Read in dataset that has both control and ensemble perturbed
-        forecast and combine them."""
+        """
+        Read in dataset that has both control and ensemble perturbed
+        forecast and combine them
+        """
         ds_list = []
         for data_type in ["cf", "pf"]:
             with xr.open_mfdataset(
@@ -216,6 +232,8 @@ class Glofas:
         self, country_iso3: str, version: int, leadtime: int = None
     ) -> Path:
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if self.use_incorrect_area_coords:
+            filename += "_incorrect-coords"
         if leadtime is not None:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
@@ -243,7 +261,7 @@ class Glofas:
 
 
 class GlofasReanalysis(Glofas):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             year_min=1979,
             year_max=2020,
@@ -252,6 +270,7 @@ class GlofasReanalysis(Glofas):
             dataset_variable_name="dataset",
             system_version_minor={2: 1, 3: 1},
             date_variable_prefix="h",
+            **kwargs,
         )
 
     def download(
@@ -313,7 +332,7 @@ class GlofasReanalysis(Glofas):
 
 
 class GlofasForecast(Glofas):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             year_min={2: 2019, 3: 2020},
             year_max=2020,
@@ -321,6 +340,7 @@ class GlofasForecast(Glofas):
             dataset=["control_forecast", "ensemble_perturbed_forecasts"],
             system_version_minor={2: 1, 3: 1},
             dataset_variable_name="product_type",
+            **kwargs,
         )
 
     def download(
@@ -388,7 +408,7 @@ class GlofasForecast(Glofas):
 
 
 class GlofasReforecast(Glofas):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             year_min=1999,
             year_max=2018,
@@ -397,6 +417,7 @@ class GlofasReforecast(Glofas):
             dataset_variable_name="product_type",
             system_version_minor={2: 2, 3: 1},
             date_variable_prefix="h",
+            **kwargs,
         )
 
     def download(
@@ -476,11 +497,10 @@ class GlofasReforecast(Glofas):
 def expand_dims(
     ds: xr.Dataset, dataset_name: str, coord_names: list, expansion_dim: int
 ):
-    """Using expand_dims seems to cause a bug with Dask like the one described
-    here:
-
-    https://github.com/pydata/xarray/issues/873 (it's supposed to be
-    fixed though)
+    """
+    Using expand_dims seems to cause a bug with Dask like the one
+    described here: https://github.com/pydata/xarray/issues/873 (it's
+    supposed to be fixed though)
     """
     coords = {coord_name: ds[coord_name] for coord_name in coord_names}
     coords[coord_names[expansion_dim]] = [coords[coord_names[expansion_dim]]]
