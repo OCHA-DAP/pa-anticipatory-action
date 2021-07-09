@@ -177,7 +177,7 @@ def plot_raster_boundaries_clip(ds_list, boundary_path, clipped=True, lon='lon',
 
         #TODO: spatial_dims needed for ICPAC data but don't understand why yet
         if clipped:
-            ds = ds.rio.set_spatial_dims(x_dim=lon,y_dim=lat).rio.clip(df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True)
+            ds = ds.rio.set_spatial_dims(x_dim=lon,y_dim=lat).rio.clip(df_bound.geometry.apply(mapping), all_touched=True)
         lons = ds.coords[lon]
         lats = ds.coords[lat]
         prob = ds[forec_val]

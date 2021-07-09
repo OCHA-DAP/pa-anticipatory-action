@@ -28,18 +28,53 @@ def get_glofas_reanalysis(
     return ds_glofas_reanalysis
 
 
-def get_glofas_forecast(
-    country_iso3: str, leadtimes: List[int], version: int = glofas.DEFAULT_VERSION
-) -> xr.Dataset:
-    glofas_forecast = glofas.GlofasForecast()
-    ds_glofas_forecast_dict = {
-        leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=country_iso3, leadtime=leadtime, version=version,
+def _get_glofas_forecast_base(
+    is_reforecast: bool,
+    country_iso3: str,
+    leadtimes: List[int],
+    interp: bool = False,
+    version: int = glofas.DEFAULT_VERSION,
+    split_by_leadtimes: bool = False,
+):
+    if is_reforecast:
+        glofas_forecast = glofas.GlofasReforecast()
+    else:
+        glofas_forecast = glofas.GlofasForecast()
+    if split_by_leadtimes:
+        ds_glofas_forecast_dict = {
+            leadtime: glofas_forecast.read_processed_dataset(
+                country_iso3=country_iso3, version=version, leadtime=leadtime,
+            )
+            for leadtime in leadtimes
+        }
+    else:
+        # Split up the dataset into different leadtimes, because then it's easier to do the shifts
+        ds_glofas_forecast = glofas_forecast.read_processed_dataset(
+            country_iso3=country_iso3, version=version
         )
-        for leadtime in leadtimes
-    }
+        ds_glofas_forecast_dict = {
+            leadtime: ds_glofas_forecast.sel(step=np.timedelta64(leadtime, "D"))
+            for leadtime in leadtimes
+        }
+    if interp:
+        ds_glofas_forecast_dict = _interp_dates(ds_glofas_forecast_dict)
     ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
     return _convert_dict_to_ds(ds_glofas_forecast_dict)
+
+
+def get_glofas_forecast(
+    country_iso3: str,
+    leadtimes: List[int],
+    version: int = glofas.DEFAULT_VERSION,
+    split_by_leadtimes=False,
+) -> xr.Dataset:
+    return _get_glofas_forecast_base(
+        is_reforecast=False,
+        country_iso3=country_iso3,
+        leadtimes=leadtimes,
+        version=version,
+        split_by_leadtimes=split_by_leadtimes,
+    )
 
 
 def get_glofas_reforecast(
@@ -47,18 +82,16 @@ def get_glofas_reforecast(
     leadtimes: List[int],
     interp: bool = True,
     version: int = glofas.DEFAULT_VERSION,
+    split_by_leadtimes: bool = False,
 ) -> xr.Dataset:
-    glofas_reforecast = glofas.GlofasReforecast()
-    ds_glofas_reforecast_dict = {
-        leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=country_iso3, version=version, leadtime=leadtime,
-        )
-        for leadtime in leadtimes
-    }
-    if interp:
-        ds_glofas_reforecast_dict = _interp_dates(ds_glofas_reforecast_dict)
-    ds_glofas_reforecast_dict = _shift_dates(ds_glofas_reforecast_dict)
-    return _convert_dict_to_ds(ds_glofas_reforecast_dict)
+    return _get_glofas_forecast_base(
+        is_reforecast=True,
+        country_iso3=country_iso3,
+        leadtimes=leadtimes,
+        interp=interp,
+        version=version,
+        split_by_leadtimes=split_by_leadtimes,
+    )
 
 
 def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
