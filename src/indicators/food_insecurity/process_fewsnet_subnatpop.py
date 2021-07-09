@@ -17,22 +17,22 @@ logger = logging.getLogger(__name__)
 
 def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
     """
-    Compile the shapefiles to a dataframe
-    Args:
-        path: path to directory that contains the FewsNet shapefiles
-        period: type of FewsNet prediction: CS (current), ML1 (near-term projection) or ML2 (medium-term projection)
-        dates: list of dates for which FewsNet data should be included
-        region: region that the fewsnet data covers, e.g. "east-africa"
-        regionabb: abbreviation of the region that the fewsnet data covers, e.g. "EA"
-        iso2_code: iso2 code of the country of interest
+    Compile the shapefiles to a dataframe Args: path: path to directory
+    that contains the FewsNet shapefiles period: type of FewsNet
+    prediction: CS (current), ML1 (near-term projection) or ML2
+    (medium-term projection) dates: list of dates for which FewsNet data
+    should be included region: region that the fewsnet data covers, e.g.
+    "east-africa" regionabb: abbreviation of the region that the fewsnet
+    data covers, e.g. "EA" iso2_code: iso2 code of the country of
+    interest
 
-    Returns:
-        df: DataFrame that contains all the shapefiles of Fewsnet for the given dates, period and regions
+    Returns: df: DataFrame that contains all the shapefiles of Fewsnet
+        for the given dates, period and regions
     """
     df = gpd.GeoDataFrame()
     for d in dates:
-        # path to fewsnet data
-        # In most cases FewsNet publishes per region, but sometimes also per country, so allow for both
+        # path to fewsnet data In most cases FewsNet publishes per
+        # region, but sometimes also per country, so allow for both
         shape_region = os.path.join(
             path, f"{region}{d}/{regionabb}_{d}_{period}.shp"
         )
@@ -52,17 +52,17 @@ def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
 
 def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
     """
-    Merge the geographic boundary information shapefile with the FewsNet dataframe.
-    Args:
-        df: DataFrame with the Fewsnet data and geometries
-        path_admin: path to file with admin(2) boundaries
-        period: type of FewsNet prediction: CS (current), ML1 (near-term projection) or ML2 (medium-term)
-        adm0c: column name of the admin0 level name, in path_admin data
-        adm1c: column name of the admin1 level name, in path_admin data
-        adm2c: column name of the admin2 level name, in path_admin data
+    Merge the geographic boundary information shapefile with the FewsNet
+    dataframe. Args: df: DataFrame with the Fewsnet data and geometries
+    path_admin: path to file with admin(2) boundaries period: type of
+    FewsNet prediction: CS (current), ML1 (near-term projection) or ML2
+    (medium-term) adm0c: column name of the admin0 level name, in
+    path_admin data adm1c: column name of the admin1 level name, in
+    path_admin data adm2c: column name of the admin2 level name, in
+    path_admin data
 
-    Returns:
-        overlap: dataframe with the regions per admin2 for each IPC level
+    Returns: overlap: dataframe with the regions per admin2 for each IPC
+        level
     """
     admin2 = gpd.read_file(path_admin)
     if not all(x in admin2.columns for x in [adm0c, adm1c, adm2c]):
@@ -82,28 +82,30 @@ def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
 
 def return_max_cs(date, df, dfadcol, period, adm0c, adm1c, adm2c):
     """
-    Return the IPC value that is assigned to the largest area (in m2) for the given Admin Level 2 region
-    It is discussable if this is the best approach to select the IPC admin2 level. One could also try to work with more local population estimates
-    Args:
-        date: string with the date of the FewsNet analysis
-        df: DataFrame that contains the geometrys per IPC level per Admin2 (output from merge_admin2)
-        dfadcol: one row of the df
-        period: type of FewsNet prediction: CS (current), ML1 (near-term projection) or ML2 (medium-term)
-        adm0c: column name of the admin0 level name, in path_admin data
-        adm1c: column name of the admin1 level name, in path_admin data
-        adm2c: column name of the admin2 level name, in path_admin data
+    Return the IPC value that is assigned to the largest area (in m2)
+    for the given Admin Level 2 region It is discussable if this is the
+    best approach to select the IPC admin2 level. One could also try to
+    work with more local population estimates Args: date: string with
+    the date of the FewsNet analysis df: DataFrame that contains the
+    geometrys per IPC level per Admin2 (output from merge_admin2)
+    dfadcol: one row of the df period: type of FewsNet prediction: CS
+    (current), ML1 (near-term projection) or ML2 (medium-term) adm0c:
+    column name of the admin0 level name, in path_admin data adm1c:
+    column name of the admin1 level name, in path_admin data adm2c:
+    column name of the admin2 level name, in path_admin data
 
 
-    Returns:
-        row: row of the df which has the largest area within the given Admin Level 2 region (defined by dfadcol)
+    Returns: row: row of the df which has the largest area within the
+        given Admin Level 2 region (defined by dfadcol)
     """
     sub = df.loc[
         (df["date"] == date)
         & (df[adm1c] == dfadcol[adm1c])
         & (df[adm2c] == dfadcol[adm2c])
     ]
-    # if there are nan (=0) values we prefer to take the non-nan values, even if those represent a smaller area
-    # however if there are only nans (=0s) in an admin2 region, we do return one of those rows
+    # if there are nan (=0) values we prefer to take the non-nan values,
+    # even if those represent a smaller area however if there are only
+    # nans (=0s) in an admin2 region, we do return one of those rows
     if len(sub[sub[period] != 0]) > 0:
         sub = sub[sub[period] != 0]
     mx = sub["area"].max()
@@ -113,18 +115,21 @@ def return_max_cs(date, df, dfadcol, period, adm0c, adm1c, adm2c):
 
 def add_missing_values(df, period, dates, path_admin, adm0c, adm1c, adm2c):
     """
-    Add dates which are in dates but not in current dataframe (i.e. not in raw FewsNet data) to dataframe and set period values to nan
-    Args:
-        df: DataFrame with the max IPC for period per adm1-adm2 combination for all dates that are in the FewsNet data
-        period: type of FewsNet prediction: CS (current), ML1 (near-term projection) or ML2 (medium-term)
-        dates: list of dates for which FewsNet data should be included. The folders of these dates have to be present in the directory (ipc_path)!
-        path_admin: path to file with admin(2) boundaries
-        adm0c: column name of the admin0 level name, in path_admin data
-        adm1c: column name of the admin1 level name, in path_admin data
-        adm2c: column name of the admin2 level name, in path_admin data
+    Add dates which are in dates but not in current dataframe (i.e. not
+    in raw FewsNet data) to dataframe and set period values to nan Args:
+    df: DataFrame with the max IPC for period per adm1-adm2 combination
+    for all dates that are in the FewsNet data period: type of FewsNet
+    prediction: CS (current), ML1 (near-term projection) or ML2
+    (medium-term) dates: list of dates for which FewsNet data should be
+    included. The folders of these dates have to be present in the
+    directory (ipc_path)! path_admin: path to file with admin(2)
+    boundaries adm0c: column name of the admin0 level name, in
+    path_admin data adm1c: column name of the admin1 level name, in
+    path_admin data adm2c: column name of the admin2 level name, in
+    path_admin data
 
-    Returns:
-        DataFrame which includes the dates in "dates" that were not in the input df
+    Returns: DataFrame which includes the dates in "dates" that were not
+        in the input df
     """
     dates_dt = pd.to_datetime(dates, format="%Y%m")
     # check if
@@ -164,34 +169,37 @@ def gen_csml1m2(
     iso2_code,
 ):
     """
-    Generate a DataFrame with the IPC level per Admin 2 Level, defined by the level that covers the largest area
-    The DataFrame includes all the dates given as input, and covers one type of classification given by period
-    Args:
-        ipc_path: path to the directory with the fewsnet data
-        bound_path: path to the file with the admin2 boundaries
-        period: type of FewsNet prediction: CS (current), ML1 (near-term projection) or ML2 (medium-term)
-        dates: list of dates for which FewsNet data should be included
-        adm0c: column name of the admin0 level name, in path_admin data
-        adm1c: column name of the admin1 level name, in path_admin data
-        adm2c: column name of the admin2 level name, in path_admin data
-        region: region that the fewsnet data covers, e.g. "east-africa"
-        regionabb: abbreviation of the region that the fewsnet data covers, e.g. "EA"
-        iso2_code: iso2 code of the country of interest
+    Generate a DataFrame with the IPC level per Admin 2 Level, defined
+    by the level that covers the largest area The DataFrame includes all
+    the dates given as input, and covers one type of classification
+    given by period Args: ipc_path: path to the directory with the
+    fewsnet data bound_path: path to the file with the admin2 boundaries
+    period: type of FewsNet prediction: CS (current), ML1 (near-term
+    projection) or ML2 (medium-term) dates: list of dates for which
+    FewsNet data should be included adm0c: column name of the admin0
+    level name, in path_admin data adm1c: column name of the admin1
+    level name, in path_admin data adm2c: column name of the admin2
+    level name, in path_admin data region: region that the fewsnet data
+    covers, e.g. "east-africa" regionabb: abbreviation of the region
+    that the fewsnet data covers, e.g. "EA" iso2_code: iso2 code of the
+    country of interest
 
-    Returns:
-        new_df: DataFrame that contains one row per Admin2-date combination, which indicates the IPC level
+    Returns: new_df: DataFrame that contains one row per Admin2-date
+        combination, which indicates the IPC level
     """
     df_ipc = shapefiles_to_df(
         ipc_path, period, dates, region, regionabb, iso2_code
     )
     try:
         overlap = merge_admin2(df_ipc, bound_path, period, adm0c, adm1c, adm2c)
-        # replace other values than 1-5 by 0 (these are 99,88,66 and indicate missing values, nature areas or lakes)
+        # replace other values than 1-5 by 0 (these are 99,88,66 and
+        # indicate missing values, nature areas or lakes)
         overlap.loc[overlap[period] >= 5, period] = 0
         new_df = pd.DataFrame(columns=["date", period, adm0c, adm1c, adm2c])
 
         for d in overlap["date"].unique():
-            # all unique combinations of admin1 and admin2 regions (sometimes an admin2 region can be in two admin1 regions)
+            # all unique combinations of admin1 and admin2 regions
+            # (sometimes an admin2 region can be in two admin1 regions)
             df_adm12c = overlap[[adm1c, adm2c]].drop_duplicates()
             for index, a in df_adm12c.iterrows():
                 row = return_max_cs(d, overlap, a, period, adm0c, adm1c, adm2c)
@@ -229,14 +237,12 @@ def get_new_name(name, n_dict):
 
 def merge_ipcperiod(inputdf_dict, adm0c, adm1c, adm2c):
     """
-    Merge the three types of IPC projections (CS, ML1, ML2) to one dataframe
-    Args:
-        inputdf_dict: dict with df for each period (CS, ML1, ML2)
-        adm1c: column name of the admin1 level name, in fewsnet data
-        adm2c: column name of the admin2 level name, in fewsnet data
+    Merge the three types of IPC projections (CS, ML1, ML2) to one
+    dataframe Args: inputdf_dict: dict with df for each period (CS, ML1,
+    ML2) adm1c: column name of the admin1 level name, in fewsnet data
+    adm2c: column name of the admin2 level name, in fewsnet data
 
-    Returns:
-        df_ipc: dataframe with the cs, ml1 and ml2 data combined
+    Returns: df_ipc: dataframe with the cs, ml1 and ml2 data combined
     """
 
     df = pd.DataFrame()
@@ -267,17 +273,18 @@ def check_missingadmins(
     """Determine if there is any admin regions that are not in the admin
     boundaries or population file.
 
-    This to circumvent part of the population not being assigned to an admin.
-    Args:
-        adm_path:
-        pop_path: path to csv with population counts per admin2 region
-        shp_adm1c:  column name of the admin1 level name, in admin boundary data
-        shp_adm2c:  column name of the admin2 level name, in admin boundary data
-        pop_adm1c: column name of the admin1 level name, in population data
-        pop_adm2c: column name of the admin2 level name, in population data
-        pop_col: column name that contains the population count
-        pop_bound_adm2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
-        pop_bound_adm1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+    This to circumvent part of the population not being assigned to an
+    admin. Args: adm_path: pop_path: path to csv with population counts
+    per admin2 region shp_adm1c:  column name of the admin1 level name,
+    in admin boundary data shp_adm2c:  column name of the admin2 level
+    name, in admin boundary data pop_adm1c: column name of the admin1
+    level name, in population data pop_adm2c: column name of the admin2
+    level name, in population data pop_col: column name that contains
+    the population count pop_bound_adm2_mapping: dict of admin2level
+    names that don't correspond in FewsNet and population data. Keys are
+    FewsNet names, values population pop_bound_adm1_mapping: dict of
+    admin1level names that don't correspond in FewsNet and population
+    data. Keys are FewsNet names, values population
     """
     df_adm2 = gpd.read_file(adm_path)
     df_pop = load_popdata(
@@ -340,16 +347,18 @@ def load_popdata(
 ):
     """
 
-    Args:
-        pop_path: path to csv with population counts per admin2 region
-        pop_adm1c: column name of the admin1 level name, in population data
-        pop_adm2c: column name of the admin1 level name, in population data
-        pop_col: column name that contains the population count
-        pop_bound_adm2_mapping: dict of admin2level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
-        pop_bound_adm1_mapping: dict of admin1level names that don't correspond in FewsNet and population data. Keys are FewsNet names, values population
+    Args: pop_path: path to csv with population counts per admin2 region
+        pop_adm1c: column name of the admin1 level name, in population
+        data pop_adm2c: column name of the admin1 level name, in
+        population data pop_col: column name that contains the
+        population count pop_bound_adm2_mapping: dict of admin2level
+        names that don't correspond in FewsNet and population data. Keys
+        are FewsNet names, values population pop_bound_adm1_mapping:
+        dict of admin1level names that don't correspond in FewsNet and
+        population data. Keys are FewsNet names, values population
 
-    Returns:
-        df_pop: DataFrame with population per admin2/admin1 combination that corresponds with FewsNet names
+    Returns: df_pop: DataFrame with population per admin2/admin1
+        combination that corresponds with FewsNet names
     """
     # import population data
     df_pop = pd.read_csv(pop_path)
@@ -370,7 +379,9 @@ def load_popdata(
         logger.warning(f"No population data for {', '.join(no_popdata)}")
 
     df_pop[pop_col] = convert_to_numeric(df_pop[pop_col])
-    # 0 is here treated as missing data, since it is not realistic that a region has no population and will make calculations later on easier
+    # 0 is here treated as missing data, since it is not realistic that
+    # a region has no population and will make calculations later on
+    # easier
     df_pop[pop_col] = df_pop[pop_col].replace(0, np.nan)
 
     # in case there are duplicate adm1-adm2 combinations
@@ -381,19 +392,18 @@ def load_popdata(
 
 def create_histpopdict(df_data, country, histpop_path):
     """
-    Retrieve the historical national population for the years that are present in df_data
-    Args:
-        df_data: DataFrame of interest
-        country: Country of interest
-        histpop_path: path to csv with historical national population
+    Retrieve the historical national population for the years that are
+    present in df_data Args: df_data: DataFrame of interest country:
+    Country of interest histpop_path: path to csv with historical
+    national population
 
-    Returns:
-        dict with national population for each year
+    Returns: dict with national population for each year
     """
     df_histpop = pd.read_csv(histpop_path, header=2)
     df_histpop.set_index("Country Name", inplace=True)
     df_histpopc = df_histpop.loc[country]
-    # only select rows that contain a year-value (some have e.g. unnamed or some other info that we don't need)
+    # only select rows that contain a year-value (some have e.g. unnamed
+    # or some other info that we don't need)
     df_histpopc.index = pd.to_datetime(df_histpopc.index, errors="coerce")
     df_histpopc = df_histpopc[df_histpopc.index.notnull()]
     df_histpopc.index = df_histpopc.index.year.astype(str)
@@ -409,8 +419,10 @@ def create_histpopdict(df_data, country, histpop_path):
     # get years that are in df_data but not in df_histpopc
     y_nothist = np.setdiff1d(data_years, df_histpopc.index)
 
-    # set values of years in df_data but not in in histpop as the value of the last year in histpop
-    # Note: assuming here that only missing values in histpop are after the last entry (e.g. only up to 2019 while in 2020 but assuming e.g. 2013 cannot be missing).
+    # set values of years in df_data but not in in histpop as the value
+    # of the last year in histpop Note: assuming here that only missing
+    # values in histpop are after the last entry (e.g. only up to 2019
+    # while in 2020 but assuming e.g. 2013 cannot be missing).
     for y in y_nothist:
         df_histpopc[y] = df_histpopc[df_histpopc.index.max()]
 
@@ -420,8 +432,8 @@ def create_histpopdict(df_data, country, histpop_path):
 
 
 def get_adjusted(row, perc_dict):
-    """Compute the subnational population, adjusted to the country's national
-    population of that year."""
+    """Compute the subnational population, adjusted to the country's
+    national population of that year."""
     year = str(row["date"].year)
     adjustment = perc_dict[year]
     if pd.isna(row["Total"]):
@@ -442,17 +454,16 @@ def merge_ipcpop(
 ):
     """
 
-    Args:
-        df_ipc: DataFrame with IPC data
-        df_pop: DataFrame with subnational population data
-        country: Name of country of interest
+    Args: df_ipc: DataFrame with IPC data df_pop: DataFrame with
+        subnational population data country: Name of country of interest
         pop_adm1c: column name of the admin1 level name, in df_pop
         pop_adm2c: column name of the admin1 level name, in df_pop
         shp_adm1c:  column name of the admin1 level name, in df_ipc
         shp_adm2c:  column name of the admin2 level name, in df_ipc
 
-    Returns:
-        df_ipcp: DataFrame with IPC level and population per admin2 region, where the population is adjusted to historical national averages
+    Returns: df_ipcp: DataFrame with IPC level and population per admin2
+        region, where the population is adjusted to historical national
+        averages
     """
     df_ipcp = df_ipc.merge(
         df_pop[[pop_adm1c, pop_adm2c, "Total"]],
@@ -465,7 +476,8 @@ def merge_ipcpop(
     pop_dict = create_histpopdict(
         df_ipcp, country=country, histpop_path=histpop_path
     )
-    # estimate percentage of population at given year in relation to the national population given by the subnational population file
+    # estimate percentage of population at given year in relation to the
+    # national population given by the subnational population file
     pop_tot_subn = df_ipcp[df_ipcp.date == df_ipcp.date.unique()[0]][
         "Total"
     ].sum()
@@ -480,8 +492,8 @@ def merge_ipcpop(
     ):
         logger.warning(
             "Population data merged with IPC doesn't match the original"
-            f" population numbers. Original:{df_pop.Total.sum()},"
-            f" Merged:{df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum()}"
+            f" population numbers. Original:{df_pop.Total.sum()}, Merged:"
+            f"{df_ipcp[df_ipcp.date == df_ipcp.date.max()].Total.sum()}"
         )
 
     # add columns with population in each IPC level for CS, ML1 and ML2
@@ -506,15 +518,15 @@ def merge_ipcpop(
 
 def aggr_admin1(df, adm1c):
     """
-    Aggregate dataframe to admin1 level
-    Args:
-        df: DataFrame of interest
-        adm1c: column name of the admin1 level name in df
+    Aggregate dataframe to admin1 level Args: df: DataFrame of interest
+    adm1c: column name of the admin1 level name in df
 
-    Returns:
-        df_adm: dataframe with number of people in each IPC class per Admin1 region
+    Returns: df_adm: dataframe with number of people in each IPC class
+        per Admin1 region
     """
-    cols_ipc = [f"{s}_{l}" for s in ["CS", "ML1", "ML2"] for l in range(1, 6)]
+    cols_ipc = [
+        f"{s}_{lev}" for s in ["CS", "ML1", "ML2"] for lev in range(1, 6)
+    ]
     df_adm = (
         df[["date", "Total", "adjusted_population", adm1c] + cols_ipc]
         .groupby(["date", adm1c])
@@ -530,21 +542,22 @@ def aggr_admin1(df, adm1c):
 
 
 def main(country, suffix, download, config=None):
-    """This script takes the FEWSNET IPC shapefiles provided by on fews.net and
-    overlays them with an admin2 shapefile, in order to provide an IPC value
-    for each admin2 district. In the case where there are multiple values per
-    district, the IPC value with the maximum area is selected.
+    """This script takes the FEWSNET IPC shapefiles provided by on
+    fews.net and overlays them with an admin2 shapefile, in order to
+    provide an IPC value for each admin2 district. In the case where
+    there are multiple values per district, the IPC value with the
+    maximum area is selected.
 
-    In FEWSNET IPC, there are 3 possible categories of maps - 'CS' (Current State), 'ML1' (3 months projection), 'ML2' (6 months projection).
-    Any one of these is compatible with the script.
+    In FEWSNET IPC, there are 3 possible categories of maps - 'CS'
+    (Current State), 'ML1' (3 months projection), 'ML2' (6 months
+    projection). Any one of these is compatible with the script.
 
-    Possible IPC values range from 1 (least severe) to 5 (most severe, famine).
+    Possible IPC values range from 1 (least severe) to 5 (most severe,
+    famine).
 
-    Set all variables, run the function for the different forecasts, and save as csv
-    Args:
-        country_iso3: string with iso3 code
-        suffix: string to attach to the output files name
-        config_file: path to config file
+    Set all variables, run the function for the different forecasts, and
+    save as csv Args: country_iso3: string with iso3 code suffix: string
+    to attach to the output files name config_file: path to config file
     """
 
     if config is None:
@@ -554,7 +567,6 @@ def main(country, suffix, download, config=None):
     iso2_code = parameters["iso2_code"]
     region = parameters["foodinsecurity"]["region"]
     regioncode = parameters["foodinsecurity"]["regioncode"]
-    admin2_shp = parameters["path_admin2_shp"]
     shp_adm0c = parameters["shp_adm0c"]
     shp_adm1c = parameters["shp_adm1c"]
     shp_adm2c = parameters["shp_adm2c"]
@@ -593,7 +605,7 @@ def main(country, suffix, download, config=None):
     admin2bound_path = os.path.join(
         country_data_raw_dir,
         config.SHAPEFILE_DIR,
-        parameters[f"path_admin2_shp"],
+        parameters["path_admin2_shp"],
     )
     histpop_path = os.path.join(
         glb_data_raw_dir, "worldbank", config.WB_POP_FILENAME
@@ -624,7 +636,8 @@ def main(country, suffix, download, config=None):
         )
 
     df_allipc = merge_ipcperiod(perioddf_dict, shp_adm0c, shp_adm1c, shp_adm2c)
-    # check whether names of adm regions in boundary and population files don't correspond
+    # check whether names of adm regions in boundary and population
+    # files don't correspond
     check_missingadmins(
         admin2bound_path,
         pop_path,

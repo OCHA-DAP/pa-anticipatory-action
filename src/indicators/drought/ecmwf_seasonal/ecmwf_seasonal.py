@@ -18,8 +18,9 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 ECMWF_SEASONAL_DIR = Path("ecmwf")
 CDSAPI_CLIENT = cdsapi.Client()
 DEFAULT_VERSION = 5
-# monthly forecasts are produced with 1 to 6 months leadtime
-# now always downloading all the lead times, might want to have one file per leadtime in the future
+# monthly forecasts are produced with 1 to 6 months leadtime now always
+# downloading all the lead times, might want to have one file per
+# leadtime in the future
 DEFAULT_LEADTIMES = list(range(1, 7))
 
 logger = logging.getLogger(__name__)
@@ -34,14 +35,16 @@ class EcmwfSeasonal:
         dataset: List[str],
         dataset_variable_name: str,
     ):
-        """Create an instance of a EcmwfSeasonal object, from which you can
-        download and process raw data, and read in the processed data.
+        """Create an instance of a EcmwfSeasonal object, from which you
+        can download and process raw data, and read in the processed
+        data.
 
-        :param year_min: The earliest year that the dataset is available.
-        :param year_max: The most recent that the dataset is available
-        :param cds_name: The name of the dataset in CDS
-        :param dataset: The sub-datasets that you would like to download (as a list of strings)
-        :param dataset_variable_name: The variable name with which to pass the above datasets in the CDS query
+        :param year_min: The earliest year that the dataset is
+        available. :param year_max: The most recent that the dataset is
+        available :param cds_name: The name of the dataset in CDS :param
+        dataset: The sub-datasets that you would like to download (as a
+        list of strings) :param dataset_variable_name: The variable name
+        with which to pass the above datasets in the CDS query
         """
         self.year_min = year_min
         self.year_max = year_max
@@ -73,9 +76,14 @@ class EcmwfSeasonal:
             return filepath
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.debug(f"Querying for {filepath}...")
-        logger.debug(
-            f"{self._get_query(area=area,version=version,year=year,month=month,leadtimes=leadtimes, )}"
+        query_str = self._get_query(
+            area=area,
+            version=version,
+            year=year,
+            month=month,
+            leadtimes=leadtimes,
         )
+        logger.debug(query_str)
         CDSAPI_CLIENT.retrieve(
             name=self.cds_name,
             request=self._get_query(
@@ -140,12 +148,17 @@ class EcmwfSeasonal:
         """Read in the dataset for each date and combine them."""
 
         def _preprocess_monthly_mean_dataset(ds, leadtimes):
-            # step is in timedelta (in nanoseconds), where the timedelta is the end of the valid time of the forecast
-            # since the nanoseconds depends on the length of the month, convert this to the leadtime in months instead to be able to compare across months
-            # other option could be to convert it to the forecasted time, but gets difficult to concat all different publication dates afterwards
+            # step is in timedelta (in nanoseconds), where the timedelta
+            # is the end of the valid time of the forecast since the
+            # nanoseconds depends on the length of the month, convert
+            # this to the leadtime in months instead to be able to
+            # compare across months other option could be to convert it
+            # to the forecasted time, but gets difficult to concat all
+            # different publication dates afterwards
             ds["step"] = leadtimes
-            # ds["step"] = ds["time"] + ds["step"]
-            # time is the publication month of the forecast, add this to the dimensions to be able to merge different times
+            # ds["step"] = ds["time"] + ds["step"] time is the
+            # publication month of the forecast, add this to the
+            # dimensions to be able to merge different times
             ds = ds.expand_dims("time")
 
             return ds
@@ -268,7 +281,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             for year in range(self.year_min, self.year_max + 1)
             for month in range(1, 13)
         ]
-        # only include files that exist, e.g. if year_max=current year then there might not be forecasts for all months
+        # only include files that exist, e.g. if year_max=current year
+        # then there might not be forecasts for all months
         filepath_list = [f for f in filepath_list if os.path.isfile(f)]
 
         if leadtimes is None:

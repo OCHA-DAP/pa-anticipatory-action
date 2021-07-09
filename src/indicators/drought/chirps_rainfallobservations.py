@@ -3,10 +3,9 @@ import os
 import xarray as xr
 
 # rioxarray shows up grey, but is actually being used
-import rioxarray
+import rioxarray  # noqa: F401
 import logging
 from datetime import datetime, timedelta
-import logging
 import urllib
 import rasterio
 import geopandas as gpd
@@ -19,11 +18,10 @@ logger = logging.getLogger(__name__)
 
 def download_chirps_daily(config, year, resolution="25", write_crs=False):
     """
-    Download the CHIRPS data for year from their ftp server
-    Args:
-        config (Config): config for the drought indicator
-        year (str or int): year for which the data should be downloaded in YYYY format
-        resolution (str): resolution of the data to be downloaded. Can be 25 or 05
+    Download the CHIRPS data for year from their ftp server Args: config
+    (Config): config for the drought indicator year (str or int): year
+    for which the data should be downloaded in YYYY format resolution
+    (str): resolution of the data to be downloaded. Can be 25 or 05
     """
     chirps_dir = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
@@ -31,9 +29,12 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
         chirps_dir,
         config.CHIRPS_NC_FILENAME_RAW.format(year=year, resolution=resolution),
     )
-    # TODO: decide if only download if file doesn't exist. Not sure if ever gets updated
+    # TODO: decide if only download if file doesn't exist. Not sure if
+    # ever gets updated
     today = datetime.now()
-    # often data is uploaded at a later date, so update those files that are in the current year and in the previous year if at the start of new year
+    # often data is uploaded at a later date, so update those files that
+    # are in the current year and in the previous year if at the start
+    # of new year
     year_update = (today - timedelta(days=60)).year
     if not os.path.exists(chirps_filepath) or int(year) >= year_update:
         try:
@@ -46,8 +47,11 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
                 chirps_filepath,
             )
             if write_crs:
-                # Xarray (python) expects a crs and cannot read this for some undefined reason from the current file, so for this purpose save it as a separate file that includes the crs
-                # In R when working with bricks, this issue doesn't seem to appear
+                # Xarray (python) expects a crs and cannot read this for
+                # some undefined reason from the current file, so for
+                # this purpose save it as a separate file that includes
+                # the crs In R when working with bricks, this issue
+                # doesn't seem to appear
                 # ds=rioxarray.open_rasterio(chirps_filepath)
                 ds = xr.open_dataset(chirps_filepath)
                 chirps_filepath_crs = os.path.join(
@@ -60,9 +64,12 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
                     os.remove(chirps_filepath_crs)
                 ds.rio.write_crs("EPSG:4326").to_netcdf(chirps_filepath_crs)
         except urllib.error.HTTPError as e:
+            chirps_url = config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(
+                year=year, resolution=resolution
+            )
             logging.error(
                 f"{e}. Date might be later than last reported datapoint."
-                f" URL:{config.CHIRPS_FTP_URL_GLOBAL_DAILY.format(year=year,resolution=resolution)}"
+                f" URL:{chirps_url}"
             )
 
 
@@ -71,10 +78,9 @@ def download_chirps_monthly(
     use_cache: bool = True,
 ):
     """
-    Download global chirps dataset containing monthly entries and save to file
-    Args:
-        config (Config): config for the drought indicator
-        use_cache: if True, don't download if filename already exists
+    Download global chirps dataset containing monthly entries and save
+    to file Args: config (Config): config for the drought indicator
+    use_cache: if True, don't download if filename already exists
     """
     # If caching is on and file already exists, don't download again
     if use_cache and config.CHIRPS_MONTHLY_RAW_PATH.exists():
@@ -99,8 +105,9 @@ def download_chirps_monthly(
 def clip_chirps_monthly_bounds(
     config, country_name: str, country_iso3: str, use_cache=True
 ):
-    """Clip the global chirps dataset to the boundaries of country_name This
-    will enable faster processing Clipping can take max half an hour."""
+    """Clip the global chirps dataset to the boundaries of country_name
+    This will enable faster processing Clipping can take max half an
+    hour."""
     parameters = config.parameters(country_name)
     adm0_bound_path = (
         Path(config.DATA_DIR)
@@ -190,29 +197,36 @@ def compute_seasonal_lowertercile_raster(
         return chirps_seasonal_lowertercile_country_filepath
 
     Path(chirps_seasonal_country_dir).mkdir(parents=True, exist_ok=True)
-    logger.debug(f"Computing lower tercile values...")
+    logger.debug("Computing lower tercile values...")
     ds = xr.open_dataset(chirps_monthly_country_filepath)
-    # compute the rolling sum over three month period. Rolling sum works backwards, i.e. value for month 3 is sum of month 1 till 3. So month==1 is NDJ season
+    # compute the rolling sum over three month period. Rolling sum works
+    # backwards, i.e. value for month 3 is sum of month 1 till 3. So
+    # month==1 is NDJ season
     ds_season = (
         ds.rolling(time=seas_len, min_periods=seas_len)
         .sum()
         .dropna(dim="time", how="all")
     )
-    # define the years that are used to define the climatology. We use 1982-2010 since this is also the period used by IRI's seasonal forecasts
-    # see https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/
+    # define the years that are used to define the climatology. We use
+    # 1982-2010 since this is also the period used by IRI's seasonal
+    # forecasts see
+    # https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/
     ds_season_climate = ds_season.sel(
         time=ds_season.time.dt.year.isin(range(1982, 2011))
     )
-    # compute the thresholds for the lower tercile, i.e. below average, per season
-    # since we computed a rolling sum, each month represents a season
+    # compute the thresholds for the lower tercile, i.e. below average,
+    # per season since we computed a rolling sum, each month represents
+    # a season
     ds_season_climate_quantile = ds_season_climate.groupby(
         ds_season_climate.time.dt.month
     ).quantile(0.33)
-    # determine the raster cells that have below-average precipitation, other cells are set to -666
+    # determine the raster cells that have below-average precipitation,
+    # other cells are set to -666
     list_ds_seass = []
     for s in np.unique(ds_season.time.dt.month):
         ds_seas_sel = ds_season.sel(time=ds_season.time.dt.month == s)
-        # keep original values of cells that are either nan or have below average precipitation, all others are set to -666
+        # keep original values of cells that are either nan or have
+        # below average precipitation, all others are set to -666
         ds_seas_below = ds_seas_sel.where(
             (ds_seas_sel.isnull())
             | (ds_seas_sel <= ds_season_climate_quantile.sel(month=s)),
@@ -226,16 +240,15 @@ def compute_seasonal_lowertercile_raster(
 
 def get_chirps_data_daily(config, year, resolution="25", download=False):
     """
-    Load CHIRP's NetCDF file as xarray dataset
-    Args:
-        config (Config): config for the drought indicator
-        year (str or int): year for which the data should be loaded in YYYY format
-        resolution (str): resolution of the data to be downloaded. Can be 25 or 05
-        download (bool): if True, download data
+    Load CHIRP's NetCDF file as xarray dataset Args: config (Config):
+    config for the drought indicator year (str or int): year for which
+    the data should be loaded in YYYY format resolution (str):
+    resolution of the data to be downloaded. Can be 25 or 05 download
+    (bool): if True, download data
 
-    Returns:
-        icpac_ds (xarray dataset): dataset continaing the information in the netcdf file
-        transform (numpy array): affine transformation of the dataset based on its CRS
+    Returns: icpac_ds (xarray dataset): dataset continaing the
+        information in the netcdf file transform (numpy array): affine
+        transformation of the dataset based on its CRS
     """
 
     if download:

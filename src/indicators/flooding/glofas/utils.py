@@ -76,7 +76,8 @@ def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
 
 
 def _interp_dates(ds_dict) -> Dict[int, xr.Dataset]:
-    # Sort the ensemble members to preserve the properties throughout the interpolation
+    # Sort the ensemble members to preserve the properties throughout
+    # the interpolation
     for leadtime, ds in ds_dict.items():
         for station in ds.keys():
             ds[station].values = np.sort(ds[station].values, axis=0)
@@ -141,11 +142,11 @@ def get_return_periods(
     show_plots: bool = False,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis dataset
-    :param years: Return period years to compute
-    :param method: Either "analytical" or "empirical"
-    :param show_plots: If method is analytical, can show the histogram and GEV distribution overlaid
-    :return: Dataframe with return period years as index and stations as columns
+    :param ds_reanalysis: GloFAS reanalysis dataset :param years: Return
+    period years to compute :param method: Either "analytical" or
+    "empirical" :param show_plots: If method is analytical, can show the
+    histogram and GEV distribution overlaid :return: Dataframe with
+    return period years as index and stations as columns
     """
     if years is None:
         years = [1.5, 2, 3, 5, 10, 20]
@@ -193,11 +194,12 @@ def get_crps(
     thresh: [float, Dict[str, float]] = None,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset
-    :param ds_reforecast: GloFAS reforecast xarray dataset
-    :param normalization: (optional) Can be 'mean' or 'std', reanalysis metric to divide the CRPS
-    :param thresh: (optional) Either a single value, or a dictionary with format {station name: thresh}
-    :return: DataFrame with station column names and leadtime index
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
+    ds_reforecast: GloFAS reforecast xarray dataset :param
+    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS :param thresh: (optional) Either a single value,
+    or a dictionary with format {station name: thresh} :return:
+    DataFrame with station column names and leadtime index
     """
     stations = list(ds_reanalysis.keys())
     leadtimes = ds_reforecast.leadtime.values
@@ -245,14 +247,15 @@ def get_groups_above_threshold(
     min_duration: int = 1,
     additional_condition: np.array = None,
 ) -> List:
-    """Get indices where consecutive values are equal to or above a threshold.
+    """Get indices where consecutive values are equal to or above a
+    threshold.
 
-    :param observations: The array of values to search for groups (length N)
-    :param threshold: The threshold above which the values must be
-    :param min_duration: The minimum group size (default 1)
-    :param additional_condition: (optional) Any additional condition the values must satisfy
-    (array-like of bools, length N)
-    :return: list of arrays with indices
+    :param observations: The array of values to search for groups
+    (length N) :param threshold: The threshold above which the values
+    must be :param min_duration: The minimum group size (default 1)
+    :param additional_condition: (optional) Any additional condition the
+    values must satisfy (array-like of bools, length N) :return: list of
+    arrays with indices
     """
     condition = observations >= threshold
     if additional_condition is not None:
@@ -300,13 +303,13 @@ def calc_mpe(observations: np.array, forecast: np.array) -> float:
 def get_same_obs_and_forecast(
     da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
 ) -> (xr.DataArray, xr.DataArray):
-    """For the GloFAS reanalysis and reforecast at a particular station, get
-    matching data ranges for the two datasets.
+    """For the GloFAS reanalysis and reforecast at a particular station,
+    get matching data ranges for the two datasets.
 
     :param da_observations: GloFAS reanalysis at a particular station
-    :param da_forecast: GloFAS reforecast at a particular station
-    :param leadtime: Leadtime
-    :return: Observations and forecast with overlapping values only
+    :param da_forecast: GloFAS reforecast at a particular station :param
+    leadtime: Leadtime :return: Observations and forecast with
+    overlapping values only
     """
     forecast = da_forecast.sel(leadtime=leadtime).dropna(dim="time")
     observations = da_observations.reindex({"time": forecast.time}).dropna(

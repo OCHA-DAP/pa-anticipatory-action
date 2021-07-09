@@ -14,7 +14,8 @@ from src.indicators.flooding.glofas.area import AreaFromShape, Station
 from src.utils_general.utils import parse_yaml
 
 
-# Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
+# Stations from here:
+# https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "npl"
 LEADTIMES = [x + 1 for x in range(20)]
 

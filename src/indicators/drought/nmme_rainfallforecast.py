@@ -1,13 +1,13 @@
 import os
 import logging
-import sys
 from pathlib import Path
 import rasterio
 
-# TODO: understand rioxarray vs xarray
-# rioxarray seems to do a better job at correctly reading the data than xarray related to coordinates etc.
-# at the same time rioxarray is still under a lot of development so not always working as stably as xarray..
-# so currently using both and hopefully in the future can do most with rioxarray
+# TODO: understand rioxarray vs xarray rioxarray seems to do a better
+# job at correctly reading the data than xarray related to coordinates
+# etc. at the same time rioxarray is still under a lot of development so
+# not always working as stably as xarray.. so currently using both and
+# hopefully in the future can do most with rioxarray
 import rioxarray
 import xarray as xr
 
@@ -33,16 +33,19 @@ def download_nmme(config, date):
     NMME_filepath = os.path.join(
         NMME_dir, config.NMME_NC_FILENAME_RAW.format(date=date)
     )
-    # assuming the files don't get updated so only download if doesn't exist yet
+    # assuming the files don't get updated so only download if doesn't
+    # exist yet
     if not os.path.exists(NMME_filepath):
         download_ftp(
             config.NMME_FTP_URL_SEASONAL.format(date=date), NMME_filepath
         )
 
-        # TODO: explore if can also open with rioxarray instead of xarray. Getting an error with current settings
+        # TODO: explore if can also open with rioxarray instead of
+        # xarray. Getting an error with current settings
         nmme_ds = xr.open_dataset(NMME_filepath, decode_times=False)
 
-        # generally nmme coordinates are not inverted, but this is a double check
+        # generally nmme coordinates are not inverted, but this is a
+        # double check
         nmme_ds = invert_latlon(nmme_ds)
         nmme_ds = change_longitude_range(nmme_ds)
         nmme_ds = fix_calendar(nmme_ds, timevar="target")
@@ -55,10 +58,12 @@ def download_nmme(config, date):
             ),
         )
 
-        # strange things happen when just overwriting the file, so delete it first if it already exists
+        # strange things happen when just overwriting the file, so
+        # delete it first if it already exists
         if os.path.exists(NMME_filepath_crs):
             os.remove(NMME_filepath_crs)
-        # crs is only saved correctly when saving one var. Don't understand why exactly but hence, only save one tercile
+        # crs is only saved correctly when saving one var. Don't
+        # understand why exactly but hence, only save one tercile
         nmme_ds[config.NMME_LOWERTERCILE].rio.write_crs("EPSG:4326").to_netcdf(
             NMME_filepath_crs
         )
@@ -66,15 +71,13 @@ def download_nmme(config, date):
 
 def get_nmme_data(config, date, download=False):
     """
-    Read the NMME NetCDF data as xarray dataset
-    Args:
-        config (Config): config for the drought indicator
-        date (str): date of publication in YYYYMM format
-        download (bool): if True, download data
+    Read the NMME NetCDF data as xarray dataset Args: config (Config):
+    config for the drought indicator date (str): date of publication in
+    YYYYMM format download (bool): if True, download data
 
-    Returns:
-        nmme_ds (xarray dataset): dataset continaing the information in the netcdf file
-        transform (numpy array): affine transformation of the dataset based on its CRS
+    Returns: nmme_ds (xarray dataset): dataset continaing the
+        information in the netcdf file transform (numpy array): affine
+        transformation of the dataset based on its CRS
     """
     if download:
         download_nmme(config, date)
@@ -87,7 +90,8 @@ def get_nmme_data(config, date, download=False):
     )
 
     nmme_ds = rioxarray.open_rasterio(NMME_filepath)
-    # nmme's data comes in fractions while other sources come in percentages, so convert to percentages
+    # nmme's data comes in fractions while other sources come in
+    # percentages, so convert to percentages
     nmme_ds[config.NMME_LOWERTERCILE] = nmme_ds[config.NMME_LOWERTERCILE] * 100
     nmme_ds = nmme_ds.rename(
         {

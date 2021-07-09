@@ -1,7 +1,3 @@
-import logging
-
-import geopandas as gpd
-
 # TODO: remove this after making top-level
 from pathlib import Path
 import os

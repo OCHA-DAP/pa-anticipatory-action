@@ -3,7 +3,10 @@ import numpy as np
 import geopandas as gpd
 from rasterstats import zonal_stats
 import xarray as xr
-import rioxarray
+
+# not using rioxarray directly but using .rio
+# so let flake8 ignore it
+import rioxarray  # noqa
 import logging
 
 
@@ -40,7 +43,8 @@ class Floodscan:
 
     def read_raw_dataset(self):
         filepath = self._get_raw_filepath()
-        # would be better to do with load_dataset, but since dataset is huge this takes up too much memory..
+        # would be better to do with load_dataset, but since dataset is
+        # huge this takes up too much memory..
         with xr.open_dataset(filepath) as ds:
             return ds
         # return xr.open_dataset(filepath)
@@ -51,10 +55,10 @@ class Floodscan:
         adm_level: int = DEFAULT_ADMIN_LEVEL,
     ):
         """
-        Load data, call function to compute statistics per admin, and save the results to a csv
-        Args:
-            country_name: name of the country of interest
-            adm_level: admin level to compute the statistics on
+        Load data, call function to compute statistics per admin, and
+        save the results to a csv Args: country_name: name of the
+        country of interest adm_level: admin level to compute the
+        statistics on
         """
         config = Config()
         parameters = config.parameters(country_name)
@@ -68,7 +72,8 @@ class Floodscan:
             parameters[f"path_admin{adm_level}_shp"],
         )
         ds = self.read_raw_dataset()
-        # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
+        # get the affine transformation of the dataset. looks
+        # complicated, but haven't found better way to do it
         coords_transform = (
             ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
             .rio.write_crs("EPSG:4326")
@@ -93,17 +98,15 @@ class Floodscan:
         percentile_list=[2, 4, 6, 8, 10, 20],
     ):
         """
-        Compute statistics on the raster cells per admin area
-        Args:
-            ds: the xarray dataset with values per raster cell
-            raster_transform: the affine transformation of ds
-            adm_path: the path to the admin boundaries shp file
-            adm_col: the name of the column containing the admin name
-            data_var: the variable of interest in ds
-            percentile_list: list of thresholds to compute the value x% of the cells is below at
+        Compute statistics on the raster cells per admin area Args: ds:
+        the xarray dataset with values per raster cell raster_transform:
+        the affine transformation of ds adm_path: the path to the admin
+        boundaries shp file adm_col: the name of the column containing
+        the admin name data_var: the variable of interest in ds
+        percentile_list: list of thresholds to compute the value x% of
+        the cells is below at
 
-        Returns:
-            df_hist: dataframe with the statistics per admin
+        Returns: df_hist: dataframe with the statistics per admin
         """
         # compute statistics on level in adm_path for all dates in ds
         df_list = []
@@ -119,7 +122,8 @@ class Floodscan:
                     nodata=np.nan,
                 )
             )[["mean", "max", "min"]]
-            # TODO: the percentiles seem to always return 0, even if setting the p to 0.00001. Don't understand why yet..
+            # TODO: the percentiles seem to always return 0, even if
+            # setting the p to 0.00001. Don't understand why yet..
             df[
                 [f"percentile_{str(p)}" for p in percentile_list]
             ] = pd.DataFrame(

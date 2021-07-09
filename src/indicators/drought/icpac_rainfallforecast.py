@@ -1,6 +1,5 @@
 import os
 import logging
-import sys
 from pathlib import Path
 import rasterio
 import rioxarray
@@ -14,12 +13,13 @@ logger = logging.getLogger(__name__)
 def download_icpac(config):
     """Download the ICPAC data from the centre for humdata's drive.
 
-    A secret key is needed for this which should be saved as environmental variable with the name GAPI_AUTH
-    Args:
-        config (Config): config for the drought indicator
+    A secret key is needed for this which should be saved as
+    environmental variable with the name GAPI_AUTH Args: config
+    (Config): config for the drought indicator
     """
-    # TODO: would like to download directly from the ftp server instead of uploading to GDrive and downloading from there.
-    # But with ftplib getting error 522 Data connections must be encrypted
+    # TODO: would like to download directly from the ftp server instead
+    # of uploading to GDrive and downloading from there. But with ftplib
+    # getting error 522 Data connections must be encrypted
     gclient = auth_googleapi()
     gzip_output_file = os.path.join(
         config.GLOBAL_DIR, f"{config.ICPAC_DIR}.zip"
@@ -32,9 +32,11 @@ def download_icpac(config):
     for path in Path(os.path.join(config.GLOBAL_DIR, config.ICPAC_DIR)).rglob(
         config.ICPAC_PROBFORECAST_REGEX_RAW
     ):
-        # opening with rioxarray better than xarray, with xarray gets some lat lon inversion
+        # opening with rioxarray better than xarray, with xarray gets
+        # some lat lon inversion
         icpac_ds = rioxarray.open_rasterio(path)
-        # selection of below is needed to save crs correctly, apparently cannot handle several variables
+        # selection of below is needed to save crs correctly, apparently
+        # cannot handle several variables
         icpac_sel = icpac_ds[config.ICPAC_LOWERTERCILE]
         path_crs = f"{str(path)[:-3]}_{config.LOWERTERCILE}_crs.nc"
         if os.path.exists(path_crs):
@@ -44,16 +46,14 @@ def download_icpac(config):
 
 def get_icpac_data(config, pubyear, pubmonth, download=False):
     """
-    Load ICPAC's NetCDF file as xarray dataset
-    Args:
-        config (Config): config for the drought indicator
-        pubyear (str): year forecast is published in YYYY format
-        pubmonth (str): month forecast is published as abbreviation, e.g. Nov
-        download (bool): if True, download data
+    Load ICPAC's NetCDF file as xarray dataset Args: config (Config):
+    config for the drought indicator pubyear (str): year forecast is
+    published in YYYY format pubmonth (str): month forecast is published
+    as abbreviation, e.g. Nov download (bool): if True, download data
 
-    Returns:
-        icpac_ds (xarray dataset): dataset continaing the information in the netcdf file
-        transform (numpy array): affine transformation of the dataset based on its CRS
+    Returns: icpac_ds (xarray dataset): dataset continaing the
+        information in the netcdf file transform (numpy array): affine
+        transformation of the dataset based on its CRS
     """
     if download:
         download_icpac(config)
@@ -67,8 +67,10 @@ def get_icpac_data(config, pubyear, pubmonth, download=False):
             )
         ):
 
-            # rioxarray reads the icpac data correctly while xarray somehow messes up stuff but still not sure what exactly goes wrong there
-            # only has one time entry so squeeze the time dimension
+            # rioxarray reads the icpac data correctly while xarray
+            # somehow messes up stuff but still not sure what exactly
+            # goes wrong there only has one time entry so squeeze the
+            # time dimension
             icpac_ds = rioxarray.open_rasterio(path, masked=True).squeeze()
             icpac_ds = icpac_ds.rename(
                 {
@@ -78,13 +80,13 @@ def get_icpac_data(config, pubyear, pubmonth, download=False):
                 }
             )
 
-            # assume all transforms of the different files are the same, so just select the one that is read the latest
+            # assume all transforms of the different files are the same,
+            # so just select the one that is read the latest
             with rasterio.open(path) as src:
                 transform = src.transform
         return icpac_ds, transform
     except UnboundLocalError:
-        logger.error(
-            "ICPAC forecast with regex"
-            f" {config.ICPAC_PROBFORECAST_REGEX_CRS.format(month=pubmonth,year=pubyear,tercile=config.LOWERTERCILE)}"
-            " not found"
+        icpac_regex = config.ICPAC_PROBFORECAST_REGEX_CRS.format(
+            month=pubmonth, year=pubyear, tercile=config.LOWERTERCILE
         )
+        logger.error(f"ICPAC forecast with regex {icpac_regex} not found")

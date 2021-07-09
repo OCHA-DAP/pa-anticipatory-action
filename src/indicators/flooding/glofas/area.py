@@ -20,11 +20,10 @@ class Area:
 class AreaFromStations(Area):
     def __init__(self, stations: Dict[str, Station], buffer: float = 0.2):
         """
-        Args:
-            stations: dictionary of form {station_name: Station]
-            buffer: degrees above / below maximum lat / lon from stations to include in GloFAS query
-        Returns:
-            list with format [N, W, S, E]
+        Args: stations: dictionary of form {station_name: Station]
+            buffer: degrees above / below maximum lat / lon from
+            stations to include in GloFAS query Returns: list with
+            format [N, W, S, E]
         """
         lon_list = [station.lon for station in stations.values()]
         lat_list = [station.lat for station in stations.values()]

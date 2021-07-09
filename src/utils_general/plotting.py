@@ -1,7 +1,5 @@
 import os
 import logging
-import sys
-from pathlib import Path
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import numpy as np
@@ -9,13 +7,6 @@ from shapely.geometry import mapping
 import cartopy.crs as ccrs
 import matplotlib.colors as mcolors
 import math
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
-sys.path.append(path_mod)
-# TODO: drought config used for world shapefile boundary path.. Used for
-# plot_raster_boundaries which is mainly debugging function. In future
-# world shp boundary path should be given as input to the function
-from indicators.drought.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -379,7 +370,8 @@ def plot_spatial_columns(
 
                 try:
                     new_text = f"{float(upper):,.2f}"
-                except:
+                except Exception as e:
+                    print(e)
                     new_text = upper
                 lbl.set_text(new_text)
     # TODO: might want to make a distinction with using colorbar and

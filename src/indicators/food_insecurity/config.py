@@ -8,10 +8,11 @@ import re
 
 def retrieve_worldpop_dirname():
     """
-    Retrieve the name of the directory with the data of interest on Worldpop's ftp server
-    This has to be done dynamically, since the folder includes a year in its name and we don't know when this year is changed
-    Returns:
-        item (str): the path to the folder with the Global population data on 1km resolution and UN adjusted numbers
+    Retrieve the name of the directory with the data of interest on
+    Worldpop's ftp server This has to be done dynamically, since the
+    folder includes a year in its name and we don't know when this year
+    is changed Returns: item (str): the path to the folder with the
+    Global population data on 1km resolution and UN adjusted numbers
     """
     site = "ftp.worldpop.org.uk"
     username = "anonymous"
@@ -23,10 +24,11 @@ def retrieve_worldpop_dirname():
 
 
 class Config:
-    ### general directories
+    # general directories
 
     def __init__(self):
-        # get the absolute path to the root directory, i.e. pa-anticipatory-action
+        # get the absolute path to the root directory, i.e.
+        # pa-anticipatory-action
         DIR_PATH = getattr(
             self,
             "DIR_PATH",
@@ -47,7 +49,7 @@ class Config:
             )
         return self._parameters
 
-    ### Data directory paths
+    # Data directory paths
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
     DATA_PUBLIC_DIR = os.path.join(DATA_DIR, "public")
     DATA_PRIVATE_DIR = os.path.join(DATA_DIR, "private")
@@ -56,30 +58,32 @@ class Config:
     DATA_PUBLIC_PROCESSED_DIR = os.path.join(DATA_PUBLIC_DIR, "processed")
     DATA_PRIVATE_PROCESSED_DIR = os.path.join(DATA_PRIVATE_DIR, "processed")
 
-    ### Shapefiles
+    # Shapefiles
     SHAPEFILE_DIR = "cod_ab"
 
-    ### Repo paths
+    # Repo paths
     ANALYSES_DIR = "analyses"
 
     # General date objects
     TODAY = datetime.now()
     TODAY_YEAR = TODAY.strftime("%Y")
 
-    ### General values
+    # General values
     IPC_PERIOD_NAMES = ["CS", "ML1", "ML2"]
     ADMIN0_COL = "ADMIN0"
     ADMIN1_COL = "ADMIN1"
     ADMIN2_COL = "ADMIN2"
 
-    #### FewsNet
+    # FewsNet
     # TODO: replace raw by dir
     FEWSNET_DIR = "fewsnet"
-    # region can either be a part of a continent (e.g. east-africa) and a country (e.g. ethiopia)
+    # region can either be a part of a continent (e.g. east-africa) and
+    # a country (e.g. ethiopia)
     FEWSNET_FILENAME = "{region}{date}/{regionabb}_{date}_{period}.shp"
 
-    # these are the standard dates fewsnet should have published data. In 2016 they changed the months of publication
-    # in the config per country, dates can be added and removed
+    # these are the standard dates fewsnet should have published data.
+    # In 2016 they changed the months of publication in the config per
+    # country, dates can be added and removed
     FEWSWORLDPOP_PROCESSED_DIR = os.path.join(FEWSNET_DIR, "worldpop")
     FEWSWORLDPOP_PROCESSED_FILENAME = (
         "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
@@ -101,40 +105,43 @@ class Config:
             for m in ["02", "06", "10"]
         ]
     )
-    #### Worldpop
+    # Worldpop
     # TODO change worldpop_raw_dir to worldpop_dir
     WORLDPOP_DIR = "worldpop"
-    # can make this more variable with a dict, e.g. if we want 1km and 100m or if we also want not UNadj
-    # we are currently using 1km because this is generally granular enough and speeds up the calculations a lot
+    # can make this more variable with a dict, e.g. if we want 1km and
+    # 100m or if we also want not UNadj we are currently using 1km
+    # because this is generally granular enough and speeds up the
+    # calculations a lot
     WORLDPOP_FILENAME = "{country_iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
-    # this dirname changes with the year, so dynamically retrieve it by using a regex
+    # this dirname changes with the year, so dynamically retrieve it by
+    # using a regex
     WORLDPOP_FTP_DIRNAME = retrieve_worldpop_dirname()
     WORLDPOP_BASEURL = f"ftp://ftp.worldpop.org.uk/{WORLDPOP_FTP_DIRNAME}/"
     WORLDPOP_URL = (
-        WORLDPOP_BASEURL
-        + "{year}/{country_iso3_upper}/{country_iso3_lower}_ppp_{year}_1km_Aggregated_UNadj.tif"
+        WORLDPOP_BASEURL + "{year}/{country_iso3_upper}/{WORLDPOP_FILENAME}"
     )
 
-    #### Subnational population
+    # Subnational population
     POPSUBN_DIR = "cod_ps"
 
-    #### Worldbank historical national population
+    # Worldbank historical national population
     WORLDBANK_DIR = "worldbank"
     WB_POP_FILENAME = "Worldbank_TotalPopulation.csv"
 
-    #### Global IPC
+    # Global IPC
     # TODO: replace raw and processed by globalipc_dir
     GLOBALIPC_RAW_DIR = "ipc_global"
     GLOBALIPC_PROCESSED_DIR = "ipc_global"
     GLOBALIPC_DIR = "ipc_global"
-    GLOBALIPC_URL = "http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"
+    GLOBALIPC_URL = "http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"  # noqa: E501
     GLOBALIPC_FILENAME_RAW = "{country}_globalipc_raw.xlsx"
     GLOBALIPC_FILENAME_NEWCOLNAMES = "{country}_globalipc_newcolumnnames.xlsx"
     GLOBALIPC_FILENAME_PROCESSED = (
         "{country}_globalipc_admin{admin_level}{suffix}.csv"
     )
-    # Analysis name, Country Population, % of total county Pop, Area Phase are not being used in our current analysis so not mapping them
-    # Not entirely sure if Area always equals Admin2 regions
+    # Analysis name, Country Population, % of total county Pop, Area
+    # Phase are not being used in our current analysis so not mapping
+    # them Not entirely sure if Area always equals Admin2 regions
     GLOBALIPC_COLUMNNAME_MAPPING = {
         "Country": "ADMIN0",
         "Level 1 Name": "ADMIN1",

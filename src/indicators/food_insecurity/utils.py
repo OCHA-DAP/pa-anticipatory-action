@@ -3,7 +3,6 @@ import os
 import argparse
 from pathlib import Path
 import urllib.error
-import pandas as pd
 
 import sys
 
@@ -43,18 +42,22 @@ def parse_args():
 def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
     """Retrieve the raw fewsnet data.
 
-    Depending on the region, this date is published per region or per country. This function tries to retrieve both.
-    The download_url always downloads the given url, but sometimes this doesn't return a valid zip file. This means that data doesn't exist. This happens often, since for most countries the classifications are on earlier dates only published per region and later on per country. This is not bad, and the function will remove the invalid zip files
-    Args:
-        date: str in yyyymm format. Date for which to retrieve the fewsnet data.
-        iso2_code: iso2 code of the country of interest
-        region: region that the fewsnet data covers, e.g. "east-africa"
-        regioncode: abbreviation of the region that the fewsnet data covers, e.g. "EA"
-        output_dir: directory to save the files to
+    Depending on the region, this date is published per region or per
+    country. This function tries to retrieve both. The download_url
+    always downloads the given url, but sometimes this doesn't return a
+    valid zip file. This means that data doesn't exist. This happens
+    often, since for most countries the classifications are on earlier
+    dates only published per region and later on per country. This is
+    not bad, and the function will remove the invalid zip files Args:
+    date: str in yyyymm format. Date for which to retrieve the fewsnet
+    data. iso2_code: iso2 code of the country of interest region: region
+    that the fewsnet data covers, e.g. "east-africa" regioncode:
+    abbreviation of the region that the fewsnet data covers, e.g. "EA"
+    output_dir: directory to save the files to
     """
-    FEWSNET_BASE_URL_REGION = "https://fews.net/data_portal_download/download?data_file_path=http%3A//shapefiles.fews.net.s3.amazonaws.com/HFIC/"
+    FEWSNET_BASE_URL_REGION = "https://fews.net/data_portal_download/download?data_file_path=http%3A//shapefiles.fews.net.s3.amazonaws.com/HFIC/"  # noqa: E501
     FEWSNET_BASE_URL_COUNTRY = "https://fdw.fews.net/api/ipcpackage/"
-    url_country = f"{FEWSNET_BASE_URL_COUNTRY}?country_code={iso2_code}&collection_date={date[:4]}-{date[-2:]}-01"
+    url_country = f"{FEWSNET_BASE_URL_COUNTRY}?country_code={iso2_code}&collection_date={date[:4]}-{date[-2:]}-01"  # noqa: E501
     zip_filename_country = os.path.join(output_dir, f"{iso2_code}{date}.zip")
     output_dir_country = os.path.join(output_dir, f"{iso2_code}{date}")
     if not os.path.exists(output_dir_country):
@@ -75,7 +78,9 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
             logger.info(f"Unzipped {zip_filename_country}")
             country_data = True
         except Exception:
-            # indicates that the url returned something that wasn't a zip, happens often and indicates data for the given country - date is not available
+            # indicates that the url returned something that wasn't a
+            # zip, happens often and indicates data for the given
+            # country - date is not available
             logger.info(
                 f"No country level FewsNet data for {iso2_code}, {date}, using"
                 " regional data if available"
@@ -103,7 +108,9 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
                 )
                 logger.info(f"Unzipped {zip_filename_region}")
             except Exception:
-                # indicates that the url returned something that wasn't a zip, happens often and indicates data for the given country - date is not available
+                # indicates that the url returned something that wasn't
+                # a zip, happens often and indicates data for the given
+                # country - date is not available
                 logger.warning(
                     f"No FewsNet data for date {date} found that covers"
                     f" {iso2_code}"
@@ -133,11 +140,10 @@ def download_worldpop(country_iso3, year, output_dir, config):
 def compute_percentage_columns(df, config):
     """
     calculate percentage of population per analysis period and level
-    Args:
-        df (pd.DataFrame): input df, should include columns of the IPC_PERIOD_NAMES for eah period in range(1,6)
-        config (Config): food-insecurity config class
-    Returns:
-        df(pd.DataFrame): input df with added percentage columns
+    Args: df (pd.DataFrame): input df, should include columns of the
+    IPC_PERIOD_NAMES for eah period in range(1,6) config (Config):
+    food-insecurity config class Returns: df(pd.DataFrame): input df
+    with added percentage columns
     """
     for period in config.IPC_PERIOD_NAMES:
         # IPC level goes up to 5, so define range up to 6

@@ -1,5 +1,4 @@
 import zipfile
-import logging
 import requests
 import yaml
 import coloredlogs

@@ -10,10 +10,11 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import AreaFromShape, Station
+from src.indicators.flooding.glofas.area import AreaFromShape
 
 
-# Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
+# Stations from here:
+# https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "mwi"
 LEADTIMES = [5, 10, 15, 20, 25, 30]
 STATIONS = {}

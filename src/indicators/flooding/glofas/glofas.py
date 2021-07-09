@@ -1,5 +1,5 @@
-"""Download raster data from GLOFAS and extracts time series of water discharge
-in selected locations."""
+"""Download raster data from GLOFAS and extracts time series of water
+discharge in selected locations."""
 from pathlib import Path
 import logging
 import time
@@ -35,19 +35,22 @@ class Glofas:
         system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
     ):
-        """Create an instance of a GloFAS object, from which you can download
-        and process raw data, and read in the processed data.
+        """Create an instance of a GloFAS object, from which you can
+        download and process raw data, and read in the processed data.
 
-        :param year_min: The earliest year that the dataset is available. Can be a single integer,
-        or a dictionary with structure {major_version: year_min} if the minimum year depends on the GloFAS
-        model version.
-        :param year_max: The most recent that the dataset is available
-        :param cds_name: The name of the dataset in CDS
-        :param dataset: The sub-datasets that you would like to download (as a list of strings)
-        :param dataset_variable_name: The variable name with which to pass the above datasets in the CDS query
-        :param system_version_minor: The minor version of the GloFAS model. Depends on the major version,
-        so is given as a dictionary with the format {major_version: minor_version}
-        :param date_variable_prefix: Some GloFAS datasets have the prefix "h" in front of some query keys
+        :param year_min: The earliest year that the dataset is
+        available. Can be a single integer, or a dictionary with
+        structure {major_version: year_min} if the minimum year depends
+        on the GloFAS model version. :param year_max: The most recent
+        that the dataset is available :param cds_name: The name of the
+        dataset in CDS :param dataset: The sub-datasets that you would
+        like to download (as a list of strings) :param
+        dataset_variable_name: The variable name with which to pass the
+        above datasets in the CDS query :param system_version_minor: The
+        minor version of the GloFAS model. Depends on the major version,
+        so is given as a dictionary with the format {major_version:
+        minor_version} :param date_variable_prefix: Some GloFAS datasets
+        have the prefix "h" in front of some query keys
         """
         self.year_min = year_min
         self.year_max = year_max
@@ -202,7 +205,8 @@ class Glofas:
             leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
-        # Netcdf seems to have problems overwriting; delete the file if it exists
+        # Netcdf seems to have problems overwriting; delete the file if
+        # it exists
         filepath.unlink(missing_ok=True)
         logger.info(f"Writing to {filepath}")
         ds.to_netcdf(filepath)
@@ -365,7 +369,8 @@ class GlofasForecast(Glofas):
                 )
                 for year in range(self.year_min[version], self.year_max + 1)
             ]
-            # Read in both the control and ensemble perturbed forecast and combine
+            # Read in both the control and ensemble perturbed forecast
+            # and combine
             logger.info(f"Reading in {len(filepath_list)} files")
             ds = self._read_in_ensemble_and_perturbed_datasets(filepath_list)
             # Create a new dataset with just the station pixels
@@ -448,7 +453,8 @@ class GlofasReforecast(Glofas):
                 for year in range(self.year_min, self.year_max + 1)
                 for month in month_range
             ]
-            # Read in both the control and ensemble perturbed forecast and combine
+            # Read in both the control and ensemble perturbed forecast
+            # and combine
             logger.info(f"Reading in {len(filepath_list)} files")
             ds = self._read_in_ensemble_and_perturbed_datasets(
                 filepath_list=filepath_list
