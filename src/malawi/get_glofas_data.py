@@ -11,26 +11,10 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.config import Config
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import AreaFromShape, Station
+from src.indicators.flooding.glofas.area import AreaFromShape, AreaFromStations, Station
 
-COUNTRY_NAME = "malawi"
-config = Config()
-parameters = config.parameters(COUNTRY_NAME)
-
-country_dir = os.path.join(config.DIR_PATH, config.ANALYSES_DIR, COUNTRY_NAME)
-country_data_raw_dir = os.path.join(config.DATA_DIR, config.RAW_DIR, COUNTRY_NAME)
-
-LEADTIMES = parameters["glofas"]["leadtimes"]
-COUNTRY_ISO3 = parameters["iso3_code"].lower()
-
-SHAPEFILE_DIR = (
-    Path(os.environ["AA_DATA_DIR"])
-    / "public"
-    / "raw"
-    / COUNTRY_ISO3
-    / "cod_ab"
-    / parameters["path_admin0_shp"]
-)
+COUNTRY_ISO3 = "mwi"
+LEADTIMES = [5, 10, 15, 20, 25, 30]
 
 STATIONS = {
     "G5694": Station(lat=-16.05, lon=34.85),
@@ -38,37 +22,53 @@ STATIONS = {
     "G1724": Station(lat=-16.45, lon=35.05),
 }
 
+SHAPEFILE_BASE_DIR = (
+    Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
+)
+SHAPEFILE = (
+    SHAPEFILE_BASE_DIR
+    / "mwi_adm_nso_20181016_shp"
+    / "mwi_admbnda_adm0_nso_20181016.shp"
+)
+
+VERSION = 3
+USE_INCORRECT_COORDS = False
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
 def main(download=False, process=True):
-
-    glofas_reanalysis = glofas.GlofasReanalysis()
-    glofas_forecast = glofas.GlofasForecast()
-    glofas_reforecast = glofas.GlofasReforecast()
+    stations = STATIONS
+    glofas_reanalysis = glofas.GlofasReanalysis(
+        use_incorrect_area_coords=USE_INCORRECT_COORDS
+    )
+    glofas_reforecast = glofas.GlofasReforecast(
+        use_incorrect_area_coords=USE_INCORRECT_COORDS
+    )
 
     if download:
         df_admin_boundaries = gpd.read_file(SHAPEFILE)
         area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
-        glofas_reanalysis.download(country_iso3=COUNTRY_ISO3, area=area)
-        glofas_forecast.download(
-            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES,
+        glofas_reanalysis.download(
+            country_iso3=COUNTRY_ISO3, area=area, version=VERSION,
         )
         glofas_reforecast.download(
-            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES,
+            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES, version=VERSION,
         )
 
     if process:
-        glofas_reanalysis.process(country_iso3=COUNTRY_ISO3, stations=STATIONS)
-        glofas_forecast.process(
-            country_iso3=COUNTRY_ISO3, stations=STATIONS, leadtimes=LEADTIMES,
+        glofas_reanalysis.process(
+            country_iso3=COUNTRY_ISO3, stations=stations, version=VERSION,
         )
         glofas_reforecast.process(
-            country_iso3=COUNTRY_ISO3, stations=STATIONS, leadtimes=LEADTIMES,
+            country_iso3=COUNTRY_ISO3,
+            stations=stations,
+            leadtimes=LEADTIMES,
+            version=VERSION,
         )
 
 
 if __name__ == "__main__":
     main()
+
