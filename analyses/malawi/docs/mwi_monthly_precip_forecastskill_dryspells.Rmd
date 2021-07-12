@@ -1,0 +1,110 @@
+---
+title: "Skill of ECMWF's monthly forecasts to predict dry spells"
+author: "By Centre for Humanitarian Data"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    toc_depth: 4
+editor_options:
+  chunk_output_type: inline
+bibliography: ["mwi_bibliography.bib"]
+biblio-style: "apalike"
+link-citations: true
+---
+
+## Background
+This document explores the skill of ECMWF's seasonal forecast, to predict dry spells. ECMWF releases a forecast each month. This forecast includes projected total precipitation per month for 1 to 6 months ahead. **The 1 month ahead is the month the forecast was released, and the release date is always the 13th of the month. I.e. the 1 month leadtime only becomes available when we are alread two weeks into that month. **
+
+ECMWF's forecast is a probabilistic forecast, meaning it consists of several members (=models) each having their projected precipitation. This is what in this document is referred to as *% of members*, and can be interpreted as a probability of the event occurring. 
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+source("mwi_rmd_setup.R")
+library(glue)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+```{r data-load-formatting}
+data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
+plot_dir <-paste0(data_dir,'/public/processed/mwi/plots/dry_spells')
+exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/')
+```
+
+```{r}
+threshold <- 170
+months_below_th <- 18
+adm_str <- "southern"
+month_str <- "decjanfeb"
+threshold_50perc <- 210
+```
+## Definitions
+This analysis
+
+- Only looks at the Southern region since almost all historical dry spells occurred in that region
+- Only looks at the months of December, January, February since these months the crops are most sensitive to dry spells
+- Classifies a month as having experienced a dry spell, if at least **7** days of that month were within a dry spell and at least **3** adm2's within the southern region experienced a dry spell
+- Computes the monthly precipitation as the mean value of all cells within the admin1
+
+## Percentage based
+Two parameters have to be set to come to a trigger, namely the cap of forecasted monthly precipitation in mm, and the probability that the forecast predicts the precipitation will be below that cap. One of these two numbers have to be set first. We chose to first set the probability and thereafter determine the optimum cap. 
+A probability of 50% was chosen as this is a clearly interpretable probability, and is relatively high. 
+NOTE: we also experimented with other probabilities, but this didn't lead to better results. 
+
+####  Distribution of precipitation
+The figure below shows the distribution of probabilities with and without a dry spell per leadtime. From this figure it can be seen that the two distributions are not very separable. 
+![](`r paste0(plot_dir,glue('/seasonal/mwi_boxplot_formonth_dsobs_perlt_perc_50_{adm_str}_{month_str}.png'))`){width=70%}
+
+#### Misses and false alarms
+The figure below shows the miss and false alarm rate for different mm thresholds. Based on this we set the threshold, at the point where the false alarm and miss rate intersect across all leadtimes. This is at `r {threshold_50perc}`.
+NOTE: false alarms is  FP/(FP+TP)! i.e. the percentage of times the monthly precipitation was below x mm, but there was no dry spell
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_missfalse_perlt_perc_50_{adm_str}_{month_str}.png'))`)
+
+With the threshold at `r {threshold_50perc}`, we can compute the confusion matrix per leadtime
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt123456_th{threshold_50perc}_perc_50_{adm_str}_{month_str}.png'))`)
+
+Since our main interest is in 2 and 4 months leadtime, we compute the confusion matrix for these two leadtimes per month, to understand if there are large differences between the months. One reason being that the rainy season often starts during December, and thus the monthly precipitation during this month is expected to be lower than during Jan and Feb. 
+NOTE: we also experimented with leaving December out and finding an optimum threshold for only January and February, but this didn't lead to better results.     
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt24_th{threshold_50perc}_perc_50_{adm_str}_dec.png'))`){width=50%}
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt24_th{threshold_50perc}_perc_50_{adm_str}_jan.png'))`){width=50%}
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt24_th{threshold_50perc}_perc_50_{adm_str}_feb.png'))`){width=50%}
+
+#### Heatmaps 
+To understand the occurrence of the threshold being met and dry spells across time, we can look at the heatmaps. 
+![](`r paste0(exploration_dry_spell_dir,glue('monthly_precipitation/mwi_viz_hm_monthly_precip_dsobs_formonth_mean_th{threshold_50perc}_perc_50_lt2_{adm_str}_{month_str}.png'))`){width=80%}
+
+![](`r paste0(exploration_dry_spell_dir,glue('monthly_precipitation/mwi_viz_hm_monthly_precip_dsobs_formonth_mean_th{threshold_50perc}_perc_50_lt4_{adm_str}_{month_str}.png'))`){width=80%}
+
+
+## Threshold based
+NOTE: we have decided to use the percentage based approach, but since results of the threshold based approach were shared earlier, we are keeping this here as a reference. 
+Set threshold and thereafter determine percentage. In this case the percentage was set per lead time, where the percentage was chosen such that the number of months the forecast would trigger was closest to the number of months the observed precipitation was below the threshold. 
+### What is the percentage of ensemble members forecasted below a certain threshold? 
+The figure below shows for how many months the % of ensemble members was below `r {threshold}` mm. The `r {threshold}` mm was the threshold set based on overlap of dry spells and monthly precipitation analysis. 
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_percmembers_th{threshold}_{adm_str}_{month_str}.png'))`)
+
+We can see that the number of months lowers as the percentage increases, which is expected. While there are slight differences between lead times, the pattern is comparable. 
+
+To set the threshold of % of members, we look at the observed data and count how many months had <=`r {threshold}`mm. This were `r {months_below_th}` months. We then choose the % of members for each leadtime which has closest to `r {months_below_th}` months forecasted <= `r {threshold}`mm. This means that the threshold differs per lead time, which in reality is not practible as a trigger. 
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_percth_th{threshold}_{adm_str}_{month_str}.png'))`)
+
+
+### What is the miss and false alarm rate per leadtime to forecast below `r {threshold}` mm monthly precipitation? 
+After setting the % of members, we get a list of forecasted months for which we would have triggered. Now we can compare these with the observed months with less than `r {threshold}` mm of precipitation. 
+
+NOTE: false alarms is  FP/(FP+TP)! i.e. the percentage of times the trigger was met but the monthly precipitation was not below `r {threshold}`
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_obsmonth_missfalse_th{threshold}_percvar_{adm_str}_{month_str}.png'))`)
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_cm_formonth_obsmonth_th{threshold}_percvar_{adm_str}_{month_str}.png'))`)
+
+### What is the miss and false alarm rate per leadtime to forecast dry spells? 
+NOTE: false alarms is  FP/(FP+TP)! i.e. the percentage of times the trigger was met but there was no dry spell
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_ds_missfalse_th{threshold}_percvar_{adm_str}_{month_str}.png'))`)
+
+![](`r paste0(plot_dir,glue('/seasonal/mwi_cm_formonth_ds_th{threshold}_percvar_{adm_str}_{month_str}.png'))`)
