@@ -64,7 +64,7 @@ class TestDownload(unittest.TestCase):
             },
             "target": Path(
                 f"/tmp/public/raw/{self.country_iso3}"
-                f"/glofas/version_3/cems-glofas-historical"
+                "/glofas/version_3/cems-glofas-historical"
                 f"/{self.country_iso3}_cems-glofas-historical_v3_2000.grib"
             ),
         }

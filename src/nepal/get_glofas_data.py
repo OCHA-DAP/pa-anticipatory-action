@@ -17,7 +17,10 @@ from src.utils_general.utils import parse_yaml
 # Stations from here:
 # https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "npl"
-LEADTIMES = [x + 1 for x in range(20)]
+LEADTIMES = [
+    x + 1 for x in range(10)
+]  # for v3 correct coords only went to lead time 10 days
+# LEADTIMES = [x + 1 for x in range(20)]
 
 STATIONS = parse_yaml("src/nepal/config.yml")["glofas"]["stations"]
 
