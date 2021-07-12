@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 import rasterio
 import xarray as xr
-import rioxarray  # noqa: F401
 
 from src.utils_general.raster_manipulation import (
     invert_latlon,

@@ -3,10 +3,6 @@ import numpy as np
 import geopandas as gpd
 from rasterstats import zonal_stats
 import xarray as xr
-
-# not using rioxarray directly but using .rio
-# so let flake8 ignore it
-import rioxarray  # noqa: F401
 import logging
 
 

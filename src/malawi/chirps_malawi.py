@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 import sys
-import rioxarray  # noqa: F401
 import geopandas as gpd
 from shapely.geometry import mapping
 import numpy as np

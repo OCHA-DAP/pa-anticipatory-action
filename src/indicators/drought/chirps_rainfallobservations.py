@@ -2,8 +2,6 @@ from pathlib import Path
 import os
 import xarray as xr
 
-# rioxarray shows up grey, but is actually being used
-import rioxarray  # noqa: F401
 import logging
 from datetime import datetime, timedelta
 import urllib
