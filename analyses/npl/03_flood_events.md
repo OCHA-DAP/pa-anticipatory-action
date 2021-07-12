@@ -72,7 +72,8 @@ df_events['Day'] = np.where(df_events['Day'] == 0, 15, df_events['Day'])
 df_events['Incident Date'] = pd.to_datetime(df_events[['Year', 'Month', 'Day']])
 
 # Only select events in the time range of GloFAS
-df_events = df_events.loc[df_events['Incident Date'] > ds_glofas_reanalysis.time[0].data]
+df_events = df_events.loc[(df_events['Incident Date'] > ds_glofas_reanalysis.time[0].data)
+                         & (df_events['Incident Date'] < ds_glofas_reanalysis.time[-1].data)]
 ```
 
 ```python
@@ -111,7 +112,8 @@ df_target_regions = df_target_regions.append(
 
 ```python
 # For each basin, get a list of affected regions
-# Must intersect 25%
+# that intersect some fraction with the basin
+# Chose 25% because larger leaves large gaps in river basins
 intersection_thresh = 0.25
 df_target_regions["districts"] = df_target_regions['geometry'].apply(lambda x:
                                                        [y['pcode']
@@ -279,6 +281,9 @@ for basin, station_list in STATIONS.items():
             for _, row in df_events_sub.iterrows():
                 ax.axvline(x=row['date'], c='r')
             ax.set_title(impact_parameter)
+        axs[0].plot([], [], 'C1', label=f'1 in {rp} y')
+        axs[0].plot([], [], 'C3', label='event')
+        axs[0].legend()
                 
 ```
 

@@ -172,6 +172,7 @@ for istation, station in enumerate(FINAL_STATIONS):
 
 ```python
 # Print out some stats
+# Round to the nearest 5 for a presentation (10 seems a bit too coarse)
 def round_to_5(x):
     return (np.around(x/5, decimals=0)*5).astype(int)
 for station in FINAL_STATIONS:
