@@ -6,7 +6,7 @@ import xarray as xr
 
 # not using rioxarray directly but using .rio
 # so let flake8 ignore it
-import rioxarray  # noqa
+import rioxarray  # noqa: F401
 import logging
 
 
