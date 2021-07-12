@@ -18,31 +18,68 @@ logger = logging.getLogger(__name__)
 
 
 def get_glofas_reanalysis(
-    country_iso3: str, version: int = glofas.DEFAULT_VERSION
+    country_iso3: str, version: int = glofas.DEFAULT_VERSION, **kwargs
 ) -> xr.Dataset:
-    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_reanalysis = glofas.GlofasReanalysis(**kwargs)
     ds_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
         country_iso3=country_iso3, version=version
     )
     return ds_glofas_reanalysis
 
 
+def _get_glofas_forecast_base(
+    is_reforecast: bool,
+    country_iso3: str,
+    leadtimes: List[int],
+    interp: bool = False,
+    version: int = glofas.DEFAULT_VERSION,
+    split_by_leadtimes: bool = False,
+    **kwargs,
+):
+    if is_reforecast:
+        glofas_forecast = glofas.GlofasReforecast(**kwargs)
+    else:
+        glofas_forecast = glofas.GlofasForecast(**kwargs)
+    if split_by_leadtimes:
+        ds_glofas_forecast_dict = {
+            leadtime: glofas_forecast.read_processed_dataset(
+                country_iso3=country_iso3,
+                version=version,
+                leadtime=leadtime,
+            )
+            for leadtime in leadtimes
+        }
+    else:
+        # Split up the dataset into different leadtimes, because then
+        # it's easier to do the shifts
+        ds_glofas_forecast = glofas_forecast.read_processed_dataset(
+            country_iso3=country_iso3, version=version
+        )
+        ds_glofas_forecast_dict = {
+            leadtime: ds_glofas_forecast.sel(
+                step=np.timedelta64(leadtime, "D")
+            )
+            for leadtime in leadtimes
+        }
+    if interp:
+        ds_glofas_forecast_dict = _interp_dates(ds_glofas_forecast_dict)
+    ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
+    return _convert_dict_to_ds(ds_glofas_forecast_dict)
+
+
 def get_glofas_forecast(
     country_iso3: str,
     leadtimes: List[int],
     version: int = glofas.DEFAULT_VERSION,
+    split_by_leadtimes=False,
 ) -> xr.Dataset:
-    glofas_forecast = glofas.GlofasForecast()
-    ds_glofas_forecast_dict = {
-        leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=country_iso3,
-            leadtime=leadtime,
-            version=version,
-        )
-        for leadtime in leadtimes
-    }
-    ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
-    return _convert_dict_to_ds(ds_glofas_forecast_dict)
+    return _get_glofas_forecast_base(
+        is_reforecast=False,
+        country_iso3=country_iso3,
+        leadtimes=leadtimes,
+        version=version,
+        split_by_leadtimes=split_by_leadtimes,
+    )
 
 
 def get_glofas_reforecast(
@@ -50,20 +87,18 @@ def get_glofas_reforecast(
     leadtimes: List[int],
     interp: bool = True,
     version: int = glofas.DEFAULT_VERSION,
+    split_by_leadtimes: bool = False,
+    **kwargs,
 ) -> xr.Dataset:
-    glofas_reforecast = glofas.GlofasReforecast()
-    ds_glofas_reforecast_dict = {
-        leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=country_iso3,
-            version=version,
-            leadtime=leadtime,
-        )
-        for leadtime in leadtimes
-    }
-    if interp:
-        ds_glofas_reforecast_dict = _interp_dates(ds_glofas_reforecast_dict)
-    ds_glofas_reforecast_dict = _shift_dates(ds_glofas_reforecast_dict)
-    return _convert_dict_to_ds(ds_glofas_reforecast_dict)
+    return _get_glofas_forecast_base(
+        is_reforecast=True,
+        country_iso3=country_iso3,
+        leadtimes=leadtimes,
+        interp=interp,
+        version=version,
+        split_by_leadtimes=split_by_leadtimes,
+        **kwargs,
+    )
 
 
 def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
@@ -247,15 +282,14 @@ def get_groups_above_threshold(
     min_duration: int = 1,
     additional_condition: np.array = None,
 ) -> List:
-    """Get indices where consecutive values are equal to or above a
-    threshold.
-
-    :param observations: The array of values to search for groups
-    (length N) :param threshold: The threshold above which the values
-    must be :param min_duration: The minimum group size (default 1)
-    :param additional_condition: (optional) Any additional condition the
-    values must satisfy (array-like of bools, length N) :return: list of
-    arrays with indices
+    """
+    Get indices where consecutive values are equal to or above a
+    threshold :param observations: The array of values to search for
+    groups (length N) :param threshold: The threshold above which the
+    values must be :param min_duration: The minimum group size (default
+    1) :param additional_condition: (optional) Any additional condition
+    the values must satisfy (array-like of bools, length N) :return:
+    list of arrays with indices
     """
     condition = observations >= threshold
     if additional_condition is not None:
@@ -303,11 +337,11 @@ def calc_mpe(observations: np.array, forecast: np.array) -> float:
 def get_same_obs_and_forecast(
     da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
 ) -> (xr.DataArray, xr.DataArray):
-    """For the GloFAS reanalysis and reforecast at a particular station,
-    get matching data ranges for the two datasets.
-
-    :param da_observations: GloFAS reanalysis at a particular station
-    :param da_forecast: GloFAS reforecast at a particular station :param
+    """
+    For the GloFAS reanalysis and reforecast at a particular station,
+    get matching data ranges for the two datasets :param
+    da_observations: GloFAS reanalysis at a particular station :param
+    da_forecast: GloFAS reforecast at a particular station :param
     leadtime: Leadtime :return: Observations and forecast with
     overlapping values only
     """
