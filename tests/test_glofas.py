@@ -19,7 +19,10 @@ def test_expand_dims():
     ds.coords["z"] = 1
     assert "z" not in ds.dims.keys()
     ds = glofas.expand_dims(
-        ds=ds, dataset_name="var_a", coord_names=["z", "x", "y"], expansion_dim=0
+        ds=ds,
+        dataset_name="var_a",
+        coord_names=["z", "x", "y"],
+        expansion_dim=0,
     )
     assert "z" in ds.dims.keys()
 
@@ -60,7 +63,8 @@ class TestDownload(unittest.TestCase):
                 "hydrological_model": "lisflood",
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-historical"
+                f"/tmp/public/raw/{self.country_iso3}"
+                "/glofas/version_3/cems-glofas-historical"
                 f"/{self.country_iso3}_cems-glofas-historical_v3_2000.grib"
             ),
         }
@@ -80,7 +84,10 @@ class TestDownload(unittest.TestCase):
             "request": {
                 "variable": "river_discharge_in_the_last_24_hours",
                 "format": "grib",
-                "product_type": ["control_forecast", "ensemble_perturbed_forecasts"],
+                "product_type": [
+                    "control_forecast",
+                    "ensemble_perturbed_forecasts",
+                ],
                 "year": f"{self.year}",
                 "month": self.expected_months,
                 "day": self.expected_days,
@@ -90,7 +97,8 @@ class TestDownload(unittest.TestCase):
                 "leadtime_hour": self.expected_leadtime,
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-forecast"
+                f"/tmp/public/raw/{self.country_iso3}"
+                f"/glofas/version_3/cems-glofas-forecast"
                 f"/{self.country_iso3}_cems-glofas-forecast_v3_2000.grib"
             ),
         }
@@ -115,7 +123,8 @@ class TestDownload(unittest.TestCase):
                 "leadtime_hour": self.expected_leadtime,
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-reforecast"
+                f"/tmp/public/raw/{self.country_iso3}"
+                f"/glofas/version_3/cems-glofas-reforecast"
                 f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000.grib"
             ),
         }
@@ -131,7 +140,9 @@ class TestDownload(unittest.TestCase):
         )
         fake_retrieve.assert_called_with(**self.get_reforecast_expected_args())
 
-    def test_reforecast_download_split_by_leadtime(self, fake_mkdir, fake_retrieve):
+    def test_reforecast_download_split_by_leadtime(
+        self, fake_mkdir, fake_retrieve
+    ):
         glofas_reforecast = glofas.GlofasReforecast()
         glofas_reforecast.download(
             country_iso3=self.country_iso3,
@@ -144,7 +155,8 @@ class TestDownload(unittest.TestCase):
         expected_args = self.get_reforecast_expected_args()
         expected_args["request"]["leadtime_hour"] = self.expected_leadtime[:1]
         expected_args["target"] = Path(
-            f"/tmp/public/raw/{self.country_iso3}/glofas/version_3/cems-glofas-reforecast"
+            f"/tmp/public/raw/{self.country_iso3}"
+            f"/glofas/version_3/cems-glofas-reforecast"
             f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000_lt10d.grib"
         )
         fake_retrieve.assert_called_with(**expected_args)

@@ -14,15 +14,22 @@ from src.indicators.flooding.glofas.area import AreaFromShape, Station
 from src.utils_general.utils import parse_yaml
 
 
-# Stations from here: https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
+# Stations from here:
+# https://drive.google.com/file/d/1oNaavhzD2u5nZEGcEjmRn944rsQfBzfz/view
 COUNTRY_ISO3 = "npl"
-LEADTIMES = [x + 1 for x in range(10)]  # for v3 correct coords only went to lead time 10 days
+LEADTIMES = [
+    x + 1 for x in range(10)
+]  # for v3 correct coords only went to lead time 10 days
 # LEADTIMES = [x + 1 for x in range(20)]
 
-STATIONS = parse_yaml('src/nepal/config.yml')['glofas']['stations']
+STATIONS = parse_yaml("src/nepal/config.yml")["glofas"]["stations"]
 
 SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
+    Path(os.environ["AA_DATA_DIR"])
+    / "public"
+    / "raw"
+    / COUNTRY_ISO3
+    / "cod_ab"
 )
 SHAPEFILE = (
     SHAPEFILE_BASE_DIR
@@ -38,8 +45,12 @@ logger = logging.getLogger(__name__)
 
 def main(download=True, process=True):
 
-    glofas_reanalysis = glofas.GlofasReanalysis(use_incorrect_area_coords=USE_INCORRECT_COORDS)
-    glofas_reforecast = glofas.GlofasReforecast(use_incorrect_area_coords=USE_INCORRECT_COORDS)
+    glofas_reanalysis = glofas.GlofasReanalysis(
+        use_incorrect_area_coords=USE_INCORRECT_COORDS
+    )
+    glofas_reforecast = glofas.GlofasReforecast(
+        use_incorrect_area_coords=USE_INCORRECT_COORDS
+    )
 
     if download:
         df_admin_boundaries = gpd.read_file(f"zip://{SHAPEFILE}")
@@ -57,7 +68,10 @@ def main(download=True, process=True):
         )
 
     if process:
-        stations = {name: Station(lon=coords['lon'], lat=coords['lat']) for name, coords in STATIONS.items()}
+        stations = {
+            name: Station(lon=coords["lon"], lat=coords["lat"])
+            for name, coords in STATIONS.items()
+        }
         glofas_reanalysis.process(
             country_iso3=COUNTRY_ISO3,
             stations=stations,
