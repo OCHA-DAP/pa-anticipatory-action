@@ -131,7 +131,3 @@ for station in major_stations:
     ax.legend()
     ax.grid()
 ```
-
-```python
-
-```
