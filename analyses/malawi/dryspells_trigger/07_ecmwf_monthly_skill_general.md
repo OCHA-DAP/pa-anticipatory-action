@@ -85,11 +85,11 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal",
 ```
 
 ```python
-da = processing.get_ecmwf_forecast()
+da = processing.get_ecmwf_forecast("mwi")
 ```
 
 ```python
-da_lt=processing.get_ecmwf_forecast_by_leadtime()
+da_lt=processing.get_ecmwf_forecast_by_leadtime("mwi")
 ```
 
 ```python
