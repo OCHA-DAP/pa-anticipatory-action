@@ -297,6 +297,18 @@ Below the distributions with and without dry spells are shown, from here we can 
 Again, note that there are only 4 occurrences of dry spells
 
 ```python
+df_southern_countmonth_selm.mean_cell.mean(axis=0)
+```
+
+```python
+df_southern_countmonth_selm.mean_cell.min(axis=0)
+```
+
+```python
+df_southern_countmonth_selm.mean_cell.max(axis=0)
+```
+
+```python
 #plot distribution monthly precip with and without ds, boxplot
 #can see a clear difference
 fig,ax=plt.subplots(figsize=(10,10))
@@ -522,8 +534,8 @@ ax.get_legend().set_title("Dry spell occurred")
 
 ```python
 #compute tp,tn,fp,fn
-y_target =  df_southern_countmonth_decjanfeb.dry_spell
-threshold_list=np.arange(0,df_southern_countmonth_decjanfeb.mean_cell.max() - df_southern_countmonth_decjanfeb.mean_cell.max()%10,10)
+y_target =  df_comb_ds_4mm_southern_selm.dry_spell
+threshold_list=np.arange(0,df_comb_ds_4mm_southern_selm.mean_cell.max() - df_southern_countmonth_decjanfeb.mean_cell.max()%10,10)
 df_pr_decjanfeb=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
 for t in threshold_list:
     y_predicted = np.where(df_southern_countmonth_decjanfeb.mean_cell<=t,1,0)
