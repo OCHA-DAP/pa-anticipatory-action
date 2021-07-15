@@ -18,7 +18,7 @@ link-citations: true
 ## Background
 This document summaries the data analyses that were performed to link the occurrence of a dry spell with various climatological indicators. This work was done for OCHA's Anticipatory Action pilot in Malawi related to dry spells. It explores: the relations with climatic indicators (observational data), the skill of a seasonal and 15-day forecast to predict dry spells, and the ability to observe dry spells in almost real-time. All work presented here was done by the Centre for Humanitarian Data with indispensable help from technical partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action) and includes more detail on the analyses presented in this document. 
 
-This work uses a list of historical dry spells and rainy seasons that was created as part of this project. The list of historical events can be [downloaded on HDX](https://data.humdata.org/dataset/historical-dry-spells-in-malawi). Further information and analyses of historical dry spells can be found [here](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/develop/analyses/malawi/notebooks/historical_dry_spells_description_mean.html). 
+This work uses a list of historical dry spells and rainy seasons that was created as part of this project. The list of historical events can be [downloaded on HDX](https://data.humdata.org/dataset/historical-dry-spells-in-malawi). Further information and analyses of historical dry spells can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/historical_dry_spells_description_mean.html). 
 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
@@ -37,9 +37,10 @@ exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/
 ```
 ### Definitions
 - A dry spell is defined as at least 14 consecutive days with less than 2mm cumulative precipitation. This definition was provided by the World Food Programme (WFP) who also shared impact survey data (MVAC). 
-- The definitions of rainy season onset/cessation and more information on dry spells can be found [here](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/develop/analyses/malawi/notebooks/historical_dry_spells_description_mean.html)
+- The rainy season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, according to @kimaro2008).
+- The end of the rainy season is defined as the first day of a 15-day period after 15 March with 25mm or less of rain (DCCMS, according to @kimaro2008). The cessation date is the first day of this 15 day period.
+- We only included data within the rainy season, unless defined differently. 
 - In this analysis we focus on the Southern region (adm1), as this is where most dry spells were observed.
-- We work with 3-month periods and define the seasons SON to MAM to be part of the rainy season. This is based on [FewsNet's calendar](https://fews.net/southern-africa/malawi).
 - [CHIRPS](https://www.chc.ucsb.edu/data/chirps) is used as data source of observed precipitation.
 - For part of the analysis we only focus on the months of January and February as these months were selected by the Anticpatory Action team as months most vulnerable to dry spells. December was also identified as a vulnerable month however the data were very noisy due to the rainy season sometimes starting in December: low rainfall was sometimes due to a late rainy season onset, sometimes to a dry spell. Therefore it was decided not to include this month in the first version of the AA trigger. 
 - **It is very important to be aware of the low statistical significance of the results presented in this analysis**. This is due to the fact that the choices made (definition of a dry spell, the areas of focus, and the months to examine) result in only a few occurrences of dry spells in the last 20 years. 
@@ -74,7 +75,7 @@ More explanation on the significance of ONI can be found [here](https://origin.c
 #### Methodology
 For each 3-month period an ENSO state was assigned to the ONI data based on the definitions detailed above. 
 A 3-month period was marked as having experienced a dry spell if a dry spell started during the middle month of that 3-month period. I.e. if a dry spell started on 15-03-2010, the FMA 2010 season was indicated to have experienced a dry spell. 
-Since our main period of interest is the rainy season, this is the focus of this analysis. The rainy season was defined quite broadly, including all seasons from September-October-November (SON) to March-April-May (MAM). 
+Since our main period of interest is the rainy season, this is the focus of this analysis. The rainy season was defined quite broadly, including all seasons from September-October-November (SON) to March-April-May (MAM). This is based on [FewsNet's calendar](https://fews.net/southern-africa/malawi). 
 Lastly, since the main effect of the ENSO phenomenon is expected in the Southern region, we only included dry spells that occurred in this region (which is the largest fraction of all dry spells).
 
 #### Analysis
@@ -251,7 +252,7 @@ NOTE: We examined the effect of lowering the threshold to reduce the number of f
 ### 15-day precipitation
 
 #### The data
-Several organizations produce rainfall forecasts with a 15-day lead time, but most of them are not openly available. For this analysis, we used CHIRPS-GEFS. This is a forecast produced by GEFS and bias-corrected to the CHIRPS data. This forecast was chosen because it is openly available, has a long historical record, is well-acknowledged, and is bias-corrected to the same data that was used to create a groundtruth dataset of observed dry spells. CHIRPS-GEFS is available as raster data at 0.05 resolution. A forecast is produced each day, and these forecasts are available from 2000 till present, with a data gap in 2020. Each forecast indicates the projected cumulative precipitation during the next 15 days per raster cell. 
+Several organizations produce rainfall forecasts with a 15-day lead time, but most of them are not openly available. For this analysis, we used [CHIRPS-GEFS](https://chc.ucsb.edu/data/chirps-gefs). This is a forecast produced by GEFS and bias-corrected to the CHIRPS data. This forecast was chosen because it is openly available, has a long historical record, is well-acknowledged, and is bias-corrected to the same data that was used to create a groundtruth dataset of observed dry spells. CHIRPS-GEFS is available as raster data at 0.05 resolution. A forecast is produced each day, and these forecasts are available from 2000 till present, with a data gap in 2020. Each forecast indicates the projected cumulative precipitation during the next 15 days per raster cell. 
 
 #### Methodology
 Due to the shorter leadtime, we expected the forecast to have a higher spatial accuracy, i.e. for there to be less geographical uncertainty in the forecasts than when using seasonal forecasts. We therefore aggregated the forecast to admin2 instead of admin1, as this leads to more detailed information without making incorrect use of forecasts. The raster cell values of the CHIRPS-GEFS forecast were aggregated to admin2 by taking the mean value across all cells with their centre within the admin2.
@@ -278,7 +279,8 @@ From these results we concluded that CHIRPS-GEFS is not a suitable forecast to p
 ![](`r paste0(plot_dir,'/chirpsgefs/mwi_cm_chirpsgefs_mean_2mm_thresh_2mm.png')`){ width=45% } ![](`r paste0(plot_dir,'/chirpsgefs/mwi_cm_chirpsgefs_mean_2mm_thresh_25mm.png')`){ width=45% }
 
 ## Real-time observation of dry spells
-We performed a comparison of two sources of observed precipitation. Throughout this project we have used CHIRPS as source of observed precipitation. While showing generally accurate results, one disadvantage of CHIRPS is that there is a long timelag in publishing the results of up to about 1.5 months (ie the observations for November may be published as late as mid January). We investigated ARC2 for its validity in detecting dry spells. ARC2 only has a time lag of a few days. 
+We performed a comparison of two sources of observed precipitation. Throughout this project we have used CHIRPS as source of observed precipitation. While showing generally accurate results, one disadvantage of CHIRPS is that there is a long timelag in publishing the results of up to 1.5 months (i.e. the observations for November may be published as late as mid January). CHIRPS also has a preliminary product which is published 2 days after the end of a pentad (@dinku2018). 
+However, we prefer a shorter latency and therefore investigated ARC2 for its validity in detecting dry spells. ARC2 only has a time lag of a few days. 
 A rough comparison is shown in the heatmap below. The two sources correspond to a large extent. They don't fully overlap, but the severe dry spell events were detected by both sources. We therefore conclude that ARC2 would be a valid source to use for near real-time monitoring of dry spells. 
 
 ![](`r paste0(plot_dir,'/arc2/viz_arc2chirps_th_2_chirpsgefs_dryspell_hm.png')`)
