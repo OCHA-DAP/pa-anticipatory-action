@@ -1,6 +1,10 @@
 from shapely.geometry import Polygon
 
-from src.indicators.flooding.glofas.area import Station, AreaFromStations, AreaFromShape
+from src.indicators.flooding.glofas.area import (
+    Station,
+    AreaFromStations,
+    AreaFromShape,
+)
 
 
 FAKE_STATIONS = {
@@ -21,7 +25,7 @@ def test_get_area_from_stations():
 
 def test_get_list_for_api():
     area = AreaFromStations(FAKE_STATIONS, buffer=0)
-    assert area.list_for_api() == [1, -4, -2, 3]
+    assert area.list_for_api() == [1.05, -4.05, -2.05, 3.05]
 
 
 def test_get_area_from_shape():

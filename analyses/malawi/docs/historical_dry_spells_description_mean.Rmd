@@ -22,7 +22,7 @@ This is a descriptive summary of the groundtruth dataset of dry spells in Malawi
 We identified, for each district (n = 32), all dry spells that occurred during their rainy season. To do so we identified the onset and cessation date of the rainy season for each district and every year. We report on the characteristics of the rainy seasons as well as the dry spells.
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
-source("historical_dry_spells_description_setup.R")
+source("mwi_rmd_setup.R")
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```

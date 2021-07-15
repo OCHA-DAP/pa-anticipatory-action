@@ -27,15 +27,15 @@ mpl.rcParams['figure.dpi'] = 200
 
 COUNTRY_ISO3 = 'npl'
 STATIONS = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
-    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat'],
-    'Rapti': ['Kusum'],
-    'Bagmati': ['Rai_goan'],
-    'Babai': ['Chepang']
+    'Koshi': ['Chatara_v3', 'Simle_v3', 'Majhitar_v3', 'Kampughat_v3'],
+    'Karnali': ['Chisapani_v3', 'Asaraghat_v3', 'Dipayal_v3', 'Samajhighat_v3'],
+    'Rapti': ['Kusum_v3'],
+    'Bagmati': ['Rai_goan_v3'],
+    'Babai': ['Chepang_v3']
 }
 STATIONS_BY_MAJOR_BASIN = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan'],
-    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang'],
+    'Koshi': ['Chatara_v3', 'Simle_v3', 'Majhitar_v3', 'Kampughat_v3', 'Rai_goan_v3'],
+    'Karnali': ['Chisapani_v3', 'Asaraghat_v3', 'Dipayal_v3', 'Samajhighat_v3', 'Kusum_v3', 'Chepang_v3'],
 }
 ```
 
