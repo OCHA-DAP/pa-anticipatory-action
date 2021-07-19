@@ -16,6 +16,7 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
 os.chdir(path_mod)
 
 from src.indicators.flooding.glofas import utils, glofas
+from src.utils_general.statistics import calc_mpe
 import src.nepal.get_glofas_data as ggd
 
 reload(utils)
@@ -164,9 +165,11 @@ for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
         mpe_ev = np.empty(len(da_forecast.leadtime))
         for ilt, leadtime in enumerate(da_forecast.leadtime):
             observations, forecast = utils.get_same_obs_and_forecast(da_observations, da_forecast, leadtime)
-            mpe[ilt] = utils.calc_mpe(observations, forecast)
+            mean_forecast = forecast.mean(axis=0)
+            mpe[ilt] = calc_mpe(observations, mean_forecast)
             observations_ev, forecast_ev = utils.get_same_obs_and_forecast(da_observations_ev, da_forecast, leadtime)
-            mpe_ev[ilt] = utils.calc_mpe(observations_ev, forecast_ev)
+            mean_forecast_ev = forecast_ev.mean(axis=0)
+            mpe_ev[ilt] = calc_mpe(observations_ev, mean_forecast_ev)
         ax.plot(da_forecast.leadtime, mpe, label=station, c=f'C{istation}')
         ax.plot(da_forecast.leadtime, mpe_ev, '--', c=f'C{istation}')
     ax.plot([], [], 'k-', label='All values')
