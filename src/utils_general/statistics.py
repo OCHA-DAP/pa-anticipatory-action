@@ -92,3 +92,12 @@ def get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
     df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
     df_rp["rp"] = 1 / df_rp["exceedance_probability"]
     return interp1d(df_rp["rp"], df_rp[rp_var])
+
+
+def calc_mpe(observations: np.array, forecast: np.array) -> float:
+    denominator = observations
+    return (
+        ((forecast - observations) / denominator).sum()
+        / len(observations.time)
+        * 100
+    )
