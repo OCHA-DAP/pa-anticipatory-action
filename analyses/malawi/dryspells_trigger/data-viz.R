@@ -29,14 +29,15 @@ mwi_adm2 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm2_nso_20181016.shp")
 ## map  historical dry spells
 #####
 
-# summarise dry spells frequency per district / year
+# summarise rainy-season dry spells frequency per district / year
 ds_counts_per_year <- ds %>%
-  filter(season_approx != "outside rainy season") %>%
-  group_by(pcode, season_approx) %>%
+  filter(during_rainy_season == 1) %>% # excludes dry spells outside the rainy season or in rainy seasons without confirmed onset/cessation dates
+  group_by(pcode, during_rainy_season) %>%
   summarise(n_ds = n())
 
+# summarise rainy-season dry spells per district (across years). Note: only reports districts that have experienced rainy-season DSs
 ds_counts <- ds %>%
-  filter(season_approx != "outside rainy season") %>%
+  filter(during_rainy_season ==1) %>%
   group_by(pcode) %>%
   summarise(n_ds = n())
 
@@ -45,11 +46,10 @@ data <- mwi_adm2 %>%
   left_join(ds_counts, by = c("ADM2_PCODE" = "pcode"))
 
 # create map
-
 data %>%
   ggplot() +
   geom_sf(aes(fill = n_ds)) +
-  scale_fill_continuous(type = "viridis", "Total number of events") +
+  scale_fill_continuous("Total number of events", trans = 'reverse') +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   ggtitle("Dry spells in Malawi", subtitle = "2000-2020") +
   theme(
