@@ -32,10 +32,11 @@ def _get_glofas_forecast_base(
     country_iso3: str,
     leadtimes: List[int],
     interp: bool = False,
+    shift_dates: bool = True,
     version: int = glofas.DEFAULT_VERSION,
     split_by_leadtimes: bool = False,
     **kwargs,
-):
+) -> xr.Dataset:
     if is_reforecast:
         glofas_forecast = glofas.GlofasReforecast(**kwargs)
     else:
@@ -63,7 +64,8 @@ def _get_glofas_forecast_base(
         }
     if interp:
         ds_glofas_forecast_dict = _interp_dates(ds_glofas_forecast_dict)
-    ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
+    if shift_dates:
+        ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
     return _convert_dict_to_ds(ds_glofas_forecast_dict)
 
 
@@ -86,6 +88,7 @@ def get_glofas_reforecast(
     country_iso3: str,
     leadtimes: List[int],
     interp: bool = True,
+    shift_dates: bool = True,
     version: int = glofas.DEFAULT_VERSION,
     split_by_leadtimes: bool = False,
     **kwargs,
@@ -95,6 +98,7 @@ def get_glofas_reforecast(
         country_iso3=country_iso3,
         leadtimes=leadtimes,
         interp=interp,
+        shift_dates=shift_dates,
         version=version,
         split_by_leadtimes=split_by_leadtimes,
         **kwargs,
