@@ -90,6 +90,7 @@ da_lt=processing.get_ecmwf_forecast_by_leadtime("mwi")
 
 ```python
 da_obs=xr.open_dataset(chirps_monthly_mwi_path)
+da_obs=da_obs.precip
 #some problem later on when using rioxarray..
 # da_obs=rioxarray.open_rasterio(chirps_monthly_mwi_path,masked=True)
 ```
@@ -116,7 +117,7 @@ Let's take a sample of some of the data to check that it all looks like we would
 start = '2020-06-01'
 # end = '2020-10-31'
 
-rf_list_slice = da_lt.sel(time=start,latitude=da_lt.latitude.values[5],longitude=da_lt.longitude.values[5])
+rf_list_slice = da_lt.sel(time=start,latitude=da_lt.latitude.values[10],longitude=da_lt.longitude.values[5])
 
 rf_list_slice.dropna("leadtime").plot.line(label='Historical', c='grey',hue="number",add_legend=False)
 rf_list_slice.dropna("leadtime").mean(dim="number").plot.line(label='Historical', c='red',hue="number",add_legend=False)
@@ -183,6 +184,103 @@ for leadtime in da_forecast.leadtime:
                 f'mean_{thresh}': observations.where(observations<=thresh).mean().values
             })
         df_crps= df_crps.append([append_dict], ignore_index=True)
+```
+
+```python
+def get_crps(
+    ds_observations: xr.Dataset,
+    ds_forecast: xr.Dataset,
+    normalization: str = None,
+    thresh: [float] = None,
+) -> pd.DataFrame:
+    """
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
+    ds_reforecast: GloFAS reforecast xarray dataset :param
+    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS :param thresh: (optional) Either a single value,
+    or a dictionary with format {station name: thresh} :return:
+    DataFrame with station column names and leadtime index
+    """
+    leadtimes = ds_forecast.leadtime.values
+    df_crps = pd.DataFrame(index=leadtimes)
+
+    for leadtime in leadtimes:
+        forecast = (
+            ds_forecast
+            .sel(leadtime=leadtime)
+            .dropna(dim="time",how="all")
+        )
+        observations = ds_observations.reindex(
+            {"time": forecast.time} #takes very long
+        )
+        if normalization == "mean":
+            norm = observations.mean().values
+        elif normalization == "std":
+            norm = observations.std().values
+        elif normalization is None:
+            norm = 1
+        crps = (
+                xs.crps_ensemble(
+                    observations, forecast, member_dim="number"
+                ).values
+                / norm
+            )
+        df_crps.loc[leadtime, "crps"] = crps
+#         # TODO: Add error for other normalization values
+#         if thresh is not None:
+#             for th in thresh:
+#             idx = observations <= thresh
+#             forecast, observations = forecast[:, idx], observations[idx]
+#             crps = (
+#                 xs.crps_ensemble(
+#                     observations, forecast, member_dim="number"
+#                 ).values
+#                 / norm
+#             )
+#             df_crps.loc[leadtime, station] = crps
+
+    return df_crps
+```
+
+```python
+get_crps(da_obs,da_forecast)
+```
+
+```python
+for thresh in [210,180,170]:
+    da_observations=
+    da_obs_thresh=da_obs.precip.where(observations<=thresh)
+    da_forecasts_thresh=da_forecast.where(observations<=thresh)
+get_crps(da_obs.precip)
+```
+
+```python
+def plot_crps(df_crps, title_suffix=None, ylog=False):
+    for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+        fig, ax = plt.subplots()
+        for station in stations:
+            crps = df_crps[station]
+            ax.plot(crps.index, crps, label=station)
+        ax.legend()
+        title = basin
+        if title_suffix is not None:
+            title += title_suffix
+        ax.set_title(title)
+        ax.set_xlabel("Lead time [days]")
+        ax.set_ylabel("Normalized CRPS [% error]")
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.grid()
+        if ylog:
+            ax.set_yscale('log')
+            ax.yaxis.set_major_formatter(ScalarFormatter())
+
+```
+
+```python
+df_crps = utils.get_crps(ds_glofas_reanalysis, 
+                         ds_glofas_reforecast,
+                        normalization="mean")
+plot_crps(df_crps * 100, title_suffix=" -- all discharge values")
 ```
 
 ```python
