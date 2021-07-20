@@ -67,4 +67,4 @@ plt_ds_map <- data %>%
   )
 
 # save plot
-#ggsave(paste0(plot_path, "/ds_count_country_map.png"), dpi = 1200)
+ggsave(paste0(plot_path, "/ds_count_country_map.png"), plot = plt_ds_map, dpi = 1200)
