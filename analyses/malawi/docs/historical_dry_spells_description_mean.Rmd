@@ -23,6 +23,7 @@ We identified, for each district (n = 32), all dry spells that occurred during t
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 source("mwi_rmd_setup.R")
+source("../dryspells_trigger/exploration/mwi_viz_dry_spells_map.R")
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
@@ -46,7 +47,7 @@ We chose to use CHIRPS as data source of historical precipitation. Different dat
 ### Definitions
 Many different definitions of a dry spell, rainy day, rainy season onset, and rainy season cessation exist. The following definitions were used in the current analysis, based on literature and consultation with partners.
 
-**Dry spells:** At least 14 consecutive days with a cumulative rainfall of no more than 2 mm during the rainy season in an ADMIN2 region.
+**Dry spells:** At least 14 consecutive days with a cumulative rainfall of no more than 2 mm during the rainy season in an ADMIN2 region. This definition was provided by the World Food Programme (WFP) who also shared impact survey data (MVAC). 
 
 **Rainy day:** At least 4mm of rainfall on a calendar day (DCCMS, according to @kimaro2008).
 
@@ -64,6 +65,16 @@ Besides the admin level, a methodology has to be chosen to aggregate the raster 
 After we extracted the mean rain fallen within a district for every day over the last 20 years, we then computed the 10-day, 14-day, and 15-day rolling sums for each district. The earliest records in the dataset were assigned rolling sums of NA (non-applicable) until at least 10/14/15 records were available, respectively. Using these sums, the dry spells and rainy seasons were computed.
 
 "Total rainfall" was summed over the relevant period and rounded to the first decimal.
+
+### Caveats
+We believe the created datasets on rainy seasons and dry spells create insights that weren't available up to now. Simultaneously, these datasets are not perfect. To be aware of these, we list the caveats that we came across while creating and working with these datasets. 
+
+- The definition of a dry spell being used is only one of many. Many different definitions exist, which differ in the number of days and precipitation caps (@usman2004dry; @mathugama2011critical; @kimaro2008; @mittal2021co). 
+- The definition of a dry spell being used is purely based on precipitation, and not on impact. We did [an analysis to relate the dry spells to impact](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_impact_summary.html), but this remains challenging. Different factors contribute to the impact of a dry spell, for example the timing in the year, and the temperature during the dry spell.  
+- Related to the impact, shorter dry spells might influence crops but go undetected in this dataset. Due to requiring 14 days with no more than 2 mm cumulative rainfall, one day in the middle with 2.1mm of rain will cause no dry spell to be detected. Nevertheless, this kind of phenomenon might have a significant impact. This is a direction that should be researched further. 
+- No precipitation dataset is perfect. We chose to use CHIRPS as explained in [Data Source], but it would be a good practice to validate results with different datasets. Especially ground station data would be valuable here, but this is data that isn't openly accessible for Malawi.  
+- As explained in [Methodology], we downscaled the observational raster data to admin2 level. We did this by taking the mean value across all cells within the admin2. We believe this is a valid method for our purposes, but one should be aware that other downscaling methods can give different results.
+- Due to the definition of the rainy season, no dry spell can be registered within 40 days after the start of the rainy season. This means that the earliest dry spell can only start mid-December. This might be limiting, since prolonged dry periods can already significantly impact crops during planting which often occurs in November and December.
 
 ### Rainy Seasons
 
@@ -289,7 +300,12 @@ num_ds_adm1 <-rainy_season_dry_spells_summary_per_region %>% group_by(region) %>
 
 Over the 20-year span, `r nbr_ds` dry spells were observed. `r perc_distr_ds`% of districts experienced a dry spell (`r nbr_distr_ds`/`r nbr_distr`). Most dry spells (`r max_ds`) were observed in `r knitr::combine_words(max_ds_dist)` district. Analyzing the dry spells per region, the largest portion of dry spells occurred in the Southern Region (`r as.numeric(num_ds_adm1[num_ds_adm1$region=="Southern","num_ds"])`/`r nbr_ds`). The Central region experienced `r as.numeric(num_ds_adm1[num_ds_adm1$region=="Central","num_ds"])` dry spells, while the Northern saw 0.
 
-Over the 20-year span, districts experienced an average of 5.1 rainy-season dry spells. Only 1 district (Karonga) experienced none, and 3 experienced a dry spell every other year on average (total: 10 or 11 dry spells). Most (75%) districts experienced between 3-7 dry spells.
+In the map below, the number of dry spells per district is shown. 
+```{r ds-map, dpi=300, include=T, message=FALSE, warning=FALSE, fig.height=5, fig.align="center", fig.cap=''}
+
+plt_ds_map
+
+```
 
 ##### Comparison with WFP's analysis
 

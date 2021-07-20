@@ -46,7 +46,7 @@ data <- mwi_adm2 %>%
   left_join(ds_counts, by = c("ADM2_PCODE" = "pcode"))
 
 # create map
-data %>%
+plt_ds_map <- data %>%
   ggplot() +
   geom_sf(aes(fill = n_ds)) +
   scale_fill_continuous("Total number of events", trans = 'reverse') +
