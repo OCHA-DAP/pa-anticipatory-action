@@ -376,9 +376,10 @@ full_list_dry_spells <- dry_spells_details %>%
   left_join(rainy_seasons[, c("pcode", "season_approx", "onset_date", "cessation_date")], by = c("pcode", "season_approx"), all.x = T, all.y = T) %>%
   # add rainy onset and cessation dates
   left_join(region_names, by = c("pcode" = "ADM2_PCODE")) %>%
-  mutate(during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>%
+  mutate(during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0),
+         season_name = ifelse(during_rainy_season == 1, season_approx, "not during a rainy season" )) %>%
   # identifies dry spells that reached 14-d rolling sum (confirmation_date) during rainy season. NA = start/end of rainy season unknown
-  dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall, during_rainy_season)
+  dplyr::select(pcode, ADM2_EN, season_name, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall, during_rainy_season)
 # write.csv(full_list_dry_spells, file = paste0(dry_spell_processed_path, "full_list_dry_spells.csv"), row.names = FALSE)
 
 # summary stats per region
