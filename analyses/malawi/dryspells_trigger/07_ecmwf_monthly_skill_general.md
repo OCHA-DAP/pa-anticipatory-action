@@ -143,7 +143,7 @@ subset_dict={"selm":[1,2],"thresh":[170,180,210]}
 for leadtime in da_forecast.leadtime:
     forecast = da_forecast.sel(
     leadtime=leadtime.values)
-    observations = da_obs.precip #.reindex({'time': forecast.time})
+    observations = da_obs #.reindex({'time': forecast.time})
     # For all dates
     crps = xs.crps_ensemble(observations, forecast,member_dim='number')
     append_dict = {'leadtime': leadtime.values,
@@ -210,9 +210,9 @@ def get_crps(
             .sel(leadtime=leadtime)
             .dropna(dim="time",how="all")
         )
-        observations = ds_observations.reindex(
-            {"time": forecast.time} #takes very long
-        )
+        
+        forecast=forecast.sel(time=slice(ds_observations.time.min(), ds_observations.time.max()))
+        observations=ds_observations.sel(time=slice(forecast.time.min(), forecast.time.max()))
         if normalization == "mean":
             norm = observations.mean().values
         elif normalization == "std":
@@ -243,15 +243,27 @@ def get_crps(
 ```
 
 ```python
-get_crps(da_obs,da_forecast)
+df_crps=get_crps(da_obs,da_forecast)
 ```
 
 ```python
 for thresh in [210,180,170]:
-    da_observations=
-    da_obs_thresh=da_obs.precip.where(observations<=thresh)
-    da_forecasts_thresh=da_forecast.where(observations<=thresh)
-get_crps(da_obs.precip)
+    da_obs_thresh=da_obs.where(observations<=thresh)
+    da_forecast_thresh=da_forecast.where(observations<=thresh)
+    df_crps_th=get_crps(da_obs,da_forecast_thresh).rename(columns={"crps":f"crps_{thresh}"})
+    df_crps=pd.concat([df_crps,df_crps_th],axis=1)
+```
+
+```python
+df_crps
+```
+
+```python
+df_crps_th
+```
+
+```python
+
 ```
 
 ```python
