@@ -12,7 +12,7 @@ library(sf)
 library(raster)
 
 # load functions
-source("01b_chirps_dry_spells_functions.R")
+source("dryspells_trigger/01b_chirps_dry_spells_functions.R")
 
 # set options
 rasterOptions(maxmemory = 1e+09)
@@ -177,7 +177,7 @@ data_long$rainy_day_bin_2mm <- ifelse(data_long$total_prec >= 2, 1, 0) # rainy d
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
 #####
-
+#data_long <- readRDS(paste0(dry_spell_processed_path, "data_long_mean_values.RDS"))
 # Rainy season onset: First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 rainy_onsets <- findRainyOnset()
 
