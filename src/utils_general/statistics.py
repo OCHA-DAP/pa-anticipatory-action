@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+import xskillscore as xs
 import logging
+import xarray as xr
 
 from scipy.stats import genextreme as gev
 import matplotlib.pyplot as plt
@@ -109,3 +111,38 @@ def calc_mpe(observations: np.array, forecast: np.array) -> float:
         / len(observations.time)
         * 100
     )
+
+
+def calc_crps(
+    observations: xr.DataArray,
+    forecasts: xr.DataArray,
+    normalization: str = None,
+    member_dim: str = "number",
+) -> float:
+    """
+    observations and forecasts must have the same shape in all
+    dimensions except the member_dim dimension
+    :param observations: datarray with observed values
+    :param forecasts: data-array with forecasted values
+    :param normalization: (optional) Can be None, 'mean' or 'std',
+    reanalysis metric to divide the CRPS
+    :param member_dim: (optional) the dimension name which contains
+    the ensemble members
+    :return: the CRPS
+    """
+
+    if normalization == "mean":
+        norm = observations.mean().values
+    elif normalization == "std":
+        norm = observations.std().values
+    elif normalization is None:
+        norm = 1
+    else:
+        logger.error(
+            f"Normalization method {normalization} has not been implemented"
+        )
+    crps = (
+        xs.crps_ensemble(observations, forecasts, member_dim=member_dim).values
+        / norm
+    )
+    return crps
