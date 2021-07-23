@@ -15,6 +15,7 @@ sys.path.append(path_mod)
 
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.drought.config import Config
+from src.utils_general.statistics import calc_crps
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +261,46 @@ def convert_dict_to_da(da_dict):
             latitude=list(da_lead_dict.values())[0].latitude,
         ),
     )
+
+
+def get_crps_ecmwf(
+    da_observations: xr.DataArray,
+    da_forecasts: xr.DataArray,
+    normalization: str = None,
+    thresh: float = None,
+) -> pd.DataFrame:
+    """
+    :param da_observations: data-array or data-set with observed values
+    :param da_forecasts: data-array with forecasted values
+    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS
+    param: threshold: (optional) only select values smaller or equal to
+    this number
+    :return: DataFrame with leadtime index containing the crps
+    """
+    leadtimes = da_forecasts.leadtime.values
+    df_crps = pd.DataFrame(index=leadtimes)
+
+    for leadtime in leadtimes:
+        forecasts = da_forecasts.sel(leadtime=leadtime).dropna(
+            dim="time", how="all"
+        )
+
+        observations = da_observations.reindex({"time": forecasts.time})
+
+        if thresh is not None:
+            # cannot index on multidimensional arrays,
+            # e.g. when having lon and lat
+            # xr.where does work on multidimensional arrays
+            observations = observations.where(observations <= thresh)
+            forecasts = forecasts.where(observations <= thresh)
+        crps = calc_crps(
+            observations,
+            forecasts,
+            normalization=normalization,
+        )
+        df_crps.loc[leadtime, "crps"] = crps
+    return df_crps
 
 
 def read_chirps_data(config, country_iso3):
