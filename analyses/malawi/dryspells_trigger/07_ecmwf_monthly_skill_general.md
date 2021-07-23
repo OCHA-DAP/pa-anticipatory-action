@@ -39,6 +39,7 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.indicators.drought.ecmwf_seasonal import processing
+from src.utils_general.statistics import calc_mpe
 reload(processing)
 
 mpl.rcParams['figure.dpi'] = 200
@@ -81,7 +82,7 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal",
 ### Read in forecast and observational data
 
 ```python
-da = processing.get_ecmwf_forecast("mwi")
+# da = processing.get_ecmwf_forecast("mwi")
 ```
 
 ```python
@@ -96,11 +97,11 @@ da_obs=da_obs.precip
 ```
 
 ```python
-da_obs=da_obs.sel(time=slice(da_lt.time.min(), da_lt.time.max()))
+# da_obs=da_obs.sel(time=slice(da_lt.time.min(), da_lt.time.max()))
 ```
 
 ```python
-da_lt=da_lt.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
+# da_lt=da_lt.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
 ```
 
 ```python
@@ -108,6 +109,14 @@ da_lt=da_lt.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
 #using "nearest" as interpolation method and not "linear" because the forecasts are designed to have sharp edged and not be smoothed
 da_forecast=da_lt.interp(latitude=da_obs["latitude"],longitude=da_obs["longitude"],method="nearest")
 # da_forecast=da_lt.interp(latitude=da_obs["y"],longitude=da_obs["x"],method="nearest")
+```
+
+```python
+da_obs.load()
+```
+
+```python
+da_forecast.load()
 ```
 
 Let's take a sample of some of the data to check that it all looks like we would expect. 
@@ -133,8 +142,13 @@ We'll compute forecast skill using the ```xskillscore``` library and focus on th
 ```
 
 ```python
+da_forecast=da_forecast.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
+da_obs=da_obs.sel(time=slice(da_forecast.time.min(), da_forecast.time.max()))
+```
+
+```python
 #takes a minute to compute
-df_crps=pd.DataFrame(columns=['leadtime', 'crps'])
+df_crps_old=pd.DataFrame(columns=['leadtime', 'crps'])
 
 #selm includes the months to select
 #thresh the thresholds
@@ -183,11 +197,11 @@ for leadtime in da_forecast.leadtime:
                 f'std_{thresh}': observations.where(observations<=thresh).std().values,
                 f'mean_{thresh}': observations.where(observations<=thresh).mean().values
             })
-        df_crps= df_crps.append([append_dict], ignore_index=True)
+        df_crps_old= df_crps_old.append([append_dict], ignore_index=True)
 ```
 
 ```python
-def get_crps(
+def calc_crps_old(
     ds_observations: xr.Dataset,
     ds_forecast: xr.Dataset,
     normalization: str = None,
@@ -213,6 +227,7 @@ def get_crps(
         
         forecast=forecast.sel(time=slice(ds_observations.time.min(), ds_observations.time.max()))
         observations=ds_observations.sel(time=slice(forecast.time.min(), forecast.time.max()))
+        # TODO: Add error for other normalization values
         if normalization == "mean":
             norm = observations.mean().values
         elif normalization == "std":
@@ -226,31 +241,67 @@ def get_crps(
                 / norm
             )
         df_crps.loc[leadtime, "crps"] = crps
-#         # TODO: Add error for other normalization values
-#         if thresh is not None:
-#             for th in thresh:
-#             idx = observations <= thresh
-#             forecast, observations = forecast[:, idx], observations[idx]
-#             crps = (
-#                 xs.crps_ensemble(
-#                     observations, forecast, member_dim="number"
-#                 ).values
-#                 / norm
-#             )
-#             df_crps.loc[leadtime, station] = crps
-
     return df_crps
 ```
 
 ```python
-df_crps=get_crps(da_obs,da_forecast)
+def calc_crps(
+    ds_observations: xr.Dataset,
+    ds_forecast: xr.Dataset,
+    normalization: str = None,
+    thresh: float = None,
+) -> pd.DataFrame:
+    """
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
+    ds_reforecast: GloFAS reforecast xarray dataset :param
+    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS :param thresh: (optional) Either a single value,
+    or a dictionary with format {station name: thresh} :return:
+    DataFrame with station column names and leadtime index
+    """
+    leadtimes = ds_forecast.leadtime.values
+    df_crps = pd.DataFrame(index=leadtimes)
+
+    for leadtime in leadtimes:
+        forecast = (
+            ds_forecast
+            .sel(leadtime=leadtime)
+            .dropna(dim="time",how="all")
+        )
+        
+#         observations = ds_observations.reindex(
+#             {"time": forecast.time}
+#         )
+        forecast=forecast.sel(time=slice(ds_observations.time.min(), ds_observations.time.max()))
+        observations=ds_observations.sel(time=slice(forecast.time.min(), forecast.time.max()))
+
+        # TODO: Add error for other normalization values
+        if normalization == "mean":
+            norm = observations.mean().values
+        elif normalization == "std":
+            norm = observations.std().values
+        elif normalization is None:
+            norm = 1
+            
+        if thresh is not None:
+            #cannot index on multidimensional arrays, e.g. when having lon and lat
+            #where does work on multidimensional arrays
+            observations=observations.where(observations <= thresh)
+            forecast=forecast.where(observations <= thresh)
+        crps = (
+                xs.crps_ensemble(
+                    observations, forecast, member_dim="number"
+                ).values
+                / norm
+            )
+        df_crps.loc[leadtime, "crps"] = crps
+    return df_crps
 ```
 
 ```python
+df_crps=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean")
 for thresh in [210,180,170]:
-    da_obs_thresh=da_obs.where(observations<=thresh)
-    da_forecast_thresh=da_forecast.where(observations<=thresh)
-    df_crps_th=get_crps(da_obs,da_forecast_thresh).rename(columns={"crps":f"crps_{thresh}"})
+    df_crps_th=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
     df_crps=pd.concat([df_crps,df_crps_th],axis=1)
 ```
 
@@ -259,40 +310,115 @@ df_crps
 ```
 
 ```python
-df_crps_th
+# df_crps=calc_crps(da_obs,da_forecast)
+for thresh in [210,180,170]:#,180,170]:
+#     da_obs_thresh=da_obs.where(da_obs<=thresh)
+#     da_forecast_thresh=da_forecast.where(da_obs<=thresh)
+    df_crps_th=calc_crps(da_obs,da_forecast,thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
+    df_crps=pd.concat([df_crps,df_crps_th],axis=1)
 ```
 
 ```python
-
+# df_crps_norm=calc_crps(da_obs,da_forecast,normalization="mean")
+for thresh in [210]:#,180,170]:#,180,170]:
+    df_crps_th_norm=calc_crps(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
+#     df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
 ```
 
 ```python
-def plot_crps(df_crps, title_suffix=None, ylog=False):
-    for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
-        fig, ax = plt.subplots()
-        for station in stations:
-            crps = df_crps[station]
-            ax.plot(crps.index, crps, label=station)
-        ax.legend()
-        title = basin
-        if title_suffix is not None:
-            title += title_suffix
+# df_crps_norm=calc_crps(da_obs,da_forecast,normalization="mean")
+for thresh in [210]:#,180,170]:#,180,170]:
+    df_crps_th_norm_old=calc_crps_old(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
+#     df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
+```
+
+```python
+df_crps_th_norm
+```
+
+```python
+df_crps_th_norm_old
+```
+
+```python
+df_crps_norm
+```
+
+```python
+df_crps_old["crps_210"]/df_crps_old["mean_210"]
+```
+
+```python
+df_crps
+```
+
+```python
+df_crps
+```
+
+```python
+df_crps
+```
+
+```python
+df_crps=get_crps(da_obs,da_forecast)
+for thresh in [210]:#,180,170]:
+    da_obs_thresh=da_obs.where(da_obs<=thresh)
+    da_forecast_thresh=da_forecast.where(da_obs<=thresh)
+    df_crps_th=get_crps(da_obs_thresh,da_forecast_thresh).rename(columns={"crps":f"crps_{thresh}"})
+    df_crps=pd.concat([df_crps,df_crps_th],axis=1)
+```
+
+```python
+df_crps_norm=get_crps(da_obs,da_forecast,normalization="mean")
+for thresh in [210,180,170]:
+    da_obs_thresh=da_obs.where(da_obs<=thresh)
+    da_forecast_thresh=da_forecast.where(da_obs<=thresh)
+    df_crps_th_norm=get_crps(da_obs_thresh,da_forecast_thresh,normalization="mean").rename(columns={"crps":f"crps_{thresh}"})
+    df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
+```
+
+```python
+df_crps_norm
+```
+
+```python
+df_crps
+```
+
+```python
+df_crps_norm
+```
+
+```python
+def plot_crps(df_crps, col_list,title=None,ylog=False):
+    print(df_crps)
+    fig, ax = plt.subplots()
+    for c in col_list:
+        ax.plot(df_crps.index, df_crps[c], label=c)
+    ax.legend(bbox_to_anchor=(1.05, 1))
+    if title is not None:
         ax.set_title(title)
-        ax.set_xlabel("Lead time [days]")
-        ax.set_ylabel("Normalized CRPS [% error]")
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.grid()
-        if ylog:
-            ax.set_yscale('log')
-            ax.yaxis.set_major_formatter(ScalarFormatter())
+    ax.set_xlabel("Lead time [months]")
+    ax.set_ylabel("Normalized CRPS [% error]")
+#     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.grid()
+    if ylog:
+        ax.set_yscale('log')
+        ax.yaxis.set_major_formatter(ScalarFormatter())
 
 ```
 
 ```python
-df_crps = utils.get_crps(ds_glofas_reanalysis, 
-                         ds_glofas_reforecast,
-                        normalization="mean")
-plot_crps(df_crps * 100, title_suffix=" -- all discharge values")
+plot_crps(df_crps*100, col_list=df_crps_norm.columns, title="Normalized CRPS on different thresholds")
+```
+
+```python
+plot_crps(df_crps_norm*100, col_list=df_crps_norm.columns, title="Normalized CRPS on different thresholds")
+```
+
+```python
+plot_crps(df_crps_norm*100, col_list=df_crps_norm.columns, title="Normalized CRPS on different thresholds")
 ```
 
 ```python
@@ -364,17 +490,17 @@ def plot_skill_selm(df_crps, division_key=None,
 ```python
 #performance pretty bad.. especially looking at the mean values, it is about 20% off on average for decjanfeb..
 # Plot absolute skill
-plot_skill_all(df_crps)
+plot_skill_all(df_crps_old)
 
 # Rainy season performs the worst, but this is likely because 
 # the values during this time period are higher. Try using 
 # reduced skill (dividing by standard devation).
-plot_skill_all(df_crps, division_key='std', ylabel="RCRPS")
+plot_skill_all(df_crps_old, division_key='std', ylabel="RCRPS")
 
 #This is perhpas not exactly what we want because we know this 
 #data comes from the same location and the dataset has the same properties, 
 #but we are splitting it up by mean value. Therefore try normalizing using mean
-plot_skill_all(df_crps, division_key='mean', ylabel="NCRPS (CRPS / mean)")
+plot_skill_all(df_crps_old, division_key='mean', ylabel="NCRPS (CRPS / mean)")
 
 ```
 
