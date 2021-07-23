@@ -286,7 +286,12 @@ def get_crps_ecmwf(
             dim="time", how="all"
         )
 
-        observations = da_observations.reindex({"time": forecasts.time})
+        forecasts = forecasts.sel(
+            time=slice(da_observations.time.min(), da_observations.time.max())
+        )
+        observations = da_observations.sel(
+            time=slice(forecasts.time.min(), forecasts.time.max())
+        )
 
         if thresh is not None:
             # cannot index on multidimensional arrays,
