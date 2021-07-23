@@ -51,6 +51,14 @@ font = {'family' : 'normal',
 mpl.rc('font', **font)
 ```
 
+```python
+import plotly.express as px 
+```
+
+```python
+import calendar
+```
+
 #### Set config values
 
 ```python
@@ -73,35 +81,20 @@ plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 all_dry_spells_list_path=os.path.join(country_data_processed_dir,"dry_spells","full_list_dry_spells.csv")
-monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","seasonal","chirps_monthly_total_precipitation_admin1.csv")
+monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
 ```
-
-# Determine general skill per leadtime
-
 
 ### Read in forecast and observational data
-
-```python
-# da = processing.get_ecmwf_forecast("mwi")
-```
 
 ```python
 da_lt=processing.get_ecmwf_forecast_by_leadtime("mwi")
 ```
 
 ```python
-da_obs=xr.open_dataset(chirps_monthly_mwi_path)
+da_obs=xr.load_dataset(chirps_monthly_mwi_path)
 da_obs=da_obs.precip
 #some problem later on when using rioxarray..
 # da_obs=rioxarray.open_rasterio(chirps_monthly_mwi_path,masked=True)
-```
-
-```python
-# da_obs=da_obs.sel(time=slice(da_lt.time.min(), da_lt.time.max()))
-```
-
-```python
-# da_lt=da_lt.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
 ```
 
 ```python
@@ -109,14 +102,6 @@ da_obs=da_obs.precip
 #using "nearest" as interpolation method and not "linear" because the forecasts are designed to have sharp edged and not be smoothed
 da_forecast=da_lt.interp(latitude=da_obs["latitude"],longitude=da_obs["longitude"],method="nearest")
 # da_forecast=da_lt.interp(latitude=da_obs["y"],longitude=da_obs["x"],method="nearest")
-```
-
-```python
-da_obs.load()
-```
-
-```python
-da_forecast.load()
 ```
 
 Let's take a sample of some of the data to check that it all looks like we would expect. 
@@ -133,7 +118,11 @@ rf_list_slice.dropna("leadtime").mean(dim="number").plot.line(label='Historical'
 plt.show()
 ```
 
-#### Compute the measure(s) of forecast skill
+```python
+#plot distribution per month and then justify taking values between 50 and 200
+```
+
+#### Compute the Continuous Ranked Probability Score (CRPS)
 
 We'll compute forecast skill using the ```xskillscore``` library and focus on the CRPS (continuous ranked probability score) value, which is similar to the mean absolute error but for probabilistic forecasts.
 
@@ -147,682 +136,249 @@ da_obs=da_obs.sel(time=slice(da_forecast.time.min(), da_forecast.time.max()))
 ```
 
 ```python
-#takes a minute to compute
-df_crps_old=pd.DataFrame(columns=['leadtime', 'crps'])
-
-#selm includes the months to select
-#thresh the thresholds
-subset_dict={"selm":[1,2],"thresh":[170,180,210]}
-
-for leadtime in da_forecast.leadtime:
-    forecast = da_forecast.sel(
-    leadtime=leadtime.values)
-    observations = da_obs #.reindex({'time': forecast.time})
-    # For all dates
-    crps = xs.crps_ensemble(observations, forecast,member_dim='number')
-    append_dict = {'leadtime': leadtime.values,
-                          'crps': crps.values,
-                           'std': observations.std().values,
-                           'mean': observations.mean().values,
-              }
-
-    if "selm" in subset_dict:
-        month_str="".join([calendar.month_abbr[m].lower() for m in subset_dict["selm"]])
-        # For rainy season only
-        observations_rainy = observations.where(observations.time.dt.month.isin(subset_dict['selm']), drop=True)
-        forecast_rainy = forecast.where(forecast.time.dt.month.isin(subset_dict['selm']), drop=True)
-        crps_rainy = xs.crps_ensemble(
-            observations_rainy,
-            forecast_rainy,
-            member_dim='number')
-        append_dict.update({
-                f'crps_{month_str}': crps_rainy.values,
-                f'std_{month_str}': observations_rainy.std().values,
-                f'mean_{month_str}': observations_rainy.mean().values
-            })
-        if "thresh" in subset_dict:
-            for thresh in subset_dict["thresh"]:
-                crps_thresh = xs.crps_ensemble(observations_rainy.where(observations_rainy<=thresh), forecast_rainy.where(observations_rainy<=thresh), member_dim='number')
-                append_dict.update({
-                    f'crps_{month_str}_{thresh}': crps_thresh.values,
-                    f'std_{month_str}_{thresh}': observations_rainy.where(observations_rainy<=thresh).std().values,
-                    f'mean_{month_str}_{thresh}': observations_rainy.where(observations_rainy<=thresh).mean().values
-                })
-    
-    if "thresh" in subset_dict:
-        for thresh in subset_dict["thresh"]:
-            crps_thresh = xs.crps_ensemble(observations.where(observations<=thresh), forecast.where(observations<=thresh), member_dim='number')
-            append_dict.update({
-                f'crps_{thresh}': crps_thresh.values,
-                f'std_{thresh}': observations.where(observations<=thresh).std().values,
-                f'mean_{thresh}': observations.where(observations<=thresh).mean().values
-            })
-        df_crps_old= df_crps_old.append([append_dict], ignore_index=True)
-```
-
-```python
-def calc_crps_old(
-    ds_observations: xr.Dataset,
-    ds_forecast: xr.Dataset,
-    normalization: str = None,
-    thresh: [float] = None,
-) -> pd.DataFrame:
-    """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
-    ds_reforecast: GloFAS reforecast xarray dataset :param
-    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
-    to divide the CRPS :param thresh: (optional) Either a single value,
-    or a dictionary with format {station name: thresh} :return:
-    DataFrame with station column names and leadtime index
-    """
-    leadtimes = ds_forecast.leadtime.values
-    df_crps = pd.DataFrame(index=leadtimes)
-
-    for leadtime in leadtimes:
-        forecast = (
-            ds_forecast
-            .sel(leadtime=leadtime)
-            .dropna(dim="time",how="all")
-        )
-        
-        forecast=forecast.sel(time=slice(ds_observations.time.min(), ds_observations.time.max()))
-        observations=ds_observations.sel(time=slice(forecast.time.min(), forecast.time.max()))
-        # TODO: Add error for other normalization values
-        if normalization == "mean":
-            norm = observations.mean().values
-        elif normalization == "std":
-            norm = observations.std().values
-        elif normalization is None:
-            norm = 1
-        crps = (
-                xs.crps_ensemble(
-                    observations, forecast, member_dim="number"
-                ).values
-                / norm
-            )
-        df_crps.loc[leadtime, "crps"] = crps
-    return df_crps
-```
-
-```python
-def calc_crps(
-    ds_observations: xr.Dataset,
-    ds_forecast: xr.Dataset,
-    normalization: str = None,
-    thresh: float = None,
-) -> pd.DataFrame:
-    """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
-    ds_reforecast: GloFAS reforecast xarray dataset :param
-    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
-    to divide the CRPS :param thresh: (optional) Either a single value,
-    or a dictionary with format {station name: thresh} :return:
-    DataFrame with station column names and leadtime index
-    """
-    leadtimes = ds_forecast.leadtime.values
-    df_crps = pd.DataFrame(index=leadtimes)
-
-    for leadtime in leadtimes:
-        forecast = (
-            ds_forecast
-            .sel(leadtime=leadtime)
-            .dropna(dim="time",how="all")
-        )
-        
-#         observations = ds_observations.reindex(
-#             {"time": forecast.time}
-#         )
-        forecast=forecast.sel(time=slice(ds_observations.time.min(), ds_observations.time.max()))
-        observations=ds_observations.sel(time=slice(forecast.time.min(), forecast.time.max()))
-
-        # TODO: Add error for other normalization values
-        if normalization == "mean":
-            norm = observations.mean().values
-        elif normalization == "std":
-            norm = observations.std().values
-        elif normalization is None:
-            norm = 1
-            
-        if thresh is not None:
-            #cannot index on multidimensional arrays, e.g. when having lon and lat
-            #where does work on multidimensional arrays
-            observations=observations.where(observations <= thresh)
-            forecast=forecast.where(observations <= thresh)
-        crps = (
-                xs.crps_ensemble(
-                    observations, forecast, member_dim="number"
-                ).values
-                / norm
-            )
-        df_crps.loc[leadtime, "crps"] = crps
-    return df_crps
-```
-
-```python
-df_crps=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean")
+df_crps=processing.get_crps_ecmwf(da_obs,da_forecast)
 for thresh in [210,180,170]:
-    df_crps_th=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
+    df_crps_th=processing.get_crps_ecmwf(da_obs,da_forecast,thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
     df_crps=pd.concat([df_crps,df_crps_th],axis=1)
 ```
 
 ```python
-df_crps
-```
-
-```python
-# df_crps=calc_crps(da_obs,da_forecast)
-for thresh in [210,180,170]:#,180,170]:
-#     da_obs_thresh=da_obs.where(da_obs<=thresh)
-#     da_forecast_thresh=da_forecast.where(da_obs<=thresh)
-    df_crps_th=calc_crps(da_obs,da_forecast,thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
-    df_crps=pd.concat([df_crps,df_crps_th],axis=1)
-```
-
-```python
-# df_crps_norm=calc_crps(da_obs,da_forecast,normalization="mean")
-for thresh in [210]:#,180,170]:#,180,170]:
-    df_crps_th_norm=calc_crps(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
-#     df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
-```
-
-```python
-# df_crps_norm=calc_crps(da_obs,da_forecast,normalization="mean")
-for thresh in [210]:#,180,170]:#,180,170]:
-    df_crps_th_norm_old=calc_crps_old(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
-#     df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
-```
-
-```python
-df_crps_th_norm
-```
-
-```python
-df_crps_th_norm_old
-```
-
-```python
-df_crps_norm
-```
-
-```python
-df_crps_old["crps_210"]/df_crps_old["mean_210"]
-```
-
-```python
-df_crps
-```
-
-```python
-df_crps
-```
-
-```python
-df_crps
-```
-
-```python
-df_crps=get_crps(da_obs,da_forecast)
-for thresh in [210]:#,180,170]:
-    da_obs_thresh=da_obs.where(da_obs<=thresh)
-    da_forecast_thresh=da_forecast.where(da_obs<=thresh)
-    df_crps_th=get_crps(da_obs_thresh,da_forecast_thresh).rename(columns={"crps":f"crps_{thresh}"})
-    df_crps=pd.concat([df_crps,df_crps_th],axis=1)
-```
-
-```python
-df_crps_norm=get_crps(da_obs,da_forecast,normalization="mean")
+df_crps_norm=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean")
 for thresh in [210,180,170]:
-    da_obs_thresh=da_obs.where(da_obs<=thresh)
-    da_forecast_thresh=da_forecast.where(da_obs<=thresh)
-    df_crps_th_norm=get_crps(da_obs_thresh,da_forecast_thresh,normalization="mean").rename(columns={"crps":f"crps_{thresh}"})
+    df_crps_th_norm=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
     df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
 ```
 
 ```python
-df_crps_norm
+# sel_m=[[1,2],[1,2,3,4],[11,12,1,2]]
+sel_m=[[1,2],[11,12,1,2,3,4]]
+df_crps_months_norm=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean")
+for m in sel_m:
+    month_str="".join([calendar.month_abbr[i].lower() for i in m])
+    da_obs_m = da_obs.where(da_obs.time.dt.month.isin(m), drop=True)
+    da_forecast_m = da_forecast.where(da_forecast.time.dt.month.isin(m), drop=True)
+    df_crps_m_norm=processing.get_crps_ecmwf(da_obs_m,da_forecast_m,normalization="mean").rename(columns={"crps":f"crps_{month_str}"})
+    df_crps_months_norm=pd.concat([df_crps_months_norm,df_crps_m_norm],axis=1)
 ```
 
 ```python
-df_crps
+sel_m=[[1,2],[11,12,1,2,3,4]]
+df_crps_months=processing.get_crps_ecmwf(da_obs,da_forecast)
+for m in sel_m:
+    month_str="".join([calendar.month_abbr[i].lower() for i in m])
+    da_obs_m = da_obs.where(da_obs.time.dt.month.isin(m), drop=True)
+    da_forecast_m = da_forecast.where(da_forecast.time.dt.month.isin(m), drop=True)
+    df_crps_m=processing.get_crps_ecmwf(da_obs_m,da_forecast_m).rename(columns={"crps":f"crps_{month_str}"})
+    df_crps_months=pd.concat([df_crps_months,df_crps_m],axis=1)
 ```
 
 ```python
-df_crps_norm
-```
+fig, axes = plt.subplots(1,2,figsize=(20,8))
+for c in df_crps_months.columns:
+    if "_" in c:
+        label= f"{c.split('_')[-1]}"
+    else:
+        label="all"
+    axes[0].plot(df_crps_months.index, df_crps_months[c], label=label)
+    axes[1].plot(df_crps_months_norm.index, df_crps_months_norm[c], label=label)
+axes[0].set_title("CRPS")
+axes[0].set_ylabel("CRPS [mm]")
+axes[1].set_title("Normalized CRPS")
+axes[1].set_ylabel("Normalized CRPS [% error]")
 
-```python
-def plot_crps(df_crps, col_list,title=None,ylog=False):
-    print(df_crps)
-    fig, ax = plt.subplots()
-    for c in col_list:
-        ax.plot(df_crps.index, df_crps[c], label=c)
-    ax.legend(bbox_to_anchor=(1.05, 1))
-    if title is not None:
-        ax.set_title(title)
-    ax.set_xlabel("Lead time [months]")
-    ax.set_ylabel("Normalized CRPS [% error]")
-#     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+for ax in axes:
+    ax.set_xlabel("Leadtime [months]")
     ax.grid()
-    if ylog:
-        ax.set_yscale('log')
-        ax.yaxis.set_major_formatter(ScalarFormatter())
+    handles, labels = ax.get_legend_handles_labels()
 
+fig.suptitle("CRPS for different months")
+fig.legend(handles, labels,bbox_to_anchor=(1.1, 0.9));
 ```
 
 ```python
-plot_crps(df_crps*100, col_list=df_crps_norm.columns, title="Normalized CRPS on different thresholds")
-```
+fig, axes = plt.subplots(1,2,figsize=(20,8))
+for c in df_crps.columns:
+    if "_" in c:
+        label= f"<={c.split('_')[-1]}"
+    else:
+        label="all"
+    axes[0].plot(df_crps.index, df_crps[c], label=label)
+    axes[1].plot(df_crps_norm.index, df_crps_norm[c], label=label)
+axes[0].set_title("CRPS")
+axes[0].set_ylabel("CRPS [mm]")
+axes[1].set_title("Normalized CRPS")
+axes[1].set_ylabel("Normalized CRPS [% error]")
 
-```python
-plot_crps(df_crps_norm*100, col_list=df_crps_norm.columns, title="Normalized CRPS on different thresholds")
-```
-
-```python
-plot_crps(df_crps_norm*100, col_list=df_crps_norm.columns, title="Normalized CRPS on different thresholds")
-```
-
-```python
-def plot_skill(df_crps, division_key=None,
-              ylabel="CRPS [mm]"):
-    fig, ax = plt.subplots()
-    df = df_crps.copy()
-    for i, subset in enumerate([k for k in df_crps.keys() if "crps" in k]):
-        y = df[subset]
-        if division_key is not None:
-            dkey = f'{division_key}_{subset.split("_")[-1]}' if subset!="crps" else division_key
-            y /= df[dkey]
-        ax.plot(df['leadtime'], y, ls="-", c=f'C{i}')
-    ax.plot([], [], ls="-", c='k')
-    # Add colours to legend
-    for i, subset in enumerate([k for k in append_dict.keys() if "crps" in k]):
-        ax.plot([], [], c=f'C{i}', label=subset)
-    ax.set_title("ECMWF forecast skill in Malawi:\n 2000-2020 forecast")
-    ax.set_xlabel("Lead time (months)")
-    ax.set_ylabel(ylabel)
-    ax.legend(bbox_to_anchor=(1.05, 1))
+for ax in axes:
+    ax.set_xlabel("Leadtime [months]")
     ax.grid()
+    handles, labels = ax.get_legend_handles_labels()
+
+fig.suptitle("CRPS for different thresholds")
+fig.legend(handles, labels,bbox_to_anchor=(1.1, 0.9));
 ```
 
-```python
-def plot_skill_all(df_crps, division_key=None,
-              ylabel="CRPS [mm]"):
-    fig, ax = plt.subplots()
-    df = df_crps.copy()
-    for i, subset in enumerate([k for k in df_crps.keys() if "crps" in k and not "janfeb" in k]):
-        y = df[subset]
-        if division_key is not None:
-            dkey = f'{division_key}_{subset.split("_")[-1]}' if subset!="crps" else division_key
-            y /= df[dkey]
-        ax.plot(df['leadtime'], y, ls="-", c=f'C{i}')
-    ax.plot([], [], ls="-", c='k')
-    # Add colours to legend
-    for i, subset in enumerate([k for k in append_dict.keys() if "crps" in k and not "janfeb" in k]):
-        ax.plot([], [], c=f'C{i}', label=subset)
-    ax.set_title("ECMWF forecast skill in Malawi:\n 2000-2020 forecast")
-    ax.set_xlabel("Lead time (months)")
-    ax.set_ylabel(ylabel)
-    ax.legend(bbox_to_anchor=(1.05, 1))
-    ax.grid()
-```
+### Compute the bias
+While the CRPS gives a good indication of the skill across ensemble members, we want to understand better which direction the error has and whether it differs across ranges of precipitation. We do this by looking at the bias. 
+
+Often the bias is computed using the MPE. However, for very small values the MPE is not suitable as it disproportionally explodes. This is also the case for our data. We therefore instead solely focus on the difference between forecasted and observed values, instead of looking at the percentual difference. 
+
+To do so we aggregate the ensemble members to one number, for which we chose to use the median. 
+
+We firstly plot the observed vs forecasted-observed values across all leadtimes, dates, and cells. 
+From this we can see that
+
+- Most months with very low precipitation were correctly classified. 
+- Months with less than 300mm have the tendency to be overpredicted, i.e. we see a positive bias
+- Months with more than 300mm have the tendency to be underpredicted, i.e. we see a negative bias
 
 ```python
-def plot_skill_selm(df_crps, division_key=None,
-              ylabel="CRPS [mm]"):
-    fig, ax = plt.subplots()
-    df = df_crps.copy()
-    for i, subset in enumerate([k for k in df_crps.keys() if "crps" in k and "janfeb" in k]):
-        y = df[subset]
-        if division_key is not None:
-            dkey = f'{division_key}_{subset.split("_")[-1]}' if subset!="crps" else division_key
-            y /= df[dkey]
-        ax.plot(df['leadtime'], y, ls="-", c=f'C{i}')
-    ax.plot([], [], ls="-", c='k')
-    # Add colours to legend
-    for i, subset in enumerate([k for k in append_dict.keys() if "crps" in k and "janfeb" in k]):
-        ax.plot([], [], c=f'C{i}', label=subset)
-    ax.set_title("ECMWF forecast skill in Malawi:\n 2000-2020 forecast")
-    ax.set_xlabel("Lead time (months)")
-    ax.set_ylabel(ylabel)
-    ax.legend(bbox_to_anchor=(1.05, 1))
-    ax.grid()
-```
-
-```python
-#performance pretty bad.. especially looking at the mean values, it is about 20% off on average for decjanfeb..
-# Plot absolute skill
-plot_skill_all(df_crps_old)
-
-# Rainy season performs the worst, but this is likely because 
-# the values during this time period are higher. Try using 
-# reduced skill (dividing by standard devation).
-plot_skill_all(df_crps_old, division_key='std', ylabel="RCRPS")
-
-#This is perhpas not exactly what we want because we know this 
-#data comes from the same location and the dataset has the same properties, 
-#but we are splitting it up by mean value. Therefore try normalizing using mean
-plot_skill_all(df_crps_old, division_key='mean', ylabel="NCRPS (CRPS / mean)")
-
-```
-
-```python
-# Plot absolute skill
-plot_skill_selm(df_crps)
-
-# Rainy season performs the worst, but this is likely because 
-# the values during this time period are higher. Try using 
-# reduced skill (dividing by standard devation).
-plot_skill_selm(df_crps, division_key='std', ylabel="RCRPS")
-
-#This is perhpas not exactly what we want because we know this 
-#data comes from the same location and the dataset has the same properties, 
-#but we are splitting it up by mean value. Therefore try normalizing using mean
-plot_skill_selm(df_crps, division_key='mean', ylabel="NCRPS (CRPS / mean)")
-
-```
-
-```python
-lt=2
-forecast_lt = da_forecast.sel(
-leadtime=lt)#.dropna(dim='time')
-forecast_ensmean=da_forecast.mean(dim="number")
-```
-
-```python
-diff_forobs=forecast_ensmean-da_obs.precip
-```
-
-```python
-from src.indicators.flooding.glofas import utils
-```
-
-```python
-(mean_forecast.max()-observations.min())/mean_forecast.max()
-```
-
-```python
-observations.squeeze().sel(time="2021-01-01",latitude=-11.575001,longitude=33.72499)
-```
-
-```python
-mean_forecast.sel(time="2021-01-01",latitude=-11.575001,longitude=33.72499)
-```
-
-```python
-bla=(mean_forecast - observations_test) / observations_test
-```
-
-```python
-bla_max=bla.where(bla==bla.max(), drop=True).squeeze()
-```
-
-```python
-bla_max
-```
-
-```python
-mean_forecast.sel(time=bla_max.time,latitude=bla_max.latitude,longitude=bla_max.longitude)
-```
-
-```python
-observations_test.squeeze().sel(time=bla_max.time,latitude=bla_max.latitude,longitude=bla_max.longitude)
-```
-
-```python
-(mean_forecast - observations).sel(time="2021-01-01",latitude=-11.575001,longitude=33.72499) 
-```
-
-```python
-da_observations=da_obs.to_array("precip").squeeze()
-
-# da_observations =  ds_glofas_reanalysis[station]
-# rp_val = df_return_period.loc[rp, station]
-# da_observations_ev = da_observations[da_observations > rp_val]
-# da_forecast = ds_glofas_reforecast[station]
-mpe = np.empty(len(da_forecast.leadtime))
-for ilt, leadtime in enumerate(da_forecast.leadtime):
-    forecast=da_forecast.sel(leadtime=leadtime)
-#     observations, forecast = utils.get_same_obs_and_forecast(da_observations, da_forecast, leadtime)
-    mean_forecast=forecast.mean(dim="number")
-    #with very small observed values, the mpe explodes
-    observations_ge=observations.where(observations>=30)
-    mpe[ilt]=(((mean_forecast - observations_ge) / observations_ge).sum(skipna=True)) / np.count_nonzero(~np.isnan(observations_ge)) *100
-#     mpe[ilt] = utils.calc_mpe(da_observations, forecast)
-#     observations_ev, forecast_ev = utils.get_same_obs_and_forecast(da_observations_ev, da_forecast, leadtime)
-#     mpe_ev[ilt] = utils.calc_mpe(observations_ev, forecast_ev)
-
-```
-
-```python
-xs.mape(da_observations,da_forecast,skipna=True)
-```
-
-```python
-fig, ax = plt.subplots()
-ax.plot(da_forecast.leadtime, mpe)
-# ax.plot(da_forecast.leadtime, mpe_ev, '--', c=f'C{istation}')
-# ax.plot([], [], 'k-', label='All values')
-# ax.plot([], [], 'k--', label=f'RP > 1 in {rp} y')
-# ax.set_ylim(-50, 10)
-ax.axhline(y=0, c='k', ls=':')
-ax.legend()
-ax.grid()
-ax.set_xlabel('Leadtime [y]')
-ax.set_ylabel('% bias')
-# ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-```
-
-```python
-
-```
-
-```python
-denominator = observations
-```
-
-```python
-
-```
-
-```python
-mean_forecast.size
-```
-
-```python
-mean_forecast = forecast.mean(axis=0)
-denominator = observations
-return (
-    ((mean_forecast - observations) / denominator).sum()
-    / len(observations.time)
-    * 100
-)
-```
-
-```python
-df_obs=da_obs.precip.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-df_forec=forecast_ensmean.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-```
-
-```python
+df_obs=da_obs.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_forec=da_forecast.mean(dim="number").to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
 df_forobs=df_forec.merge(df_obs,how="left",on=["time","latitude","longitude"],suffixes=("_for","_obs"))
-```
-
-```python
 df_forobs["diff_forobs"]=df_forobs["precip_for"]-df_forobs["precip_obs"]
 ```
 
 ```python
-leadtimes=[2]
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_forobs[df_forobs.leadtime.isin(leadtimes)],y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
+g=sns.jointplot(data=df_forobs,y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
 #compute the average value of the difference between the forecasted and observed values
 #do this in bins cause else very noisy mean
-# bins = np.arange(0,df_forobs.rollsum_15d.max()+20,10)
-# group = df_forobs.groupby(pd.cut(df_forobs.rollsum_15d, bins))
-# plot_centers = (bins [:-1] + bins [1:])/2
-# plot_values = group.diff_forecobs.median()
-# g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-# g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
-```
-
-```python
-
-```
-
-```python
-leadtimes=[2]
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_forobs[(df_forobs.leadtime.isin(leadtimes))],y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-# bins = np.arange(0,df_forobs.rollsum_15d.max()+20,10)
-# group = df_forobs.groupby(pd.cut(df_forobs.rollsum_15d, bins))
-# plot_centers = (bins [:-1] + bins [1:])/2
-# plot_values = group.diff_forecobs.median()
-# g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-# g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
-```
-
-```python
-leadtimes=[2]
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_forobs[(df_forobs.leadtime.isin(leadtimes))&(df_forobs.time.dt.month.isin([1,2]))],y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-# bins = np.arange(0,df_forobs.rollsum_15d.max()+20,10)
-# group = df_forobs.groupby(pd.cut(df_forobs.rollsum_15d, bins))
-# plot_centers = (bins [:-1] + bins [1:])/2
-# plot_values = group.diff_forecobs.median()
-# g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-# g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
-```
-
-```python
-import calendar
-```
-
-```python
-# leadtimes=[2]
-# months=range(1,13)
-# for m in months:
-#     df_sel=df_forobs[(df_forobs.time.dt.month==m)]
-#     #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-#     g=sns.jointplot(data=df_sel[df_sel.leadtime.isin(leadtimes)],y="diff_forobs",x="precip_obs", 
-#                     kind="hex",height=16,joint_kws={ 'bins':'log'})
-#     #compute the average value of the difference between the forecasted and observed values
-#     #do this in bins cause else very noisy mean
-#     bins = np.arange(0,df_sel.precip_obs.max()+20,10)
-#     group = df_sel.groupby(pd.cut(df_sel.precip_obs, bins))
-#     plot_centers = (bins [:-1] + bins [1:])/2
-#     plot_values = group.diff_forobs.median()
-#     g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-#     # g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-#     plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-#     # make new ax object for the cbar
-#     cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-#     plt.colorbar(cax=cbar_ax)
-#     g.ax_joint.legend()
-#     g.fig.suptitle(f"Month = {calendar.month_name[m]}")
-#     g.fig.tight_layout()
-```
-
-```python
-leadtimes=[2]
-df_sel=df_forobs[(df_forobs.precip_obs<=250)&(df_forobs.time.dt.month.isin([1,2]))]
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_sel[df_sel.leadtime.isin(leadtimes)],y="diff_forobs",x="precip_obs", 
-                kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-bins = np.arange(0,df_sel.precip_obs.max()+20,10)
-group = df_sel.groupby(pd.cut(df_sel.precip_obs, bins))
+bins = np.arange(0,df_forobs.precip_obs.max()+20,10)
+group = df_forobs.groupby(pd.cut(df_forobs.precip_obs, bins))
 plot_centers = (bins [:-1] + bins [1:])/2
 plot_values = group.diff_forobs.median()
 g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-# g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+g.set_axis_labels("Observed monthly precipitation (mm)", "Forecasted - Observed monthly precipitation (mm)", fontsize=12)
 plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
 # make new ax object for the cbar
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
+g.fig.suptitle("Bias plot of observed vs forecasted values")
+g.fig.subplots_adjust(top=0.95) # Reduce plot to make room 
 ```
 
+Since our main months of interest are January and February, we zoom in on these months. 
+From here we can see that the bias is a lot higher for these months compared to all months. Again for values up to 300 the forecast has a tendency to overpredict and for higher values to underpredict. 
+
+It is hard to say whether this increased bias is due to the period or the range of precipitation, while these are largely intertwined. 
+
 ```python
-leadtimes=[2]
-df_sel=df_forobs[(df_forobs.time.dt.month.isin([1,2]))]
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_sel[df_sel.leadtime.isin(leadtimes)],y="diff_forobs",x="precip_obs", 
-                kind="hex",height=16,joint_kws={ 'bins':'log'})
+df_forobs_selm=df_forobs[(df_forobs.time.dt.month.isin([1,2]))]
+g=sns.jointplot(data=df_forobs_selm,y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
 #compute the average value of the difference between the forecasted and observed values
 #do this in bins cause else very noisy mean
-bins = np.arange(0,df_sel.precip_obs.max()+20,10)
-group = df_sel.groupby(pd.cut(df_sel.precip_obs, bins))
+bins = np.arange(0,df_forobs_selm.precip_obs.max()+20,10)
+group = df_forobs_selm.groupby(pd.cut(df_forobs_selm.precip_obs, bins))
 plot_centers = (bins [:-1] + bins [1:])/2
 plot_values = group.diff_forobs.median()
 g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-# g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
+g.set_axis_labels("Observed monthly precipitation (mm)", "Forecasted - Observed monthly precipitation (mm)", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
 plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
 # make new ax object for the cbar
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
+g.fig.suptitle("Bias plot of observed vs forecasted values for January and February")
+g.fig.subplots_adjust(top=0.95)
 ```
 
 ```python
-df_diff_forobs=diff_forobs.to_dataframe(name="precip").reset_index()
+#mean vs median
+df_obs=da_obs.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_forec=da_forecast.median(dim="number").to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_forobs=df_forec.merge(df_obs,how="left",on=["time","latitude","longitude"],suffixes=("_for","_obs"))
+df_forobs["diff_forobs"]=df_forobs["precip_for"]-df_forobs["precip_obs"]
+```
+
+question: better use mean or median? 
+does CI make sense? so many values that CI is very small
+
+```python
+def calc_diff_stats(observations,forecast):
+    #median and mean make a hug difference! --> std quite large? 
+    diff=forecast-observations
+    diff_mean=diff.mean()
+    diff_median=diff.median()
+    diff_std=diff.std()
+    diff_count=diff.count()
+    ci95_hi = diff_mean + 1.95*diff_std/math.sqrt(diff_count)
+    ci95_lo = diff_mean - 1.95*diff_std/math.sqrt(diff_count)
+    return diff_median, diff_mean, diff_std, ci95_hi, ci95_lo
+
+def compute_diff_cats(df,obs_col,for_col,threshold_list=None,adm_list=None,month_list=None):
+    leadtimes=df.leadtime.sort_values().unique()
+    df_diff=pd.DataFrame(leadtimes,columns=["leadtime"]).set_index('leadtime')
+    for ilt, leadtime in enumerate(leadtimes):
+        df_lt=df[df.leadtime==leadtime]
+        med,me,std,ci_hi,ci_lo=calc_diff_stats(df_lt[obs_col],df_lt[for_col])
+        df_diff.loc[leadtime,"all_med"]=med
+        df_diff.loc[leadtime,"all_mean"]=me
+        df_diff.loc[leadtime,"all_ci_lo"]=ci_lo
+        df_diff.loc[leadtime,"all_ci_hi"]=ci_hi
+        if threshold_list:
+            for thresh in threshold_list:
+                df_lt_thresh=df_lt[df_lt[obs_col]<=thresh]
+                med,me,std,ci_hi,ci_lo = calc_diff_stats(df_lt_thresh[obs_col],df_lt_thresh[for_col])
+                df_diff.loc[leadtime,f"thresh_{thresh}_med"]=med
+        if month_list:
+            for m in month_list:
+                month_str="".join([calendar.month_abbr[i].lower() for i in m])
+                df_lt_m=df_lt[df_lt.time.dt.month.isin(m)]
+                med,me,std,ci_hi,ci_lo = calc_diff_stats(df_lt_m[obs_col],df_lt_m[for_col])
+                df_diff.loc[leadtime,f"{month_str}_med"]=med
+                df_diff.loc[leadtime,f"{month_str}_ci_lo"]=ci_lo
+                df_diff.loc[leadtime,f"{month_str}_ci_hi"]=ci_hi
+                
+    return df_diff
 ```
 
 ```python
-df_diff_forobs
+df_diff=compute_diff_cats(df_forobs,"precip_obs","precip_for",threshold_list=[210,180,170],month_list=[[m] for m in range(1,13)])
 ```
 
 ```python
-leadtimes=[2]
-#plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_forobs[df_forobs.leadtime.isin(leadtimes)],y="diff_forecobs",x="mean_cell_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
-#compute the average value of the difference between the forecasted and observed values
-#do this in bins cause else very noisy mean
-# bins = np.arange(0,df_forobs.rollsum_15d.max()+20,10)
-# group = df_forobs.groupby(pd.cut(df_forobs.rollsum_15d, bins))
-# plot_centers = (bins [:-1] + bins [1:])/2
-# plot_values = group.diff_forecobs.median()
-# g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
-g.set_axis_labels("Observed 15 day sum (mm)", "Forecasted 15 day sum - Observed 15 day sum", fontsize=12)
-plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
-# make new ax object for the cbar
-cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
-plt.colorbar(cax=cbar_ax)
-g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
+# ax=sns.histplot(df_forobs,x="diff_forobs")
+# ax.set_xlim(-20,20)
 ```
 
-```python
-forecast_ensmean
-```
+The median is very different, not sure which makes most sense here.. Probably the median, as that is also what we using when we aggregate to admin1. 
 
 ```python
-bias=forecast_ensmean-observations
+fig, ax = plt.subplots()
+ax.plot(df_diff.index,df_diff["all_mean"])
+ax.fill_between(df_diff.index, df_diff.all_ci_lo, df_diff.all_ci_hi,alpha=0.2)
+ax.plot(df_diff.index, df_diff["all_med"])
+# for c in col_list:
+#     ax.plot(df_crps.index, df_crps[c], label=c)
+# ax.legend(bbox_to_anchor=(1.05, 1))
+# if title is not None:
+#     ax.set_title(title)
+# ax.set_xlabel("Lead time [months]")
+# ax.set_ylabel("Normalized CRPS [% error]")
+ax.grid()
+# if ylog:
+#     ax.set_yscale('log')
+#     ax.yaxis.set_major_formatter(ScalarFormatter())
 ```
 
+When looking per month, we can see that the bias clearly differs per month. The months around the rainy season have the highest bias (nov, dec, jan, feb). This can either be because values are generally larger, or because the forecast has less skill. 
+
 ```python
-bias
+px.line(df_diff.reset_index(), x='leadtime', y=[c for c in df_diff.columns if "thresh" not in c])
+```
+
+We can also look at the bias for different thresholds. Here we see that there is not much difference. This is however partly caused by the fact that most months have very low values. If you would separate by month and threshold, you would probably get different patterns
+
+```python
+px.line(df_diff.reset_index(), x='leadtime', y=[c for c in df_diff.columns if "thresh" in c]+["all"])
+```
+
+The CRPS looks a lot worse than the difference plots. Why? 
+
+```python
+
 ```
