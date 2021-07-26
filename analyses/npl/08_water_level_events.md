@@ -451,11 +451,3 @@ for station in STATIONS:
         for detection in utils.get_groups_above_threshold(q, thresh, DURATION):
             ax.plot(x[detection[0]], q[detection[0]], 'o', c=c2, lw=2, mfc='none')
 ```
-
-```python
-
-```
-
-```python
-
-```
