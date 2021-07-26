@@ -1,9 +1,11 @@
 ### Evaluating the forecast skill of ECMWF seasonal forecast in Malawi
 This notebook is to compare the forecast skill of ECMWF's seasonal forecast for various lead times. We use the monthly total precipitation that is forecasted by this forecast. As ground truth, we use CHIRPS observations. 
 
-We first look assess the skill at cell level. For this we compute the CRPS. We investigate this CRPS for different sets of data, e.g. for months with low rainfall. 
-Thereafter, we assess the skill at the admin1 level. We compare the forecasted and observed values visually. Thereafter we compute the bias, and more specifically look at the areas, leadtimes, and months that are of interest for the trigger.  
+We first assess the skill at cell level. To assess this skill across ensemble members, we compute the Continuous Ranked Probability Score (CRPS). We investigate the CRPS for different sets of data, e.g. for months with low rainfall. 
 
+Thereafter we look at the bias of the median of all ensemble members. 
+
+`mwi_ecmwf_monthly_skill_southern.md` assesses the skill at the admin1 level for the Southern region in Malawi.     
 `mwi_ecmwf_monthly_skill_dryspells.md` assesses the skill of the forecast for dry spells specifically. 
 
 ```python
@@ -17,46 +19,32 @@ from pathlib import Path
 import os
 import sys
 
-import rioxarray
 import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
-import xskillscore as xs
 import numpy as np
-
+import plotly.express as px 
 import seaborn as sns
-from mlxtend.evaluate import confusion_matrix
-from mlxtend.plotting import plot_confusion_matrix
 import calendar
-import glob
-import itertools
-
 import math
-import geopandas as gpd
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.indicators.drought.ecmwf_seasonal import processing
-from src.utils_general.statistics import calc_mpe
 reload(processing)
 
 mpl.rcParams['figure.dpi'] = 200
 pd.options.mode.chained_assignment = None
-font = {'family' : 'normal',
-        'weight' : 'normal',
-        'size'   : 16}
+font = {'size'   : 16}
 
 mpl.rc('font', **font)
 ```
 
 ```python
-import plotly.express as px 
-```
-
-```python
-import calendar
+#set plot colors
+hdx_blue='#66B0EC'
 ```
 
 #### Set config values
@@ -66,22 +54,12 @@ country="malawi"
 config=Config()
 parameters = config.parameters(country)
 country_iso3=parameters["iso3_code"]
-
-country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR, config.RAW_DIR,country_iso3)
-country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,country_iso3)
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
-chirps_country_data_exploration_dir= os.path.join(config.DATA_DIR,config.PUBLIC_DIR, "exploration", country_iso3,'chirps')
-
-chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps_mwi_monthly.nc")
-ecmwf_country_data_processed_dir = os.path.join(country_data_processed_dir,"ecmwf")
+chirps_country_data_exploration_dir= os.path.join(country_data_exploration_dir,'chirps')
 monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells","monthly_precipitation")
 
-plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells")
-plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
-
-adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
-all_dry_spells_list_path=os.path.join(country_data_processed_dir,"dry_spells","full_list_dry_spells.csv")
-monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
+chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps_mwi_monthly.nc")
+crps_path=os.path.join(monthly_precip_exploration_dir,"mwi_crps.csv")
 ```
 
 ### Read in forecast and observational data
@@ -93,23 +71,19 @@ da_lt=processing.get_ecmwf_forecast_by_leadtime("mwi")
 ```python
 da_obs=xr.load_dataset(chirps_monthly_mwi_path)
 da_obs=da_obs.precip
-#some problem later on when using rioxarray..
-# da_obs=rioxarray.open_rasterio(chirps_monthly_mwi_path,masked=True)
 ```
 
 ```python
 #interpolate forecast data such that it has the same resolution as the observed values
 #using "nearest" as interpolation method and not "linear" because the forecasts are designed to have sharp edged and not be smoothed
 da_forecast=da_lt.interp(latitude=da_obs["latitude"],longitude=da_obs["longitude"],method="nearest")
-# da_forecast=da_lt.interp(latitude=da_obs["y"],longitude=da_obs["x"],method="nearest")
 ```
 
-Let's take a sample of some of the data to check that it all looks like we would expect. 
+Small check to see if the data looks as expected.
 
 ```python
 # Slice time and get mean of ensemble members for simple plotting
-start = '2020-06-01'
-# end = '2020-10-31'
+start = '2020-01-01'
 
 rf_list_slice = da_lt.sel(time=start,latitude=da_lt.latitude.values[10],longitude=da_lt.longitude.values[5])
 
@@ -118,69 +92,85 @@ rf_list_slice.dropna("leadtime").mean(dim="number").plot.line(label='Historical'
 plt.show()
 ```
 
-```python
-#plot distribution per month and then justify taking values between 50 and 200
-```
+Question:
+- Is there a method to already show the distribution of values here? 
+    - We do this now after aggregating the ensemble members. Simply because without aggregation there are so many values that the code crashes when doing a histogram/boxplot
+
 
 #### Compute the Continuous Ranked Probability Score (CRPS)
 
-We'll compute forecast skill using the ```xskillscore``` library and focus on the CRPS (continuous ranked probability score) value, which is similar to the mean absolute error but for probabilistic forecasts.
+We'll compute forecast skill using the ```xskillscore``` library and focus on the CRPS (continuous ranked probability score) value, which is similar to the mean absolute error but for probabilistic forecasts. More information on the CRPS can for example be found [here](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwjJoPGs44DyAhUlJMUKHadUDogQFjAAegQIBxAD&url=https%3A%2F%2Fconfluence.ecmwf.int%2Fdownload%2Fattachments%2F50042306%2Fhandout_v2.pdf%3Fversion%3D1%26modificationDate%3D1441745383382%26api%3Dv2&usg=AOvVaw0oiem39qkz_Yv_3LvbBnld)
 
 ```python
-#other thing to select on is the area..
-```
-
-```python
+#only include times that are present in both datasets (assuming no missing data)
 da_forecast=da_forecast.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
 da_obs=da_obs.sel(time=slice(da_forecast.time.min(), da_forecast.time.max()))
 ```
 
 ```python
-df_crps=processing.get_crps_ecmwf(da_obs,da_forecast)
-for thresh in [210,180,170]:
-    df_crps_th=processing.get_crps_ecmwf(da_obs,da_forecast,thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
-    df_crps=pd.concat([df_crps,df_crps_th],axis=1)
+# #only need to run if not updated data/categories. Takes about 15 minutes
+# thresh_list=[210,180,170]
+# sel_m=[[11,12,1,2,3,4],[1,2]]
+# norm_meth=[None,"mean"]
+# n_str_dict={None:"","mean":"n"}
+# leadtimes = da_forecast.leadtime.values
+# df_crps = pd.DataFrame(index=leadtimes)
+# for n in norm_meth:
+#     n_str=n_str_dict[n]
+#     df_crps_all=processing.get_crps_ecmwf(da_obs,
+#                                           da_forecast,
+#                                           normalization=n
+#                                          ).rename(columns={"crps":f"{n_str}crps"})
+#     df_crps=pd.concat([df_crps,df_crps_all],axis=1)
+#     for thresh in thresh_list:
+#         df_crps_th=processing.get_crps_ecmwf(da_obs,
+#                                              da_forecast,
+#                                              normalization=n,
+#                                              thresh=thresh
+#                                             ).rename(columns={"crps":f"{n_str}crps_{thresh}"})
+#         df_crps=pd.concat([df_crps,df_crps_th],axis=1)
+#     for m in sel_m:
+#         month_str="".join([calendar.month_abbr[i].lower() for i in m])
+#         da_obs_m = da_obs.where(da_obs.time.dt.month.isin(m), drop=True)
+#         da_forecast_m = da_forecast.where(da_forecast.time.dt.month.isin(m), drop=True)
+#         df_crps_m=processing.get_crps_ecmwf(da_obs_m,
+#                                             da_forecast_m,
+#                                             normalization = n,
+#                                            ).rename(columns={"crps":f"{n_str}crps_{month_str}"})
+#         df_crps=pd.concat([df_crps,df_crps_m],axis=1)
+#         for thresh in thresh_list:
+#             df_crps_m=processing.get_crps_ecmwf(da_obs_m,
+#                                                 da_forecast_m,
+#                                                 thresh=thresh,
+#                                                 normalization = n,
+#                                                ).rename(columns={"crps":f"{n_str}crps_{month_str}_{thresh}"})
+#             df_crps=pd.concat([df_crps,df_crps_m],axis=1)
+# df_crps.to_csv(crps_path)
 ```
 
 ```python
-df_crps_norm=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean")
-for thresh in [210,180,170]:
-    df_crps_th_norm=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean",thresh=thresh).rename(columns={"crps":f"crps_{thresh}"})
-    df_crps_norm=pd.concat([df_crps_norm,df_crps_th_norm],axis=1)
+df_crps=pd.read_csv(crps_path)
 ```
 
-```python
-# sel_m=[[1,2],[1,2,3,4],[11,12,1,2]]
-sel_m=[[1,2],[11,12,1,2,3,4]]
-df_crps_months_norm=processing.get_crps_ecmwf(da_obs,da_forecast,normalization="mean")
-for m in sel_m:
-    month_str="".join([calendar.month_abbr[i].lower() for i in m])
-    da_obs_m = da_obs.where(da_obs.time.dt.month.isin(m), drop=True)
-    da_forecast_m = da_forecast.where(da_forecast.time.dt.month.isin(m), drop=True)
-    df_crps_m_norm=processing.get_crps_ecmwf(da_obs_m,da_forecast_m,normalization="mean").rename(columns={"crps":f"crps_{month_str}"})
-    df_crps_months_norm=pd.concat([df_crps_months_norm,df_crps_m_norm],axis=1)
-```
-
-```python
-sel_m=[[1,2],[11,12,1,2,3,4]]
-df_crps_months=processing.get_crps_ecmwf(da_obs,da_forecast)
-for m in sel_m:
-    month_str="".join([calendar.month_abbr[i].lower() for i in m])
-    da_obs_m = da_obs.where(da_obs.time.dt.month.isin(m), drop=True)
-    da_forecast_m = da_forecast.where(da_forecast.time.dt.month.isin(m), drop=True)
-    df_crps_m=processing.get_crps_ecmwf(da_obs_m,da_forecast_m).rename(columns={"crps":f"crps_{month_str}"})
-    df_crps_months=pd.concat([df_crps_months,df_crps_m],axis=1)
-```
+From the plots below we can see that
+- The CRPS is pretty high, resulting in a 30% error across all values
+- The CRPS is relatively steady across leadtimes. We can see a dip at 1 month leadtime, and a smaller dip at 4 months leadtime
+- The CRPS differs across months and thresholds
+- For the months around the rainy season (Nov-Apr), we can see that the CRPS is relatively high, but the normalized CRPS is lower. This is largely due to the fact that the precipitation during the rainy season is higher. 
+    - While lower during Nov-Apr, and specifically JanFeb, the error is still 25% which is quite large. 
+- When selecting on the precipitation threshold, we can see that the higher the threshold the lower the normalized CRPS. 
+    - This is likely because there are many very low values in the data, which causes the normalized CRPS to get large quickly even though the absolute difference might be small
 
 ```python
 fig, axes = plt.subplots(1,2,figsize=(20,8))
-for c in df_crps_months.columns:
+months_col = ["crps","crps_novdecjanfebmarapr","crps_janfeb"]
+for c in months_col:
     if "_" in c:
         label= f"{c.split('_')[-1]}"
     else:
         label="all"
-    axes[0].plot(df_crps_months.index, df_crps_months[c], label=label)
-    axes[1].plot(df_crps_months_norm.index, df_crps_months_norm[c], label=label)
+    axes[0].plot(df_crps.index, df_crps[c], label=label)
+    axes[1].plot(df_crps.index, df_crps[f"n{c}"]*100, label=label)
 axes[0].set_title("CRPS")
 axes[0].set_ylabel("CRPS [mm]")
 axes[1].set_title("Normalized CRPS")
@@ -197,13 +187,14 @@ fig.legend(handles, labels,bbox_to_anchor=(1.1, 0.9));
 
 ```python
 fig, axes = plt.subplots(1,2,figsize=(20,8))
-for c in df_crps.columns:
+thresh_col = ["crps","crps_210","crps_180","crps_170"]
+for c in thresh_col:
     if "_" in c:
         label= f"<={c.split('_')[-1]}"
     else:
         label="all"
     axes[0].plot(df_crps.index, df_crps[c], label=label)
-    axes[1].plot(df_crps_norm.index, df_crps_norm[c], label=label)
+    axes[1].plot(df_crps.index, df_crps[f"n{c}"]*100, label=label)
 axes[0].set_title("CRPS")
 axes[0].set_ylabel("CRPS [mm]")
 axes[1].set_title("Normalized CRPS")
@@ -218,26 +209,67 @@ fig.suptitle("CRPS for different thresholds")
 fig.legend(handles, labels,bbox_to_anchor=(1.1, 0.9));
 ```
 
-### Compute the bias
-While the CRPS gives a good indication of the skill across ensemble members, we want to understand better which direction the error has and whether it differs across ranges of precipitation. We do this by looking at the bias. 
+For the use of the forecast to predict dry spells, we are especially interested in the months of January and February, which have relatively low values. We therefore inspect the normalized crps for values which are not greater than 210 and 170 mm for these two months. It is important to note that the statistical significance becomes smaller here since we have less data points that meet these criteria. 
 
-Often the bias is computed using the MPE. However, for very small values the MPE is not suitable as it disproportionally explodes. This is also the case for our data. We therefore instead solely focus on the difference between forecasted and observed values, instead of looking at the percentual difference. 
+Nevertheleess, we can see that the results are not very promising. When only looking at January and February, the normalized CRPS becomes higher the lower we set the threshold. While the NCRPS for Jan and Feb was relatively lower compared to all months if we didn't set this threshold, it is significantly larger if we set the threshold. 
+
+Moreover, the NCRPS for <=210 and <=170 mm during Jan and Feb is larger than across all months, indicating extra difficulty of prediction during those months
+
+```python
+fig,ax=plt.subplots()
+ax.plot(df_crps["ncrps_janfeb_210"]*100,label="janfeb and <=210 mm")
+ax.plot(df_crps["ncrps_janfeb_170"]*100,label="janfeb and <=170 mm")
+ax.plot(df_crps["ncrps_janfeb"]*100,label="janfeb")
+ax.plot(df_crps["ncrps"]*100,label="all")
+ax.set_title("Normalized CRPS")
+ax.set_ylabel("Normalized CRPS [% error]")
+ax.set_xlabel("Leadtime [months]")
+ax.grid()
+ax.legend(bbox_to_anchor=(1.05,1))
+```
+
+### Compute the bias
+While the CRPS gives a good indication of the skill across ensemble members, we want to understand better which direction the error has and whether it differs across ranges of precipitation.
 
 To do so we aggregate the ensemble members to one number, for which we chose to use the median. 
 
-We firstly plot the observed vs forecasted-observed values across all leadtimes, dates, and cells. 
+We firstly look at the distribution of observed and forecasted values. Thereafter we compute the bias.
+
+Often the bias is computed using the MPE. However, for very small values the MPE is not suitable as it disproportionally explodes. This is also the case for our data. We therefore instead solely focus on the difference between forecasted and observed values, instead of looking at the percentual difference. 
+
+```python
+#takes a minute to compute, due to taking the median
+df_obs=da_obs.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_forec=da_forecast.median(dim="number").to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_forobs=df_forec.merge(df_obs,how="left",on=["time","latitude","longitude"],suffixes=("_for","_obs"))
+df_forobs["diff_forobs"]=df_forobs["precip_for"]-df_forobs["precip_obs"]
+df_forobs["month"]=df_forobs.time.dt.month
+```
+
+Below we plot the range of observed and forecasted values per month, but across all leadtimes. We can see that they both show the same pattern across the months. However, the observed data shows a broader range of values, and especially has more outliers. The medians are relatively in the same range for observed and forecasted values, though when zooming in you can see that they also differ. 
+
+```python
+fig, axes = plt.subplots(1,2,figsize=(20,8),sharey=True)
+sns.boxplot(data=df_forobs,x="month",y="precip_obs",ax=axes[0],color=hdx_blue)
+sns.boxplot(data=df_forobs,x="month",y="precip_for",ax=axes[1],color=hdx_blue)
+axes[0].set_title("Observed")
+axes[1].set_title("Forecasted")
+
+for ax in axes:
+    ax.set_ylabel("Monthly precipitation")
+    ax.set_xlabel("Month number")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.tick_params(axis='y', labelleft=True)
+fig.suptitle("Ranges of precipitation for different months");
+```
+
+Next we look at the bias. We firstly plot the observed vs forecasted-observed values across all leadtimes, dates, and cells. 
 From this we can see that
 
 - Most months with very low precipitation were correctly classified. 
 - Months with less than 300mm have the tendency to be overpredicted, i.e. we see a positive bias
 - Months with more than 300mm have the tendency to be underpredicted, i.e. we see a negative bias
-
-```python
-df_obs=da_obs.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-df_forec=da_forecast.mean(dim="number").to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-df_forobs=df_forec.merge(df_obs,how="left",on=["time","latitude","longitude"],suffixes=("_for","_obs"))
-df_forobs["diff_forobs"]=df_forobs["precip_for"]-df_forobs["precip_obs"]
-```
 
 ```python
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
@@ -262,12 +294,12 @@ g.fig.subplots_adjust(top=0.95) # Reduce plot to make room
 Since our main months of interest are January and February, we zoom in on these months. 
 From here we can see that the bias is a lot higher for these months compared to all months. Again for values up to 300 the forecast has a tendency to overpredict and for higher values to underpredict. 
 
-It is hard to say whether this increased bias is due to the period or the range of precipitation, while these are largely intertwined. 
+It is hard to say whether this increased bias is due to the period or the range of precipitation, while these are heavily intertwined. 
 
 ```python
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
 df_forobs_selm=df_forobs[(df_forobs.time.dt.month.isin([1,2]))]
-g=sns.jointplot(data=df_forobs_selm,y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
+g=sns.jointplot(data=df_forobs_selm,y="diff_forobs",x="precip_obs", kind="hex",height=10,joint_kws={ 'bins':'log'})
 #compute the average value of the difference between the forecasted and observed values
 #do this in bins cause else very noisy mean
 bins = np.arange(0,df_forobs_selm.precip_obs.max()+20,10)
@@ -286,20 +318,15 @@ g.fig.suptitle("Bias plot of observed vs forecasted values for January and Febru
 g.fig.subplots_adjust(top=0.95)
 ```
 
-```python
-#mean vs median
-df_obs=da_obs.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-df_forec=da_forecast.median(dim="number").to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-df_forobs=df_forec.merge(df_obs,how="left",on=["time","latitude","longitude"],suffixes=("_for","_obs"))
-df_forobs["diff_forobs"]=df_forobs["precip_for"]-df_forobs["precip_obs"]
-```
+Above we looked at the bias across all leadtimes and per cell. We now take the median of the error across all cells and months, but separated by leadtime. We can see that across all values the error is not that large, which was expected from the plots above
 
-question: better use mean or median? 
-does CI make sense? so many values that CI is very small
+
+Questions: 
+- better use mean or median to compute the difference between observation and forecast? As they give quite different results 
+- Does using the CI make sense or better use percentiles? Due to the large number of values the CI becomes small (which can be a good thing), but at the same time the std is quite large
 
 ```python
 def calc_diff_stats(observations,forecast):
-    #median and mean make a hug difference! --> std quite large? 
     diff=forecast-observations
     diff_mean=diff.mean()
     diff_median=diff.median()
@@ -341,43 +368,40 @@ df_diff=compute_diff_cats(df_forobs,"precip_obs","precip_for",threshold_list=[21
 ```
 
 ```python
-# ax=sns.histplot(df_forobs,x="diff_forobs")
-# ax.set_xlim(-20,20)
-```
-
-The median is very different, not sure which makes most sense here.. Probably the median, as that is also what we using when we aggregate to admin1. 
-
-```python
 fig, ax = plt.subplots()
-ax.plot(df_diff.index,df_diff["all_mean"])
-ax.fill_between(df_diff.index, df_diff.all_ci_lo, df_diff.all_ci_hi,alpha=0.2)
-ax.plot(df_diff.index, df_diff["all_med"])
-# for c in col_list:
-#     ax.plot(df_crps.index, df_crps[c], label=c)
-# ax.legend(bbox_to_anchor=(1.05, 1))
-# if title is not None:
-#     ax.set_title(title)
-# ax.set_xlabel("Lead time [months]")
-# ax.set_ylabel("Normalized CRPS [% error]")
+ax.plot(df_diff.index,df_diff["all_mean"],label="mean")
+ax.fill_between(df_diff.index, df_diff.all_ci_lo, df_diff.all_ci_hi,alpha=0.2,label="confidence interval")
+ax.plot(df_diff.index, df_diff["all_med"],label="median")
+ax.set_xlabel("leadtime [months]")
+ax.set_ylabel("median bias")
 ax.grid()
-# if ylog:
-#     ax.set_yscale('log')
-#     ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.legend(bbox_to_anchor=(1.05, 1));
 ```
 
-When looking per month, we can see that the bias clearly differs per month. The months around the rainy season have the highest bias (nov, dec, jan, feb). This can either be because values are generally larger, or because the forecast has less skill. 
+When looking per month though, we can see that the average bias clearly differs per month. The months around the rainy season have the highest bias (nov, dec, jan, feb). This can either be because values are generally larger, or because the forecast has less skill. 
 
 ```python
-px.line(df_diff.reset_index(), x='leadtime', y=[c for c in df_diff.columns if "thresh" not in c])
+px.line(df_diff.reset_index(), 
+        x='leadtime', 
+        y=[c for c in df_diff.columns if "thresh" not in c and "med" in c],
+        labels={"value": "median bias"}
+       )
 ```
 
 We can also look at the bias for different thresholds. Here we see that there is not much difference. This is however partly caused by the fact that most months have very low values. If you would separate by month and threshold, you would probably get different patterns
 
 ```python
-px.line(df_diff.reset_index(), x='leadtime', y=[c for c in df_diff.columns if "thresh" in c]+["all"])
+px.line(df_diff.reset_index(), 
+        x='leadtime', 
+        y=[c for c in df_diff.columns if "thresh" in c and "med" in c]+["all_med"],
+        labels={"value": "median bias"}
+       )
 ```
 
-The CRPS looks a lot worse than the difference plots. Why? 
+Questions:
+- The values we saw in the CRPS plots are a lot larger than for the median bias plots. Why is this the case? 
+    - a median bias of around 6 across all values, compared to a CRPS of around 25
+    - the mean bias is around 15 but this is still lower than the CRPS
 
 ```python
 
