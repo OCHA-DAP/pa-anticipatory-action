@@ -297,18 +297,6 @@ Below the distributions with and without dry spells are shown, from here we can 
 Again, note that there are only 4 occurrences of dry spells
 
 ```python
-df_southern_countmonth_selm.mean_cell.mean(axis=0)
-```
-
-```python
-df_southern_countmonth_selm.mean_cell.min(axis=0)
-```
-
-```python
-df_southern_countmonth_selm.mean_cell.max(axis=0)
-```
-
-```python
 #plot distribution monthly precip with and without ds, boxplot
 #can see a clear difference
 fig,ax=plt.subplots(figsize=(10,10))
