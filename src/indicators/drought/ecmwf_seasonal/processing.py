@@ -270,6 +270,7 @@ def get_crps_ecmwf(
     thresh: float = None,
 ) -> pd.DataFrame:
     """
+    Assumes there is no missing data in da_observations or da_forecasts
     :param da_observations: data-array or data-set with observed values
     :param da_forecasts: data-array with forecasted values
     normalization: (optional) Can be 'mean' or 'std', reanalysis metric
@@ -280,17 +281,11 @@ def get_crps_ecmwf(
     """
     leadtimes = da_forecasts.leadtime.values
     df_crps = pd.DataFrame(index=leadtimes)
+    observations = da_observations.dropna(dim="time", how="all")
 
     for leadtime in leadtimes:
         forecasts = da_forecasts.sel(leadtime=leadtime).dropna(
             dim="time", how="all"
-        )
-
-        forecasts = forecasts.sel(
-            time=slice(da_observations.time.min(), da_observations.time.max())
-        )
-        observations = da_observations.sel(
-            time=slice(forecasts.time.min(), forecasts.time.max())
         )
 
         if thresh is not None:
@@ -299,6 +294,14 @@ def get_crps_ecmwf(
             # xr.where does work on multidimensional arrays
             observations = observations.where(observations <= thresh)
             forecasts = forecasts.where(observations <= thresh)
+
+        # make sure that time periods overlap, for calc_crps
+        forecasts = forecasts.sel(
+            time=slice(observations.time.min(), observations.time.max())
+        )
+        observations = observations.sel(
+            time=slice(forecasts.time.min(), forecasts.time.max())
+        )
         crps = calc_crps(
             observations,
             forecasts,
