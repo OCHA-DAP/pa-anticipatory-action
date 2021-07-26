@@ -1,11 +1,18 @@
 ```python
 import os
 from pathlib import Path
-
+import sys
+from importlib import reload
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+
+path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
+sys.path.append(path_mod)
+
+from src.utils_general import statistics
+reload(statistics)
 ```
 
 ```python
@@ -29,13 +36,13 @@ STATIONS = [
 ### Check out the DHM WL data
 
 ```python
-df_station_info = pd.read_excel(DHM_DIR / STATION_INFO_FILENAME, index_col='station_name')
+df_station_info = pd.read_excel(DHM_DIR / STATION_INFO_FILENAME, index_col='station_name', dtype={'station_number': object})
 ```
 
 ```python
 for i, station in enumerate(STATIONS):
     station_number = df_station_info.at[station, 'station_number']
-    df_wl_station = pd.read_csv(WL_RAW_DIR / WL_INPUT_FILENAME.format(int(station_number)),
+    df_wl_station = pd.read_csv(WL_RAW_DIR / WL_INPUT_FILENAME.format(station_number),
                        skiprows=1, 
                         header=None,
                         comment=' ',
@@ -88,4 +95,39 @@ for station in STATIONS:
 ```python
 # Write out the station files:, 'Chepang']:, 'Chepang']
 df_wl.to_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME)
+```
+
+### Get return periods
+
+```python
+major_stations = ['Chatara', 'Chisapani']
+rps = np.linspace(1.5, 25, 1000)
+
+for station in major_stations:
+    # Get the max value per year
+    df = (df_wl[[station]]
+          .dropna()
+          .resample(rule='A', kind='period')
+          .max()
+          .dropna()
+         )
+    rp_analytical = statistics.get_return_period_function_analytical(df, station, show_plots=True, plot_title=station)
+    rp_empirical = statistics.get_return_period_function_empirical(df, station)    
+    
+    # Get the RP of the warning and danger levels
+    warning_level = df_station_info.at[station, 'warning_level']
+    danger_level = df_station_info.at[station, 'danger_level']
+    print(f"RP warning: {np.round(rps[np.argmin(np.abs(rp_analytical(rps) - warning_level))], 1)}")
+    print(f"RP danger: {np.round(rps[np.argmin(np.abs(rp_analytical(rps) - danger_level))], 1)}")
+
+    fig, ax = plt.subplots()
+    ax.plot(rps, rp_analytical(rps), label='Analytical')
+    ax.plot(rps, rp_empirical(rps), label='Emprical')
+    ax.set_title(station)
+    ax.axhline(warning_level, c='C2', label='Warning level')
+    ax.axhline(danger_level, c='C3', label='Danger level')
+    ax.set_xlabel('Return period [years]')
+    ax.set_ylabel('Water level [m]')
+    ax.legend()
+    ax.grid()
 ```

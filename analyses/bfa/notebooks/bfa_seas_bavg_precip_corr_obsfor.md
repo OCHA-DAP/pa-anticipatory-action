@@ -223,7 +223,7 @@ It would be possible that the observed and forecasted below average seasons don'
 
 Note:
 1) the forecasted percentage, is the percentage of the area where the probability of below average >=40 & the difference between below and above average is at least 5 percentage points
-2) some seasons are not included due to the dry mask defined by IRI (the dry mask is further explained [here](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/)
+2) some seasons are not included due to the dry mask defined by IRI, meaning that there are not enough non-zero values to enable a forecast (the dry mask is further explained [here](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/)
 
 ```{code-cell} ipython3
 :tags: [hide_input]
@@ -313,7 +313,7 @@ fig.tight_layout(rect=(0,0,1,0.9))
 
 We can see that the forecasts never correspond with an occurrence of observed below average precipitation, regardless of the threshold that is set. However, since we only have 4 years of data, these patterns are not at all statistically significant. 
 
-However, to understand a bit better when extreme events of below average precipitation occur, we compute the confusion matrix per month as well as across all months. For this we set the threshold to 40% of the area having observed below average precipitaiton, since this is the 1 in 3 year return value. 
+However, to understand a bit better when extreme events of below average precipitation occur, we compute the confusion matrix per month as well as across all months. For this we set the threshold to 40% of the area having observed below average precipitaiton, since this is the 1 in 3 year return value.
 
 +++
 
@@ -387,7 +387,6 @@ cm_thresh=compute_confusionmatrix(df_obsfor_mar,f"obs_bavg_50",f"for_bavg_10","O
 - Across all months, the accuracy is pretty bad.. With a leadtime of 3 months, the trigger would have been met 5 times, and with a leadtime of 1 month only 2 times. However, all those occurrences didn’t correspond with a 1 in 3 year event (which were 9 in total). So there were 9 misses and 5 or 2 false alarms.  (experimented with lower observed numbers but then it doesn’t get better)
 - For Mar, the trigger was only met in 2017, and in that season 7% of the area had observed bel avg rainfall
 - For Jul, the trigger was never met. In 2017, 24% of the area observed bel avg precipitation, in the other 3 years this was 0%.
-
 
 +++
 
