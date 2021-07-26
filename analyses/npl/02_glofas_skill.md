@@ -94,7 +94,7 @@ def plot_crps(df_crps, title_suffix=None, ylog=False):
 ```
 
 ```python
-df_crps = utils.get_crps(ds_glofas_reanalysis, 
+df_crps = utils.get_crps_glofas(ds_glofas_reanalysis, 
                          ds_glofas_reforecast,
                         normalization="mean")
 plot_crps(df_crps * 100, title_suffix=" -- all discharge values")
@@ -102,7 +102,7 @@ plot_crps(df_crps * 100, title_suffix=" -- all discharge values")
 
 ```python
 rp = 1.5
-df_crps = utils.get_crps(ds_glofas_reanalysis, 
+df_crps = utils.get_crps_glofas(ds_glofas_reanalysis, 
                          ds_glofas_reforecast,
                          normalization="mean", 
                          thresh=df_return_period.loc[rp].to_dict())
