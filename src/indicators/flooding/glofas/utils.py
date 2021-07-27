@@ -175,25 +175,27 @@ def get_glofas_forecast_summary(ds_glofas_forecast):
 
 
 def get_return_periods(
-    ds_reanalysis: xr.Dataset,
+    ds_glofas: xr.Dataset,
     years: list = None,
     method: str = "analytical",
     show_plots: bool = False,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis dataset :param years: Return
-    period years to compute :param method: Either "analytical" or
-    "empirical" :param show_plots: If method is analytical, can show the
-    histogram and GEV distribution overlaid :return: Dataframe with
-    return period years as index and stations as columns
+    :param ds_glofas: GloFAS reanalysis or forecast/reforecast dataset
+    :param years: Return period years to compute
+    :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV
+    distribution overlaid
+    :return: Dataframe with return period years as index and stations as
+    columns
     """
     if years is None:
-        years = [1.5, 2, 3, 5, 10, 20]
-    stations = list(ds_reanalysis.keys())
+        years = [1.5, 2, 5, 10, 20]
+    stations = list(ds_glofas.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
         df_rp = _get_return_period_df(
-            ds_reanalysis=ds_reanalysis, station=station
+            ds_glofas=ds_glofas, station=station
         )
         if method == "analytical":
             f_rp = get_return_period_function_analytical(
@@ -214,9 +216,9 @@ def get_return_periods(
     return df_rps
 
 
-def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
+def _get_return_period_df(ds_glofas: xr.Dataset, station: str):
     df_rp = (
-        ds_reanalysis.to_dataframe()[[station]]
+        ds_glofas.to_dataframe()[[station]]
         .rename(columns={station: "discharge"})
         .resample(rule="A", kind="period")
         .max()
@@ -233,12 +235,13 @@ def get_crps(
     thresh: [float, Dict[str, float]] = None,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
-    ds_reforecast: GloFAS reforecast xarray dataset :param
-    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
-    to divide the CRPS :param thresh: (optional) Either a single value,
-    or a dictionary with format {station name: thresh} :return:
-    DataFrame with station column names and leadtime index
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset
+    :param ds_reforecast: GloFAS reforecast xarray dataset
+    :param normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS
+    :param thresh: (optional) Either a single value, or a dictionary with
+    format {station name: thresh}
+    :return: DataFrame with station column names and leadtime index
     """
     stations = list(ds_reanalysis.keys())
     leadtimes = ds_reforecast.leadtime.values
