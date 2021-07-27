@@ -328,16 +328,6 @@ def get_rank(observations: np.array, forecast: np.array) -> np.array:
     return rank
 
 
-def calc_mpe(observations: np.array, forecast: np.array) -> float:
-    mean_forecast = forecast.mean(axis=0)
-    denominator = observations
-    return (
-        ((mean_forecast - observations) / denominator).sum()
-        / len(observations.time)
-        * 100
-    )
-
-
 def get_same_obs_and_forecast(
     da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
 ) -> (xr.DataArray, xr.DataArray):

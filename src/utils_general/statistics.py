@@ -54,11 +54,12 @@ def get_return_period_function_analytical(
 ):
     """
     :param df_rp: DataFrame where the index is the year, and the rp_var
-    column contains the maximum value per year :param rp_var: The column
-    with the quantity to be evaluated :param show_plots: Show the
-    histogram with GEV distribution overlaid :param plot_title: The
-    title of the plot :return: Interpolated function that gives the
-    quantity for a give return period
+    column contains the maximum value per year
+    :param rp_var: The column with the quantity to be evaluated
+    :param show_plots: Show the histogram with GEV distribution overlaid
+    :param plot_title: The title of the plot
+    :return: Interpolated function that gives the quantity for a
+    given return period
     """
     df_rp = df_rp.sort_values(by=rp_var, ascending=False)
     rp_var_values = df_rp[rp_var]
@@ -82,8 +83,10 @@ def get_return_period_function_analytical(
 def get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
     """
     :param df_rp: DataFrame where the index is the year, and the rp_var
-    column contains the maximum value per year :param rp_var: The column
-    with the quantity to be evaluated :return: Interpolated function
+    column contains the maximum value per year
+    :param rp_var: The column
+    with the quantity to be evaluated
+    :return: Interpolated function
     that gives the quantity for a give return period
     """
     df_rp = df_rp.sort_values(by=rp_var, ascending=False)
@@ -92,3 +95,17 @@ def get_return_period_function_empirical(df_rp: pd.DataFrame, rp_var: str):
     df_rp["exceedance_probability"] = df_rp["rank"] / (n + 1)
     df_rp["rp"] = 1 / df_rp["exceedance_probability"]
     return interp1d(df_rp["rp"], df_rp[rp_var])
+
+
+def calc_mpe(observations: np.array, forecast: np.array) -> float:
+    """
+    :param observations: array with the observed values
+    :param forecast: array with the forecasted values.
+    Should be the same shape as observations
+    :return: the mpe across all entries in the arrays
+    """
+    return (
+        ((forecast - observations) / observations).sum()
+        / len(observations.time)
+        * 100
+    )
