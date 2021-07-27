@@ -25,6 +25,7 @@ STATIONS = [
     'Chisapani_v3'
 ]
 MAIN_RP = 2
+FORECAST_PERCENTILE = 30
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
 GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
@@ -46,18 +47,22 @@ df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 ### Calculate the return periods
 
 ```python
+reload(utils)
+from src.utils_general import statistics
+reload(statistics)
 method = "analytical"
-years = np.arange(1.5, 40.5, 0.5)
-df_rps_obs = utils.get_return_periods(ds_glofas_reanalysis, years=years, method=method)
+years = np.arange(1.5, 500.5, 0.1)
+extend_factor = 10
+df_rps_obs = utils.get_return_periods(ds_glofas_reanalysis, years=years, method=method, extend_factor=extend_factor)
 # Select observations only on the date of forecast
 df_rps_obs_sub = utils.get_return_periods(
     ds_glofas_reanalysis.reindex({"time": ds_glofas_forecast_summary.dropna(dim="time").time}),
-    years=years, method=method)
+    years=years, method=method, extend_factor=extend_factor)
 
 df_rps_forecast_dict = {}
 for leadtime in LEADTIMES:
-    ds = ds_glofas_forecast_summary.sel(leadtime=leadtime, percentile=50)
-    df_rps_forecast_dict[leadtime] = utils.get_return_periods(ds, years=years, method=method)
+    ds = ds_glofas_forecast_summary.sel(leadtime=leadtime, percentile=FORECAST_PERCENTILE)
+    df_rps_forecast_dict[leadtime] = utils.get_return_periods(ds, years=years, method=method, extend_factor=extend_factor)
 ```
 
 ### Plot them for comparison

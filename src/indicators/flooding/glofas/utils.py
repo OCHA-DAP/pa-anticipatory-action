@@ -179,6 +179,7 @@ def get_return_periods(
     years: list = None,
     method: str = "analytical",
     show_plots: bool = False,
+    extend_factor: int = 1
 ) -> pd.DataFrame:
     """
     :param ds_glofas: GloFAS reanalysis or forecast/reforecast dataset
@@ -186,6 +187,8 @@ def get_return_periods(
     :param method: Either "analytical" or "empirical"
     :param show_plots: If method is analytical, can show the histogram and GEV
     distribution overlaid
+    :param extend_factor: If method is analytical, can extend the interpolation
+    range to reach higher return periods
     :return: Dataframe with return period years as index and stations as
     columns
     """
@@ -203,6 +206,7 @@ def get_return_periods(
                 rp_var="discharge",
                 show_plots=show_plots,
                 plot_title=station,
+                extend_factor=extend_factor
             )
         elif method == "empirical":
             f_rp = get_return_period_function_empirical(

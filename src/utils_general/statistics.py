@@ -15,15 +15,20 @@ def get_return_periods_dataframe(
     years: list = None,
     method: str = "analytical",
     show_plots: bool = False,
+    extend_factor: int = 1
 ) -> pd.DataFrame:
     """
     Function to get the return periods, either empirically or
     analytically See the `glofas/utils.py` to do this with a xarray
-    dataset instead of a dataframe :param df: Dataframe with data to
-    compute rp on :param rp_var: column name to compute return period on
-    :param years: Return period years to compute :param method: Either
-    "analytical" or "empirical" :param show_plots: If method is
-    analytical, can show the histogram and GEV distribution overlaid
+    dataset instead of a dataframe
+    :param df: Dataframe with data to compute rp on
+    :param rp_var: column name to compute return period on
+    :param years: Return period years to compute
+    :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV
+    distribution overlaid
+    :param extend_factor: If method is analytical, can extend the interpolation
+    range to reach higher return periods
     :return: Dataframe with return period years as index and stations as
     columns
     """
@@ -32,7 +37,8 @@ def get_return_periods_dataframe(
     df_rps = pd.DataFrame(columns=["rp"], index=years)
     if method == "analytical":
         f_rp = get_return_period_function_analytical(
-            df_rp=df, rp_var=rp_var, show_plots=show_plots
+            df_rp=df, rp_var=rp_var, show_plots=show_plots,
+            extend_factor=extend_factor
         )
     elif method == "empirical":
         f_rp = get_return_period_function_empirical(
@@ -51,6 +57,7 @@ def get_return_period_function_analytical(
     rp_var: str,
     show_plots: bool = False,
     plot_title: str = "",
+    extend_factor: int = 1
 ):
     """
     :param df_rp: DataFrame where the index is the year, and the rp_var
@@ -58,6 +65,8 @@ def get_return_period_function_analytical(
     :param rp_var: The column with the quantity to be evaluated
     :param show_plots: Show the histogram with GEV distribution overlaid
     :param plot_title: The title of the plot
+    :param extend_factor: Extend the interpolation range in case you want to
+    calculate a relatively high return period
     :return: Interpolated function that gives the quantity for a
     given return period
     """
@@ -68,7 +77,7 @@ def get_return_period_function_analytical(
         loc=rp_var_values.median(),
         scale=rp_var_values.median() / 2,
     )
-    x = np.linspace(rp_var_values.min(), rp_var_values.max(), 100)
+    x = np.linspace(rp_var_values.min(), rp_var_values.max()*extend_factor, 100*extend_factor)
     if show_plots:
         fig, ax = plt.subplots()
         ax.hist(rp_var_values, density=True, bins=20)
