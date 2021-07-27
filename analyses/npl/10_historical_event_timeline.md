@@ -199,6 +199,16 @@ def get_station_stats(df_station_dict, event_var, rp=MAIN_RP, percentiles=None):
 ```
 
 ```python
+df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=2)
+df_station_stats
+```
+
+```python
+df_station_stats = get_station_stats(df_station_dict, "event_rp2", rp=2)
+df_station_stats
+```
+
+```python
 df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=5, percentiles=[50])
 df_station_stats
 ```
@@ -253,6 +263,7 @@ for station in STATIONS:
 ### Plots
 
 ```python
+# Try to plot the single readiness TP, and see which percentiles capture it
 rp = 2
 x = ds_glofas_forecast_summary['Chisapani_v3'].sel(leadtime=4, percentile=[20, 25, 30, 35, 40, 45, 50])
 rp_val = df_return_period.loc[rp, 'Chisapani']
@@ -266,6 +277,9 @@ ax.set_ylim(4000, 8000)
 ```
 
 ```python
+# Plot timeline of events
+
+percentile = 50
 mpl.rcParams['hatch.linewidth'] = 0.5
 for station in STATIONS:
     df_station = df_station_dict[station].copy().dropna(subset=["water_level"])
@@ -296,15 +310,11 @@ for station in STATIONS:
                                              [0.5, 0.5, 2]):
             cname = f'event_{event_type}'
             if event_type != "danger":
-                cname += f"_rp{MAIN_RP}"
+                cname += f"_rp{MAIN_RP}_p{percentile}"
             ax.fill_between(data.index, y0, y1, where=data[cname], 
                             facecolor='none', hatch=hatch, edgecolor=colour, lw=lw, 
                             alpha=.75, label=event_type)
     fig.supylabel('Water level [m]')
     fig.suptitle(station)    
     ax.legend()
-```
-
-```python
-
 ```
