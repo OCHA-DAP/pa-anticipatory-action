@@ -28,8 +28,8 @@ mpl.rcParams['figure.dpi'] = 200
 ```python
 COUNTRY_ISO3 = 'npl'
 MAIN_RP = 2
-RP_LIST = [1.5, 2, 5]
-FORECAST_PERCENTILE_LIST = [50, 30, 25]
+RP_LIST = [1.5, 2]
+FORECAST_PERCENTILE_LIST = [50, 30]
 # Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
 VERSION_LOC = "_v3" 
 STATIONS = [
@@ -196,7 +196,7 @@ def get_station_stats(df_station_dict, event_var, rp=MAIN_RP):
 ```
 
 ```python
-df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=5)
+df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=2)
 df_station_stats
 ```
 
