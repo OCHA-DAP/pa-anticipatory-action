@@ -28,8 +28,8 @@ mpl.rcParams['figure.dpi'] = 200
 ```python
 COUNTRY_ISO3 = 'npl'
 MAIN_RP = 2
-RP_LIST = [1.5, 2]
-FORECAST_PERCENTILE_LIST = [50, 25]
+RP_LIST = [1.5, 2, 5]
+FORECAST_PERCENTILE_LIST = [50, 30, 25]
 # Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
 VERSION_LOC = "_v3" 
 STATIONS = [
@@ -196,7 +196,7 @@ def get_station_stats(df_station_dict, event_var, rp=MAIN_RP):
 ```
 
 ```python
-df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=MAIN_RP)
+df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=5)
 df_station_stats
 ```
 
@@ -212,11 +212,11 @@ df_station_stats
 
 event_bools = {
     'readiness': False,
-    #'action': False,
-    'rp1.5': False
-    #'danger': False
+    'action': False,
+    #'rp2': False
+    'danger': False
 }
-rp = 1.5
+rp = 2
 
 for station in STATIONS:
     for percentile in FORECAST_PERCENTILE_LIST:
@@ -247,11 +247,20 @@ for station in STATIONS:
                     event_bools[event_type] = False
 ```
 
-```python
-df_station.columns
-```
-
 ### Plots
+
+```python
+rp = 2
+x = ds_glofas_forecast_summary['Chisapani_v3'].sel(leadtime=4, percentile=[20, 25, 30, 35, 40, 45, 50])
+rp_val = df_return_period.loc[rp, 'Chisapani']
+
+
+fig, ax = plt.subplots()
+x.plot.line(hue='percentile', alpha=0.5)
+ax.set_xlim(np.datetime64('2009-08-10'), np.datetime64('2009-08-20'))
+ax.axhline(rp_val, c='k')
+ax.set_ylim(4000, 8000)
+```
 
 ```python
 mpl.rcParams['hatch.linewidth'] = 0.5
