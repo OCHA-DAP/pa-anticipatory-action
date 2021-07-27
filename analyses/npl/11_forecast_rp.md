@@ -97,5 +97,5 @@ for station in STATIONS:
     rp_val = df_return_period.loc[MAIN_RP, station[:-3]]
     for leadtime, df_rps_forecast in df_rps_forecast_dict.items():
         rp_equiv = df_rps_forecast.index[(df_rps_forecast[station] - rp_val).abs().argmin()]
-        print(leadtime, rp_equiv)
+        print(leadtime, f'{rp_equiv:.1f}')
 ```
