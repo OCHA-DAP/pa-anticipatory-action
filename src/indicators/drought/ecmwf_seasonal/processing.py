@@ -90,13 +90,17 @@ def compute_stats_per_admin(
     for date in ds.time.values:
         date_dt = pd.to_datetime(date)
         if interpolate:
-            output_filename = f"{parameters['iso3_code'].lower()}"
-            f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
-            f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            output_filename = (
+                f"{parameters['iso3_code'].lower()}"
+                f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
+                f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            )
         else:
-            output_filename = f"{parameters['iso3_code'].lower()}"
-            f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
-            f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            output_filename = (
+                f"{parameters['iso3_code'].lower()}"
+                f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
+                f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            )
         output_path = os.path.join(
             country_data_processed_dir, "ecmwf", output_filename
         )
@@ -107,7 +111,6 @@ def compute_stats_per_admin(
                 " skipping"
             )
         else:
-            print(date)
             ds_sel = ds.sel(time=date)
             df = compute_zonal_stats(
                 ds_sel,
