@@ -18,11 +18,12 @@ class Area:
 
     def list_for_api(self, do_not_round: bool = False) -> List[float]:
         """
-        List the coordinates in the order that they're needed for the API
-        :param do_not_round: Don't round to the format x.y5, which is required for the API.
-        Only left as a parameter for now to be able to replicate older datasets
-        -- should generally not be toggled
-        :return: List of coordinates in the correct order for the API (north, west, south, east)
+        List the coordinates in the order that they're needed for the
+        API :param do_not_round: Don't round to the format x.y5, which
+        is required for the API. Only left as a parameter for now to be
+        able to replicate older datasets -- should generally not be
+        toggled :return: List of coordinates in the correct order for
+        the API (north, west, south, east)
         """
         if do_not_round:
             return [self.north, self.west, self.south, self.east]
@@ -47,17 +48,19 @@ class Area:
         elif direction == "down":
             function = np.floor
             offset_factor = -1
-        return function(coord / GLOFAS_ROUND_VAL) * GLOFAS_ROUND_VAL + offset_factor * GLOFAS_OFFSET_VAL
+        return (
+            function(coord / GLOFAS_ROUND_VAL) * GLOFAS_ROUND_VAL
+            + offset_factor * GLOFAS_OFFSET_VAL
+        )
 
 
 class AreaFromStations(Area):
     def __init__(self, stations: Dict[str, Station], buffer: float = 0.2):
         """
-        Args:
-            stations: dictionary of form {station_name: Station]
-            buffer: degrees above / below maximum lat / lon from stations to include in GloFAS query
-        Returns:
-            list with format [N, W, S, E]
+        Args: stations: dictionary of form {station_name: Station]
+            buffer: degrees above / below maximum lat / lon from
+            stations to include in GloFAS query Returns: list with
+            format [N, W, S, E]
         """
         lon_list = [station.lon for station in stations.values()]
         lat_list = [station.lat for station in stations.values()]

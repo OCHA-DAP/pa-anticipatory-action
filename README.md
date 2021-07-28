@@ -98,3 +98,8 @@ The structure of the directory is as follows:
 ```
 The naming conventions for the data source directories are available in 
 [this spreadsheet](https://docs.google.com/spreadsheets/d/155buqH6hcox2IG54NSRkdIjiLcPDmrs6JcjwjdFFA8g/edit?usp=sharing)
+
+#### Development
+All code is formatted according to [black](https://github.com/psf/black) and [flake8](https://flake8.pycqa.org/en/latest/) guidelines. 
+The repo is set-up to use [pre-commit](https://github.com/pre-commit/pre-commit). So please run `pre-commit install` the first time you are editing. 
+Thereafter all commits will be checked against black and flake8 guidelines

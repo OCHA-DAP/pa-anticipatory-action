@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_glofas_reanalysis(
-    country_iso3: str, version: int = glofas.DEFAULT_VERSION
+    country_iso3: str, version: int = glofas.DEFAULT_VERSION, **kwargs
 ) -> xr.Dataset:
-    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_reanalysis = glofas.GlofasReanalysis(**kwargs)
     ds_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
         country_iso3=country_iso3, version=version
     )
@@ -35,11 +35,12 @@ def _get_glofas_forecast_base(
     interp: bool = False,
     version: int = glofas.DEFAULT_VERSION,
     split_by_leadtimes: bool = False,
+    **kwargs,
 ):
     if is_reforecast:
-        glofas_forecast = glofas.GlofasReforecast()
+        glofas_forecast = glofas.GlofasReforecast(**kwargs)
     else:
-        glofas_forecast = glofas.GlofasForecast()
+        glofas_forecast = glofas.GlofasForecast(**kwargs)
     if split_by_leadtimes:
         ds_glofas_forecast_dict = {
             leadtime: glofas_forecast.read_processed_dataset(
@@ -48,12 +49,15 @@ def _get_glofas_forecast_base(
             for leadtime in leadtimes
         }
     else:
-        # Split up the dataset into different leadtimes, because then it's easier to do the shifts
+        # Split up the dataset into different leadtimes, because then
+        # it's easier to do the shifts
         ds_glofas_forecast = glofas_forecast.read_processed_dataset(
             country_iso3=country_iso3, version=version
         )
         ds_glofas_forecast_dict = {
-            leadtime: ds_glofas_forecast.sel(step=np.timedelta64(leadtime, "D"))
+            leadtime: ds_glofas_forecast.sel(
+                step=np.timedelta64(leadtime, "D")
+            )
             for leadtime in leadtimes
         }
     if interp:
@@ -83,6 +87,7 @@ def get_glofas_reforecast(
     interp: bool = True,
     version: int = glofas.DEFAULT_VERSION,
     split_by_leadtimes: bool = False,
+    **kwargs,
 ) -> xr.Dataset:
     return _get_glofas_forecast_base(
         is_reforecast=True,
@@ -91,18 +96,22 @@ def get_glofas_reforecast(
         interp=interp,
         version=version,
         split_by_leadtimes=split_by_leadtimes,
+        **kwargs,
     )
 
 
 def _shift_dates(ds_dict) -> Dict[int, xr.Dataset]:
     return {
-        leadtime: ds.assign_coords(time=ds.time.values + np.timedelta64(leadtime, "D"))
+        leadtime: ds.assign_coords(
+            time=ds.time.values + np.timedelta64(leadtime, "D")
+        )
         for leadtime, ds in ds_dict.items()
     }
 
 
 def _interp_dates(ds_dict) -> Dict[int, xr.Dataset]:
-    # Sort the ensemble members to preserve the properties throughout the interpolation
+    # Sort the ensemble members to preserve the properties throughout
+    # the interpolation
     for leadtime, ds in ds_dict.items():
         for station in ds.keys():
             ds[station].values = np.sort(ds[station].values, axis=0)
@@ -167,18 +176,20 @@ def get_return_periods(
     show_plots: bool = False,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis dataset
-    :param years: Return period years to compute
-    :param method: Either "analytical" or "empirical"
-    :param show_plots: If method is analytical, can show the histogram and GEV distribution overlaid
-    :return: Dataframe with return period years as index and stations as columns
+    :param ds_reanalysis: GloFAS reanalysis dataset :param years: Return
+    period years to compute :param method: Either "analytical" or
+    "empirical" :param show_plots: If method is analytical, can show the
+    histogram and GEV distribution overlaid :return: Dataframe with
+    return period years as index and stations as columns
     """
     if years is None:
         years = [1.5, 2, 3, 5, 10, 20]
     stations = list(ds_reanalysis.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
-        df_rp = _get_return_period_df(ds_reanalysis=ds_reanalysis, station=station)
+        df_rp = _get_return_period_df(
+            ds_reanalysis=ds_reanalysis, station=station
+        )
         if method == "analytical":
             f_rp = get_return_period_function_analytical(
                 df_rp=df_rp,
@@ -216,11 +227,12 @@ def get_crps(
     thresh: [float, Dict[str, float]] = None,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset
-    :param ds_reforecast: GloFAS reforecast xarray dataset
-    :param normalization: (optional) Can be 'mean' or 'std', reanalysis metric to divide the CRPS
-    :param thresh: (optional) Either a single value, or a dictionary with format {station name: thresh}
-    :return: DataFrame with station column names and leadtime index
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
+    ds_reforecast: GloFAS reforecast xarray dataset :param
+    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS :param thresh: (optional) Either a single value,
+    or a dictionary with format {station name: thresh} :return:
+    DataFrame with station column names and leadtime index
     """
     stations = list(ds_reanalysis.keys())
     leadtimes = ds_reforecast.leadtime.values
@@ -228,8 +240,14 @@ def get_crps(
 
     for station in stations:
         for leadtime in leadtimes:
-            forecast = ds_reforecast[station].sel(leadtime=leadtime).dropna(dim="time")
-            observations = ds_reanalysis[station].reindex({"time": forecast.time})
+            forecast = (
+                ds_reforecast[station]
+                .sel(leadtime=leadtime)
+                .dropna(dim="time")
+            )
+            observations = ds_reanalysis[station].reindex(
+                {"time": forecast.time}
+            )
             if normalization == "mean":
                 norm = observations.mean().values
             elif normalization == "std":
@@ -246,7 +264,9 @@ def get_crps(
                 idx = observations > thresh_to_use
                 forecast, observations = forecast[:, idx], observations[idx]
             crps = (
-                xs.crps_ensemble(observations, forecast, member_dim="number").values
+                xs.crps_ensemble(
+                    observations, forecast, member_dim="number"
+                ).values
                 / norm
             )
             df_crps.loc[leadtime, station] = crps
@@ -261,18 +281,20 @@ def get_groups_above_threshold(
     additional_condition: np.array = None,
 ) -> List:
     """
-    Get indices where consecutive values are equal to or above a threshold
-    :param observations: The array of values to search for groups (length N)
-    :param threshold: The threshold above which the values must be
-    :param min_duration: The minimum group size (default 1)
-    :param additional_condition: (optional) Any additional condition the values must satisfy
-    (array-like of bools, length N)
-    :return: list of arrays with indices
+    Get indices where consecutive values are equal to or above a
+    threshold :param observations: The array of values to search for
+    groups (length N) :param threshold: The threshold above which the
+    values must be :param min_duration: The minimum group size (default
+    1) :param additional_condition: (optional) Any additional condition
+    the values must satisfy (array-like of bools, length N) :return:
+    list of arrays with indices
     """
     condition = observations >= threshold
     if additional_condition is not None:
         condition = condition & additional_condition
-    groups = np.where(np.diff(condition, prepend=False, append=False))[0].reshape(-1, 2)
+    groups = np.where(np.diff(condition, prepend=False, append=False))[
+        0
+    ].reshape(-1, 2)
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
@@ -362,28 +384,20 @@ def get_rank(observations: np.array, forecast: np.array) -> np.array:
     return rank
 
 
-def calc_mpe(observations: np.array, forecast: np.array) -> float:
-    mean_forecast = forecast.mean(axis=0)
-    denominator = observations
-    return (
-        ((mean_forecast - observations) / denominator).sum()
-        / len(observations.time)
-        * 100
-    )
-
-
 def get_same_obs_and_forecast(
     da_observations: xr.DataArray, da_forecast: xr.DataArray, leadtime: int
 ) -> (xr.DataArray, xr.DataArray):
     """
-    For the GloFAS reanalysis and reforecast at a particular station, get matching data
-    ranges for the two datasets
-    :param da_observations: GloFAS reanalysis at a particular station
-    :param da_forecast: GloFAS reforecast at a particular station
-    :param leadtime: Leadtime
-    :return: Observations and forecast with overlapping values only
+    For the GloFAS reanalysis and reforecast at a particular station,
+    get matching data ranges for the two datasets :param
+    da_observations: GloFAS reanalysis at a particular station :param
+    da_forecast: GloFAS reforecast at a particular station :param
+    leadtime: Leadtime :return: Observations and forecast with
+    overlapping values only
     """
     forecast = da_forecast.sel(leadtime=leadtime).dropna(dim="time")
-    observations = da_observations.reindex({"time": forecast.time}).dropna(dim="time")
+    observations = da_observations.reindex({"time": forecast.time}).dropna(
+        dim="time"
+    )
     forecast = forecast.reindex({"time": observations.time})
     return observations, forecast

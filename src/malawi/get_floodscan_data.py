@@ -1,7 +1,3 @@
-import logging
-
-import geopandas as gpd
-
 # TODO: remove this after making top-level
 from pathlib import Path
 import os
@@ -16,6 +12,7 @@ from src.indicators.flooding.floodscan import floodscan
 COUNTRY_NAME = "malawi"
 config = Config()
 parameters = config.parameters(COUNTRY_NAME)
+
 
 
 def main(process=True):

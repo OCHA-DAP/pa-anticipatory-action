@@ -59,7 +59,8 @@ define_theme_hm <- function(yticks_text){
       legend.text = element_text(size=24),
       axis.title.x = element_text(size=20),
       axis.title.y = element_text(size=20),
-      plot.title = element_text(size=32)
+      plot.title = element_text(size=32),
+      plot.subtitle = element_text(size=24),
     )
   return(theme_hm)
 }

@@ -11,7 +11,11 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.config import Config
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import AreaFromShape, AreaFromStations, Station
+from src.indicators.flooding.glofas.area import (
+    AreaFromShape,
+    AreaFromStations,
+    Station,
+)
 
 COUNTRY_ISO3 = "mwi"
 LEADTIMES = [x + 1 for x in range(10)]
@@ -23,7 +27,11 @@ STATIONS = {
 }
 
 SHAPEFILE_BASE_DIR = (
-    Path(os.environ["AA_DATA_DIR"]) / "public" / "raw" / COUNTRY_ISO3 / "cod_ab"
+    Path(os.environ["AA_DATA_DIR"])
+    / "public"
+    / "raw"
+    / COUNTRY_ISO3
+    / "cod_ab"
 )
 SHAPEFILE = (
     SHAPEFILE_BASE_DIR

@@ -406,6 +406,7 @@ plt.title(f"Percentage of months that are correctly categorized for the given th
 handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, loc='upper center')
 fig.tight_layout(rect=(0,0,1,0.9))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_missfalse_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
 ```python
@@ -552,7 +553,7 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 
 ```python
 fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}")
-# fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
+# fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt123456_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
 ```python

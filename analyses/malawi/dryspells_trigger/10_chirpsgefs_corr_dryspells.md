@@ -383,9 +383,6 @@ df_ds_daterange=df_ds_res[["ADM2_EN","ID_obs"]].join(pd.DataFrame(a)).set_index(
 df_ds_daterange.rename(columns={0:"date"},inplace=True)
 #all dates in this dataframe had an observed dry spell, so add that information
 df_ds_daterange["dryspell_obs"]=1
-#due to definition can have overlapping dry spells
-df_ds_daterange.drop_duplicates("date",inplace=True)
-```
 
 ```python
 df_ds_daterange.head()
@@ -709,12 +706,14 @@ for threshold in threshold_list:
     print(f"The precision (TP/(TP+FP))  with {threshold}mm threshold is: {round(precision,4)} ({num_forobs}/{num_for})")
     print(f"The miss rate (FP/(TP+FP))  with {threshold}mm threshold is: {round((num_for-num_forobs)/(num_for),4)} ({num_for-num_forobs}/{num_for})\n")
     cm=np.array([[tn, num_for-num_obsfor],[num_obs-num_obsfor, num_obsfor]])
-    plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,class_names=["No","Yes"])#,axis=ax)
+    fig_cm,ax=plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,class_names=["No","Yes"])
     plt.xlabel("Forecasted dry spell")
     plt.ylabel("Observed dry spell")
     plt.title(f"{threshold}mm threshold")
     plt.show()
     # df_pr.to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
+    fig_cm.tight_layout()
+    # fig_cm.savefig(os.path.join(country_data_processed_dir,"plots","dry_spells","chirpsgefs",f"{country_iso3}_cm_chirpsgefs_{ds_meth}_thresh_{threshold}mm.png"))
 ```
 
 ### Experiment extent

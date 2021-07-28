@@ -41,11 +41,15 @@ GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 COUNTRY_ISO3 = 'npl'
 DURATION = 1
 MAIN_RP = 2
+FORECAST_PERCENTILE = 50
 
 STATIONS = [
     'Chatara',
     'Chisapani',
 ]
+# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
+VERSION_LOC = "_v3"
+USE_INCORRECT_AREA_COORDS = False
 
 LEVEL_TYPES = ['warning', 'danger']
 RP_LIST = [1.5, 2, 5]
@@ -59,11 +63,12 @@ df_wl = pd.read_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index_col='date')
 
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=COUNTRY_ISO3, use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS)
 
 ds_glofas_reforecast = utils.get_glofas_reforecast(
     country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
-    interp=True
+    interp=True,
+    use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
 )
 ds_glofas_forecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
@@ -77,7 +82,10 @@ df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
 df_station_dict = {}
 for station in STATIONS:
     wl = df_wl[[station]]
-    rd = ds_glofas_reanalysis[station].to_dataframe().drop(columns=['step', 'surface', 'valid_time'])
+    rd = (ds_glofas_reanalysis[station + VERSION_LOC]
+              .to_dataframe()
+              .drop(columns=['step', 'surface', 'valid_time'])
+              .rename(columns={f"{station+VERSION_LOC}": station}))
     data = (pd.merge(wl, rd, 
                      how='inner', 
                      left_index=True, 
@@ -91,10 +99,11 @@ for station in STATIONS:
     data = data.reindex(pd.date_range(data.index.min(), data.index.max()))
     # Add in the forecast data
     for leadtime in LEADTIMES:
-        forecast = (ds_glofas_forecast_summary[station]
-                    .sel(leadtime=leadtime, percentile=50)
+        forecast = (ds_glofas_forecast_summary[station + VERSION_LOC]
+                    .sel(leadtime=leadtime, percentile=FORECAST_PERCENTILE)
                     .to_dataframe()
-                    .drop(columns=['surface', 'leadtime', 'percentile']))
+                    .drop(columns=['surface', 'leadtime', 'percentile'])
+                    .rename(columns={f"{station+VERSION_LOC}": station}))
         data = (pd.merge(data, forecast,
                         how='left',
                         left_index=True,
@@ -215,11 +224,11 @@ for station in STATIONS:
             'FN': len(df_true_events[df_true_events['detections'] == 0]),
             'wl_days': wl_days
         }, ignore_index=True)
+        
+df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
+df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
 df_station_stats[df_station_stats['wl_days'].isnull()]
 ```
-
-# 
-
 
 ## Make plots for presentation
 
@@ -229,7 +238,7 @@ def plot_arrow(ax, x, y, c):
                      xy=(x, y+y*0.3),
                      xytext=(x, y+y*0.5),
                     arrowprops=dict(facecolor=c, shrink=0.05, headlength=3,
-                               width=1, headwidth=3, lw=0.5))
+                               width=1, headwidth=3, lw=0.5, alpha=0.5))
     
 for station in STATIONS:
     df = df_station_dict[station]
@@ -361,6 +370,8 @@ for station in STATIONS:
             'leadtime': leadtime
         }, ignore_index=True)
 
+        
+df_station_stats[df_station_stats['leadtime'].isin([3, 7])]
 ```
 
 ```python
@@ -374,13 +385,14 @@ for istation, station in enumerate(STATIONS):
     ax.set_title(station)
     ax.set_xlabel('Lead time [days]')
     ax.set_ylabel('Number')
+    ax.set_ylim(-0.5, None)
     # Make legend
     ax.legend()
 
 ```
 
 ```python
-rp = 2
+rp = MAIN_RP
 leadtimes = [7, 3] # Longer first
 
 for station in STATIONS:
@@ -392,10 +404,7 @@ for station in STATIONS:
     model = df_station['river_discharge']
     forecast_1 = df_station[f'forecast_{leadtimes[0]}']
     forecast_2 = df_station[f'forecast_{leadtimes[1]}']
-
-
-
-
+    
     fig = plt.figure(figsize=(10,8))
     gs= fig.add_gridspec(ncols=1, nrows=4, hspace=0.05, top=0.93, bottom=0.08)
 

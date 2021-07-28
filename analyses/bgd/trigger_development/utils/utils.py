@@ -33,9 +33,8 @@ def get_glofas_df(
     year_min: int = 1979,
     year_max: int = 2021,
 ) -> pd.DataFrame:
-    """
-    Get GloFAS data from the exploration directory -- from the 2020 analysis
-    """
+    """Get GloFAS data from the exploration directory -- from the 2020
+    analysis."""
     glofas_df = pd.DataFrame(columns=district_list)
     for year in range(year_min, year_max):
         glofas_filename = Path(f"{year}.csv")
@@ -84,7 +83,9 @@ def get_glofas_reforecast(
 
 def shift_dates(da_dict):
     return {
-        leadtime: da.assign_coords(time=da.time.values + np.timedelta64(leadtime, "D"))
+        leadtime: da.assign_coords(
+            time=da.time.values + np.timedelta64(leadtime, "D")
+        )
         for leadtime, da in da_dict.items()
     }
 
@@ -111,14 +112,18 @@ def convert_dict_to_da(da_glofas_dict):
         leadtime: da_glofas.reindex({"time": time})
         for leadtime, da_glofas in da_glofas_dict.items()
     }
-    data = np.array([da_glofas.values for da_glofas in da_glofas_dict.values()])
-    # Create data array with all lead times, as well as ensemble members (number)
-    # and timestep
+    data = np.array(
+        [da_glofas.values for da_glofas in da_glofas_dict.values()]
+    )
+    # Create data array with all lead times, as well as ensemble members
+    # (number) and timestep
     return xr.DataArray(
         data=data,
         dims=["leadtime", "number", "time"],
         coords=dict(
-            number=list(da_glofas_dict.values())[0].number,  # ensemble member number
+            number=list(da_glofas_dict.values())[
+                0
+            ].number,  # ensemble member number
             time=time,
             leadtime=list(da_glofas_dict.keys()),
         ),
@@ -130,11 +135,16 @@ def get_da_glofas_summary(da_glofas):
     percentile_dict = {
         **{"median": 50.0},
         **{f"{n}sig+": norm.cdf(n) * 100 for n in range(1, nsig_max + 1)},
-        **{f"{n}sig-": (1 - norm.cdf(n)) * 100 for n in range(1, nsig_max + 1)},
+        **{
+            f"{n}sig-": (1 - norm.cdf(n)) * 100 for n in range(1, nsig_max + 1)
+        },
     }
     coord_names = ["leadtime", "time"]
     data_vars_dict = {
-        var_name: (coord_names, np.percentile(da_glofas, percentile_value, axis=1))
+        var_name: (
+            coord_names,
+            np.percentile(da_glofas, percentile_value, axis=1),
+        )
         for var_name, percentile_value in percentile_dict.items()
     }
     return xr.Dataset(
@@ -150,7 +160,10 @@ def read_in_ffwc():
 
     # Need to combine the three sheets
     df_ffwc_wl_dict = pd.read_excel(
-        FFWC_DIR / ffwc_wl_filename, sheet_name=None, header=[1], index_col="Date"
+        FFWC_DIR / ffwc_wl_filename,
+        sheet_name=None,
+        header=[1],
+        index_col="Date",
     )
     df_ffwc_wl = (
         df_ffwc_wl_dict["2017"]
@@ -174,7 +187,9 @@ def read_in_ffwc():
     )
     ffwc_rl_name = "{}/{}".format(FFWC_DIR, FFWC_RL_HIS_FILENAME)
     df_ffwc_wl_old = pd.read_excel(ffwc_rl_name, index_col=0, header=0)
-    df_ffwc_wl_old.index = pd.to_datetime(df_ffwc_wl_old.index, format="%d/%m/%y")
+    df_ffwc_wl_old.index = pd.to_datetime(
+        df_ffwc_wl_old.index, format="%d/%m/%y"
+    )
     df_ffwc_wl_old = df_ffwc_wl_old[["WL"]].rename(columns={"WL": "observed"})[
         df_ffwc_wl_old.index < df_ffwc_wl.index[0]
     ]
@@ -183,9 +198,9 @@ def read_in_ffwc():
     # Read in the more recent file from Hassan
     ffwc_full_data_filename = "SW46.9L_19-11-2020.xls"
     df_ffwc_wl_full = (
-        pd.read_excel(FFWC_DIR / ffwc_full_data_filename, index_col="DateTime").rename(
-            columns={"WL(m)": "observed"}
-        )
+        pd.read_excel(
+            FFWC_DIR / ffwc_full_data_filename, index_col="DateTime"
+        ).rename(columns={"WL(m)": "observed"})
     )[["observed"]]
 
     # Mutliple observations per day. Find mean and std
@@ -210,10 +225,14 @@ def read_in_ffwc():
 
 
 def get_events(df_ffwc_wl):
-    groups = get_groups_above_threshold(df_ffwc_wl["observed"], EVENT_WATER_THRESH)
+    groups = get_groups_above_threshold(
+        df_ffwc_wl["observed"], EVENT_WATER_THRESH
+    )
 
     # Only take those that are 3 consecutive days
-    groups = [group for group in groups if group[1] - group[0] >= EVENT_NDAYS_THRESH]
+    groups = [
+        group for group in groups if group[1] - group[0] >= EVENT_NDAYS_THRESH
+    ]
 
     # Mark the first date in each series as TP
     events = [group[0] + EVENT_NDAYS_THRESH - 1 for group in groups]
@@ -225,7 +244,6 @@ def get_events(df_ffwc_wl):
 
 
 def get_groups_above_threshold(observations, threshold):
-    return np.where(np.diff(np.hstack(([False], observations > threshold, [False]))))[
-        0
-    ].reshape(-1, 2)
-
+    return np.where(
+        np.diff(np.hstack(([False], observations > threshold, [False])))
+    )[0].reshape(-1, 2)

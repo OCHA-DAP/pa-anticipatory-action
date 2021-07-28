@@ -3,7 +3,6 @@ import numpy as np
 import geopandas as gpd
 from rasterstats import zonal_stats
 import xarray as xr
-import rioxarray
 import logging
 
 
@@ -25,7 +24,9 @@ GLOBAL_DIR = "glb"
 SHAPEFILE_DIR = config.SHAPEFILE_DIR
 PROCESSED_DATA_DIR = config.PROCESSED_DIR
 FLOODSCAN_DIR = Path("floodscan")
-FLOODSCAN_FILENAME = "floodscan_africa_sfed_area_300s_19980112_20201231_v05r01.nc"
+FLOODSCAN_FILENAME = (
+    "floodscan_africa_sfed_area_300s_19980112_20201231_v05r01.nc"
+)
 
 DEFAULT_ADMIN_LEVEL = 1
 
@@ -33,13 +34,13 @@ logger = logging.getLogger(__name__)
 
 
 class Floodscan:
-    """
-    Create an instance of a Floodscan object, from which you can process the raw data and read the data.
-    """
+    """Create an instance of a Floodscan object, from which you can process the
+    raw data and read the data."""
 
     def read_raw_dataset(self):
         filepath = self._get_raw_filepath()
-        # would be better to do with load_dataset, but since dataset is huge this takes up too much memory..
+        # would be better to do with load_dataset, but since dataset is
+        # huge this takes up too much memory..
         with xr.open_dataset(filepath) as ds:
             return ds
         # return xr.open_dataset(filepath)
@@ -85,7 +86,9 @@ class Floodscan:
             df = self.compute_stats_per_area(
                 ds, coords_transform, boundaries_path, custom_id_col,
             )
-            self._write_to_processed_file(country_iso3, adm_level, df, custom_name)
+            self._write_to_processed_file(
+                country_iso3, adm_level, df, custom_name
+            )
 
         else:
             boundaries_path = os.path.join(
@@ -103,7 +106,9 @@ class Floodscan:
                 boundaries_path,
                 parameters[f"shp_adm{adm_level}c"],
             )
-            self._write_to_processed_file(country_iso3, adm_level, df, custom_name)
+            self._write_to_processed_file(
+                country_iso3, adm_level, df, custom_name
+            )
 
     def compute_stats_per_area(
         self,
@@ -145,15 +150,21 @@ class Floodscan:
                 )
             )[["mean", "max", "min"]]
             # TODO: the percentiles seem to always return 0, even if setting the p to 0.00001. Don't understand why yet..
-            df[[f"percentile_{str(p)}" for p in percentile_list]] = pd.DataFrame(
+            df[
+                [f"percentile_{str(p)}" for p in percentile_list]
+            ] = pd.DataFrame(
                 zonal_stats(
                     vectors=df,
                     raster=ds_date[data_var].values,
                     affine=raster_transform,
                     nodata=np.nan,
-                    stats=" ".join([f"percentile_{str(p)}" for p in percentile_list]),
+                    stats=" ".join(
+                        [f"percentile_{str(p)}" for p in percentile_list]
+                    ),
                 )
-            )[[f"percentile_{str(p)}" for p in percentile_list]]
+            )[
+                [f"percentile_{str(p)}" for p in percentile_list]
+            ]
 
             df["date"] = pd.to_datetime(date)
 
@@ -182,7 +193,9 @@ class Floodscan:
     ) -> Path:
         if custom_name:
             filepath = self._get_processed_filepath(
-                country_iso3=country_iso3, adm_level=adm_level, custom_name=custom_name
+                country_iso3=country_iso3,
+                adm_level=adm_level,
+                custom_name=custom_name,
             )
         else:
             filepath = self._get_processed_filepath(
@@ -196,7 +209,11 @@ class Floodscan:
 
     def _get_raw_filepath(self,):
         directory = (
-            DATA_DIR / PRIVATE_DATA_DIR / RAW_DATA_DIR / GLOBAL_DIR / FLOODSCAN_DIR
+            DATA_DIR
+            / PRIVATE_DATA_DIR
+            / RAW_DATA_DIR
+            / GLOBAL_DIR
+            / FLOODSCAN_DIR
         )
 
         return directory / Path(FLOODSCAN_FILENAME)
@@ -205,9 +222,13 @@ class Floodscan:
         self, country_iso3: str, adm_level: int, custom_name: str = None
     ) -> Path:
         if custom_name:
-            filename = f"{country_iso3.lower()}_floodscan_stats_{custom_name}.csv"
+            filename = (
+                f"{country_iso3.lower()}_floodscan_stats_{custom_name}.csv"
+            )
         else:
-            filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
+            filename = (
+                f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
+            )
         return (
             DATA_DIR
             / PRIVATE_DATA_DIR

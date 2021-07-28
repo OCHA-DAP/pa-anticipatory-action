@@ -1,5 +1,6 @@
 """
-Download raster data from GLOFAS and extracts time series of water discharge in selected locations
+Download raster data from GLOFAS and extracts time series of water
+discharge in selected locations
 """
 from pathlib import Path
 import logging
@@ -39,20 +40,23 @@ class Glofas:
         use_incorrect_area_coords: bool = False,
     ):
         """
-        Create an instance of a GloFAS object, from which you can download and process raw data, and
-        read in the processed data.
-        :param year_min: The earliest year that the dataset is available. Can be a single integer,
-        or a dictionary with structure {major_version: year_min} if the minimum year depends on the GloFAS
-        model version.
-        :param year_max: The most recent that the dataset is available
-        :param cds_name: The name of the dataset in CDS
-        :param dataset: The sub-datasets that you would like to download (as a list of strings)
-        :param dataset_variable_name: The variable name with which to pass the above datasets in the CDS query
-        :param system_version_minor: The minor version of the GloFAS model. Depends on the major version,
-        so is given as a dictionary with the format {major_version: minor_version}
-        :param date_variable_prefix: Some GloFAS datasets have the prefix "h" in front of some query keys
-        :param use_incorrect_area_coords: Generally not meant to be used, needed for backward compatibility
-        with some historical data
+        Create an instance of a GloFAS object, from which you can
+        download and process raw data, and read in the processed data.
+        :param year_min: The earliest year that the dataset is
+        available. Can be a single integer, or a dictionary with
+        structure {major_version: year_min} if the minimum year depends
+        on the GloFAS model version. :param year_max: The most recent
+        that the dataset is available :param cds_name: The name of the
+        dataset in CDS :param dataset: The sub-datasets that you would
+        like to download (as a list of strings) :param
+        dataset_variable_name: The variable name with which to pass the
+        above datasets in the CDS query :param system_version_minor: The
+        minor version of the GloFAS model. Depends on the major version,
+        so is given as a dictionary with the format {major_version:
+        minor_version} :param date_variable_prefix: Some GloFAS datasets
+        have the prefix "h" in front of some query keys :param
+        use_incorrect_area_coords: Generally not meant to be used,
+        needed for backward compatibility with some historical data
         """
         self.year_min = year_min
         self.year_max = year_max
@@ -150,9 +154,15 @@ class Glofas:
             ]
             if month is None
             else str(month).zfill(2),
-            f"{self.date_variable_prefix}day": [str(x + 1).zfill(2) for x in range(31)],
-            "area": area.list_for_api(do_not_round=self.use_incorrect_area_coords),
-            "system_version": f"version_{version}_{self.system_version_minor[version]}",
+            f"{self.date_variable_prefix}day": [
+                str(x + 1).zfill(2) for x in range(31)
+            ],
+            "area": area.list_for_api(
+                do_not_round=self.use_incorrect_area_coords
+            ),
+            "system_version": (
+                f"version_{version}_{self.system_version_minor[version]}"
+            ),
             "hydrological_model": HYDROLOGICAL_MODELS[version],
         }
         if leadtime is not None:
@@ -167,8 +177,8 @@ class Glofas:
     @staticmethod
     def _read_in_ensemble_and_perturbed_datasets(filepath_list: List[Path]):
         """
-        Read in dataset that has both control and ensemble perturbed forecast
-        and combine them
+        Read in dataset that has both control and ensemble perturbed
+        forecast and combine them
         """
         ds_list = []
         for data_type in ["cf", "pf"]:
@@ -187,7 +197,13 @@ class Glofas:
                     ds = expand_dims(
                         ds=ds,
                         dataset_name=RIVER_DISCHARGE_VAR,
-                        coord_names=["number", "time", "step", "latitude", "longitude"],
+                        coord_names=[
+                            "number",
+                            "time",
+                            "step",
+                            "latitude",
+                            "longitude",
+                        ],
                         expansion_dim=0,
                     )
                 ds_list.append(ds)
@@ -205,7 +221,8 @@ class Glofas:
             country_iso3=country_iso3, version=version, leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
-        # Netcdf seems to have problems overwriting; delete the file if it exists
+        # Netcdf seems to have problems overwriting; delete the file if
+        # it exists
         filepath.unlink(missing_ok=True)
         logger.info(f"Writing to {filepath}")
         ds.to_netcdf(filepath)
@@ -265,7 +282,8 @@ class GlofasReanalysis(Glofas):
         year_min = self.year_min if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS reanalysis v{version} for years {year_min} - {year_max}"
+            f"Downloading GloFAS reanalysis v{version} for years {year_min} -"
+            f" {year_max}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
@@ -324,13 +342,16 @@ class GlofasForecastBase(Glofas):
         year_min = self.year_min[version] if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Downloading GloFAS {forecast_type} v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
+            f"Downloading GloFAS {forecast_type} v{version} for years"
+            f" {year_min} - {year_max} and lead time {leadtimes}"
         )
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             month_range = range(1, 13) if split_by_month else [None]
             for month in month_range:
-                leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
+                leadtime_range = (
+                    leadtimes if split_by_leadtimes else [leadtimes]
+                )
                 for leadtime in leadtime_range:
                     super()._download(
                         country_iso3=country_iso3,
@@ -357,7 +378,8 @@ class GlofasForecastBase(Glofas):
         year_min = self.year_min[version] if year_min is None else year_min
         year_max = self.year_max if year_max is None else year_max
         logger.info(
-            f"Processing GloFAS {forecast_type} v{version} for years {year_min} - {year_max} and lead time {leadtimes}"
+            f"Processing GloFAS {forecast_type} v{version} for years"
+            f" {year_min} - {year_max} and lead time {leadtimes}"
         )
         month_range = range(1, 13) if split_by_month else [None]
         leadtime_range = leadtimes if split_by_leadtimes else [leadtimes]
@@ -375,7 +397,8 @@ class GlofasForecastBase(Glofas):
                 for year in range(year_min, year_max + 1)
                 for month in month_range
             ]
-            # Read in both the control and ensemble perturbed forecast and combine
+            # Read in both the control and ensemble perturbed forecast
+            # and combine
             logger.info(f"Reading in {len(filepath_list)} files")
             ds = self._read_in_ensemble_and_perturbed_datasets(
                 filepath_list=filepath_list
@@ -440,8 +463,9 @@ def expand_dims(
     ds: xr.Dataset, dataset_name: str, coord_names: list, expansion_dim: int
 ):
     """
-    Using expand_dims seems to cause a bug with Dask like the one described here:
-    https://github.com/pydata/xarray/issues/873 (it's supposed to be fixed though)
+    Using expand_dims seems to cause a bug with Dask like the one
+    described here: https://github.com/pydata/xarray/issues/873 (it's
+    supposed to be fixed though)
     """
     coords = {coord_name: ds[coord_name] for coord_name in coord_names}
     coords[coord_names[expansion_dim]] = [coords[coord_names[expansion_dim]]]
@@ -467,8 +491,9 @@ class CoordsOutOfBounds(Exception):
         coord_max: float,
     ):
         message = (
-            f"Station {station_name} has out-of-bounds {param_name} value of {coord_station} "
-            f"(GloFAS {param_name} ranges from {coord_min} to {coord_max})"
+            f"Station {station_name} has out-of-bounds {param_name} value of"
+            f" {coord_station} (GloFAS {param_name} ranges from {coord_min} to"
+            f" {coord_max})"
         )
         super().__init__(message)
 
@@ -499,9 +524,11 @@ def _get_station_dataset(
         data_vars={
             station_name: (
                 coord_names,
-                ds.sel(longitude=station.lon, latitude=station.lat, method="nearest")[
-                    RIVER_DISCHARGE_VAR
-                ],
+                ds.sel(
+                    longitude=station.lon,
+                    latitude=station.lat,
+                    method="nearest",
+                )[RIVER_DISCHARGE_VAR],
             )
             for station_name, station in stations.items()
         },
