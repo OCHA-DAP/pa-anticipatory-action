@@ -33,7 +33,7 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-SAVE_FIG = True
+SAVE_FIG = False
 LEADTIMES = [x + 1 for x in range(10)]
 
 stations_adm2 = {
@@ -41,6 +41,8 @@ stations_adm2 = {
     'G2001': 'Chikwawa'
 }
 COUNTRY_ISO3 = 'mwi'
+
+RP = 3
 ```
 
 Read in the processed GloFAS data and calculate the return periods. We can also plot the river discharge thresholds for each return period level.
@@ -72,43 +74,34 @@ for code, station in stations_adm2.items():
 Look into forecast skill by calculating the CRPS. We'll first do this by looking at all discharge values, and then recalculate looking specifically at extreme discharge values (eg. at the 3-year return period level). 
 
 ```python
-def plot_crps(df_crps, title_suffix=None, ylog=False):
-    for code, station in stations_adm2.items():
-        fig, ax = plt.subplots()
-        crps = df_crps[code]
-        ax.plot(crps.index, crps, label=station)
-        ax.legend()
-        title = station
-        if title_suffix is not None:
-            title += title_suffix
-        ax.set_title(title)
-        ax.set_xlabel("Lead time [days]")
-        ax.set_ylabel("Normalized CRPS [% error]")
-        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.grid()
-        if ylog:
-            ax.set_yscale('log')
-            ax.yaxis.set_major_formatter(ScalarFormatter())
-```
-
-```python
-df_crps = utils.get_crps(ds_glofas_reanalysis, 
+df_crps_all = utils.get_crps(ds_glofas_reanalysis, 
                          ds_glofas_reforecast,
                         normalization="mean")
-plot_crps(df_crps * 100, title_suffix=" -- all discharge values")
 
-if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_ncrps_all.png')
-```
-
-```python
-rp = 3
-df_crps = utils.get_crps(ds_glofas_reanalysis, 
+df_crps_high = utils.get_crps(ds_glofas_reanalysis, 
                          ds_glofas_reforecast,
                          normalization="mean", 
-                         thresh=df_return_period.loc[rp].to_dict())
-plot_crps(df_crps * 100, title_suffix=f" -- values > RP 1 in {rp} y", ylog=False)
+                         thresh=df_return_period.loc[RP].to_dict())
 
-if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_ncrps_{rp}_rp.png')
+for code, station in stations_adm2.items():
+    fig, ax = plt.subplots()
+    
+    crps_all = df_crps_all[code] * 100
+    ax.plot(crps_all.index, crps_all, label="All discharge values")
+    
+    crps_high = df_crps_high[code] * 100
+    ax.plot(crps_high.index, crps_high, label=f"Values > RP 1 in {RP} y")
+    
+    ax.legend()
+    title = station
+
+    ax.set_title(title)
+    ax.set_xlabel("Lead time [days]")
+    ax.set_ylabel("Normalized CRPS [% error]")
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.grid()
+    
+if SAVE_FIG: plt.savefig(PLOT_DIR / f'{station}_ncrps.png')
 ```
 
 We'll also look at the forecast bias, again specifically at extreme water discharge levels. 
@@ -132,7 +125,6 @@ def plot_hist(da_observations, da_forecast, station_name, rp=None, leadtimes=Non
         title += f': > 1 in {rp} y'
     ax.set_title(title)
 
-rp = 3
 for code, station in stations_adm2.items():
     da_observations =  ds_glofas_reanalysis[code]
     da_forecast = ds_glofas_reforecast[code]
@@ -141,7 +133,7 @@ for code, station in stations_adm2.items():
     if SAVE_FIG: 
         plt.savefig(PLOT_DIR / f'{station}_rank_hist_all.png')
     
-    rp_val = df_return_period.loc[rp, code]
+    rp_val = df_return_period.loc[RP, code]
     o = da_observations[da_observations > rp_val]
     # Needs at least about 50 vals to work, not sure why
     if len(o) > 50:
@@ -151,12 +143,11 @@ for code, station in stations_adm2.items():
 ```
 
 ```python
-rp = 2
 for code, station in stations_adm2.items():
     fig, ax = plt.subplots()
     
     da_observations =  ds_glofas_reanalysis[code]
-    rp_val = df_return_period.loc[rp, code]
+    rp_val = df_return_period.loc[RP, code]
     da_observations_ev = da_observations[da_observations > rp_val]
     da_forecast = ds_glofas_reforecast[code]
     mpe = np.empty(len(da_forecast.leadtime))
@@ -167,8 +158,7 @@ for code, station in stations_adm2.items():
         observations_ev, forecast_ev = utils.get_same_obs_and_forecast(da_observations_ev, da_forecast, leadtime)
         mpe_ev[ilt] = utils.calc_mpe(observations_ev, forecast_ev)
     ax.plot(da_forecast.leadtime, mpe, label='All values')
-    ax.plot(da_forecast.leadtime, mpe_ev, label=f'RP > 1 in {rp} y')
-    ax.set_ylim(-50, 10)
+    ax.plot(da_forecast.leadtime, mpe_ev, label=f'RP > 1 in {RP} y')
     ax.axhline(y=0, c='k', ls=':')
     ax.legend()
     ax.grid()
