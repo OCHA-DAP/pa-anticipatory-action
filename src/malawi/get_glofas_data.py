@@ -31,41 +31,31 @@ SHAPEFILE = (
     / "mwi_admbnda_adm0_nso_20181016.shp"
 )
 
-VERSION = 3
-USE_INCORRECT_COORDS = False
-
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
 def main(download=False, process=True):
     stations = STATIONS
-    glofas_reanalysis = glofas.GlofasReanalysis(
-        use_incorrect_area_coords=USE_INCORRECT_COORDS
-    )
-    glofas_reforecast = glofas.GlofasReforecast(
-        use_incorrect_area_coords=USE_INCORRECT_COORDS
-    )
+    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_reforecast = glofas.GlofasReforecast()
 
     if download:
         df_admin_boundaries = gpd.read_file(SHAPEFILE)
         area = AreaFromShape(df_admin_boundaries.iloc[0]["geometry"])
         glofas_reanalysis.download(
-            country_iso3=COUNTRY_ISO3, area=area, version=VERSION,
+            country_iso3=COUNTRY_ISO3, area=area,
         )
         glofas_reforecast.download(
-            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES, version=VERSION,
+            country_iso3=COUNTRY_ISO3, area=area, leadtimes=LEADTIMES,
         )
 
     if process:
         glofas_reanalysis.process(
-            country_iso3=COUNTRY_ISO3, stations=stations, version=VERSION,
+            country_iso3=COUNTRY_ISO3, stations=stations,
         )
         glofas_reforecast.process(
-            country_iso3=COUNTRY_ISO3,
-            stations=stations,
-            leadtimes=LEADTIMES,
-            version=VERSION,
+            country_iso3=COUNTRY_ISO3, stations=stations, leadtimes=LEADTIMES,
         )
 
 
