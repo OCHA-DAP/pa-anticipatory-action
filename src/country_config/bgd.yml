@@ -1,0 +1,8 @@
+glofas:
+  area_type: statsion
+  leadtimes:
+    max: 20
+  stations:
+    Bahadurabad:
+      lat: 89.65
+      lon: 25.15
