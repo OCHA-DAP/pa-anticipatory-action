@@ -116,22 +116,25 @@ def calc_mpe(observations: np.array, forecast: np.array) -> float:
 def calc_crps(
     observations: xr.DataArray,
     forecasts: xr.DataArray,
-    normalization: str = None,
+    normalization: [str, float] = None,
     member_dim: str = "number",
 ) -> float:
     """
     observations and forecasts must have the same shape in all
     dimensions except the member_dim dimension
+    the member_dim should only be present in the forecasts not in the
+    observation
     :param observations: datarray with observed values
     :param forecasts: data-array with forecasted values
-    :param normalization: (optional) Can be None, 'mean' or 'std',
+    :param normalization: (optional) Can be None, a number, 'mean' or 'std',
     reanalysis metric to divide the CRPS
     :param member_dim: (optional) the dimension name which contains
     the ensemble members
     :return: the CRPS
     """
-
-    if normalization == "mean":
+    if isinstance(normalization, (int, float)):
+        norm = normalization
+    elif normalization == "mean":
         norm = observations.mean().values
     elif normalization == "std":
         norm = observations.std().values
