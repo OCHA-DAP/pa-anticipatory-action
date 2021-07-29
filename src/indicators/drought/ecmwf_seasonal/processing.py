@@ -90,13 +90,17 @@ def compute_stats_per_admin(
     for date in ds.time.values:
         date_dt = pd.to_datetime(date)
         if interpolate:
-            output_filename = f"{parameters['iso3_code'].lower()}"
-            f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
-            f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            output_filename = (
+                f"{parameters['iso3_code'].lower()}"
+                f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
+                f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            )
         else:
-            output_filename = f"{parameters['iso3_code'].lower()}"
-            f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
-            f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            output_filename = (
+                f"{parameters['iso3_code'].lower()}"
+                f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
+                f"_{date_dt.month}_adm{adm_level}_stats.csv"
+            )
         output_path = os.path.join(
             country_data_processed_dir, "ecmwf", output_filename
         )
@@ -107,7 +111,6 @@ def compute_stats_per_admin(
                 " skipping"
             )
         else:
-            print(date)
             ds_sel = ds.sel(time=date)
             df = compute_zonal_stats(
                 ds_sel,
@@ -264,28 +267,34 @@ def convert_dict_to_da(da_dict):
 
 
 def get_crps_ecmwf(
-    da_observations: xr.DataArray,
-    da_forecasts: xr.DataArray,
+    observations: xr.DataArray,
+    forecasts: xr.DataArray,
     normalization: str = None,
     thresh: float = None,
 ) -> pd.DataFrame:
     """
-    Assumes there is no missing data in da_observations or da_forecasts
-    :param da_observations: data-array or data-set with observed values
-    :param da_forecasts: data-array with forecasted values
-    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
-    to divide the CRPS
-    param: threshold: (optional) only select values smaller or equal to
+    Assumes there is no missing data in observations or forecasts
+    :param observations: data-array with observed values
+    :param forecasts: data-array with forecasted values
+    :param normalization: (optional) can be None, a number, 'mean' or 'std',
+    reanalysis metric to divide the CRPS
+    :param threshold: (optional) only select values smaller or equal to
     this number
     :return: DataFrame with leadtime index containing the crps
     """
-    leadtimes = da_forecasts.leadtime.values
+    leadtimes = forecasts.leadtime.values
     df_crps = pd.DataFrame(index=leadtimes)
-    observations = da_observations.dropna(dim="time", how="all")
 
     for leadtime in leadtimes:
-        forecasts = da_forecasts.sel(leadtime=leadtime).dropna(
+        forecasts_lt = forecasts.sel(leadtime=leadtime).dropna(
             dim="time", how="all"
+        )
+        # make sure that time periods overlap, for calc_crps
+        forecasts_lt = forecasts_lt.sel(
+            time=slice(observations.time.min(), observations.time.max())
+        )
+        observations = observations.sel(
+            time=slice(forecasts_lt.time.min(), forecasts_lt.time.max())
         )
 
         if thresh is not None:
@@ -293,18 +302,11 @@ def get_crps_ecmwf(
             # e.g. when having lon and lat
             # xr.where does work on multidimensional arrays
             observations = observations.where(observations <= thresh)
-            forecasts = forecasts.where(observations <= thresh)
+            forecasts_lt = forecasts_lt.where(observations <= thresh)
 
-        # make sure that time periods overlap, for calc_crps
-        forecasts = forecasts.sel(
-            time=slice(observations.time.min(), observations.time.max())
-        )
-        observations = observations.sel(
-            time=slice(forecasts.time.min(), forecasts.time.max())
-        )
         crps = calc_crps(
             observations,
-            forecasts,
+            forecasts_lt,
             normalization=normalization,
         )
         df_crps.loc[leadtime, "crps"] = crps

@@ -251,6 +251,14 @@ def get_crps_glofas(
             observations = ds_reanalysis[station].reindex(
                 {"time": forecast.time}
             )
+
+            if normalization == "mean":
+                norm = observations.mean().values
+            elif normalization == "std":
+                norm = observations.std().values
+            elif normalization is None:
+                norm = 1
+
             if thresh is not None:
                 # Thresh can either be dict of floats, or float
                 try:
@@ -263,7 +271,7 @@ def get_crps_glofas(
             df_crps.loc[leadtime, station] = calc_crps(
                 observations,
                 forecast,
-                normalization=normalization,
+                normalization=norm,
             )
 
     return df_crps
