@@ -298,82 +298,78 @@ def get_groups_above_threshold(
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
-def get_glofas_activations(da_glofas, thresh, ndays):
-    vals = da_glofas.values
-    groups = get_groups_above_threshold(vals, thresh, ndays)
-    df_glofas_act = pd.DataFrame(groups, columns=["start_index", "end_index"])
-    df_glofas_act["num_days"] = (
-        df_glofas_act["end_index"] - df_glofas_act["start_index"]
-    )
-    df_glofas_act["start_date"] = df_glofas_act["start_index"].apply(
+def get_dates_from_groups(
+    groups: np.array, da_glofas: xr.DataArray
+) -> pd.DataFrame:
+    """
+    Get the duration and start and end dates of each glofas exceedance event. 
+    :param groups: The output from get_groups_above_threshold, which gives the indices from glofas events
+    :param da_glofas: DataArray used in get_groups_above_threshold, which needs to include a 'time' coordinate
+    :return: DataFrame of events
+    """
+    df = pd.DataFrame(groups, columns=["start_index", "end_index"])
+    df["num_days"] = df["end_index"] - df["start_index"]
+    df["start_date"] = df["start_index"].apply(
         lambda x: da_glofas.time[x].values
     )
-    df_glofas_act["end_date"] = df_glofas_act["end_index"].apply(
-        lambda x: da_glofas.time[x].values
-    )
-    return df_glofas_act
+    df["end_date"] = df["end_index"].apply(lambda x: da_glofas.time[x].values)
+    return df
 
 
-def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
-    TP = 0
-    FP = 0
-    tot_events = len(df_impact.index)
-    df_impact_copy = df_impact.copy()
+def get_detection_stats(df_events, df_glofas, days_before=30, days_after=30):
+    """
+    Calculate the glofas forecast detection performance against a dataset of reference events. The rows in each of the input dataframes 
+    should correspond to either a forecasted or true flood event. Both dataframes should have 'start_date' and 'end_date' columns that define the start and end of the flood event. 
+    :param df_events: DataFrame with the reference 'true' flood events.
+    :param df_glofas: DataFrame with the forecasted flood events predicted by GloFAS.
+    :param days_before: Size of the buffer (in days) to add to the start date of the true events. Can be 0 for no buffer.
+    :param days_after: Size of the buffer (in days) to add to the end date of the true events. Can be 0 for no buffer.
+    """
 
-    # Add buffer around the flood event dates to account for some uncertainty if desired
-    df_impact_copy["start_date_buffer"] = pd.to_datetime(
-        df_impact_copy["start_date"]
-    ) - timedelta(days=buffer_before)
-    df_impact_copy["end_date_buffer"] = pd.to_datetime(
-        df_impact_copy["end_date"]
-    ) + timedelta(days=buffer_after)
+    df_events_copy = df_events.copy()
+    df_events_copy["detected"] = 0
 
-    for index, row in df_glofas.iterrows():
-        TP_ = False
-        act_dates = np.array(pd.date_range(row["start_date"], row["end_date"]))
+    df_glofas_copy = df_glofas.copy()
+    df_glofas_copy["detection"] = 0
 
-        for index, row in df_impact_copy.iterrows():
+    # Check through all of the true events
+    for evix, evr in df_events_copy.iterrows():
+
+        # Get all consecutive dates where the flooding has happened
+        # Incorporate the potential buffer
+        start_date = pd.to_datetime(evr["start_date"]) - timedelta(
+            days=days_before
+        )
+        end_date = pd.to_datetime(evr["end_date"]) + timedelta(days=days_after)
+        act_dates = np.array(pd.date_range(start_date, end_date))
+
+        # Now check through each of the glofas events to see if dates overlap
+        for gfix, gfr in df_glofas_copy.iterrows():
             event_dates = np.array(
-                pd.date_range(row["start_date_buffer"], row["end_date_buffer"])
+                pd.date_range(gfr["start_date"], gfr["end_date"])
             )
 
+            # If there is a match:
+            # Log that the true event has been detected
+            # and that the forecasted event is a true detection
             if set(act_dates) & set(event_dates):
-                TP += 1
-                TP_ = True
-                df_impact_copy = df_impact_copy.drop([index,])
-        if not TP_:
-            FP += 1
+                df_events_copy.loc[evix, "detected"] = 1
+                df_glofas_copy.loc[gfix, "detection"] = 1
 
-    FN = tot_events - TP
-    return TP, FP, FN
+    TP = sum(df_events_copy["detected"])
+    FP = len(df_glofas_copy.index) - sum(df_glofas_copy["detection"])
+    FN = len(df_events_copy.index) - TP
 
-
-def get_more_stats(TP, FP, FN):
     try:
         precision = TP / (TP + FP)
-    except Exception as e:
+    except ZeroDivisionError:
         precision = None
-    recall = TP / (TP + FN)
     try:
-        f1 = 2 / ((1 / recall) + (1 / precision))
-    except Exception as e:
-        f1 = None
-    return precision, recall, f1
+        recall = TP / (TP + FN)
+    except ZeroDivisionError:
+        recall = None
 
-
-def get_clean_stats_dict(df_glofas, df_impact, buffer_before, buffer_after):
-    stats = {}
-    TP, FP, FN = get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after)
-    precision, recall, f1 = get_more_stats(TP, FP, FN)
-
-    stats["TP"] = TP
-    stats["FP"] = FP
-    stats["FN"] = FN
-    stats["precision"] = precision
-    stats["recall"] = recall
-    stats["f1"] = f1
-
-    return stats
+    return TP, FP, FN, precision, recall
 
 
 def get_rank(observations: np.array, forecast: np.array) -> np.array:

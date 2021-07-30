@@ -26,7 +26,6 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-LEADTIMES = [x + 1 for x in range(10)]
 SAVE_PLOT = True
 EVENT = 'RCO' # 'rco', 'floodscan', 'combined'
 COUNTRY_ISO3 = 'mwi'
@@ -37,6 +36,9 @@ stations_adm2 = {
 }
 
 DURATION = 3
+LEADTIMES = [x + 1 for x in range(10)]
+FORECAST_PROB = 50
+RP_LIST = [1.5, 2, 5]
 ```
 
 Read in the processed GloFAS data and get a summary of the reforecasted values. The summary includes percentile values to summarize the distribution of the ensemble forecast. We'll also get a dataframe of calculated return period thresholds and read in the dataset of historical events.
@@ -55,49 +57,28 @@ df_return_period = utils.get_return_periods(ds_glofas_reanalysis, method='analyt
 We'll check to see how the GloFAS forecast performs across various leadtimes in detecting streamflow exceedance events from the reanalysis (historical) GloFAS data. These events don't necessarily correspond to floods, but these results give us a sense of how the GloFAS forecast performs across various leadtimes at predicting the kinds of streamflow levels that we are interested in. 
 
 ```python
-forecast_prob = 50
-
-days_before_buffer = 5
-days_after_buffer = 30
-
-rp_list = [1.5, 2, 5]
-
-df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'TP', 'FP', 'FN'])
+df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'TP', 'FP', 'FN', 'precision', 'recall'])
 
 for station in df_return_period.columns:
-    for rp in rp_list:
+    
+    da_glofas_reanalysis = ds_glofas_reanalysis[station].reindex(time=ds_glofas_reforecast.time)
+    observations = da_glofas_reanalysis.values
+    
+    for rp in RP_LIST:
         rp_val = df_return_period.loc[rp, station]
-        observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station].values
-        forecast = ds_glofas_reforecast_summary[station].sel(percentile=forecast_prob)
 
-        # The GlofAS event takes place on the Nth day (since for an event)
-        # you require N days in a row
-        event_groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=DURATION)
-        event_dates = [event_group[0] + DURATION - 1 for event_group in event_groups]
+        observation_groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=DURATION)
+        df_observation_groups = utils.get_dates_from_groups(observation_groups, da_glofas_reanalysis)
 
         for leadtime in LEADTIMES:
-            TP = 0
-            FN = 0
             
-            forecast_groups = utils.get_groups_above_threshold(forecast.sel(leadtime=leadtime), rp_val, min_duration=DURATION)
-            forecast_dates = np.array([forecast_group[0] + DURATION - 1 for forecast_group in forecast_groups])
-            forecast_detections = np.zeros(len(forecast_dates))
-            
-            for event_date in event_dates:
-                # Check if any events are around that date
-                days_offset = forecast_dates - event_date
+            da_glofas_reforecast = ds_glofas_reforecast_summary[station].sel(percentile=FORECAST_PROB).sel(leadtime=leadtime)
+            forecast = da_glofas_reforecast.values
+            forecast_groups = utils.get_groups_above_threshold(forecast, rp_val)
+            df_forecast_groups = utils.get_dates_from_groups(forecast_groups, da_glofas_reforecast)
 
-                detected = (days_offset >= -1 * days_before_buffer) & (days_offset <= days_after_buffer)
-                
+            TP, FP, FN, precision, recall = utils.get_detection_stats(df_observation_groups, df_forecast_groups)
 
-                # If there were any detections, it's  a TP. Otherwise a FP
-                if sum(detected):
-                    TP += 1
-                else:
-                    FN += 1
-                forecast_detections[detected] += 1
-                
-            FP = sum(forecast_detections == 0)
             df_station_stats = df_station_stats.append({
                 'station': station,
                 'leadtime': leadtime,
@@ -105,10 +86,9 @@ for station in df_return_period.columns:
                 'TP': TP,
                 'FP': FP,
                 'FN': FN,
+                'precision': precision,
+                'recall': recall
             }, ignore_index=True)
-            
-df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
-df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
 ```
 
 Plot the detection stats against the historical GloFAS data.
@@ -174,34 +154,28 @@ for code, station in stations_adm2.items():
 Now we'll see how the GloFAS forecast performs in detecting historical flood events as defined in our event dataset (eg. from the RCO, Floodscan, EM-DAT or combined). We'll first read in all of the historical event datasets.
 
 ```python
-#event_sources = ['combined', 'rco', 'emdat', 'floodscan']
-event_sources = ['rco']
+event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+#event_sources = ['rco']
 events = {}
 for station in stations_adm2.values():
     sources = {}
     for source in event_sources:
-        #sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
-        sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv')
+        sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        #sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv')
     events[station] = sources
 ```
 
 Compute the standard performance metrics between each of the event sources and the GloFAS forecast data.
 
 ```python
-days_before_buffer = 30
-days_after_buffer = 30
 start_slice = '1998-01-01'
 end_slice = '2019-12-31'
 
-forecast_prob = 50
-
-rp_list = [1.5, 2, 5]
-lt_list = [5, 10, 15, 20]
-
-df_detection_stats = pd.DataFrame(columns=['station', 'lead_time', 'return_period', 'source', 'TP', 'FP', 'FN', 'precision', 'recall', 'f1'])
-
 def filter_event_dates(df_event, start, end):
     return df_event[(df_event['start_date']<str(end)) & (df_event['start_date']>str(start))].reset_index()
+
+
+df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'source', 'TP', 'FP', 'FN', 'precision', 'recall'])
 
 # TODO: Here we're limiting the time window to 1998-2019. 
 # Could better tailor this to be more specific to each source.
@@ -211,51 +185,51 @@ def filter_event_dates(df_event, start, end):
 
 for code, station in stations_adm2.items():
     
-    for rp in rp_list:
+    for rp in RP_LIST:
         rp_val = df_return_period.loc[rp, code]
         
-        detection_stats = {}
-        
-        for lt in LEADTIMES: 
-            df_glofas_event = utils.get_glofas_activations(ds_glofas_reforecast_summary[code]
-                                                           .sel(leadtime=lt)
-                                                           .sel(percentile=forecast_prob)
-                                                           .sel(time=slice(start_slice, end_slice)), 
-                                                           rp_val, DURATION)
+        for leadtime in LEADTIMES:
+            
+            da_glofas_reforecast = ds_glofas_reforecast_summary[code].sel(percentile=FORECAST_PROB).sel(leadtime=leadtime)
+            forecast = da_glofas_reforecast.values
+            forecast_groups = utils.get_groups_above_threshold(forecast, rp_val)
+            df_forecast_groups = utils.get_dates_from_groups(forecast_groups, da_glofas_reforecast)
 
             for source in event_sources: 
 
                 df_event = filter_event_dates(events[station][source], start_slice, end_slice) 
-                dict_performance = utils.get_clean_stats_dict(df_glofas_event, df_event, days_before_buffer, days_after_buffer)
-                dict_performance['return_period'] = rp
-                dict_performance['station'] = station
-                dict_performance['lead_time'] = lt
-                detection_stats[source] = dict_performance
-
-            df_detection_stats = df_detection_stats.append(pd.DataFrame
-                                  .from_dict(detection_stats)
-                                  .transpose()
-                                  .reset_index()
-                                  .rename(columns={'index':'source'}))  
+                TP, FP, FN, precision, recall = utils.get_detection_stats(df_event, df_forecast_groups)
+                
+                df_station_stats = df_station_stats.append({
+                    'station': station,
+                    'leadtime': leadtime,
+                    'source': source,
+                    'rp': rp,
+                    'TP': TP,
+                    'FP': FP,
+                    'FN': FN,
+                    'precision': precision,
+                    'recall': recall
+                }, ignore_index=True)
 ```
 
 Plot out the results.
 
 ```python
-fig, axs = plt.subplots(len(stations_adm2.values()), len(rp_list), figsize=(15, 5 * len(stations_adm2.values())), sharex=True, sharey=True)
+fig, axs = plt.subplots(len(stations_adm2.values()), len(RP_LIST), figsize=(15, 5 * len(stations_adm2.values())), sharex=True, sharey=True)
 
 for istation, station in enumerate(stations_adm2.values()):
     
-    for irp, rp in enumerate(rp_list):
+    for irp, rp in enumerate(RP_LIST):
         if len(stations_adm2.values()) > 1: 
             ax = axs[istation, irp]
         else: 
             ax = axs[irp]
 
         for isource, source in enumerate(event_sources): 
-            df_sel = df_detection_stats[(df_detection_stats['station'] == station) & (df_detection_stats['source'] == source) & (df_detection_stats['return_period'] == rp)]
-            ax.plot(df_sel['lead_time'], df_sel['precision'], color=f'C{isource}', ls='--', lw=0.75)
-            ax.plot(df_sel['lead_time'], df_sel['recall'], color=f'C{isource}', ls='-', lw=0.75)  
+            df_sel = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['source'] == source) & (df_station_stats['rp'] == rp)]
+            ax.plot(df_sel['leadtime'], df_sel['precision'], color=f'C{isource}', ls='--', lw=0.75)
+            ax.plot(df_sel['leadtime'], df_sel['recall'], color=f'C{isource}', ls='-', lw=0.75)  
 
             # Add to the legend
             ax.plot([], [], label=source.capitalize(), color=f'C{isource}')
