@@ -5,14 +5,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.stats import rankdata
-import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
 from src.utils_general.statistics import (
     get_return_period_function_analytical,
     get_return_period_function_empirical,
+    calc_crps,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -222,19 +221,21 @@ def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     return df_rp
 
 
-def get_crps(
+def get_crps_glofas(
     ds_reanalysis: xr.Dataset,
     ds_reforecast: xr.Dataset,
     normalization: str = None,
     thresh: [float, Dict[str, float]] = None,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
-    ds_reforecast: GloFAS reforecast xarray dataset :param
-    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
-    to divide the CRPS :param thresh: (optional) Either a single value,
-    or a dictionary with format {station name: thresh} :return:
-    DataFrame with station column names and leadtime index
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset
+    :param ds_reforecast: GloFAS reforecast xarray dataset
+    :param normalization: (optional) Can be 'mean' or 'std',
+    reanalysis metric to divide the CRPS
+    :param thresh: (optional) Either a single value,
+    or a dictionary with format {station name: thresh}
+    to select values greater than thresh
+    :return: DataFrame with station column names and leadtime index
     """
     stations = list(ds_reanalysis.keys())
     leadtimes = ds_reforecast.leadtime.values
@@ -250,13 +251,14 @@ def get_crps(
             observations = ds_reanalysis[station].reindex(
                 {"time": forecast.time}
             )
+
             if normalization == "mean":
                 norm = observations.mean().values
             elif normalization == "std":
                 norm = observations.std().values
-            elif normalization is None:
-                norm = 1
-            # TODO: Add error for other normalization values
+            else:
+                norm = normalization
+
             if thresh is not None:
                 # Thresh can either be dict of floats, or float
                 try:
@@ -265,13 +267,12 @@ def get_crps(
                     thresh_to_use = thresh
                 idx = observations > thresh_to_use
                 forecast, observations = forecast[:, idx], observations[idx]
-            crps = (
-                xs.crps_ensemble(
-                    observations, forecast, member_dim="number"
-                ).values
-                / norm
+
+            df_crps.loc[leadtime, station] = calc_crps(
+                observations,
+                forecast,
+                normalization=norm,
             )
-            df_crps.loc[leadtime, station] = crps
 
     return df_crps
 
