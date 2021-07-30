@@ -256,8 +256,8 @@ def get_crps_glofas(
                 norm = observations.mean().values
             elif normalization == "std":
                 norm = observations.std().values
-            elif normalization is None:
-                norm = 1
+            else:
+                norm = normalization
 
             if thresh is not None:
                 # Thresh can either be dict of floats, or float
