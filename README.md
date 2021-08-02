@@ -42,7 +42,7 @@ The pages below hold documented examples of some of the analyses that are held i
 #### Malawi
 - [Identifying historical dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_historical_dry_spells_description.html)
 - [Baseline overview of factors relating to dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_impact_summary.html)
-- [Forecasting dry spells](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_historical_dry_spells_description.html)
+- [Forecasting dry spells](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_dry_spells_indicator_analyses.html)
 
 #### Bangladesh
 - [Analysis of satellite imagery to identify past flooding](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bgd/validation/summary_flooding.html)
