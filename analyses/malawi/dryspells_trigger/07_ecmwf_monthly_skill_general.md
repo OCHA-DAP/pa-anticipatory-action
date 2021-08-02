@@ -28,6 +28,7 @@ import plotly.express as px
 import seaborn as sns
 import calendar
 import math
+import geopandas as gpd
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -56,27 +57,60 @@ parameters = config.parameters(country)
 country_iso3=parameters["iso3_code"]
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
 chirps_country_data_exploration_dir= os.path.join(country_data_exploration_dir,'chirps')
-monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells","monthly_precipitation")
-
-chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps_mwi_monthly.nc")
-crps_path=os.path.join(monthly_precip_exploration_dir,"mwi_crps.csv")
+adm2_shp_path=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,country_iso3,"cod_ab",parameters["path_admin2_shp"])
 ```
 
 ### Read in forecast and observational data
 
 ```python
-da_lt=processing.get_ecmwf_forecast_by_leadtime("mwi")
+gdf_adm2=gpd.read_file(adm2_shp_path)
 ```
 
 ```python
-da_obs=xr.load_dataset(chirps_monthly_mwi_path)
-da_obs=da_obs.precip
+da_for=processing.get_ecmwf_forecast_by_leadtime("mwi")
 ```
 
 ```python
-#interpolate forecast data such that it has the same resolution as the observed values
-#using "nearest" as interpolation method and not "linear" because the forecasts are designed to have sharp edged and not be smoothed
-da_forecast=da_lt.interp(latitude=da_obs["latitude"],longitude=da_obs["longitude"],method="nearest")
+da_for_clip=da_for.rio.set_spatial_dims(x_dim="longitude",y_dim="latitude").rio.write_crs("EPSG:4326").rio.clip(gdf_adm2["geometry"], all_touched=True)
+```
+
+```python
+#get the global dataset, such that we can clip it with a buffer
+da_obs_glb=xr.open_dataset(config.CHIRPS_MONTHLY_RAW_PATH)
+```
+
+```python
+bb=gdf_adm2.total_bounds
+buf=1
+```
+
+```python
+da_obs_mwi=da_obs_glb.rio.write_crs("EPSG:4326").rio.clip_box(bb[0]-buf,bb[1]-buf,bb[2]+buf,bb[3]+buf).precip
+```
+
+```python
+g=da_obs_mwi.sel(time="2020-01-01").plot()
+gdf_adm2.boundary.plot(ax=g.axes)
+```
+
+```python
+da_obs_interp=da_obs_mwi.interp(latitude=da_for["latitude"],longitude=da_for["longitude"],method="linear")
+da_obs_clip=da_obs_interp.rio.clip(gdf_adm2["geometry"],all_touched=True)
+```
+
+```python
+g=da_obs_clip.sel(time="2020-01-01").plot()
+
+gdf_adm2.boundary.plot(ax=g.axes)
+```
+
+```python
+da_for_clip=da_for.rio.write_crs("EPSG:4326").rio.clip(gdf_adm2["geometry"],all_touched=True)
+```
+
+```python
+g=da_for_clip.sel(time="2020-01-01",leadtime=2,number=10).plot()
+gdf_adm2.boundary.plot(ax=g.axes);
 ```
 
 Small check to see if the data looks as expected.
@@ -85,7 +119,7 @@ Small check to see if the data looks as expected.
 # Slice time and get mean of ensemble members for simple plotting
 start = '2020-01-01'
 
-rf_list_slice = da_lt.sel(time=start,latitude=da_lt.latitude.values[10],longitude=da_lt.longitude.values[5])
+rf_list_slice = da_for_clip.sel(time=start,latitude=da_for_clip.latitude.values[3],longitude=da_for_clip.longitude.values[2])
 
 rf_list_slice.dropna("leadtime").plot.line(label='Historical', c='grey',hue="number",add_legend=False)
 rf_list_slice.dropna("leadtime").mean(dim="number").plot.line(label='Historical', c='red',hue="number",add_legend=False)
@@ -103,53 +137,48 @@ We'll compute forecast skill using the ```xskillscore``` library and focus on th
 
 ```python
 #only include times that are present in both datasets (assuming no missing data)
-da_forecast=da_forecast.sel(time=slice(da_obs.time.min(), da_obs.time.max()))
-da_obs=da_obs.sel(time=slice(da_forecast.time.min(), da_forecast.time.max()))
+da_for_clip=da_for_clip.sel(time=slice(da_obs_clip.time.min(), da_obs_clip.time.max()))
+da_obs_clip=da_obs_clip.sel(time=slice(da_for_clip.time.min(), da_for_clip.time.max()))
 ```
 
 ```python
-# #only need to run if not updated data/categories. Takes about 15 minutes
-# thresh_list=[210,180,170]
-# sel_m=[[11,12,1,2,3,4],[1,2]]
-# norm_meth=[None,"mean"]
-# n_str_dict={None:"","mean":"n"}
-# leadtimes = da_forecast.leadtime.values
-# df_crps = pd.DataFrame(index=leadtimes)
-# for n in norm_meth:
-#     n_str=n_str_dict[n]
-#     df_crps_all=processing.get_crps_ecmwf(da_obs,
-#                                           da_forecast,
-#                                           normalization=n
-#                                          ).rename(columns={"crps":f"{n_str}crps"})
-#     df_crps=pd.concat([df_crps,df_crps_all],axis=1)
-#     for thresh in thresh_list:
-#         df_crps_th=processing.get_crps_ecmwf(da_obs,
-#                                              da_forecast,
-#                                              normalization=n,
-#                                              thresh=thresh
-#                                             ).rename(columns={"crps":f"{n_str}crps_{thresh}"})
-#         df_crps=pd.concat([df_crps,df_crps_th],axis=1)
-#     for m in sel_m:
-#         month_str="".join([calendar.month_abbr[i].lower() for i in m])
-#         da_obs_m = da_obs.where(da_obs.time.dt.month.isin(m), drop=True)
-#         da_forecast_m = da_forecast.where(da_forecast.time.dt.month.isin(m), drop=True)
-#         df_crps_m=processing.get_crps_ecmwf(da_obs_m,
-#                                             da_forecast_m,
-#                                             normalization = n,
-#                                            ).rename(columns={"crps":f"{n_str}crps_{month_str}"})
-#         df_crps=pd.concat([df_crps,df_crps_m],axis=1)
-#         for thresh in thresh_list:
-#             df_crps_m=processing.get_crps_ecmwf(da_obs_m,
-#                                                 da_forecast_m,
-#                                                 thresh=thresh,
-#                                                 normalization = n,
-#                                                ).rename(columns={"crps":f"{n_str}crps_{month_str}_{thresh}"})
-#             df_crps=pd.concat([df_crps,df_crps_m],axis=1)
-# df_crps.to_csv(crps_path)
-```
-
-```python
-df_crps=pd.read_csv(crps_path)
+#only need to run if not updated data/categories. Takes about 15 minutes
+thresh_list=[210,180,170]
+sel_m=[[11,12,1,2,3,4],[1,2]]
+norm_meth=[None,"mean"]
+n_str_dict={None:"","mean":"n"}
+leadtimes = da_for_clip.leadtime.values
+df_crps = pd.DataFrame(index=leadtimes)
+for n in norm_meth:
+    n_str=n_str_dict[n]
+    df_crps_all=processing.get_crps_ecmwf(da_obs_clip,
+                                          da_for_clip,
+                                          normalization=n
+                                         ).rename(columns={"crps":f"{n_str}crps"})
+    df_crps=pd.concat([df_crps,df_crps_all],axis=1)
+    for thresh in thresh_list:
+        df_crps_th=processing.get_crps_ecmwf(da_obs_clip,
+                                             da_for_clip,
+                                             normalization=n,
+                                             thresh=thresh
+                                            ).rename(columns={"crps":f"{n_str}crps_{thresh}"})
+        df_crps=pd.concat([df_crps,df_crps_th],axis=1)
+    for m in sel_m:
+        month_str="".join([calendar.month_abbr[i].lower() for i in m])
+        da_obs_clip_m = da_obs_clip.where(da_obs_clip.time.dt.month.isin(m), drop=True)
+        da_for_clip_m = da_for_clip.where(da_for_clip.time.dt.month.isin(m), drop=True)
+        df_crps_m=processing.get_crps_ecmwf(da_obs_clip_m,
+                                            da_for_clip_m,
+                                            normalization = n,
+                                           ).rename(columns={"crps":f"{n_str}crps_{month_str}"})
+        df_crps=pd.concat([df_crps,df_crps_m],axis=1)
+        for thresh in thresh_list:
+            df_crps_m=processing.get_crps_ecmwf(da_obs_clip_m,
+                                                da_for_clip_m,
+                                                thresh=thresh,
+                                                normalization = n,
+                                               ).rename(columns={"crps":f"{n_str}crps_{month_str}_{thresh}"})
+            df_crps=pd.concat([df_crps,df_crps_m],axis=1)
 ```
 
 From the plots below we can see that
@@ -239,8 +268,8 @@ Often the bias is computed using the MPE. However, for very small values the MPE
 
 ```python
 #takes a minute to compute, due to taking the median
-df_obs=da_obs.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
-df_forec=da_forecast.median(dim="number").to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_obs=da_obs_clip.to_dataframe(name="precip").reset_index().drop("spatial_ref",axis=1)
+df_forec=da_for_clip.median(dim="number").to_dataframe(name="precip").reset_index()#.drop("spatial_ref",axis=1)
 df_forobs=df_forec.merge(df_obs,how="left",on=["time","latitude","longitude"],suffixes=("_for","_obs"))
 df_forobs["diff_forobs"]=df_forobs["precip_for"]-df_forobs["precip_obs"]
 df_forobs["month"]=df_forobs.time.dt.month
@@ -264,6 +293,27 @@ for ax in axes:
 fig.suptitle("Ranges of precipitation for different months");
 ```
 
+```python
+leadtimes=df_forobs.leadtime.unique()
+num_plots = len(leadtimes)
+colp_num=3
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(16,10))
+for i, l in enumerate(leadtimes):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    sns.boxplot(data=df_forobs[df_forobs.leadtime==l],x="month",y="precip_for", ax=ax, color=hdx_blue)
+    ax.set_title(f"Leadtime = {l}")
+    ax.set_ylim(0,df_forobs.precip_for.max()+10)
+    ax.set_ylabel("Monthly precipitation")
+    ax.set_xlabel("Month number")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+fig.tight_layout()
+```
+
 Next we look at the bias. We firstly plot the observed vs forecasted-observed values across all leadtimes, dates, and cells. 
 From this we can see that
 
@@ -273,13 +323,33 @@ From this we can see that
 
 ```python
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-g=sns.jointplot(data=df_forobs,y="diff_forobs",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
+g=sns.jointplot(data=df_forobs,y="diff_forobs",x="precip_obs", kind="hex",height=10,joint_kws={ 'bins':'log'})
 #compute the average value of the difference between the forecasted and observed values
 #do this in bins cause else very noisy mean
 bins = np.arange(0,df_forobs.precip_obs.max()+20,10)
 group = df_forobs.groupby(pd.cut(df_forobs.precip_obs, bins))
 plot_centers = (bins [:-1] + bins [1:])/2
 plot_values = group.diff_forobs.median()
+g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
+g.set_axis_labels("Observed monthly precipitation (mm)", "Forecasted monthly precipitation (mm)", fontsize=12)
+plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
+# make new ax object for the cbar
+cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
+plt.colorbar(cax=cbar_ax)
+g.ax_joint.legend()
+g.fig.suptitle("Bias plot of observed vs forecasted values")
+g.fig.subplots_adjust(top=0.95) # Reduce plot to make room 
+```
+
+```python
+#plot the observed vs forecast
+g=sns.jointplot(data=df_forobs,y="precip_for",x="precip_obs", kind="hex",height=16,joint_kws={ 'bins':'log'})
+#compute the average value of the difference between the forecasted and observed values
+#do this in bins cause else very noisy mean
+bins = np.arange(0,df_forobs.precip_obs.max()+20,10)
+group = df_forobs.groupby(pd.cut(df_forobs.precip_obs, bins))
+plot_centers = (bins [:-1] + bins [1:])/2
+plot_values = group.precip_for.median()
 g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")
 g.set_axis_labels("Observed monthly precipitation (mm)", "Forecasted - Observed monthly precipitation (mm)", fontsize=12)
 plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so cbar is visible
@@ -398,11 +468,4 @@ px.line(df_diff.reset_index(),
        )
 ```
 
-Questions:
-- The values we saw in the CRPS plots are a lot larger than for the median bias plots. Why is this the case? 
-    - a median bias of around 6 across all values, compared to a CRPS of around 25
-    - the mean bias is around 15 but this is still lower than the CRPS
-
-```python
-
-```
+The values we saw in the CRPS plots are a lot larger than for the median bias plots. The bias can be lower because it sums both negative and positive errors, which can cancel each other out. With the CRPS the errors are squared.
