@@ -1,4 +1,4 @@
-We have a file from the RCO that has flood eents only in the municipalities 
+We have a file from the RCO that has flood events only in the municipalities 
 of interest. Here we want to correlate these events with past GloFAS activations.
 
 ```python
@@ -75,8 +75,6 @@ Read in events and clean
 df_events = (pd.read_excel(PAST_EVENTS_FILENAME, index_col='S.No.')
              .rename(columns={'Mun_ETHOS_Code': 'pcode'})
             )
-# Drop events with no date and convert date column
-df_events = df_events.loc[df_events['Year'] > 0]
 # For days that are 0, assume they mean the middle of the month
 df_events['Day'] = np.where(df_events['Day'] == 0, 15, df_events['Day'])
 df_events['Incident Date'] = pd.to_datetime(df_events[['Year', 'Month', 'Day']])
