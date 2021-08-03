@@ -5,15 +5,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.stats import rankdata
-import xskillscore as xs
-from datetime import timedelta
 
 from src.indicators.flooding.glofas import glofas
 from src.utils_general.statistics import (
     get_return_period_function_analytical,
     get_return_period_function_empirical,
+    calc_crps,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +31,11 @@ def _get_glofas_forecast_base(
     country_iso3: str,
     leadtimes: List[int],
     interp: bool = False,
+    shift_dates: bool = True,
     version: int = glofas.DEFAULT_VERSION,
     split_by_leadtimes: bool = False,
     **kwargs,
-):
+) -> xr.Dataset:
     if is_reforecast:
         glofas_forecast = glofas.GlofasReforecast(**kwargs)
     else:
@@ -62,7 +61,8 @@ def _get_glofas_forecast_base(
         }
     if interp:
         ds_glofas_forecast_dict = _interp_dates(ds_glofas_forecast_dict)
-    ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
+    if shift_dates:
+        ds_glofas_forecast_dict = _shift_dates(ds_glofas_forecast_dict)
     return _convert_dict_to_ds(ds_glofas_forecast_dict)
 
 
@@ -85,6 +85,7 @@ def get_glofas_reforecast(
     country_iso3: str,
     leadtimes: List[int],
     interp: bool = True,
+    shift_dates: bool = True,
     version: int = glofas.DEFAULT_VERSION,
     split_by_leadtimes: bool = False,
     **kwargs,
@@ -94,6 +95,7 @@ def get_glofas_reforecast(
         country_iso3=country_iso3,
         leadtimes=leadtimes,
         interp=interp,
+        shift_dates=shift_dates,
         version=version,
         split_by_leadtimes=split_by_leadtimes,
         **kwargs,
@@ -170,32 +172,36 @@ def get_glofas_forecast_summary(ds_glofas_forecast):
 
 
 def get_return_periods(
-    ds_reanalysis: xr.Dataset,
+    ds_glofas: xr.Dataset,
     years: list = None,
     method: str = "analytical",
     show_plots: bool = False,
+    extend_factor: int = 1,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis dataset :param years: Return
-    period years to compute :param method: Either "analytical" or
-    "empirical" :param show_plots: If method is analytical, can show the
-    histogram and GEV distribution overlaid :return: Dataframe with
-    return period years as index and stations as columns
+    :param ds_glofas: GloFAS reanalysis or forecast/reforecast dataset
+    :param years: Return period years to compute
+    :param method: Either "analytical" or "empirical"
+    :param show_plots: If method is analytical, can show the histogram and GEV
+    distribution overlaid
+    :param extend_factor: If method is analytical, can extend the interpolation
+    range to reach higher return periods
+    :return: Dataframe with return period years as index and stations as
+    columns
     """
     if years is None:
-        years = [1.5, 2, 3, 5, 10, 20]
-    stations = list(ds_reanalysis.keys())
+        years = [1.5, 2, 5, 10, 20]
+    stations = list(ds_glofas.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
-        df_rp = _get_return_period_df(
-            ds_reanalysis=ds_reanalysis, station=station
-        )
+        df_rp = _get_return_period_df(ds_glofas=ds_glofas, station=station)
         if method == "analytical":
             f_rp = get_return_period_function_analytical(
                 df_rp=df_rp,
                 rp_var="discharge",
                 show_plots=show_plots,
                 plot_title=station,
+                extend_factor=extend_factor,
             )
         elif method == "empirical":
             f_rp = get_return_period_function_empirical(
@@ -208,9 +214,9 @@ def get_return_periods(
     return df_rps
 
 
-def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
+def _get_return_period_df(ds_glofas: xr.Dataset, station: str):
     df_rp = (
-        ds_reanalysis.to_dataframe()[[station]]
+        ds_glofas.to_dataframe()[[station]]
         .rename(columns={station: "discharge"})
         .resample(rule="A", kind="period")
         .max()
@@ -220,19 +226,20 @@ def _get_return_period_df(ds_reanalysis: xr.Dataset, station: str):
     return df_rp
 
 
-def get_crps(
+def get_crps_glofas(
     ds_reanalysis: xr.Dataset,
     ds_reforecast: xr.Dataset,
     normalization: str = None,
     thresh: [float, Dict[str, float]] = None,
 ) -> pd.DataFrame:
     """
-    :param ds_reanalysis: GloFAS reanalysis xarray dataset :param
-    ds_reforecast: GloFAS reforecast xarray dataset :param
-    normalization: (optional) Can be 'mean' or 'std', reanalysis metric
-    to divide the CRPS :param thresh: (optional) Either a single value,
-    or a dictionary with format {station name: thresh} :return:
-    DataFrame with station column names and leadtime index
+    :param ds_reanalysis: GloFAS reanalysis xarray dataset
+    :param ds_reforecast: GloFAS reforecast xarray dataset
+    :param normalization: (optional) Can be 'mean' or 'std', reanalysis metric
+    to divide the CRPS
+    :param thresh: (optional) Either a single value, or a dictionary with
+    format {station name: thresh} to select values greater than thresh
+    :return: DataFrame with station column names and leadtime index
     """
     stations = list(ds_reanalysis.keys())
     leadtimes = ds_reforecast.leadtime.values
@@ -248,13 +255,14 @@ def get_crps(
             observations = ds_reanalysis[station].reindex(
                 {"time": forecast.time}
             )
+
             if normalization == "mean":
                 norm = observations.mean().values
             elif normalization == "std":
                 norm = observations.std().values
-            elif normalization is None:
-                norm = 1
-            # TODO: Add error for other normalization values
+            else:
+                norm = normalization
+
             if thresh is not None:
                 # Thresh can either be dict of floats, or float
                 try:
@@ -263,13 +271,10 @@ def get_crps(
                     thresh_to_use = thresh
                 idx = observations > thresh_to_use
                 forecast, observations = forecast[:, idx], observations[idx]
-            crps = (
-                xs.crps_ensemble(
-                    observations, forecast, member_dim="number"
-                ).values
-                / norm
+
+            df_crps.loc[leadtime, station] = calc_crps(
+                observations, forecast, normalization=norm,
             )
-            df_crps.loc[leadtime, station] = crps
 
     return df_crps
 
@@ -363,7 +368,9 @@ def get_more_stats(TP, FP, FN):
 
 def get_clean_stats_dict(df_glofas, df_impact, buffer_before, buffer_after):
     stats = {}
-    TP, FP, FN = get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after)
+    TP, FP, FN = get_detection_stats(
+        df_glofas, df_impact, buffer_before, buffer_after
+    )
     precision, recall, f1 = get_more_stats(TP, FP, FN)
 
     stats["TP"] = TP
