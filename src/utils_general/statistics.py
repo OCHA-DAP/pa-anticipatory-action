@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+import xskillscore as xs
 import logging
+import xarray as xr
 
 from scipy.stats import genextreme as gev
 import matplotlib.pyplot as plt
@@ -15,7 +17,7 @@ def get_return_periods_dataframe(
     years: list = None,
     method: str = "analytical",
     show_plots: bool = False,
-    extend_factor: int = 1
+    extend_factor: int = 1,
 ) -> pd.DataFrame:
     """
     Function to get the return periods, either empirically or
@@ -37,8 +39,10 @@ def get_return_periods_dataframe(
     df_rps = pd.DataFrame(columns=["rp"], index=years)
     if method == "analytical":
         f_rp = get_return_period_function_analytical(
-            df_rp=df, rp_var=rp_var, show_plots=show_plots,
-            extend_factor=extend_factor
+            df_rp=df,
+            rp_var=rp_var,
+            show_plots=show_plots,
+            extend_factor=extend_factor,
         )
     elif method == "empirical":
         f_rp = get_return_period_function_empirical(
@@ -57,7 +61,7 @@ def get_return_period_function_analytical(
     rp_var: str,
     show_plots: bool = False,
     plot_title: str = "",
-    extend_factor: int = 1
+    extend_factor: int = 1,
 ):
     """
     :param df_rp: DataFrame where the index is the year, and the rp_var
@@ -77,7 +81,11 @@ def get_return_period_function_analytical(
         loc=rp_var_values.median(),
         scale=rp_var_values.median() / 2,
     )
-    x = np.linspace(rp_var_values.min(), rp_var_values.max()*extend_factor, 100*extend_factor)
+    x = np.linspace(
+        rp_var_values.min(),
+        rp_var_values.max() * extend_factor,
+        100 * extend_factor,
+    )
     if show_plots:
         fig, ax = plt.subplots()
         ax.hist(rp_var_values, density=True, bins=20)
@@ -118,3 +126,41 @@ def calc_mpe(observations: np.array, forecast: np.array) -> float:
         / len(observations.time)
         * 100
     )
+
+
+def calc_crps(
+    observations: xr.DataArray,
+    forecasts: xr.DataArray,
+    normalization: [str, float] = None,
+    member_dim: str = "number",
+) -> float:
+    """
+    observations and forecasts must have the same shape in all
+    dimensions except the member_dim dimension
+    the member_dim should only be present in the forecasts not in the
+    observation
+    :param observations: datarray with observed values
+    :param forecasts: data-array with forecasted values
+    :param normalization: (optional) Can be None, a number, 'mean' or 'std',
+    reanalysis metric to divide the CRPS
+    :param member_dim: (optional) the dimension name which contains
+    the ensemble members
+    :return: the CRPS
+    """
+    if isinstance(normalization, (int, float)):
+        norm = normalization
+    elif normalization == "mean":
+        norm = observations.mean().values
+    elif normalization == "std":
+        norm = observations.std().values
+    elif normalization is None:
+        norm = 1
+    else:
+        logger.error(
+            f"Normalization method {normalization} has not been implemented"
+        )
+    crps = (
+        xs.crps_ensemble(observations, forecasts, member_dim=member_dim).values
+        / norm
+    )
+    return crps

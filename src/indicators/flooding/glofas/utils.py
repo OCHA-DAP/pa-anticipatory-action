@@ -5,14 +5,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.stats import rankdata
-import xskillscore as xs
 
 from src.indicators.flooding.glofas import glofas
 from src.utils_general.statistics import (
     get_return_period_function_analytical,
     get_return_period_function_empirical,
+    calc_crps,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +178,7 @@ def get_return_periods(
     years: list = None,
     method: str = "analytical",
     show_plots: bool = False,
-    extend_factor: int = 1
+    extend_factor: int = 1,
 ) -> pd.DataFrame:
     """
     :param ds_glofas: GloFAS reanalysis or forecast/reforecast dataset
@@ -197,16 +196,14 @@ def get_return_periods(
     stations = list(ds_glofas.keys())
     df_rps = pd.DataFrame(columns=stations, index=years)
     for station in stations:
-        df_rp = _get_return_period_df(
-            ds_glofas=ds_glofas, station=station
-        )
+        df_rp = _get_return_period_df(ds_glofas=ds_glofas, station=station)
         if method == "analytical":
             f_rp = get_return_period_function_analytical(
                 df_rp=df_rp,
                 rp_var="discharge",
                 show_plots=show_plots,
                 plot_title=station,
-                extend_factor=extend_factor
+                extend_factor=extend_factor,
             )
         elif method == "empirical":
             f_rp = get_return_period_function_empirical(
@@ -232,7 +229,7 @@ def _get_return_period_df(ds_glofas: xr.Dataset, station: str):
     return df_rp
 
 
-def get_crps(
+def get_crps_glofas(
     ds_reanalysis: xr.Dataset,
     ds_reforecast: xr.Dataset,
     normalization: str = None,
@@ -244,7 +241,7 @@ def get_crps(
     :param normalization: (optional) Can be 'mean' or 'std', reanalysis metric
     to divide the CRPS
     :param thresh: (optional) Either a single value, or a dictionary with
-    format {station name: thresh}
+    format {station name: thresh} to select values greater than thresh
     :return: DataFrame with station column names and leadtime index
     """
     stations = list(ds_reanalysis.keys())
@@ -261,13 +258,14 @@ def get_crps(
             observations = ds_reanalysis[station].reindex(
                 {"time": forecast.time}
             )
+
             if normalization == "mean":
                 norm = observations.mean().values
             elif normalization == "std":
                 norm = observations.std().values
-            elif normalization is None:
-                norm = 1
-            # TODO: Add error for other normalization values
+            else:
+                norm = normalization
+
             if thresh is not None:
                 # Thresh can either be dict of floats, or float
                 try:
@@ -276,13 +274,12 @@ def get_crps(
                     thresh_to_use = thresh
                 idx = observations > thresh_to_use
                 forecast, observations = forecast[:, idx], observations[idx]
-            crps = (
-                xs.crps_ensemble(
-                    observations, forecast, member_dim="number"
-                ).values
-                / norm
+
+            df_crps.loc[leadtime, station] = calc_crps(
+                observations,
+                forecast,
+                normalization=norm,
             )
-            df_crps.loc[leadtime, station] = crps
 
     return df_crps
 

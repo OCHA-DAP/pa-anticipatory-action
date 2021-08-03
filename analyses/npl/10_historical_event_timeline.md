@@ -29,7 +29,7 @@ mpl.rcParams['figure.dpi'] = 200
 COUNTRY_ISO3 = 'npl'
 MAIN_RP = 2
 RP_LIST = [1.5, 2, 5]
-FORECAST_PERCENTILE_LIST = [50, 30, 25]
+FORECAST_PERCENTILE_LIST = [50, 30]
 # Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
 VERSION_LOC = "_v3" 
 STATIONS = [
@@ -146,12 +146,15 @@ def get_consecutive_groups(x: pd.Series, n=2):
     return [l[i:i+n] for i in range(0, len(l), n)]
 
 
-def get_station_stats(df_station_dict, event_var, rp=MAIN_RP):
+def get_station_stats(df_station_dict, event_var, rp=MAIN_RP, percentiles=None):
 
     days_before_buffer = 0 # Event can occur at the earliest on the same day as the trigger
     days_after_buffer = 30 # How many days the true event can occur after the GloFAS event
     df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN', 'event_type', 'percentile'])
 
+    if percentiles is None:
+        percentiles = FORECAST_PERCENTILE_LIST
+    
     for station in STATIONS:
         df_station = df_station_dict[station]
         if event_var == 'event_danger':
@@ -159,7 +162,7 @@ def get_station_stats(df_station_dict, event_var, rp=MAIN_RP):
         df_true_events = df_station[df_station[event_var]][[event_var]]
         rp_val = df_return_period.loc[rp, station]
         for event_type, leadtimes in LEADTIMES_BY_TRIGGER.items():
-            for percentile in FORECAST_PERCENTILE_LIST:
+            for percentile in percentiles:
                 glofas_event_indices = get_consecutive_groups(df_station[f"event_{event_type}_rp{rp}_p{percentile}"])
                 df_true_events['detections'] = 0
                 TP = 0
@@ -196,12 +199,22 @@ def get_station_stats(df_station_dict, event_var, rp=MAIN_RP):
 ```
 
 ```python
-df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=5)
+df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=2)
 df_station_stats
 ```
 
 ```python
-df_station_stats = get_station_stats(df_station_dict, "event_rp1.5", rp=1.5)
+df_station_stats = get_station_stats(df_station_dict, "event_rp2", rp=2)
+df_station_stats
+```
+
+```python
+df_station_stats = get_station_stats(df_station_dict, "event_danger", rp=5, percentiles=[50])
+df_station_stats
+```
+
+```python
+df_station_stats = get_station_stats(df_station_dict, "event_rp5", rp=5, percentiles=[50])
 df_station_stats
 ```
 
@@ -250,6 +263,7 @@ for station in STATIONS:
 ### Plots
 
 ```python
+# Try to plot the single readiness TP, and see which percentiles capture it
 rp = 2
 x = ds_glofas_forecast_summary['Chisapani_v3'].sel(leadtime=4, percentile=[20, 25, 30, 35, 40, 45, 50])
 rp_val = df_return_period.loc[rp, 'Chisapani']
@@ -263,6 +277,9 @@ ax.set_ylim(4000, 8000)
 ```
 
 ```python
+# Plot timeline of events
+
+percentile = 50
 mpl.rcParams['hatch.linewidth'] = 0.5
 for station in STATIONS:
     df_station = df_station_dict[station].copy().dropna(subset=["water_level"])
@@ -293,15 +310,11 @@ for station in STATIONS:
                                              [0.5, 0.5, 2]):
             cname = f'event_{event_type}'
             if event_type != "danger":
-                cname += f"_rp{MAIN_RP}"
+                cname += f"_rp{MAIN_RP}_p{percentile}"
             ax.fill_between(data.index, y0, y1, where=data[cname], 
                             facecolor='none', hatch=hatch, edgecolor=colour, lw=lw, 
                             alpha=.75, label=event_type)
     fig.supylabel('Water level [m]')
     fig.suptitle(station)    
     ax.legend()
-```
-
-```python
-
 ```
