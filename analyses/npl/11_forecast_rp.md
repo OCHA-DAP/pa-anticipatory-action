@@ -1,3 +1,7 @@
+Because the forecasts at Chatara and Chisapani have a negative bias, 
+we want to know what to know what a 2 year RP effectively corresponds
+to for each lead time.
+
 ```python
 from pathlib import Path
 import os
