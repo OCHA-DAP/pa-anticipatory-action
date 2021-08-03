@@ -43,9 +43,7 @@ def _get_glofas_forecast_base(
     if split_by_leadtimes:
         ds_glofas_forecast_dict = {
             leadtime: glofas_forecast.read_processed_dataset(
-                country_iso3=country_iso3,
-                version=version,
-                leadtime=leadtime,
+                country_iso3=country_iso3, version=version, leadtime=leadtime,
             )
             for leadtime in leadtimes
         }
@@ -207,8 +205,7 @@ def get_return_periods(
             )
         elif method == "empirical":
             f_rp = get_return_period_function_empirical(
-                df_rp=df_rp,
-                rp_var="discharge",
+                df_rp=df_rp, rp_var="discharge",
             )
         else:
             logger.error(f"{method} is not a valid keyword for method")
@@ -276,9 +273,7 @@ def get_crps_glofas(
                 forecast, observations = forecast[:, idx], observations[idx]
 
             df_crps.loc[leadtime, station] = calc_crps(
-                observations,
-                forecast,
-                normalization=norm,
+                observations, forecast, normalization=norm,
             )
 
     return df_crps
@@ -322,6 +317,70 @@ def get_glofas_activations(da_glofas, thresh, ndays):
         lambda x: da_glofas.time[x].values
     )
     return df_glofas_act
+
+
+def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
+    TP = 0
+    FP = 0
+    tot_events = len(df_impact.index)
+    df_impact_copy = df_impact.copy()
+
+    # Add buffer around the flood event dates to account for some uncertainty if desired
+    df_impact_copy["start_date_buffer"] = pd.to_datetime(
+        df_impact_copy["start_date"]
+    ) - timedelta(days=buffer_before)
+    df_impact_copy["end_date_buffer"] = pd.to_datetime(
+        df_impact_copy["end_date"]
+    ) + timedelta(days=buffer_after)
+
+    for index, row in df_glofas.iterrows():
+        TP_ = False
+        act_dates = np.array(pd.date_range(row["start_date"], row["end_date"]))
+
+        for index, row in df_impact_copy.iterrows():
+            event_dates = np.array(
+                pd.date_range(row["start_date_buffer"], row["end_date_buffer"])
+            )
+
+            if set(act_dates) & set(event_dates):
+                TP += 1
+                TP_ = True
+                df_impact_copy = df_impact_copy.drop([index,])
+        if not TP_:
+            FP += 1
+
+    FN = tot_events - TP
+    return TP, FP, FN
+
+
+def get_more_stats(TP, FP, FN):
+    try:
+        precision = TP / (TP + FP)
+    except Exception as e:
+        precision = None
+    recall = TP / (TP + FN)
+    try:
+        f1 = 2 / ((1 / recall) + (1 / precision))
+    except Exception as e:
+        f1 = None
+    return precision, recall, f1
+
+
+def get_clean_stats_dict(df_glofas, df_impact, buffer_before, buffer_after):
+    stats = {}
+    TP, FP, FN = get_detection_stats(
+        df_glofas, df_impact, buffer_before, buffer_after
+    )
+    precision, recall, f1 = get_more_stats(TP, FP, FN)
+
+    stats["TP"] = TP
+    stats["FP"] = FP
+    stats["FN"] = FN
+    stats["precision"] = precision
+    stats["recall"] = recall
+    stats["f1"] = f1
+
+    return stats
 
 
 def get_rank(observations: np.array, forecast: np.array) -> np.array:

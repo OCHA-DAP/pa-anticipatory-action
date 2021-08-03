@@ -12,13 +12,13 @@ import os
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
-from src.indicators.drought.config import Config
+from src.indicators.flooding.config import Config
 
 config = Config()
 
 DATA_DIR = Path(config.DATA_DIR)
-PRIVATE_DATA_DIR = config.PRIVATE_DIR
-PUBLIC_DATA_DIR = config.PUBLIC_DIR
+PRIVATE_DATA_DIR = config.DATA_PRIVATE_DIR
+PUBLIC_DATA_DIR = config.DATA_DIR
 RAW_DATA_DIR = config.RAW_DIR
 GLOBAL_DIR = "glb"
 SHAPEFILE_DIR = config.SHAPEFILE_DIR
@@ -49,65 +49,96 @@ class Floodscan:
         self,
         country_name: str,
         adm_level: int = DEFAULT_ADMIN_LEVEL,
+        custom_path: str = None,
+        custom_id_col: str = "",
+        custom_name: str = "",
+        start_date: str = "1998-01-12",
+        end_date: str = "2020-12-31",
     ):
         """
-        Load data, call function to compute statistics per admin, and
-        save the results to a csv Args: country_name: name of the
-        country of interest adm_level: admin level to compute the
-        statistics on
+        Load data, call function to compute statistics per admin, and save the results to a csv
+        Args:
+            country_name: name of the country of interest
+            adm_level: admin level to compute the statistics on
+            custom_path: file path to the custom area shapefile
+            custom_id_col: the name of the id column for features in the custom area shapefile
+            custom_name: the name of the custom area (for the output file)
+            start_date: to filter by start date
+            end_date: to filter by end date
         """
         config = Config()
         parameters = config.parameters(country_name)
         country_iso3 = parameters["iso3_code"]
-        adm_boundaries_path = os.path.join(
-            DATA_DIR,
-            PUBLIC_DATA_DIR,
-            RAW_DATA_DIR,
-            country_iso3,
-            config.SHAPEFILE_DIR,
-            parameters[f"path_admin{adm_level}_shp"],
-        )
-        ds = self.read_raw_dataset()
-        # get the affine transformation of the dataset. looks
-        # complicated, but haven't found better way to do it
+
+        ds = self.read_raw_dataset().sel(time=slice(start_date, end_date))
+
+        # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
         coords_transform = (
             ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
             .rio.write_crs("EPSG:4326")
             .rio.transform()
         )
-        # this takes a few hours to compute
-        df = self.compute_stats_per_area(
-            ds,
-            coords_transform,
-            adm_boundaries_path,
-            parameters[f"shp_adm{adm_level}c"],
-        )
-        self._write_to_processed_file(country_iso3, adm_level, df)
+
+        if custom_path:
+            boundaries_path = custom_path
+
+            # this takes a few hours to compute
+            df = self.compute_stats_per_area(
+                ds, coords_transform, boundaries_path, custom_id_col,
+            )
+            self._write_to_processed_file(
+                country_iso3, adm_level, df, custom_name
+            )
+
+        else:
+            boundaries_path = os.path.join(
+                DATA_DIR,
+                RAW_DATA_DIR,
+                country_name,
+                config.SHAPEFILE_DIR,
+                parameters[f"path_admin{adm_level}_shp"],
+            )
+
+            # this takes a few hours to compute
+            df = self.compute_stats_per_area(
+                ds,
+                coords_transform,
+                boundaries_path,
+                parameters[f"shp_adm{adm_level}c"],
+            )
+            self._write_to_processed_file(
+                country_iso3, adm_level, df, custom_name
+            )
 
     def compute_stats_per_area(
         self,
         ds,
         raster_transform,
-        adm_path,
-        adm_col,
+        bound_path,
+        id_col,
         data_var="SFED_AREA",
-        percentile_list=[2, 4, 6, 8, 10, 20],
+        percentile_list=None,
     ):
         """
-        Compute statistics on the raster cells per admin area Args: ds:
-        the xarray dataset with values per raster cell raster_transform:
-        the affine transformation of ds adm_path: the path to the admin
-        boundaries shp file adm_col: the name of the column containing
-        the admin name data_var: the variable of interest in ds
-        percentile_list: list of thresholds to compute the value x% of
-        the cells is below at
+        Compute statistics on the raster cells per admin area
+        Args:
+            ds: the xarray dataset with values per raster cell
+            raster_transform: the affine transformation of ds
+            bound_path: the path to the boundaries shp file
+            id_col: the name of the column containing the boundary IDs
+            data_var: the variable of interest in ds
+            percentile_list: list of thresholds to compute the value x% of the cells is below at
 
-        Returns: df_hist: dataframe with the statistics per admin
+        Returns:
+            df_hist: dataframe with the statistics per admin
         """
+        if not percentile_list:
+            percentile_list = [2, 4, 6, 8, 10, 20]
+
         # compute statistics on level in adm_path for all dates in ds
         df_list = []
         for date in ds.time.values:
-            df = gpd.read_file(adm_path)[[adm_col, "geometry"]]
+            df = gpd.read_file(bound_path)[[id_col, "geometry"]]
             ds_date = ds.sel(time=date)
 
             df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
@@ -118,8 +149,7 @@ class Floodscan:
                     nodata=np.nan,
                 )
             )[["mean", "max", "min"]]
-            # TODO: the percentiles seem to always return 0, even if
-            # setting the p to 0.00001. Don't understand why yet..
+            # TODO: the percentiles seem to always return 0, even if setting the p to 0.00001. Don't understand why yet..
             df[
                 [f"percentile_{str(p)}" for p in percentile_list]
             ] = pd.DataFrame(
@@ -147,13 +177,10 @@ class Floodscan:
         return df_hist
 
     def read_processed_dataset(
-        self,
-        country_iso3: str,
-        adm_level: int,
+        self, country_iso3: str, adm_level: int,
     ):
         filepath = self._get_processed_filepath(
-            country_iso3=country_iso3,
-            adm_level=adm_level,
+            country_iso3=country_iso3, adm_level=adm_level,
         )
         return pd.read_csv(filepath, index_col=False)
 
@@ -162,20 +189,25 @@ class Floodscan:
         country_iso3: str,
         adm_level: int,
         df: pd.DataFrame,
+        custom_name: str = None,
     ) -> Path:
-        filepath = self._get_processed_filepath(
-            country_iso3=country_iso3,
-            adm_level=adm_level,
-        )
+        if custom_name:
+            filepath = self._get_processed_filepath(
+                country_iso3=country_iso3,
+                adm_level=adm_level,
+                custom_name=custom_name,
+            )
+        else:
+            filepath = self._get_processed_filepath(
+                country_iso3=country_iso3, adm_level=adm_level,
+            )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         filepath.unlink(missing_ok=True)
         logger.info(f"Writing to {filepath}")
         df.to_csv(filepath)
         return filepath
 
-    def _get_raw_filepath(
-        self,
-    ):
+    def _get_raw_filepath(self,):
         directory = (
             DATA_DIR
             / PRIVATE_DATA_DIR
@@ -187,11 +219,16 @@ class Floodscan:
         return directory / Path(FLOODSCAN_FILENAME)
 
     def _get_processed_filepath(
-        self,
-        country_iso3: str,
-        adm_level: int,
+        self, country_iso3: str, adm_level: int, custom_name: str = None
     ) -> Path:
-        filename = f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
+        if custom_name:
+            filename = (
+                f"{country_iso3.lower()}_floodscan_stats_{custom_name}.csv"
+            )
+        else:
+            filename = (
+                f"{country_iso3.lower()}_floodscan_stats_adm{adm_level}.csv"
+            )
         return (
             DATA_DIR
             / PRIVATE_DATA_DIR
