@@ -1,5 +1,6 @@
-from typing import List, Dict
 import logging
+from datetime import timedelta
+from typing import List, Dict
 
 import numpy as np
 import pandas as pd
@@ -43,7 +44,9 @@ def _get_glofas_forecast_base(
     if split_by_leadtimes:
         ds_glofas_forecast_dict = {
             leadtime: glofas_forecast.read_processed_dataset(
-                country_iso3=country_iso3, version=version, leadtime=leadtime,
+                country_iso3=country_iso3,
+                version=version,
+                leadtime=leadtime,
             )
             for leadtime in leadtimes
         }
@@ -205,7 +208,8 @@ def get_return_periods(
             )
         elif method == "empirical":
             f_rp = get_return_period_function_empirical(
-                df_rp=df_rp, rp_var="discharge",
+                df_rp=df_rp,
+                rp_var="discharge",
             )
         else:
             logger.error(f"{method} is not a valid keyword for method")
@@ -257,12 +261,11 @@ def get_crps_glofas(
             )
 
             if normalization == "mean":
-                norm = observations.mean().values
+                norm = observations.mean().item()
             elif normalization == "std":
-                norm = observations.std().values
+                norm = observations.std().item()
             else:
                 norm = normalization
-
             if thresh is not None:
                 # Thresh can either be dict of floats, or float
                 try:
@@ -273,7 +276,9 @@ def get_crps_glofas(
                 forecast, observations = forecast[:, idx], observations[idx]
 
             df_crps.loc[leadtime, station] = calc_crps(
-                observations, forecast, normalization=norm,
+                observations,
+                forecast,
+                normalization=norm,
             )
 
     return df_crps
@@ -325,7 +330,8 @@ def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
     tot_events = len(df_impact.index)
     df_impact_copy = df_impact.copy()
 
-    # Add buffer around the flood event dates to account for some uncertainty if desired
+    # Add buffer around the flood event dates to account for some uncertainty
+    # if desired
     df_impact_copy["start_date_buffer"] = pd.to_datetime(
         df_impact_copy["start_date"]
     ) - timedelta(days=buffer_before)
@@ -345,7 +351,11 @@ def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
             if set(act_dates) & set(event_dates):
                 TP += 1
                 TP_ = True
-                df_impact_copy = df_impact_copy.drop([index,])
+                df_impact_copy = df_impact_copy.drop(
+                    [
+                        index,
+                    ]
+                )
         if not TP_:
             FP += 1
 
@@ -356,12 +366,12 @@ def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
 def get_more_stats(TP, FP, FN):
     try:
         precision = TP / (TP + FP)
-    except Exception as e:
+    except Exception:
         precision = None
     recall = TP / (TP + FN)
     try:
         f1 = 2 / ((1 / recall) + (1 / precision))
-    except Exception as e:
+    except Exception:
         f1 = None
     return precision, recall, f1
 
