@@ -307,6 +307,17 @@ def get_groups_above_threshold(
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
+def get_dates_list_from_dataset(
+    da: xr.DataArray, threshold: float, min_duration: int = 1
+):
+    groups = get_groups_above_threshold(
+        observations=da.to_masked_array(),
+        threshold=threshold,
+        min_duration=min_duration,
+    )
+    return [da.time[group[0] + min_duration - 1].data for group in groups]
+
+
 def get_detection_stats(
     true_event_dates: np.ndarray,
     forecasted_event_dates: np.ndarray,

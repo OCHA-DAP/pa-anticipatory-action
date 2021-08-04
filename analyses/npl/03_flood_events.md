@@ -176,14 +176,12 @@ for basin, df in df_events_dict.items():
 ```python
 # Define GloFAS events
 rp = settings.MAIN_RP
-
 df_station_stats = pd.DataFrame(columns=['station', 'impact_parameter', 'TP', 'FP', 'FN'])
 
 for basin, station_list in settings.STATIONS_BY_BASIN.items():
     for station in station_list:
         rp_val = df_return_period.loc[rp, station]
-        glofas_groups = utils.get_groups_above_threshold(ds_glofas_reanalysis[station], rp_val, min_duration=settings.DURATION)
-        glofas_dates = [ds_glofas_reanalysis.time[group[0] + settings.DURATION -1].data for group in groups]
+        glofas_dates = utils.get_dates_list_from_dataset(ds_glofas_reanalysis[station], rp_val, min_duration=settings.DURATION)
         for impact_parameter in impact_parameters:
             df_events_sub = df_events_high_impact[
                 (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
@@ -215,7 +213,7 @@ df_events_sub
 ```
 
 ```python
-rp = MAIN_RP
+rp = settings.MAIN_RP
 for basin, station_list in settings.STATIONS_BY_BASIN.items():
     for station in station_list:
         fig, axs = plt.subplots(len(impact_parameters), figsize=(12, 10))
