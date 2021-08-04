@@ -57,9 +57,7 @@ def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
     glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=ggd.COUNTRY_ISO3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
         )[STATION]
         for leadtime in leadtimes
     }
@@ -73,9 +71,7 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=ggd.COUNTRY_ISO3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
         )[STATION]
         for leadtime in leadtimes
     }
