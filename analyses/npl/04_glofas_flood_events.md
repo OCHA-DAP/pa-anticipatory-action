@@ -1,8 +1,4 @@
 ```python
-from pathlib import Path
-import os
-import sys
-
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -11,48 +7,22 @@ import matplotlib as mpl
 import xarray as xr
 from matplotlib.ticker import MaxNLocator
 
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_settings as settings
 from src.indicators.flooding.glofas import utils
 ```
 
 ```python
-mpl.rcParams['figure.dpi'] = 200
-
-LEADTIMES = [x + 1 for x in range(10)]
-
-COUNTRY_ISO3 = 'npl'
-
-FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
-# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
-VERSION_LOC = "_v3"
-USE_INCORRECT_AREA_COORDS = False
-
-MAIN_RP = 1.5
-MAIN_FORECAST_PROB = 50
-    
-
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
-
-DURATION = 1
-```
-
-```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3, use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS)
+    country_iso3=settings.COUNTRY_ISO3, use_incorrect_area_coords=settings.USE_INCORRECT_AREA_COORDS)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
-    country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
+    country_iso3 = settings.COUNTRY_ISO3, leadtimes=settings.LEADTIMES,
     interp=True,
-    use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+    use_incorrect_area_coords=settings.USE_INCORRECT_AREA_COORDS
 )
 ds_glofas_reforecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
 #df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
-df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
+df_return_period =  pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
 
 ```
 

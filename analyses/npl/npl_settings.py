@@ -18,6 +18,10 @@ DATA_DIR_PRIVATE = DATA_DIR / "private"
 
 # Commonly used subdirectories
 RCO_DIR = DATA_DIR_PRIVATE / "exploration" / "npl" / "unrco"
+GLOFAS_DIR = DATA_DIR_PUBLIC / "exploration" / "npl" / "glofas"
+
+# Commonly used files
+GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 
 # Shapefile
 SHAPEFILE_DIR = DATA_DIR_PUBLIC / "raw" / "npl" / "cod_ab"
@@ -35,7 +39,12 @@ DURATION = 1  # How many consecutive days the event needs to occur for
 MAIN_RP = 2
 DAYS_BEFORE_BUFFER = 3  # When not using forecast leadtime
 DAYS_AFTER_BUFFER = 30
+# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2
+VERSION_LOC = "_v3"
+USE_INCORRECT_AREA_COORDS = False
 
+
+FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
 STATIONS_BY_BASIN = {
     "Koshi": ["Chatara_v3", "Simle_v3", "Majhitar_v3", "Kampughat_v3"],
     "Karnali": [
