@@ -1,8 +1,13 @@
+Try to figure out which stations to use by scraping stations from the government websites
+and comparing with the GloFAS ones.
+Note that this is now outdated because it uses the GloFAS v2 station locations. 
+
 ```python
 import os
 from pathlib import Path
 import requests
 import yaml
+import time
 
 import tabula
 import fiona
@@ -12,19 +17,18 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from bs4 import BeautifulSoup
 
+import npl_settings as settings
+```
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / 'public/exploration'
-DATA_DIR_PRIVATE = Path(os.environ["AA_DATA_DIR"]) / 'private'
-
-
-GLOFAS_STATION_FILE = DATA_DIR / 'glb/glofas/station_list.pdf'
-GLOFAS_STATION_OUTPUT = DATA_DIR / 'npl/glofas/npl_glofas_stations.gpkg'
+```python
+GLOFAS_STATION_FILE = settings.DATA_DIR_PUBLIC / 'glb/glofas/station_list.pdf'
+GLOFAS_STATION_OUTPUT = settings.DATA_DIR_PUBLIC / 'npl/glofas/npl_glofas_stations.gpkg'
 
 # Be careful if you want to run this, it takes awhile
 # and you can easily reach max requests
 SCRAPE_GOV_STATIONS = False
 GOV_BASE_URL = f"http://www.hydrology.gov.np/#/basin"
-GOV_DIR =  DATA_DIR / 'npl/dhm'
+GOV_DIR =  settings.DATA_DIR_PUBLIC / 'npl/dhm'
 GOV_STATION_FILENAME = GOV_DIR / 'npl_dhm_hydrology_stations.gpkg'
 GOV_BASIN_FILENAME = GOV_DIR / 'npl_dhm_hydrology_basins.csv'
 GOV_BASIN_SHAPEFILE = GOV_DIR / 'Nepal_Basin_final.kml'
@@ -38,8 +42,8 @@ STATION_OUTPUT = GOV_DIR / 'station_list_glofas_final.xlsx'
 STATION_OUTPUT_YAML = GOV_DIR / 'station_list_glofas_final.yml'
 
 # From Ragindra
-RCO_DIR = DATA_DIR_PRIVATE / 'exploration/npl/unrco'
-BASINS_SHAPEFILE = RCO_DIR / 'shapefiles/Major_River_Basins.shp'
+RCO_DIR = settings.DATA_DIR_PRIVATE / 'exploration/npl/unrco'
+BASINS_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
 
 # Final stations file
 STATIONS_FINAL = {
@@ -102,7 +106,6 @@ df_glofas.to_file(GLOFAS_STATION_OUTPUT, driver="GPKG", index=False)
 ## Scrape stations from government website
 
 ```python
-import time
 if SCRAPE_GOV_STATIONS:
 
     df_gov = gpd.GeoDataFrame(columns=['web_id', 'station_index', 'name', 'lat', 'lon'])
