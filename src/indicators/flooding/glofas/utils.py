@@ -1,5 +1,4 @@
 import logging
-from datetime import timedelta
 from typing import List, Dict
 
 import numpy as np
@@ -285,10 +284,10 @@ def get_crps_glofas(
 
 
 def get_groups_above_threshold(
-    observations: np.array,
+    observations: np.ndarray,
     threshold: float,
     min_duration: int = 1,
-    additional_condition: np.array = None,
+    additional_condition: np.ndarray = None,
 ) -> List:
     """
     Get indices where consecutive values are equal to or above a
@@ -308,92 +307,63 @@ def get_groups_above_threshold(
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
-def get_glofas_activations(da_glofas, thresh, ndays):
-    vals = da_glofas.values
-    groups = get_groups_above_threshold(vals, thresh, ndays)
-    df_glofas_act = pd.DataFrame(groups, columns=["start_index", "end_index"])
-    df_glofas_act["num_days"] = (
-        df_glofas_act["end_index"] - df_glofas_act["start_index"]
-    )
-    df_glofas_act["start_date"] = df_glofas_act["start_index"].apply(
-        lambda x: da_glofas.time[x].values
-    )
-    df_glofas_act["end_date"] = df_glofas_act["end_index"].apply(
-        lambda x: da_glofas.time[x].values
-    )
-    return df_glofas_act
-
-
-def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
-    TP = 0
+def get_detection_stats(
+    true_event_dates: np.ndarray,
+    forecasted_event_dates: np.ndarray,
+    days_before_buffer: int,
+    days_after_buffer: int,
+) -> dict:
+    """
+    Give a list of true and forecasted event dates, calculate how many
+    true / false positives and false negatives occurred
+    :param true_event_dates: A list of dates when the true events occurred
+    :param forecasted_event_dates: A list of dates when the events were
+    forecasted to occur
+    :param days_before_buffer: How many days before the forecasted date the
+    true event can occur. Usually set to the lead time or a small number
+    (even 0)
+    :param days_after_buffer: How many days after the forecasted date the
+    true event can occur. Can usually be a generous number
+    like 30, since forecasting too early isn't usually an issue
+    :return: dictionary with parameters
+    """
+    df_detected = pd.DataFrame(0, index=true_event_dates, columns=["detected"])
     FP = 0
-    tot_events = len(df_impact.index)
-    df_impact_copy = df_impact.copy()
-
-    # Add buffer around the flood event dates to account for some uncertainty
-    # if desired
-    df_impact_copy["start_date_buffer"] = pd.to_datetime(
-        df_impact_copy["start_date"]
-    ) - timedelta(days=buffer_before)
-    df_impact_copy["end_date_buffer"] = pd.to_datetime(
-        df_impact_copy["end_date"]
-    ) + timedelta(days=buffer_after)
-
-    for index, row in df_glofas.iterrows():
-        TP_ = False
-        act_dates = np.array(pd.date_range(row["start_date"], row["end_date"]))
-
-        for index, row in df_impact_copy.iterrows():
-            event_dates = np.array(
-                pd.date_range(row["start_date_buffer"], row["end_date_buffer"])
-            )
-
-            if set(act_dates) & set(event_dates):
-                TP += 1
-                TP_ = True
-                df_impact_copy = df_impact_copy.drop(
-                    [
-                        index,
-                    ]
-                )
-        if not TP_:
+    # Loop through the forecasted event
+    for forecasted_event in forecasted_event_dates:
+        # Calculate the offset from the true dates
+        days_offset = (true_event_dates - forecasted_event) / np.timedelta64(
+            1, "D"
+        )
+        # Calculate which true events were detected by this forecast event
+        detected = (days_offset >= -1 * days_before_buffer) & (
+            days_offset <= days_after_buffer
+        )
+        df_detected.loc[detected, "detected"] += 1
+        # If there were no detections at all, it's a FP
+        if not sum(detected):
             FP += 1
-
-    FN = tot_events - TP
-    return TP, FP, FN
-
-
-def get_more_stats(TP, FP, FN):
-    try:
-        precision = TP / (TP + FP)
-    except Exception:
-        precision = None
-    recall = TP / (TP + FN)
-    try:
-        f1 = 2 / ((1 / recall) + (1 / precision))
-    except Exception:
-        f1 = None
-    return precision, recall, f1
+    return {
+        # TP is the number of true events that were detected
+        "TP": sum(df_detected["detected"] > 0),
+        # FN is the number of true events that were not detected
+        "FN": sum(df_detected["detected"] == 0),
+        "FP": FP,
+    }
 
 
-def get_clean_stats_dict(df_glofas, df_impact, buffer_before, buffer_after):
-    stats = {}
-    TP, FP, FN = get_detection_stats(
-        df_glofas, df_impact, buffer_before, buffer_after
-    )
-    precision, recall, f1 = get_more_stats(TP, FP, FN)
-
-    stats["TP"] = TP
-    stats["FP"] = FP
-    stats["FN"] = FN
-    stats["precision"] = precision
-    stats["recall"] = recall
-    stats["f1"] = f1
-
-    return stats
+def get_more_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute precision, recall, F1, POD and FAR
+    :param df: Dataframe with columns TP, FP and FN
+    :return: Dataframe with additional stats columns
+    """
+    df["precision"] = df["TP"] / (df["TP"] + df["FP"])
+    df["recall"] = df["TP"] / (df["TP"] + df["FN"])
+    return df
 
 
-def get_rank(observations: np.array, forecast: np.array) -> np.array:
+def get_rank(observations: np.ndarray, forecast: np.ndarray) -> np.ndarray:
     # Create array of both obs and forecast
     rank_array = np.concatenate(([observations], forecast))
     # Calculate rank and take 0th array, which should be the obs

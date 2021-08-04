@@ -13,17 +13,29 @@ mpl.rcParams["figure.dpi"] = 200
 
 # Main directories
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-DATA_DIR_PUBLIC = DATA_DIR / "public" / "exploration"
-DATA_DIR_PRIVATE = DATA_DIR / "private" / "exploration"
+DATA_DIR_PUBLIC = DATA_DIR / "public"
+DATA_DIR_PRIVATE = DATA_DIR / "private"
 
 # Commonly used subdirectories
-RCO_DIR = DATA_DIR_PRIVATE / "npl" / "unrco"
+RCO_DIR = DATA_DIR_PRIVATE / "exploration" / "npl" / "unrco"
+
+# Shapefile
+SHAPEFILE_DIR = DATA_DIR_PUBLIC / "raw" / "npl" / "cod_ab"
+ADMIN_SHAPEFILE = (
+    SHAPEFILE_DIR
+    / "npl_admbnda_ocha_20201117"
+    / "npl_admbnda_nd_20201117_shp.zip"
+)
+ADMIN2_SHAPEFILE = "npl_admbnda_districts_nd_20201117.shp"
 
 # GloFAS settings
 COUNTRY_ISO3 = "npl"
 LEADTIMES = [x + 1 for x in range(10)]
+DURATION = 1  # How many consecutive days the event needs to occur for
+MAIN_RP = 2
+DAYS_BEFORE_BUFFER = 3  # When not using forecast leadtime
+DAYS_AFTER_BUFFER = 30
 
-#
 STATIONS_BY_BASIN = {
     "Koshi": ["Chatara_v3", "Simle_v3", "Majhitar_v3", "Kampughat_v3"],
     "Karnali": [
@@ -32,7 +44,7 @@ STATIONS_BY_BASIN = {
         "Dipayal_v3",
         "Samajhighat_v3",
     ],
-    "Rapti": ["Kusum_v3"],
+    "West Rapti": ["Kusum_v3"],
     "Bagmati": ["Rai_goan_v3"],
     "Babai": ["Chepang_v3"],
 }

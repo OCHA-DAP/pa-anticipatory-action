@@ -21,8 +21,8 @@ import npl_settings as settings
 ```
 
 ```python
-GLOFAS_STATION_FILE = settings.DATA_DIR_PUBLIC / 'glb/glofas/station_list.pdf'
-GLOFAS_STATION_OUTPUT = settings.DATA_DIR_PUBLIC / 'npl/glofas/npl_glofas_stations.gpkg'
+GLOFAS_STATION_FILE = settings.DATA_DIR_PUBLIC / 'exploration/glb/glofas/station_list.pdf'
+GLOFAS_STATION_OUTPUT = settings.DATA_DIR_PUBLIC / 'exploration/npl/glofas/npl_glofas_stations.gpkg'
 
 # Be careful if you want to run this, it takes awhile
 # and you can easily reach max requests
@@ -42,7 +42,6 @@ STATION_OUTPUT = GOV_DIR / 'station_list_glofas_final.xlsx'
 STATION_OUTPUT_YAML = GOV_DIR / 'station_list_glofas_final.yml'
 
 # From Ragindra
-RCO_DIR = settings.DATA_DIR_PRIVATE / 'exploration/npl/unrco'
 BASINS_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
 
 # Final stations file
