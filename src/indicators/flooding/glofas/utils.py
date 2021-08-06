@@ -338,7 +338,9 @@ def get_detection_stats(
     like 30, since forecasting too early isn't usually an issue
     :return: dictionary with parameters
     """
-    df_detected = pd.DataFrame(0, index=true_event_dates, columns=["detected"])
+    df_detected = pd.DataFrame(
+        0, index=np.array(true_event_dates), columns=["detected"]
+    )
     FP = 0
     # Loop through the forecasted event
     for forecasted_event in forecasted_event_dates:
@@ -363,14 +365,22 @@ def get_detection_stats(
     }
 
 
-def get_more_stats(df: pd.DataFrame) -> pd.DataFrame:
+def get_more_detection_stats(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute precision, recall, F1, POD and FAR
     :param df: Dataframe with columns TP, FP and FN
     :return: Dataframe with additional stats columns
     """
+    # Convert everything to float to avoid zero division errors
+    for q in ["TP", "FP", "FN"]:
+        df[q] = df[q].astype("float")
     df["precision"] = df["TP"] / (df["TP"] + df["FP"])
     df["recall"] = df["TP"] / (df["TP"] + df["FN"])
+    df["F1"] = 2 / (1 / df["precision"] + 1 / df["recall"])
+    df["POD"] = df["recall"]
+    df["FAR"] = 1 - df["precision"]
+    for q in ["TP", "FP", "FN"]:
+        df[q] = df[q].astype("int")
     return df
 
 

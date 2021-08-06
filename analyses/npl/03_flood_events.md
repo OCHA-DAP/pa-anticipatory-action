@@ -197,7 +197,7 @@ for basin, station_list in settings.STATIONS_BY_BASIN.items():
                 'impact_parameter': impact_parameter},
                 **detection_stats
             }, ignore_index=True)
-df_station_stats = utils.get_more_stats(df_station_stats)
+df_station_stats = utils.get_more_detection_stats(df_station_stats)
 df_station_stats
 ```
 

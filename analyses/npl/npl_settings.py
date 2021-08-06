@@ -37,14 +37,14 @@ COUNTRY_ISO3 = "npl"
 LEADTIMES = [x + 1 for x in range(10)]
 DURATION = 1  # How many consecutive days the event needs to occur for
 MAIN_RP = 2
+MAIN_FORECAST_PROB = 50
 DAYS_BEFORE_BUFFER = 3  # When not using forecast leadtime
 DAYS_AFTER_BUFFER = 30
 # Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2
 VERSION_LOC = "_v3"
 USE_INCORRECT_AREA_COORDS = False
 
-
-FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
+FINAL_STATIONS = ["Chatara", "Chisapani"]
 STATIONS_BY_BASIN = {
     "Koshi": ["Chatara_v3", "Simle_v3", "Majhitar_v3", "Kampughat_v3"],
     "Karnali": [
