@@ -309,7 +309,7 @@ def get_groups_above_threshold(
 
 def get_dates_list_from_dataset(
     da: xr.DataArray, threshold: float, min_duration: int = 1
-):
+) -> List[np.datetime64]:
     groups = get_groups_above_threshold(
         observations=da.to_masked_array(),
         threshold=threshold,
