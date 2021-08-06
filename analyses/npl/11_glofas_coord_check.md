@@ -1,37 +1,27 @@
 Check that the positions of the GloFAS reporting points make sense on the raster
 
 ```python
-from pathlib import Path
-import os
-import sys
 import glob
 
 import pandas as pd
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+
+import npl_settings as settings
+from src.utils_general.utils import parse_yaml
 ```
 
 ```python
-DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-PUBLIC_DIR = DATA_DIR / 'public'
-PRIVATE_DIR = DATA_DIR / 'private'
 
-GLOFAS_NEW_STATIONS = PRIVATE_DIR / 'exploration/glb/glofas/Qgis_World_outlet_202104_20210421.csv'
-NEPAL_RAW_DATA_DIR = PUBLIC_DIR / 'raw/npl/glofas/version_3/cems-glofas-historical/'
+GLOFAS_NEW_STATIONS = settings.DATA_DIR_PRIVATE / 'exploration/glb/glofas/Qgis_World_outlet_202104_20210421.csv'
+NEPAL_RAW_DATA_DIR = settings.DATA_DIR_PUBLIC / 'raw/npl/glofas/version_3/cems-glofas-historical/'
 STATIONS_YML = '../../src/nepal/config.yml'
 
 STATIONS = [
     'Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan',
     'Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang',
 ]
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-from src.utils_general.utils import parse_yaml
-
-mpl.rcParams['figure.dpi'] = 200
 ```
 
 ```python

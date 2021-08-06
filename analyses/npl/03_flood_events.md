@@ -35,7 +35,7 @@ df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
 # make pcode column names match for simplicity
 df_events = (pd.read_excel(PAST_EVENTS_FILENAME)
              .rename(columns={'DIST_CODE_ETHOS': 'pcode'}))
-df_admin = (gpd.read_file(f'zip://{settings.ADMIN_SHAPEFILE}!{settings.ADMIN2_SHAPEFILE}')
+df_admin = (gpd.read_file(f'zip://{settings.ADMIN_SHAPEFILE}!{settings.ADMIN_DISTRICTS_SHAPEFILE}')
             .rename(columns={'DIST_PCODE': 'pcode'}))
 ```
 

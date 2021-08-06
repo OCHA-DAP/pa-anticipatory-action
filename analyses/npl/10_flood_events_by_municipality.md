@@ -2,61 +2,34 @@ We have a file from the RCO that has flood events only in the municipalities
 of interest. Here we want to correlate these events with past GloFAS activations.
 
 ```python
-from pathlib import Path
-import os
-import sys
-from importlib import reload
-
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import geopandas as gpd
 import numpy as np
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_settings as settings
 from src.indicators.flooding.glofas import utils
-reload(utils)
 
-mpl.rcParams['figure.dpi'] = 200
 pd.options.mode.chained_assignment = None 
 ```
 
 ```python
-COUNTRY_ISO3 = 'npl'
-
 STATIONS = {
     'Koshi': 'Chatara',
     'Karnali': 'Chisapani'
 }
-# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
-VERSION_LOC = "_v3"
 
 KARNALI_BASINS = [
     'Karnali', 'West Rapti', 'Babai'
 ]
 KOSHI_WATERSHED = 'Saptakoshi'
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-DATA_DIR_PRIVATE = DATA_DIR / 'private'
-DATA_DIR_PUBLIC = DATA_DIR / 'public'
-RCO_DIR = DATA_DIR_PRIVATE / 'exploration/npl/unrco'
-SHAPEFILE_DIR = DATA_DIR_PUBLIC / 'raw/npl/cod_ab'
+BASINS_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
+WATERSHED_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_watershed.shp'
 
+PAST_EVENTS_FILENAME = settings.RCO_DIR / 'HistoricalReportedIncident_Municipality Level_AAPilot.xlsx'
 
-BASINS_SHAPEFILE = RCO_DIR / 'shapefiles/Major_River_Basins.shp'
-WATERSHED_SHAPEFILE = RCO_DIR / 'shapefiles/Major_watershed.shp'
-ADMIN_SHAPEFILE = SHAPEFILE_DIR / 'npl_admbnda_ocha_20201117/npl_admbnda_nd_20201117_shp.zip'
-#ADMIN2_SHAPEFILE = 'npl_admbnda_districts_nd_20201117.shp'
-ADMIN2_SHAPEFILE = 'npl_admbnda_adm2_nd_20201117.shp'
-
-PAST_EVENTS_FILENAME = RCO_DIR / 'HistoricalReportedIncident_Municipality Level_AAPilot.xlsx'
-
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
-
-MUNICIPALITIES_OUTPUT_GEOPACKAGE = RCO_DIR / 'shapefiles/municipalities_of_interest.gpkg'
+MUNICIPALITIES_OUTPUT_GEOPACKAGE = settings.RCO_DIR / 'shapefiles/municipalities_of_interest.gpkg'
 ```
 
 ### Read in and clean data
@@ -65,8 +38,8 @@ Read in GloFAS data
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
-df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
+    country_iso3=settings.COUNTRY_ISO3)
+df_return_period =  pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
 ```
 
 Read in events and clean
@@ -86,7 +59,7 @@ df_events = df_events.loc[df_events['Incident Date'] > ds_glofas_reanalysis.time
 Merge event data with admin
 
 ```python
-df_admin = (gpd.read_file(f'zip://{ADMIN_SHAPEFILE}!{ADMIN2_SHAPEFILE}')
+df_admin = (gpd.read_file(f'zip://{settings.ADMIN_SHAPEFILE}!{settings.ADMIN2_SHAPEFILE}')
             .rename(columns={'ADM2_PCODE': 'pcode'}))
 
 df_events = pd.merge(df_admin, df_events, how='right', left_on='pcode', right_on='pcode')
@@ -138,12 +111,12 @@ df_events_final = df_events[df_events.columns[24:43]].groupby(['basin', 'Inciden
 # Use a rolling sum
 rolling_sum_size = 10
 center = False
-event_thresh = 0
+event_thresh = 1
 impact_parameters =  ['Total Death', 
                          'Affected Family', 
                          'Private House Partially Damaged', 
                          'Private House Fully Damaged']
-plot_results = False
+plot_results = True
 
 df_events_high_impact = pd.DataFrame(columns=['date', 'basin', 'impact_parameter'])
 
@@ -183,45 +156,34 @@ days_after_buffer = 60
 df_station_stats = pd.DataFrame(columns=['station', 'impact_parameter', 'TP', 'FP', 'FN'])
 
 for basin, station in STATIONS.items():
+    rp_val = df_return_period.loc[rp, station]
+
     for impact_parameter in impact_parameters:
         df_events_sub = df_events_high_impact[
             (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
         ]
-        df_events_sub['detections'] = 0
-        TP = 0
-        FP = 0
-        rp_val = df_return_period.loc[rp, station]
-        observations = ds_glofas_reanalysis[station + VERSION_LOC].values
-        groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=ndays)
-        for group in groups:
-            # The GlofAS event takes place on the Nth day (since for an event)
-            # you require N days in a row
-            glofas_event_date = ds_glofas_reanalysis.time[group[0] + ndays - 1].data
-            # Check if any events are around that date
-            days_offset = (df_events_sub['date'] - glofas_event_date) /  np.timedelta64(1, 'D')
-            detected = (days_offset >= -1 * days_before_buffer) & (days_offset <= days_after_buffer)
-            df_events_sub.loc[detected, 'detections'] += 1
-            # If there were any detections, it's  a TP. Otherwise a FP
-            if sum(detected):
-                TP += 1
-            else:
-                FP += 1
+        glofas_dates = utils.get_dates_list_from_dataset(
+            ds_glofas_reanalysis[station + settings.VERSION_LOC],
+            threshold=rp_val, min_duration=settings.DURATION
+        )
+        detection_stats = utils.get_detection_stats(true_event_dates=df_events_sub['date'].values,
+                           forecasted_event_dates=glofas_dates,
+                            days_before_buffer=settings.DAYS_BEFORE_BUFFER,
+                            days_after_buffer=settings.DAYS_AFTER_BUFFER)
+                            
+       
         df_station_stats = df_station_stats.append({
-            'station': station,
-            'impact_parameter': impact_parameter,
-            'TP': TP,
-            'FP': FP,
-            'FN': len(df_events_sub[df_events_sub['detections'] == 0])
+            **{'station': station,
+            'impact_parameter': impact_parameter},
+            **detection_stats
         }, ignore_index=True)
             
-            
-df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
-df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
+df_stations_stats = utils.get_more_detection_stats(df_station_stats)            
+df_stations_stats
 ```
 
 ```python
 df_station_stats.groupby('station').mean()
-#df_station_stats
 ```
 
 ```python
@@ -233,7 +195,7 @@ for basin, station in STATIONS.items():
         df_events_sub = df_events_high_impact[
             (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
         ]
-        observations = ds_glofas_reanalysis[station + VERSION_LOC].values
+        observations = ds_glofas_reanalysis[station + settings.VERSION_LOC].values
         x = ds_glofas_reanalysis.time
         ax = axs[i]
         ax.plot(x, observations, lw=0.5)

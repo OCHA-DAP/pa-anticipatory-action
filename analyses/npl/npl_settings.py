@@ -30,7 +30,8 @@ ADMIN_SHAPEFILE = (
     / "npl_admbnda_ocha_20201117"
     / "npl_admbnda_nd_20201117_shp.zip"
 )
-ADMIN2_SHAPEFILE = "npl_admbnda_districts_nd_20201117.shp"
+ADMIN_DISTRICTS_SHAPEFILE = "npl_admbnda_districts_nd_20201117.shp"
+ADMIN2_SHAPEFILE = "npl_admbnda_adm2_nd_20201117.shp"
 
 # GloFAS settings
 COUNTRY_ISO3 = "npl"
