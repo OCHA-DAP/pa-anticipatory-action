@@ -23,7 +23,7 @@ GLOFAS_DIR = DATA_DIR_PUBLIC / "exploration" / "npl" / "glofas"
 # Commonly used files
 GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 
-# Shapefile
+# Shapefile things
 SHAPEFILE_DIR = DATA_DIR_PUBLIC / "raw" / "npl" / "cod_ab"
 ADMIN_SHAPEFILE = (
     SHAPEFILE_DIR
@@ -74,3 +74,10 @@ STATIONS_BY_MAJOR_BASIN = {
         "Chepang_v3",
     ],
 }
+
+# DHM water level
+LEVEL_TYPES = ["warning", "danger"]
+DHM_DIR = DATA_DIR_PRIVATE / "exploration" / "npl" / "dhm"
+DHM_STATION_INFO_FILENAME = DHM_DIR / "npl_dhm_station_info.xlsx"
+WL_PROCESSED_DIR = DHM_DIR / "processed"
+WL_OUTPUT_FILENAME = WL_PROCESSED_DIR / "waterl_level_procssed.csv"

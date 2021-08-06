@@ -1,48 +1,16 @@
 ```python
-from pathlib import Path
-import os
-import sys
-
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 import xarray as xr
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_settings as settings
 from src.indicators.flooding.glofas import utils
-
-mpl.rcParams['figure.dpi'] = 300
 ```
 
 ```python
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
-DHM_DIR = DATA_DIR / 'private/exploration/npl/dhm'
-WL_PROCESSED_DIR = DHM_DIR / 'processed'
-WL_OUTPUT_FILENAME = 'waterl_level_procssed.csv'
-STATION_INFO_FILENAME = 'npl_dhm_station_info.xlsx'
-
-COUNTRY_ISO3 = 'npl'
-
 RP_LIST = [1.5, 2, 5] 
-LEVEL_TYPES = ['warning', 'danger']
-
-STATIONS = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
-    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat'],
-    'Rapti': ['Kusum'],
-    'Bagmati': ['Rai_goan'],
-    'Babai': ['Chepang']
-}
-# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
-VERSION_LOC = "_v3"
-
-DURATION = 1
 ```
 
 #### Define functions to make overlay plots
@@ -155,9 +123,9 @@ def visualize_station_overlay(
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=settings.COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
-df_return_period_glofas = pd.read_excel(GLOFAS_RP_FILENAME)
+df_return_period_glofas = pd.read_excel(settings.GLOFAS_RP_FILENAME)
 ```
 
 ```python
@@ -171,12 +139,12 @@ for station in primary_stations:
     
     #rp_val_event = int(df_return_period_glofas.loc[df_return_period_glofas['rp']==rp_event, station])
     rp_val_event = df_return_period.loc[rp_event, station]
-    da_primary = ds_glofas_reanalysis[station + VERSION_LOC]
+    da_primary = ds_glofas_reanalysis[station + settings.VERSION_LOC]
         
     for station_small in secondary_stations:
         
         rp_val_secondary = df_return_period.loc[rp_secondary, station_small]  
-        da_secondary = ds_glofas_reanalysis[station_small + VERSION_LOC]
+        da_secondary = ds_glofas_reanalysis[station_small + settings.VERSION_LOC]
         
         plt_title = f'What is water discharge at {station_small} when {station} triggers at {rp_event}-year RP?'
         save_title_line = f'line_{station_small}_{station}_{rp_secondary}_{rp_event}.png'
@@ -188,7 +156,7 @@ for station in primary_stations:
             da_secondary, 
             rp_val_event, 
             rp_val_secondary, 
-            DURATION, 
+            settings.DURATION, 
             days_buffer,
             plt_title, 
             hist_title, 
@@ -200,10 +168,10 @@ for station in primary_stations:
 #### Investigate relationship between stations with water level
 
 ```python
-df_wl = pd.read_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index_col='date')
+df_wl = pd.read_csv(settings.WL_OUTPUT_FILENAME, index_col='date')
 df_wl.index = pd.to_datetime(df_wl.index).rename('time')
 ds_wl = xr.Dataset.from_dataframe(df_wl)
-df_station_info = pd.read_excel(DHM_DIR / STATION_INFO_FILENAME, index_col='station_name')
+df_station_info = pd.read_excel(settings.DHM_STATION_INFO_FILENAME, index_col='station_name')
 ```
 
 ```python
@@ -233,7 +201,7 @@ for station in stations:
             da_secondary, 
             val_event, 
             val_secondary, 
-            DURATION, 
+            settings.DURATION, 
             days_buffer,
             plt_title, 
             hist_title, 
