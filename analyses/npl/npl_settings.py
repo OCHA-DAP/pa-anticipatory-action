@@ -79,5 +79,7 @@ STATIONS_BY_MAJOR_BASIN = {
 LEVEL_TYPES = ["warning", "danger"]
 DHM_DIR = DATA_DIR_PRIVATE / "exploration" / "npl" / "dhm"
 DHM_STATION_INFO_FILENAME = DHM_DIR / "npl_dhm_station_info.xlsx"
+WL_RAW_DIR = DHM_DIR / "raw" / "water_level"
+WL_INPUT_FILENAME = "GHT_{}.txt"
 WL_PROCESSED_DIR = DHM_DIR / "processed"
 WL_OUTPUT_FILENAME = WL_PROCESSED_DIR / "waterl_level_procssed.csv"
