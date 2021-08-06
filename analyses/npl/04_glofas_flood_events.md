@@ -1,3 +1,6 @@
+We want to know the forecast performance against GloFAS events, i.e. when an
+event is defined as a GloFAS return period exceedance
+
 ```python
 import pandas as pd
 import geopandas as gpd

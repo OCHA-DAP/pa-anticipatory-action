@@ -1,3 +1,6 @@
+We want to know if an event happens at a particular station, what is the river 
+discharge at stations in neighbouring basins
+
 ```python
 import pandas as pd
 import matplotlib.pyplot as plt
