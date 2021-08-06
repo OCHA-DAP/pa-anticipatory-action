@@ -5,69 +5,38 @@ historical analysis, taking into account all forecast lead times.
 
 
 ```python
-import sys
-from pathlib import Path
-import os
-from importlib import reload
-
-import matplotlib as mpl
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_settings as settings
 from src.indicators.flooding.glofas import utils
-reload(utils)
-
-mpl.rcParams['figure.dpi'] = 200
 ```
 
 ```python
-COUNTRY_ISO3 = 'npl'
-MAIN_RP = 2
 RP_LIST = [1.5, 2, 5]
 FORECAST_PERCENTILE_LIST = [50, 30]
-# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
-VERSION_LOC = "_v3" 
-STATIONS = [
-    'Chatara',
-    'Chisapani',
-]
-DURATION = 1
-
-LEVEL_TYPES = ['warning', 'danger']
 
 LEADTIMES = [x+1 for x in range(7)]
 LEADTIMES_BY_TRIGGER = {
     "action": [1, 2, 3],
     "readiness": [4, 5, 6, 7]
 }
-
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-DHM_DIR = DATA_DIR / 'private/exploration/npl/dhm'
-WL_PROCESSED_DIR = DHM_DIR / 'processed'
-WL_OUTPUT_FILENAME = 'waterl_level_procssed.csv'
-STATION_INFO_FILENAME = 'npl_dhm_station_info.xlsx'
-
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 ```
 
 ```python
-df_station_info = pd.read_excel(DHM_DIR / STATION_INFO_FILENAME, index_col='station_name')
-df_wl = pd.read_csv(WL_PROCESSED_DIR / WL_OUTPUT_FILENAME, index_col='date', parse_dates=True)
+df_station_info = pd.read_excel(settings.DHM_STATION_INFO_FILENAME, index_col='station_name')
+df_wl = pd.read_csv(settings.WL_OUTPUT_FILENAME, index_col='date', parse_dates=True)
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=settings.COUNTRY_ISO3)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
-    country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
+    country_iso3 = settings.COUNTRY_ISO3, leadtimes=LEADTIMES,
     interp=True, shift_dates=False
 )
 ds_glofas_forecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
-df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
+df_return_period =  pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
 pd.options.mode.chained_assignment = None  # default='warn'
 ```
 
@@ -75,12 +44,12 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 ```python
 df_station_dict = {}
-for station in STATIONS:
+for station in settings.FINAL_STATIONS:
     wl = df_wl[[station]]
-    rd = (ds_glofas_reanalysis[station + VERSION_LOC]
+    rd = (ds_glofas_reanalysis[station + settings.VERSION_LOC]
               .to_dataframe()
               .drop(columns=['step', 'surface', 'valid_time'])
-              .rename(columns={f"{station+VERSION_LOC}": station}))
+              .rename(columns={f"{station+settings.VERSION_LOC}": station}))
     data = (pd.merge(wl, rd, 
                      how='right', 
                      left_index=True, 
@@ -95,11 +64,11 @@ for station in STATIONS:
     # Add in the forecast data
     for leadtime in LEADTIMES:
         for percentile in FORECAST_PERCENTILE_LIST:
-            forecast = (ds_glofas_forecast_summary[station + VERSION_LOC]
+            forecast = (ds_glofas_forecast_summary[station + settings.VERSION_LOC]
                     .sel(leadtime=leadtime, percentile=percentile)
                     .to_dataframe()
                     .drop(columns=['surface', 'leadtime', 'percentile'])
-                    .rename(columns={f"{station+VERSION_LOC}": station}))
+                    .rename(columns={f"{station+settings.VERSION_LOC}": station}))
             data = (pd.merge(data, forecast,
                         how='left',
                         left_index=True,
@@ -111,20 +80,18 @@ for station in STATIONS:
     # Get the water level events
     level_type = "danger"
     level_val = df_station_info.at[station, f'{level_type}_level']
-    events = utils.get_groups_above_threshold(data['water_level'], level_val, min_duration=DURATION)
+    events = utils.get_groups_above_threshold(data['water_level'], level_val, min_duration=settings.DURATION)
     event_start_indices = [event[0] for event in events]
     data[f"event_{level_type}"] = False
     data[f"event_{level_type}"].iloc[event_start_indices] = True
     # Get river discharge events
     for rp in RP_LIST:
         rp_val = df_return_period.loc[rp, station]
-        events = utils.get_groups_above_threshold(data['river_discharge'], rp_val, min_duration=DURATION)
+        events = utils.get_groups_above_threshold(data['river_discharge'], rp_val, min_duration=settings.DURATION)
         event_start_indices = [event[0] for event in events]
         data[f"event_rp{rp}"] = False
         data[f"event_rp{rp}"].iloc[event_start_indices] = True
-    # Go through each date and add activations
-    for rp in RP_LIST:
-        rp_val = df_return_period.loc[rp, station]
+        # Go through each date and add activations
         for percentile in FORECAST_PERCENTILE_LIST:
             for event_type, leadtimes in LEADTIMES_BY_TRIGGER.items():
                 data[f'event_{event_type}_rp{rp}_p{percentile}'] = data.apply(lambda row: 
@@ -146,55 +113,38 @@ def get_consecutive_groups(x: pd.Series, n=2):
     return [l[i:i+n] for i in range(0, len(l), n)]
 
 
-def get_station_stats(df_station_dict, event_var, rp=MAIN_RP, percentiles=None):
+def get_station_stats(df_station_dict, event_var, rp=settings.MAIN_RP, percentiles=None):
 
     days_before_buffer = 0 # Event can occur at the earliest on the same day as the trigger
-    days_after_buffer = 30 # How many days the true event can occur after the GloFAS event
     df_station_stats = pd.DataFrame(columns=['station', 'TP', 'FP', 'FN', 'event_type', 'percentile'])
 
     if percentiles is None:
         percentiles = FORECAST_PERCENTILE_LIST
     
-    for station in STATIONS:
+    for station in settings.FINAL_STATIONS:
         df_station = df_station_dict[station]
         if event_var == 'event_danger':
             df_station = df_station.dropna(subset=['water_level'])
-        df_true_events = df_station[df_station[event_var]][[event_var]]
+        true_event_dates = df_station[df_station[event_var]][[event_var]].index
+        
         rp_val = df_return_period.loc[rp, station]
         for event_type, leadtimes in LEADTIMES_BY_TRIGGER.items():
             for percentile in percentiles:
-                glofas_event_indices = get_consecutive_groups(df_station[f"event_{event_type}_rp{rp}_p{percentile}"])
-                df_true_events['detections'] = 0
-                TP = 0
-                FP = 0    
-                for (glofas_event_start_index, glofas_event_end_index) in glofas_event_indices:
-                    glofas_event = df_station.index[glofas_event_start_index]
-                    # Check the maximum lead time 
-                    max_leadtime = -1
-                    for leadtime in leadtimes:
-                        if df_station.loc[glofas_event, f'forecast_lt{leadtime}_p{percentile}'] >= rp_val:
-                            max_leadtime = leadtime
-                    if max_leadtime == -1:
-                        print('Something went wrong!')
-                    # Check if any events are around that date
-                    days_offset = (df_true_events.index - glofas_event) /  np.timedelta64(1, 'D')
-                    # Add the max leadtime to the days after buffer
-                    detected = (days_offset >= -1 * days_before_buffer) & (days_offset <= days_after_buffer + max_leadtime)
-                    df_true_events.loc[detected, 'detections'] += 1
-                    # If there were any detections, it's  a TP. Otherwise a FP
-                    if not sum(detected):
-                        FP += 1
+                glofas_event_dates = [df_station.index[start_index] for start_index, end_index in 
+                                        get_consecutive_groups(df_station[f"event_{event_type}_rp{rp}_p{percentile}"])]
+                detection_stats = utils.get_detection_stats(true_event_dates=true_event_dates,
+                                                       forecasted_event_dates=glofas_event_dates,
+                                                       days_before_buffer=settings.DAYS_BEFORE_BUFFER,
+                                                       days_after_buffer=settings.DAYS_AFTER_BUFFER + min(leadtimes))
+                
                 df_station_stats = df_station_stats.append({
-                    'station': station,
-                    'TP': len(df_true_events[df_true_events['detections'] > 0]),
-                    'FP': FP,
-                    'FN': len(df_true_events[df_true_events['detections'] == 0]),
+                    **{'station': station,
                     'event_type': event_type,
-                    'percentile': 100 - percentile
+                    'percentile': 100 - percentile},
+                    **detection_stats
                 }, ignore_index=True)
 
-    df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
-    df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
+    df_station_stats = utils.get_more_detection_stats(df_station_stats)
     return df_station_stats
 ```
 
@@ -231,7 +181,7 @@ event_bools = {
 }
 rp = 2
 
-for station in STATIONS:
+for station in settings.FINAL_STATIONS:
     for percentile in FORECAST_PERCENTILE_LIST:
         print(station)
         print(100-percentile)
@@ -281,10 +231,10 @@ ax.set_ylim(4000, 8000)
 
 percentile = 50
 mpl.rcParams['hatch.linewidth'] = 0.5
-for station in STATIONS:
+for station in settings.STATIONS_FINAL:
     df_station = df_station_dict[station].copy().dropna(subset=["water_level"])
     thresh = df_station_info.at[station, f'danger_level']
-    rp_val = df_return_period.loc[MAIN_RP, station]
+    rp_val = df_return_period.loc[settings.MAIN_RP, station]
     years = df_station.index.year.unique()
     fig, axs = plt.subplots(len(years), figsize=(8, 20))
     for year, ax in zip(years, axs):
@@ -310,7 +260,7 @@ for station in STATIONS:
                                              [0.5, 0.5, 2]):
             cname = f'event_{event_type}'
             if event_type != "danger":
-                cname += f"_rp{MAIN_RP}_p{percentile}"
+                cname += f"_rp{settings.MAIN_RP}_p{percentile}"
             ax.fill_between(data.index, y0, y1, where=data[cname], 
                             facecolor='none', hatch=hatch, edgecolor=colour, lw=lw, 
                             alpha=.75, label=event_type)
