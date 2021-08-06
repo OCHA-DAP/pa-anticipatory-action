@@ -10,6 +10,7 @@
 library(tidyverse)
 library(sf)
 library(raster)
+library(glue)
 
 # load functions
 source("dryspells_trigger/01b_chirps_dry_spells_functions.R")
@@ -46,46 +47,28 @@ plot(mwi_adm2$geometry) # visual inspection
 mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select("ADM2_PCODE", "ADM2_EN")
 
+min_year="2000"
+max_year="2021"
 # list years and adm2 regions to be analysed
-year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = "year")))
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date(glue("{min_year}-01-01")), to = as.Date(glue("{max_year}-12-31")), by = "year")))
 year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
 names(year_by_adm2)[2] <- "pcode"
 year_by_adm2$year <- as.character(year_by_adm2$year)
 
-#####
-## process observational rainfall data (CHIRPS)
-#####
-
-# read in CHIRPS data (multiple multi-layer raster files) into a single stack
-s2000 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2000_p05.nc")) # each file has to be read in separately or layer names get lost
-s2001 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2001_p05.nc"))
-s2002 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2002_p05.nc"))
-s2003 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2003_p05.nc"))
-s2004 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2004_p05.nc"))
-s2005 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2005_p05.nc"))
-s2006 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2006_p05.nc"))
-s2007 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2007_p05.nc"))
-s2008 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2008_p05.nc"))
-s2009 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2009_p05.nc"))
-s2010 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2010_p05.nc"))
-s2011 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2011_p05.nc"))
-s2012 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2012_p05.nc"))
-s2013 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2013_p05.nc"))
-s2014 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2014_p05.nc"))
-s2015 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2015_p05.nc"))
-s2016 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2016_p05.nc"))
-s2017 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2017_p05.nc"))
-s2018 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2018_p05.nc"))
-s2019 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2019_p05.nc"))
-s2020 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2020_p05.nc"))
-
-s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s2008, s2009, s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020) # all files combined into a stack
-
-# crop and masked area outside of MWI
-s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
-data_masked <- mask(s2000_s2020_cropped, mask = mwi_adm2)
-# saveRDS(data_masked, paste0(dry_spell_processed_path, "data_2000_2020_r5.RDS")) # 5-deg resolution
-# data_masked <- readRDS(paste0(dry_spell_processed_path, "data_2000_2020_r5.RDS")) # 5-deg resolution
+# #####
+# ## process observational rainfall data (CHIRPS)
+# #####
+#
+#
+# # read in CHIRPS data (multiple multi-layer raster files) into a single stack
+# rastlist <- list.files(path = chirps_path, pattern='chirps_global_daily_[0-9]{4}_p05.nc$', all.files=TRUE, full.names=TRUE)
+#
+# allyears <- raster::stack(rastlist)
+#
+# allyears_cropped <- crop(x = allyears, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
+# data_masked <- mask(allyears_cropped, mask = mwi_adm2)
+# saveRDS(data_masked, paste0(dry_spell_processed_path, glue("data_{min_year}_{max_year}_r5.RDS"))) # 5-deg resolution
+data_masked <- readRDS(paste0(dry_spell_processed_path, glue("data_{min_year}_{max_year}_r5.RDS"))) # 5-deg resolution
 # plot(data_masked) # visual inspection
 
 # explore compiled raster file ("brick")
@@ -99,6 +82,7 @@ nbr_layers <- nlayers(data_masked)
 dim(data_masked) # (nrow, ncol, nlayers)
 yres(data_masked) # y-resolution
 xres(data_masked) # x-resolution
+data_masked
 
 # create list of regions
 region_list <- mwi_adm2[, c("ADM2_PCODE", "ADM2_EN", "geometry")]
@@ -118,10 +102,10 @@ for (i in seq_along(1:nbr_layers)) {
   data_mean_values <- computeLayerStat(i, mean, data_mean_values)
 }
 
-# saveRDS(data_max_values,paste0(dry_spell_processed_path, "data_max_values_2000_2020_r5.RDS"))
-# saveRDS(data_mean_values,paste0(dry_spell_processed_path, "data_mean_values_2000_2020_r5.RDS"))
-# data_max_values <- readRDS(paste0(dry_spell_processed_path, "data_max_values_2000_2020_r5.RDS"))
-# data_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_mean_values_2000_2020_r5.RDS"))
+# saveRDS(data_max_values,paste0(dry_spell_processed_path, glue("data_max_values_2000_2021_r5.RDS"))
+saveRDS(data_mean_values,paste0(dry_spell_processed_path, glue("data_mean_values_{min_year}_{max_year}_r5.RDS")))
+# data_max_values <- readRDS(paste0(dry_spell_processed_path, "data_max_values_{min_year}_{max_year}_r5.RDS"))
+# data_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_mean_values_{min_year}_{max_year}_r5.RDS"))
 
 # select which values (mean or max) to use
 # data <- data_max_values
@@ -172,7 +156,7 @@ data_long <- data_long %>%
 data_long$rainy_day_bin <- ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
 data_long$rainy_day_bin_2mm <- ifelse(data_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
 
-# saveRDS(data_long, paste0(dry_spell_processed_path, "data_long_mean_values.RDS"))
+saveRDS(data_long, paste0(dry_spell_processed_path, glue("data_long_mean_values_{min_year}_{max_year}.RDS")))
 
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
@@ -185,7 +169,7 @@ rainy_onsets <- findRainyOnset()
 rainy_cessations <- findRainyCessation()
 
 # combine onset and cessation dates
-rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c("ID", "pcode", "season_approx"), all.x = TRUE, all.y = TRUE) # keep partial years 2000 and 2020
+rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c("ID", "pcode", "season_approx"), all.x = TRUE, all.y = TRUE) # keep partial years
 rainy_seasons <- merge(rainy_seasons, year_by_adm2, by.x = c("pcode", "season_approx"), by.y = c("pcode", "year"), all.x = T, all.y = T) # ensure a record is created for each adm2 for every year
 
 # checks
@@ -213,7 +197,7 @@ rainfall_during_rainy_seasons_list <- sqldf::sqldf("select m.*,
                                                from data_long m
                                                inner join rainy_seasons r
                                                on m.pcode = r.pcode
-                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 1999 and 2020 rainy seasons because don't have onset/cessation dates for them
+                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude rainy seasons for which we don't have onset/cessation dates for them
 
 rainfall_during_rainy_seasons_stats <- rainfall_during_rainy_seasons_list %>%
   group_by(pcode, season_approx) %>%
@@ -235,8 +219,8 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
   mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
 # save results
-# write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, "rainy_seasons_detail_2000_2020.csv"), row.names = FALSE)
-# write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, "rainy_seasons_detail_2000_2020_mean_back.csv"), row.names = FALSE)
+# write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, glue("rainy_seasons_detail_{min_year}_{max_year}.csv"), row.names = FALSE))
+write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, glue("rainy_seasons_detail_{min_year}_{max_year}_mean_back.csv")), row.names = FALSE)
 
 #####
 ## explore rainy season patterns
@@ -368,8 +352,8 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
   mutate(region = substr(pcode, 3, 3)) %>%
   mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
-# write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_2000_2020.csv"), row.names = FALSE)
-# write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"), row.names = FALSE)
+# write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_{min_year}_{max_year}.csv"), row.names = FALSE)
+write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_{min_year}_{max_year}_mean_back.csv"), row.names = FALSE)
 
 # save full list of dry spells
 full_list_dry_spells <- dry_spells_details %>%
@@ -380,7 +364,7 @@ full_list_dry_spells <- dry_spells_details %>%
          season_name = ifelse(during_rainy_season == 1, season_approx, "not during a rainy season" )) %>%
   # identifies dry spells that reached 14-d rolling sum (confirmation_date) during rainy season. NA = start/end of rainy season unknown
   dplyr::select(pcode, ADM2_EN, season_name, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall, during_rainy_season)
-# write.csv(full_list_dry_spells, file = paste0(dry_spell_processed_path, "full_list_dry_spells.csv"), row.names = FALSE)
+write.csv(full_list_dry_spells, file = paste0(dry_spell_processed_path, glue("full_list_dry_spells_{min_year}_{max_year}.csv")), row.names = FALSE)
 
 # summary stats per region
 rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>%
@@ -463,7 +447,7 @@ daily_max_dry_spells_details <- daily_max_dry_spells_details %>%
   mutate(region = substr(pcode, 3, 3)) %>%
   mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
-# write.csv(daily_max_dry_spells_details, file = paste0(dry_spell_processed_path, "daily_mean_dry_spells_details_2000_2020.csv"), row.names = FALSE)
+# write.csv(daily_max_dry_spells_details, file = paste0(dry_spell_processed_path, glue("daily_mean_dry_spells_details_{min_year}_{max_year}.csv")), row.names = FALSE)
 
 
 # summary stats per region
@@ -548,7 +532,7 @@ daily_max_dry_spells_details_2mm <- daily_max_dry_spells_details_2mm %>%
   mutate(region = substr(pcode, 3, 3)) %>%
   mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
-# write.csv(daily_max_dry_spells_details_2mm, file = paste0(dry_spell_processed_path, "daily_mean_dry_spells_details_2mm_2000_2020.csv"), row.names = FALSE)
+# write.csv(daily_max_dry_spells_details_2mm, file = paste0(dry_spell_processed_path, glue("daily_mean_dry_spells_details_2mm_{min_year}_{max_year}.csv")), row.names = FALSE)
 
 
 # summary stats per region
@@ -636,7 +620,7 @@ map_original_def <- mwi_adm2 %>%
     limits = c(0, 12)
   ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  ggtitle("Dry spells during 2000-2020", subtitle = "14-day period with cumulative rainfall <= 2mm") +
+  ggtitle(glue("Dry spells during {min_year}-{max_year}"), subtitle = "14-day period with cumulative rainfall <= 2mm") +
   labs(caption = "Mean values per district, CHIRPS")
 
 map_consec2mm_def <- mwi_adm2 %>%
@@ -649,7 +633,7 @@ map_consec2mm_def <- mwi_adm2 %>%
     limits = c(0, 12)
   ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  ggtitle("Dry spells during 2000-2020", subtitle = "14 consecutive days with <= 2mm rainfall daily") +
+  ggtitle(glue("Dry spells during {min_year}-{max_year}"), subtitle = "14 consecutive days with <= 2mm rainfall daily") +
   labs(caption = "Mean values per district, CHIRPS")
 
 map_consec4mm_def <- mwi_adm2 %>%
@@ -662,7 +646,7 @@ map_consec4mm_def <- mwi_adm2 %>%
     limits = c(0, 12)
   ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  ggtitle("Dry spells during 2000-2020", subtitle = "14 consecutive days with <= 4mm rainfall daily") +
+  ggtitle(glue("Dry spells during {min_year}-{max_year}"), subtitle = "14 consecutive days with <= 4mm rainfall daily") +
   labs(caption = "Mean values per district, CHIRPS")
 
 # gridExtra::grid.arrange(map_original_def, map_consec2mm_def, map_consec4mm_def, nrow = 1) # for viewing in console only
@@ -683,7 +667,7 @@ durations %>%
   geom_histogram(alpha = 0.6, binwidth = 5) +
   xlab("Number of days in spell") +
   ylab("Number of dry spells * adm2") +
-  ggtitle("Duration of Dry Spells per Region 2000-2020") +
+  ggtitle(glue("Duration of Dry Spells per Region {min_year}-{max_year}")) +
   facet_wrap(~region)
 
 durations %>% # same as above but bars shown side-by-side
@@ -691,7 +675,7 @@ durations %>% # same as above but bars shown side-by-side
   geom_histogram(alpha = 0.6, binwidth = 5, position = "dodge") +
   xlab("Number of days in spell") +
   ylab("Number of dry spells * adm2") +
-  ggtitle("Duration of Dry Spells per Region 2000-2020")
+  ggtitle(glue("Duration of Dry Spells per Region {min_year}-{max_year}"))
 
 # at adm2
 
@@ -700,7 +684,7 @@ durations %>%
   geom_histogram(alpha = 0.6, binwidth = 5) +
   xlab("Number of days in spell") +
   ylab("Number of dry spells") +
-  ggtitle("Duration of Dry Spells per District 2000-2020") +
+  ggtitle(glue("Duration of Dry Spells per District {min_year}-{max_year}")) +
   facet_wrap(~ADM2_EN)
 
 # compare with nbr of days with <= 2mm during rainy_season
