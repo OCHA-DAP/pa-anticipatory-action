@@ -143,7 +143,7 @@ sel_months=[1,2]
 sel_leadtime=[1,2,3,4,5,6]
 #for some plots we can only show one leadtime, set that here
 sel_lt_plt=4
-seas_years=range(2000,2020)
+seas_years=range(1993,2020)#range(2000,2020)
 
 adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
@@ -192,7 +192,7 @@ df_for_quant["date_month"]=df_for_quant.date.dt.to_period("M")
 #load the monthly precipitation data
 df_obs_month=pd.read_csv(monthly_precip_path,parse_dates=["date"])
 df_obs_month["date_month"]=df_obs_month.date.dt.to_period("M")
-df_obs_month["season_approx"]=np.where(df_obs_month.date.dt.month>=start_rainy_seas,df_obs_month.date.dt.year,df_obs_month.date.dt.year-1)
+# df_obs_month["season_approx"]=np.where(df_obs_month.date.dt.month>=start_rainy_seas,df_obs_month.date.dt.year,df_obs_month.date.dt.year-1)
 ```
 
 #### Merge the two datasets
@@ -209,53 +209,93 @@ df_obsfor["diff_forecobs"]=df_obsfor["mean_cell_forec"]-df_obsfor["mean_cell_obs
 Create one df with only the admins, months, and leadtimes of interest for the trigger. This is further explained in `08_ecmwf_monthly_skill_dryspells.md`
 
 ```python
-df_obsfor_sel=df_obsfor[(df_obsfor.ADM1_EN.isin(sel_adm))&(df_obsfor.date_month.dt.month.isin(sel_months))&(df_obsfor.leadtime.isin(sel_leadtime))]
+df_obsfor_sel=df_obsfor[(df_obsfor.ADM1_EN.isin(sel_adm))&(df_obsfor.date_month.dt.month.isin(sel_months))&(df_obsfor.leadtime.isin(sel_leadtime))&(df_obsfor.season_approx.isin(seas_years))]
 ```
 
 ### Analysis
 
+```python
+def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None):
+    #number of dates with observed dry spell overlapping with forecasted per month
+    num_plots = len(df.leadtime.unique())
+    if num_plots==1:
+        colp_num=1
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+    fig=plt.figure(figsize=(15,8))
+    for i, m in enumerate(df.sort_values(by="leadtime").leadtime.unique()):
+        ax = fig.add_subplot(rows,colp_num,i+1)
+        y_target =    df.loc[df.leadtime==m,target_var]
+        y_predicted = df.loc[df.leadtime==m,predict_var]
+        cm = confusion_matrix(y_target=y_target, 
+                              y_predicted=y_predicted)
 
-#### Visually inspect values
-We plot the forecasted and observed values. For the forecasted values we include the 95% confidence interval, to get a feeling of the range of values from the different ensemble members. 
-
-We inspect these values to firstly see if there are strange patterns that might indicate bugs in the code. But also to see how and when the patterns differ to better understand the skill and what differences might be caused by
+        plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax,class_names=["No","Yes"])
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        ax.set_title(f"Leadtime={m}")
+    if title is not None:
+        fig.suptitle(title)
+    fig.tight_layout()
+    return fig
+```
 
 ```python
-#compute the confidence interval for plotting
-df_for_ci=calc_ci(df_for.groupby(['leadtime','ADM1_EN','date'])['mean_cell'])
+thresh_obs=210
+thresh_for=210
+lt_rp=4
+month_rp=2
+```
+
+```python
+df_obsfor_lt=df_obsfor_sel[(df_obsfor_sel.leadtime==lt_rp)&(df_obsfor_sel.date_forec.dt.month==month_rp)]
+print(f"Occurrences observed <={thresh_obs} in {calendar.month_name[month_rp]}: "
+      f"{len(df_obsfor_lt[df_obsfor_lt.mean_cell_obs<=thresh_obs])} (of {len(df_obsfor_lt)}={len(df_obsfor_lt[df_obsfor_lt.mean_cell_obs<=thresh_obs])/len(df_obsfor_lt)*100:.2f}%)")
+print(f"Occurrences forecasted <={thresh_obs} in {calendar.month_name[month_rp]} with leadtime {lt_rp}: "
+      f"{len(df_obsfor_lt[df_obsfor_lt.mean_cell_forec<=thresh_for])} (of {len(df_obsfor_lt)}={len(df_obsfor_lt[df_obsfor_lt.mean_cell_forec<=thresh_for])/len(df_obsfor_lt)*100:.2f}%)")
+```
+
+```python
+df_obsfor[f"mean_cell_obs_{thresh_obs}"]=np.where(df_obsfor.mean_cell_obs<=thresh_obs,1,0)
+df_obsfor[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor.mean_cell_forec<=thresh_for,1,0)
+df_obsfor_sel[f"mean_cell_obs_{thresh_obs}"]=np.where(df_obsfor_sel.mean_cell_obs<=thresh_obs,1,0)
+df_obsfor_sel[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor_sel.mean_cell_forec<=thresh_for,1,0)
+cm_th=compute_confusionmatrix_leadtime(df_obsfor_sel,f"mean_cell_obs_{thresh_obs}",f"mean_cell_forec_{thresh_for}",f"Observed <={thresh_obs}",f"Forecasted <={thresh_for}",title=f"Confusion matrices of below threshold monthly precipitation during January and February in the Southern region of Malawi")
 ```
 
 ```python
 df_for_sel_plot=df_for_quant[(df_for_quant.leadtime==sel_lt_plt)&(df_for_quant.ADM1_EN.isin(sel_adm))]
 df_obs_sel_plot=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))]
-ci_plot=df_for_ci[(df_for_ci.leadtime==sel_lt_plt)&(df_for_ci.ADM1_EN.isin(sel_adm))].sort_values("date")
+
+df_for_perc25=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False)["mean_cell"].quantile(0.25)
+df_for_perc75=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False)["mean_cell"].quantile(0.75)
 fig = go.Figure()
 # Create and style traces
 fig.add_trace(go.Scatter(
     x=df_for_sel_plot.date, 
     y=df_for_sel_plot.mean_cell, 
-    name='Forecasted',
+    name='Forecasted median',
     line=dict(color='firebrick', width=4)
 ))
 fig.add_trace(go.Scatter(
     name='Upper Bound',
-    x=ci_plot.date,
-    y=ci_plot['ci95_hi'],
+    x=df_for_perc75.date,
+    y=df_for_perc75.mean_cell,
     mode='lines',
     marker=dict(color="#444"),
     line=dict(width=0),
     showlegend=False
 ))
 fig.add_trace(go.Scatter(
-    name='Lower Bound',
-    x=ci_plot.date,
-    y=ci_plot['ci95_lo'],
+    name='Forecasted 25-75 percentile',
+    x=df_for_perc25.date,
+    y=df_for_perc25.mean_cell,
     marker=dict(color="#444"),
     line=dict(width=0),
     mode='lines',
     fillcolor='rgba(68, 68, 68, 0.3)',
     fill='tonexty',
-    showlegend=False
+    showlegend=True
 ))
 fig.add_trace(go.Scatter(
     x=df_obs_sel_plot.date, 
@@ -263,6 +303,14 @@ fig.add_trace(go.Scatter(
     name = 'Observed',
     line=dict(color='royalblue', width=4)
 ))
+
+
+
+fig.update_layout(
+    title=f"Forecasted and observed precipitation in the Southern region with {sel_lt_plt} months leadtime",
+    xaxis_title="Year",
+    yaxis_title="Monthly precipitation (mm)",
+)
 ```
 
 From the above graph we can see that the forecasts generally follow the trend quite well. However it is often wrong around dec-mar. During this period it predicts relatively smooth transitions from one month to another while the observed patterns are more spikey. This is problematic for our goal of predicting dry spells, where we are especially interested in the abnormally low months
@@ -272,19 +320,11 @@ While above we inspected the values for one leadtime, we are also interested in 
 
 ```python
 df_for_ci_lt=calc_ci(df_for_quant.groupby(['ADM1_EN','date'])['mean_cell'])
-```
-
-```python
 stats_lt_sel_plot=df_for_ci_lt[df_for_ci_lt.ADM1_EN.isin(sel_adm)]
 df_obs_sel_plot=df_obs_month[df_obs_month.ADM1_EN.isin(sel_adm)]
 fig = go.Figure()
 # Create and style traces
-fig.add_trace(go.Scatter(
-    x=stats_lt_sel_plot.date, 
-    y=stats_lt_sel_plot["mean"], 
-    name='Forecasted mean',
-    line=dict(color='firebrick', width=4)
-))
+
 fig.add_trace(go.Scatter(
     name='Minimum',
     x=stats_lt_sel_plot.date,
@@ -295,7 +335,7 @@ fig.add_trace(go.Scatter(
     showlegend=False
 ))
 fig.add_trace(go.Scatter(
-    name='Maximum',
+    name='Min-Max leadtimes',
     x=stats_lt_sel_plot.date,
     y=stats_lt_sel_plot['max'],
     marker=dict(color="#444"),
@@ -303,7 +343,7 @@ fig.add_trace(go.Scatter(
     mode='lines',
     fillcolor='rgba(68, 68, 68, 0.3)',
     fill='tonexty',
-    showlegend=False
+    showlegend=True
 ))
 fig.add_trace(go.Scatter(
     x=df_obs_sel_plot.date, 
@@ -311,6 +351,18 @@ fig.add_trace(go.Scatter(
     name = 'Observed',
     line=dict(color='royalblue', width=4)
 ))
+fig.add_trace(go.Scatter(
+    x=stats_lt_sel_plot.date, 
+    y=stats_lt_sel_plot["mean"], 
+    name='Forecasted mean',
+    line=dict(color='firebrick', width=4)
+))
+
+fig.update_layout(
+    title=f"Forecasted and observed precipitation in the Southern region across leadtimes",
+    xaxis_title="Year",
+    yaxis_title="Monthly precipitation (mm)",
+)
 ```
 
 From the above graph we can see that forecasted values differ across leadtimes, especially around the rainy season. However in several years during none of the leadtimes the observed values were forecasted. Moreover, it should be noted that often the forecast with 1 month leadtimes "dares" to forecast relatively more extreme values. 
@@ -371,4 +423,8 @@ Note however that there are not many data points here, which means that the stat
 ```python
 df_mpe_sel=compute_mpe_cats(df_obsfor_sel,"mean_cell_obs","mean_cell_forec",leadtime_list,threshold_list)
 plot_mpe(df_mpe_sel,title="Bias for the data points evaluated in the trigger")
+```
+
+```python
+
 ```
