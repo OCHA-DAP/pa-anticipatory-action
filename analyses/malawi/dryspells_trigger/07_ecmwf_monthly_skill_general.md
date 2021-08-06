@@ -5,6 +5,8 @@ We first assess the skill at cell level. To assess this skill across ensemble me
 
 Thereafter we look at the bias of the median of all ensemble members. 
 
+A summary of the key figures of this analysis can be found in [this slide deck](https://docs.google.com/presentation/d/10AHQhIB3r7WJ_LulVzyox9RTXOk0Kp9gL3Ik6u9W4jQ/edit?usp=sharing). This deck has also been shared with ECMWF. 
+
 `mwi_ecmwf_monthly_skill_southern.md` assesses the skill at the admin1 level for the Southern region in Malawi.     
 `mwi_ecmwf_monthly_skill_dryspells.md` assesses the skill of the forecast for dry spells specifically. 
 
