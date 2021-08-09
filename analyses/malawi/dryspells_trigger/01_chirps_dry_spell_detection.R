@@ -23,7 +23,7 @@ options(scipen = 999)
 # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
-chirps_path <- paste0(data_dir, "/public/raw/glb/chirps")
+chirps_path <- paste0(data_dir, "/public/raw/glb/chirps/")
 dry_spell_processed_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/")
 
 #####
