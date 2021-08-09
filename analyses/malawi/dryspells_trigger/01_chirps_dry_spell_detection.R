@@ -47,8 +47,6 @@ plot(mwi_adm2$geometry) # visual inspection
 mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
 mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select("ADM2_PCODE", "ADM2_EN")
 
-min_year="2000"
-max_year="2021"
 # list years and adm2 regions to be analysed
 year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date(glue("{min_year}-01-01")), to = as.Date(glue("{max_year}-12-31")), by = "year")))
 year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
@@ -86,9 +84,11 @@ s2021 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2021_p05.nc"))
 s2000_s2021 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s2008, s2009, s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020, s2021) # all files combined into a stack
 
 # crop and masked area outside of MWI
-s2000_s2021_cropped <- crop(x = s2000_s2021, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
+s2000_s2021_cropped <- crop(x = s2000_s2021, y = extent(mwi_adm2_spatial_extent)) # crop() converts to a brick (= a single raster file)
 data_masked <- mask(s2000_s2021_cropped, mask = mwi_adm2)
 
+min_year="2000"
+max_year="2021"
 # saveRDS(data_masked, paste0(dry_spell_processed_path, glue("data_{min_year}_{max_year}_r5.RDS"))) # 5-deg resolution
 # data_masked <- readRDS(paste0(dry_spell_processed_path, glue("data_{min_year}_{max_year}_r5.RDS"))) # 5-deg resolution
 # plot(data_masked) # visual inspection
@@ -118,6 +118,7 @@ for (i in seq_along(1:nbr_layers)) {
   data_max_values <- computeLayerStat(layer = i, stat = max, raster_brick = data_masked, data_stat_values = data_max_values)
 }
 
+# loop through layers/days to compile MEAN values across layers/days
 data_mean_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
