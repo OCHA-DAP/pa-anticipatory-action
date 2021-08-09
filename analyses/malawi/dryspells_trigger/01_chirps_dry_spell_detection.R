@@ -93,13 +93,13 @@ region_names <- as.data.frame(region_list) %>%
 data_max_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
-  data_max_values <- computeLayerStat(i, max, data_max_values)
+  data_max_values <- computeLayerStat(layer = i, stat = max, raster_brick = data_masked, data_stat_values = data_max_values)
 }
 
 data_mean_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
-  data_mean_values <- computeLayerStat(i, mean, data_mean_values)
+  data_mean_values <- computeLayerStat(layer = i, stat = mean, raster_brick = data_masked, data_stat_values = data_mean_values)
 }
 
 # saveRDS(data_max_values,paste0(dry_spell_processed_path, glue("data_max_values_2000_2021_r5.RDS"))
