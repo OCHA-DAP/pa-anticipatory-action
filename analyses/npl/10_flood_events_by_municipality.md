@@ -162,7 +162,7 @@ for basin, station in STATIONS.items():
         df_events_sub = df_events_high_impact[
             (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
         ]
-        glofas_dates = utils.get_dates_list_from_dataset(
+        glofas_dates = utils.get_dates_list_from_data_array(
             ds_glofas_reanalysis[station + parameters.VERSION_LOC],
             threshold=rp_val, min_duration=parameters.DURATION
         )

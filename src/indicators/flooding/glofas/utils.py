@@ -307,9 +307,21 @@ def get_groups_above_threshold(
     return [group for group in groups if group[1] - group[0] >= min_duration]
 
 
-def get_dates_list_from_dataset(
+def get_dates_list_from_data_array(
     da: xr.DataArray, threshold: float, min_duration: int = 1
 ) -> List[np.datetime64]:
+    """
+    Given a data array of a smoothly varying quantity over time,
+    get the dates of an event occurring where the quantity crosses
+    some threshold for a specified duration. If the duration is more than
+    one timestep, then the event date is defined as the timestep when
+    the duration is reached.
+    :param da: Data array with the main quantity
+    :param threshold: Threshold >= which an event is defined
+    :param min_duration: Number of timesteps above the quantity to be
+    considered an event
+    :return: List of event dates
+    """
     groups = get_groups_above_threshold(
         observations=da.to_masked_array(),
         threshold=threshold,

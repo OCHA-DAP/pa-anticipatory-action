@@ -57,7 +57,7 @@ for basin in parameters.STATIONS_BY_BASIN.keys():
         
         for rp in RP_LIST:
             rp_val=df_return_period.loc[rp, station]
-            df_activations = utils.get_dates_list_from_dataset(ds_glofas_reanalysis[station], rp_val, parameters.DURATION)
+            df_activations = utils.get_dates_list_from_data_array(ds_glofas_reanalysis[station], rp_val, parameters.DURATION)
             rp_events[rp] = df_activations
             
         station_events[station] = rp_events

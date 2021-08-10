@@ -44,9 +44,9 @@ for station in df_return_period.columns:
     forecast = ds_glofas_reforecast_summary[station + parameters.VERSION_LOC].sel(percentile=parameters.MAIN_FORECAST_PROB)
     for rp in RP_LIST:
         rp_val = df_return_period.loc[rp, station]
-        model_dates = utils.get_dates_list_from_dataset(model,  rp_val, min_duration=parameters.DURATION)
+        model_dates = utils.get_dates_list_from_data_array(model,  rp_val, min_duration=parameters.DURATION)
         for leadtime in parameters.LEADTIMES:
-            forecast_dates = utils.get_dates_list_from_dataset(
+            forecast_dates = utils.get_dates_list_from_data_array(
                 forecast.sel(leadtime=leadtime), rp_val, min_duration=parameters.DURATION)
             detection_stats = utils.get_detection_stats(true_event_dates=model_dates,
                                                        forecasted_event_dates=forecast_dates,

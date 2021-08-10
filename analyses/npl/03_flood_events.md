@@ -184,7 +184,7 @@ df_station_stats = pd.DataFrame(columns=['station', 'impact_parameter', 'TP', 'F
 for basin, station_list in parameters.STATIONS_BY_BASIN.items():
     for station in station_list:
         rp_val = df_return_period.loc[rp, station]
-        glofas_dates = utils.get_dates_list_from_dataset(ds_glofas_reanalysis[station], rp_val, min_duration=parameters.DURATION)
+        glofas_dates = utils.get_dates_list_from_data_array(ds_glofas_reanalysis[station], rp_val, min_duration=parameters.DURATION)
         for impact_parameter in impact_parameters:
             df_events_sub = df_events_high_impact[
                 (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
