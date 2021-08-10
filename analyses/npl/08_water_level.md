@@ -1,3 +1,5 @@
+Explore the DHM water level data, and create a summary CSV file
+
 ```python
 import pandas as pd
 import matplotlib.pyplot as plt
