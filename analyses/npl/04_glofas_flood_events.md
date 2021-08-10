@@ -12,6 +12,12 @@ from matplotlib.ticker import MaxNLocator
 
 import npl_settings as settings
 from src.indicators.flooding.glofas import utils
+from src.utils_general import math
+```
+
+```python
+RP_LIST = [1.5, 2, 5]
+MAIN_RP = 1.5
 ```
 
 ```python
@@ -30,15 +36,13 @@ df_return_period =  pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
 ```
 
 ```python
-rp_list = [1.5, 2, 5]
-
 df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'TP', 'FP', 'FN'])
 
 for station in df_return_period.columns:
     #for rp in df_return_period.index:
     model = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + settings.VERSION_LOC]
     forecast = ds_glofas_reforecast_summary[station + settings.VERSION_LOC].sel(percentile=settings.MAIN_FORECAST_PROB)
-    for rp in rp_list:
+    for rp in RP_LIST:
         rp_val = df_return_period.loc[rp, station]
         model_dates = utils.get_dates_list_from_dataset(model,  rp_val, min_duration=settings.DURATION)
         for leadtime in settings.LEADTIMES:
@@ -65,7 +69,7 @@ df_station_stats
 #    2: '--',
 #    5: ':'
 #}
-rp_dict = {1.5: '-'}
+rp_dict = {MAIN_RP: '-'}
 plot_numbers = True
 plot_precision_recall = True
 leadtime_range = (1, 10)
@@ -119,21 +123,19 @@ for istation, station in enumerate(settings.FINAL_STATIONS):
 ```python
 # Print out some stats
 # Round to the nearest 5 for a presentation (10 seems a bit too coarse)
-rp = 1.5
-def round_to_5(x):
-    return (np.around(x/5, decimals=0)*5).astype(int)
+rp = MAIN_RP
 for station in settings.FINAL_STATIONS:
     data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
-    data.loc[:, "POD"] = round_to_5(data["POD"].fillna(-1) * 100)
-    data.loc[:, "FAR"] = round_to_5(data["FAR"].fillna(-1) * 100)
+    for q in ["POD", "FAR"]:
+        data.loc[:, q + "_rounded"] = math.round_to_n(data["POD"].fillna(-1) * 100, 5)
     print(station)
-    print(data[["leadtime", "POD", "FAR"]])
+    print(data[["leadtime", "POD_rounded", "FAR_rounded"]])
 ```
 
 ### Make plot showing event comparison
 
 ```python
-rp = 1.5
+rp = MAIN_RP
 leadtimes = [7, 3] # Longer first
 
 for station in settings.FINAL_STATIONS:
@@ -196,7 +198,7 @@ ax.legend()
 ```
 
 ```python
-rp = 1.5
+rp = MAIN_RP
 leadtimes = [1, 3, 5, 7, 10]
 for station in ['Asaraghat', 'Chisapani']:
     df = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp) & (df_station_stats.leadtime.isin(leadtimes))]

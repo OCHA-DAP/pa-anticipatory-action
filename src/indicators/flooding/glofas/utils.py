@@ -384,6 +384,16 @@ def get_more_detection_stats(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def round_to_n(x: float, n: int) -> int:
+    """
+    Round float x to the nearest multiple of n
+    :param x: The number to be rounded
+    :param n: The integer multiple to round to
+    :return: Rounded integer
+    """
+    return (np.around(x / n, decimals=0) * n).astype(int)
+
+
 def get_rank(observations: np.ndarray, forecast: np.ndarray) -> np.ndarray:
     # Create array of both obs and forecast
     rank_array = np.concatenate(([observations], forecast))
