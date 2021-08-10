@@ -119,7 +119,7 @@ df_total_month.head()
 
 ```python
 #merge forecasted and observed monthly precipitation
-df_forobs=df_sel.merge(df_total_month[["date_month","ADM1_EN","obs_below_th"]],how="left",on=["date_month","ADM1_EN"])
+df_forobs=df_sel.merge(df_total_month[["date_month","ADM1_EN","obs_below_th","mean_cell"]],how="left",on=["date_month","ADM1_EN"])
 ```
 
 #### load 10 day dry spell data
@@ -142,6 +142,95 @@ df_10dds.head()
 
 ```python
 df_forobs=df_forobs.merge(df_10dds[["date_month","with_10d_10mm"]],how="left",on="date_month")
+```
+
+### Load dry days data
+
+```python
+def load_monthly_drydays_precip(daily_precip_path,
+                                dd_thresh,
+                                sel_months,
+                                sel_adm,
+                                min_ds_days_month=7,
+                                min_adm_ds_month=3,
+                                ds_adm_col="pcode",
+                                date_col="date",
+                                adm1_col="ADM1_EN"):
+    df_daily_precip=pd.read_csv(daily_precip_path,parse_dates=[date_col])
+    df_daily_precip_selm=df_daily_precip[df_daily_precip[date_col].dt.month.isin(sel_months)]
+    df_daily_precip_selm.loc[:,"dry_day"]=np.where(df_daily_precip_selm.total_prec<=dd_thresh,1,0)
+    start_rainy_seas=10
+    #season approx indicates the year during which the rainy season started
+    #this is done because it can start during one year and continue the next calendar year
+    #we therefore prefer to group by rainy season instead of by calendar year
+    df_daily_precip_selm.loc[:,"season_approx"]=np.where(df_daily_precip_selm[date_col].dt.month>=start_rainy_seas,df_daily_precip_selm[date_col].dt.year,df_daily_precip_selm[date_col].dt.year-1)
+    #count the number of days within a year-month combination that had were part of a dry spell
+    df_daily_season=df_daily_precip_selm.groupby([ds_adm_col,"season_approx"],as_index=False).sum()
+    
+#     df_daily_season_dd=df_daily_season[df_daily_season.dry_day>=min_ds_days_month]
+    
+    # add adm1 col
+    if adm1_col not in df_daily_season.columns:
+        df_adm2=gpd.read_file(adm2_bound_path)
+        df_daily_season=df_daily_season.merge(df_adm2[["ADM2_PCODE","ADM2_EN",adm1_col]],left_on=ds_adm_col,right_on="ADM2_PCODE")
+#     display(df_daily_season)
+    df_daily_season_adm1=df_daily_season.groupby([adm1_col,"season_approx"])["dry_day"].agg(dd_max="max",dd_min="min").reset_index()
+   
+    #dryspell_obs is number of adm2s in which a dry spell is observed in the given date_month
+    #select all date_months with at least min_adm_ds_month adm2 having a dry spell
+#     display(df_daily_season_adm1.groupby([adm1_col,"season_approx"]).count())
+    df_daily_season.loc[:,"min_dd"]=np.where(df_daily_season.dry_day>=min_ds_days_month,1,0)
+
+    df_daily_season_adm1.loc[:,"num_adm_dd_thresh"]=df_daily_season.groupby([adm1_col,"season_approx"],as_index=False).sum()["min_dd"]
+    df_daily_season_adm1.loc[:,"thresh_dry_days"]=np.where(df_daily_season_adm1.num_adm_dd_thresh>=min_adm_ds_month,1,0)
+    df_daily_season_adm1=df_daily_season_adm1[df_daily_season_adm1[adm1_col].isin(sel_adm)]
+    return df_daily_season_adm1
+```
+
+```python
+#should contain the same data as data_mean_values_long but this file seems a bit newer
+daily_precip_adm2_path=os.path.join(country_data_processed_dir,"dry_spells","data_mean_values_long_5day.csv")
+```
+
+```python
+df_dd=load_monthly_drydays_precip(daily_precip_adm2_path,4,sel_months,sel_adm,min_ds_days_month=35)
+df_dd.rename(columns={"dd_max":"dd_max_seas","dd_min":"dd_min_seas","thresh_dry_days":"thresh_dry_days_seas"},inplace=True)
+df_dd_jan=load_monthly_drydays_precip(daily_precip_adm2_path,4,[1],sel_adm,min_ds_days_month=14)
+df_dd_feb=load_monthly_drydays_precip(daily_precip_adm2_path,4,[2],sel_adm,min_ds_days_month=14)
+```
+
+```python
+#start month of the rainy season
+#the start month is based on FewsNet's calendar (https://fews.net/sites/default/files/styles/large/public/seasonal-calendar-malawi.png)
+start_rainy_seas=10
+#season approx indicates the year during which the rainy season started
+#this is done because it can start during one year and continue the next calendar year
+#we therefore prefer to group by rainy season instead of by calendar year
+df_forobs["season_approx"]=np.where(df_forobs.date_month.dt.month>=start_rainy_seas,df_forobs.date_month.dt.year,df_forobs.date_month.dt.year-1)
+```
+
+```python
+df_dd_feb["month"]=2
+df_dd_jan["month"]=1
+df_forobs["month"]=df_forobs.date_month.dt.month
+```
+
+```python
+df_dd_month=pd.concat([df_dd_feb,df_dd_jan])
+```
+
+```python
+df_forobs=df_forobs.merge(df_dd_month[["season_approx","month","dd_max"]],how="left",on=["season_approx","month"])
+```
+
+```python
+#group to rainy season, as dry days can also be seen as yearly data (and later on MVAC is also yearlt)
+df_forobs_seas=df_forobs.groupby(["season_approx","leadtime","ADM1_EN"],as_index=False).sum()
+```
+
+```python
+#merge seasonal dry days data
+df_forobs_seas=df_forobs_seas.merge(df_dd,on=["ADM1_EN","season_approx"],how="left")
 ```
 
 #### Load MVAC data
@@ -197,21 +286,6 @@ df_mvac_year[df_mvac_year.ADM1_EN=="Southern"].plot(x="season_approx",y="perc",k
 ```
 
 ```python
-#start month of the rainy season
-#the start month is based on FewsNet's calendar (https://fews.net/sites/default/files/styles/large/public/seasonal-calendar-malawi.png)
-start_rainy_seas=10
-#season approx indicates the year during which the rainy season started
-#this is done because it can start during one year and continue the next calendar year
-#we therefore prefer to group by rainy season instead of by calendar year
-df_forobs["season_approx"]=np.where(df_forobs.date_month.dt.month>=start_rainy_seas,df_forobs.date_month.dt.year,df_forobs.date_month.dt.year-1)
-```
-
-```python
-#group to rainy season, as mvac is yearly data
-df_forobs_seas=df_forobs.groupby(["season_approx","leadtime","ADM1_EN"],as_index=False).sum()
-```
-
-```python
 df_forobs_seas=df_forobs_seas.merge(df_mvac_year[["season_approx","ADM1_EN","perc"]],how="left",on=["season_approx","ADM1_EN"])
 df_forobs_seas.rename(columns={"perc":"perc_ds_mvac"},inplace=True)
 ```
@@ -226,6 +300,10 @@ df_rp_emp["rp_round"]=5*np.round(df_rp_emp["rp"]/5)
 
 ```python
 df_rp_emp
+```
+
+```python
+df_mvac_year.loc[df_mvac_year.perc.notnull(),"mvac_rp3"]=np.where(df_mvac_year[df_mvac_year.perc.notnull()].perc>=df_rp_emp.loc[3,"rp_round"],1,0)
 ```
 
 ```python
@@ -261,6 +339,7 @@ for l in sel_leadtime:
         df_metrics_lt.loc[l,f"false_alarms_{m}_obs"]=len(df_forobs_lt[(df_forobs_lt.for_below_th>=1)&(df_forobs_lt.dry_spell==0)&(df_forobs_lt.date_month.dt.month==m)&(df_forobs_lt.obs_below_th==1)])
         df_metrics_lt.loc[l,f"false_alarms_{m}_10d"]=len(df_forobs_lt[(df_forobs_lt.for_below_th>=1)&(df_forobs_lt.dry_spell==0)&(df_forobs_lt.date_month.dt.month==m)&(df_forobs_lt.with_10d_10mm==1)])
     df_metrics_lt.loc[l,"false_alarms_year"]=len(df_forobs_seas_lt[(df_forobs_seas_lt.for_below_th>=1)&(df_forobs_seas_lt.dry_spell==0)])
+    df_metrics_lt.loc[l,"false_alarms_dd"]=len(df_forobs_seas_lt[(df_forobs_seas_lt.for_below_th>=1)&(df_forobs_seas_lt.dry_spell==0)&(df_forobs_seas_lt.thresh_dry_days_seas==1)])
     #false alarms during years with mvac data
     df_metrics_lt.loc[l,"false_alarms_year_mvac"]=len(df_forobs_mvac_lt[(df_forobs_mvac_lt.for_below_th>=1)&(df_forobs_mvac_lt.dry_spell==0)])
     df_metrics_lt.loc[l,"false_alarms_mvac"]=len(df_forobs_mvac_lt[(df_forobs_mvac_lt.for_below_th>=1)&(df_forobs_mvac_lt.dry_spell==0)&(df_forobs_mvac_lt.mvac_rp3==1)])
@@ -300,6 +379,81 @@ Leadtime=2 months, forecasting for Jan and Feb (leadtime of 2 months means that 
 - 4 of the years with a false alarm occurred during years MVAC data was available
 - 2/4 (50%) of these years with a false alarm did occurr during years where more than 85% of the region experienced a dry spell according to MVAC
 
-```python
 
+#### Further understand relations
+while not very clean, the below section explores the relations between the different data sources a bit further
+
+```python
+from mlxtend.evaluate import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
+import matplotlib.pyplot as plt
+
+for lt in df_forobs_seas.leadtime.unique():
+    df_forobs_seas_lt=df_forobs_seas[df_forobs_seas.leadtime==lt]
+    y_target =  df_forobs_seas_lt.thresh_dry_days_seas
+
+    y_predicted = np.where(df_forobs_seas_lt.for_below_th>=1,1,0)
+
+    cm = confusion_matrix(y_target=y_target, 
+                          y_predicted=y_predicted)
+
+    fig, ax = plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True)#,class_names=["No","Yes"])
+    plt.title(f"Dry days vs forecasted monthly, Leadtime = {lt} months")
+```
+
+```python
+from mlxtend.evaluate import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
+import matplotlib.pyplot as plt
+
+for lt in df_forobs_seas.leadtime.unique():
+    df_forobs_seas_lt=df_forobs_seas[df_forobs_seas.leadtime==lt]
+    y_target =  df_forobs_seas_lt.thresh_dry_days_seas
+
+    y_predicted = np.where(df_forobs_seas_lt.obs_below_th>=1,1,0)
+
+    cm = confusion_matrix(y_target=y_target, 
+                          y_predicted=y_predicted)
+
+    fig, ax = plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True)#,class_names=["No","Yes"])
+    plt.title(f"Dry days vs observed monthly, Leadtime = {lt} months")
+```
+
+```python
+from mlxtend.evaluate import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
+import matplotlib.pyplot as plt
+
+for lt in df_forobs_seas.leadtime.unique():
+    df_forobs_seas_lt=df_forobs_seas[df_forobs_seas.leadtime==lt]
+    y_target =  np.where(df_forobs_seas_lt.obs_below_th>=1,1,0)
+
+    y_predicted = np.where(df_forobs_seas_lt.for_below_th>=1,1,0)
+
+    cm = confusion_matrix(y_target=y_target, 
+                          y_predicted=y_predicted)
+
+    fig, ax = plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True)#,class_names=["No","Yes"])
+    plt.title(f"Observed monthly vs forecasted monthly, Leadtime = {lt} months")
+```
+
+```python
+df_forobs.drop_duplicates(["dd_max","mean_cell"]).plot("dd_max","mean_cell",kind="scatter")
+```
+
+```python
+df_forobs_mvac.drop_duplicates(["dd_max_seas","perc_ds_mvac"]).plot("perc_ds_mvac","dd_max_seas",kind="scatter")
+```
+
+```python
+df_forobs_mvac.drop_duplicates(["mean_cell","perc_ds_mvac"]).plot("perc_ds_mvac","mean_cell",kind="scatter")
+```
+
+```python
+df_forobs_month=df_forobs.merge(df_mvac_year,how="left",on=["season_approx","ADM1_EN"])
+df_forobs_month_mvac=df_forobs_month[df_forobs_month.mvac_rp3.notnull()]
+```
+
+```python
+df_forobs_month_mvac[df_forobs_month_mvac.date_month.dt.month==2].drop_duplicates(["mean_cell","perc"]).plot("perc","mean_cell",kind="scatter")
 ```

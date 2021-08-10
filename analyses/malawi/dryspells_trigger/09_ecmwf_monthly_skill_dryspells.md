@@ -366,6 +366,24 @@ ax.get_legend().set_title("Dry spell occurred")
 ```
 
 ```python
+df_ds_for_labels
+```
+
+```python
+for m in df_ds_for_labels.month_name.unique():#plot distribution precipitation with and withoud dry spell
+    df_ds_for_labels_m=df_ds_for_labels[(df_ds_for_labels.month_name==m)&(df_ds_for_labels.leadtime.isin([2,4]))]
+    fig,ax=plt.subplots(figsize=(10,6))
+    g=sns.boxplot(data=df_ds_for_labels_m,x="leadtime",y="mean_cell",ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
+    ax.set_ylabel("Monthly precipitation")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.set_xlabel("Leadtime")
+    ax.get_legend().set_title("Dry spell occurred")
+    ax.set_title(f"Month={m}")
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_boxplot_formonth_dsobs_perlt_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
+```
+
+```python
 #compute tp,tn,fp,fn per threshold
 y_target =  df_ds_for.dry_spell
 threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for_labels.mean_cell.max()%10,10)
