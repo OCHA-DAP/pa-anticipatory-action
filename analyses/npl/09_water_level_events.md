@@ -163,7 +163,7 @@ for station in settings.FINAL_STATIONS:
         glofas_events = df_station[df_station[glofas_cname]].index
         if wl_days is None:
             print(f"{station}")
-            print(f"True events: {len(df_true_events)}")
+            print(f"True events: {len(wl_events)}")
             print(f"Glofas events: {len(glofas_events)}")
         
         
