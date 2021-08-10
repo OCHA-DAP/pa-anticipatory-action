@@ -1,56 +1,32 @@
-```python
-from pathlib import Path
-from pathlib import Path
-import os
-import sys
+Try to derive major flood events from a list of historical impacts,
+and compare to GloFAS river discharge
 
+```python
 import pandas as pd
 import geopandas as gpd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils, glofas
+
+pd.options.mode.chained_assignment = None 
 ```
 
 ```python
-pd.options.mode.chained_assignment = None 
-mpl.rcParams['figure.dpi'] = 200
+PAST_EVENTS_FILENAME = parameters.RCO_DIR / 'NepalHistoricalFlood1971-2020.xlsx' 
+BASINS_SHAPEFILE = parameters.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
+WATERSHED_SHAPEFILE = parameters.RCO_DIR / 'shapefiles/Major_watershed.shp'
 
-
-COUNTRY_ISO3 = 'npl'
-STATIONS = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar'],
-    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat'],
-    'West Rapti': ['Kusum'],
-    'Bagmati': ['Rai_goan'],
-    'Babai': ['Chepang']
-}
-
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-DATA_DIR_PUBLIC = DATA_DIR / 'public'
-DATA_DIR_PRIVATE = DATA_DIR / 'private'
-RCO_DIR = DATA_DIR_PRIVATE / 'exploration/npl/unrco'
-SHAPEFILE_DIR = DATA_DIR_PUBLIC / 'raw/npl/cod_ab'
-
-PAST_EVENTS_FILENAME = RCO_DIR / 'NepalHistoricalFlood1971-2020.xlsx' 
-BASINS_SHAPEFILE = RCO_DIR / 'shapefiles/Major_River_Basins.shp'
-WATERSHED_SHAPEFILE = RCO_DIR / 'shapefiles/Major_watershed.shp'
-ADMIN_SHAPEFILE = SHAPEFILE_DIR / 'npl_admbnda_ocha_20201117/npl_admbnda_nd_20201117_shp.zip'
-ADMIN2_SHAPEFILE = 'npl_admbnda_districts_nd_20201117.shp'
-
-EVENTS_FOR_RAGINDRA = DATA_DIR_PUBLIC / 'exploration/npl/glofas/npl_glofas_events.xlsx'
+EVENTS_FOR_RAGINDRA = parameters.DATA_DIR_PUBLIC / 'exploration/npl/glofas/npl_glofas_events.xlsx'
 ```
 
 ### Read in data and clean slightly
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
 ```
 
@@ -59,7 +35,7 @@ df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
 # make pcode column names match for simplicity
 df_events = (pd.read_excel(PAST_EVENTS_FILENAME)
              .rename(columns={'DIST_CODE_ETHOS': 'pcode'}))
-df_admin = (gpd.read_file(f'zip://{ADMIN_SHAPEFILE}!{ADMIN2_SHAPEFILE}')
+df_admin = (gpd.read_file(f'zip://{parameters.ADMIN_SHAPEFILE}!{parameters.ADMIN_DISTRICTS_SHAPEFILE}')
             .rename(columns={'DIST_PCODE': 'pcode'}))
 ```
 
@@ -186,7 +162,7 @@ for basin, df in df_events_dict.items():
 ```python
 for basin, df in df_events_dict.items():
     # Reindex the events to the reanalysis time
-     # and get the rolling sum of impact
+    # and get the rolling sum of impact
     df = (df.reindex(ds_glofas_reanalysis.time.data, fill_value=0)
             .rolling(5, center=True).sum()).fillna(0)
 
@@ -195,52 +171,37 @@ for basin, df in df_events_dict.items():
     fig.supxlabel('River discharge [m$^3$ s$^{-1}$]')
     for i, impact_parameter in enumerate(impact_parameters):
         ax = axs[i]
-        ax.plot(ds_glofas_reanalysis[STATIONS[basin][0]], df[impact_parameter],'.', label=impact_parameter, c=f'C{i}')
+        ax.plot(ds_glofas_reanalysis[parameters.STATIONS_BY_BASIN[basin][0]], df[impact_parameter],'.', label=impact_parameter, c=f'C{i}')
         ax.legend()
 
 ```
 
 ```python
 # Define GloFAS events
-rp = 2
-ndays = 3 # Number of consecutive days above RP
-days_before_buffer = 5 # Number of days before GloFAS event the flooding event can occur
-days_after_buffer = 30
-
+rp = parameters.MAIN_RP
 df_station_stats = pd.DataFrame(columns=['station', 'impact_parameter', 'TP', 'FP', 'FN'])
 
-for basin, station_list in STATIONS.items():
+for basin, station_list in parameters.STATIONS_BY_BASIN.items():
     for station in station_list:
+        rp_val = df_return_period.loc[rp, station]
+        glofas_dates = utils.get_dates_list_from_data_array(ds_glofas_reanalysis[station], rp_val, min_duration=parameters.DURATION)
         for impact_parameter in impact_parameters:
             df_events_sub = df_events_high_impact[
                 (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
             ]
-            df_events_sub['detections'] = 0
-            TP = 0
-            FP = 0
-            rp_val = df_return_period.loc[rp, station]
-            observations = ds_glofas_reanalysis[station].values
-            groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=ndays)
-            for group in groups:
-                # The GlofAS event takes place on the Nth day (since for an event)
-                # you require N days in a row
-                glofas_event_date = ds_glofas_reanalysis.time[group[0] + ndays - 1].data
-                # Check if any events are around that date
-                days_offset = (df_events_sub['date'] - glofas_event_date) /  np.timedelta64(1, 'D')
-                detected = (days_offset > -1 * days_before_buffer) & (days_offset < days_after_buffer)
-                df_events_sub.loc[detected, 'detections'] += 1
-                # If there were any detections, it's  a TP. Otherwise a FP
-                if sum(detected):
-                    TP += 1
-                else:
-                    FP += 1
+            detection_stats = utils.get_detection_stats(true_event_dates=df_events_sub['date'].values,
+                                                       forecasted_event_dates=glofas_dates,
+                                                       days_before_buffer=parameters.DAYS_BEFORE_BUFFER,
+                                                       days_after_buffer=parameters.DAYS_AFTER_BUFFER)
+   
+    
             df_station_stats = df_station_stats.append({
-                'station': station,
-                'impact_parameter': impact_parameter,
-                'TP': TP,
-                'FP': FP,
-                'FN': len(df_events_sub[df_events_sub['detections'] == 0])
+                **{'station': station,
+                'impact_parameter': impact_parameter},
+                **detection_stats
             }, ignore_index=True)
+df_station_stats = utils.get_more_detection_stats(df_station_stats)
+df_station_stats
 ```
 
 ### Plot events and GloFAS together
@@ -255,8 +216,8 @@ df_events_sub
 ```
 
 ```python
-rp = 5
-for basin, station_list in STATIONS.items():
+rp = parameters.MAIN_RP
+for basin, station_list in parameters.STATIONS_BY_BASIN.items():
     for station in station_list:
         fig, axs = plt.subplots(len(impact_parameters), figsize=(12, 10))
         fig.suptitle(f'{basin} - {station}')
@@ -271,7 +232,7 @@ for basin, station_list in STATIONS.items():
             ax.plot(x, observations, lw=0.5)
             # Plot when GLoFAS is above RP
             rp_val=df_return_period.loc[rp, station]
-            groups = utils.get_groups_above_threshold(observations, rp_val, ndays)
+            groups = utils.get_groups_above_threshold(observations, rp_val, parameters.DURATION)
             for group in groups:
                 idx = range(group[0], group[1])
                 ax.plot(x[idx], observations[idx], ls='-', 
@@ -291,14 +252,14 @@ for basin, station_list in STATIONS.items():
 
 ```python
 df_glofas_events = pd.DataFrame(columns=['basin', 'station', 'rp', 'date'])
-for basin, station_list in STATIONS.items():
+for basin, station_list in parameters.STATIONS_BY_BASIN.items():
     for station in station_list:
         observations = ds_glofas_reanalysis[station]
         for rp in df_return_period.index:
             rp_val=df_return_period.loc[rp, station]
-            groups = utils.get_groups_above_threshold(observations, rp_val, ndays)
+            groups = utils.get_groups_above_threshold(observations, rp_val, parameters.DURATION)
             for group in groups:
-                idx = group[0] + ndays - 1
+                idx = group[0] + parameters.DURATION - 1
                 row = {
                     'date': observations.time.data[idx],
                     'basin': basin,
@@ -316,7 +277,7 @@ df_glofas_events.to_excel(EVENTS_FOR_RAGINDRA, index=False)
 ### Plot all events
 
 ```python
-for basin, station_list in STATIONS.items():
+for basin, station_list in parameters.STATIONS_BY_BASIN.items():
     df_events_basin = df_events_dict[basin]
     # Only select events in the time range of GloFAS
     df_events_basin = df_events_basin.loc[df_events_basin.index > ds_glofas_reanalysis.time[0].data]

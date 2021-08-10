@@ -1,29 +1,15 @@
-```python
-import os
-from pathlib import Path
-import sys
-from importlib import reload
+Explore the DHM water level data, and create a summary CSV file
 
+```python
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_parameters as parameters
 from src.utils_general import statistics
-reload(statistics)
 ```
 
 ```python
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-DHM_DIR = DATA_DIR / 'private/exploration/npl/dhm'
-WL_RAW_DIR = DHM_DIR / 'raw/water_level'
-WL_PROCESSED_DIR = DHM_DIR / 'processed'
-WL_INPUT_FILENAME = 'GHT_{}.txt' 
-WL_OUTPUT_FILENAME = 'waterl_level_procssed.csv'
-STATION_INFO_FILENAME = 'npl_dhm_station_info.xlsx'
-
 STATIONS = [
     'Chatara',
     'Chisapani',
@@ -36,13 +22,13 @@ STATIONS = [
 ### Check out the DHM WL data
 
 ```python
-df_station_info = pd.read_excel(DHM_DIR / STATION_INFO_FILENAME, index_col='station_name', dtype={'station_number': object})
+df_station_info = pd.read_excel(parameters.DHM_STATION_INFO_FILENAME, index_col='station_name', dtype={'station_number': object})
 ```
 
 ```python
 for i, station in enumerate(STATIONS):
     station_number = df_station_info.at[station, 'station_number']
-    df_wl_station = pd.read_csv(WL_RAW_DIR / WL_INPUT_FILENAME.format(station_number),
+    df_wl_station = pd.read_csv(parameters.WL_RAW_DIR / parameters.WL_INPUT_FILENAME.format(station_number),
                        skiprows=1, 
                         header=None,
                         comment=' ',

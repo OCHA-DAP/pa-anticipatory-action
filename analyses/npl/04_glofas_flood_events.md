@@ -1,8 +1,7 @@
-```python
-from pathlib import Path
-import os
-import sys
+We want to know the forecast performance against GloFAS events, i.e. when an
+event is defined as a GloFAS return period exceedance
 
+```python
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -11,108 +10,57 @@ import matplotlib as mpl
 import xarray as xr
 from matplotlib.ticker import MaxNLocator
 
-
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
+from src.utils_general import math
 ```
 
 ```python
-mpl.rcParams['figure.dpi'] = 200
-
-LEADTIMES = [x + 1 for x in range(10)]
-
-COUNTRY_ISO3 = 'npl'
-
-FINAL_STATIONS = ["Chatara", "Chisapani", "Asaraghat"]
-# Use "_v3" for the GloFAS model v3 locs, or empty string for the original v2 ones
-VERSION_LOC = "_v3"
-USE_INCORRECT_AREA_COORDS = False
-
+RP_LIST = [1.5, 2, 5]
 MAIN_RP = 1.5
-MAIN_FORECAST_PROB = 50
-    
-
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
-
-DURATION = 1
 ```
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3, use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS)
+    country_iso3=parameters.COUNTRY_ISO3, use_incorrect_area_coords=parameters.USE_INCORRECT_AREA_COORDS)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
-    country_iso3 = COUNTRY_ISO3, leadtimes=LEADTIMES,
+    country_iso3 = parameters.COUNTRY_ISO3, leadtimes=parameters.LEADTIMES,
     interp=True,
-    use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+    use_incorrect_area_coords=parameters.USE_INCORRECT_AREA_COORDS
 )
 ds_glofas_reforecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
 #df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
-df_return_period =  pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
+df_return_period =  pd.read_excel(parameters.GLOFAS_RP_FILENAME, index_col='rp')
 
 ```
 
 ```python
-days_before_buffer = 5
-days_after_buffer = 30
-
-rp_list = [1.5, 2, 5]
-
 df_station_stats = pd.DataFrame(columns=['station', 'rp', 'leadtime', 'TP', 'FP', 'FN'])
 
 for station in df_return_period.columns:
     #for rp in df_return_period.index:
-    for rp in rp_list:
+    model = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + parameters.VERSION_LOC]
+    forecast = ds_glofas_reforecast_summary[station + parameters.VERSION_LOC].sel(percentile=parameters.MAIN_FORECAST_PROB)
+    for rp in RP_LIST:
         rp_val = df_return_period.loc[rp, station]
-        observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + VERSION_LOC].values
-        forecast = ds_glofas_reforecast_summary[station + VERSION_LOC].sel(percentile=MAIN_FORECAST_PROB)
-
-        # The GlofAS event takes place on the Nth day (since for an event)
-        # you require N days in a row
-        event_groups = utils.get_groups_above_threshold(observations, rp_val, min_duration=DURATION)
-        event_dates = [event_group[0] + DURATION - 1 for event_group in event_groups]
-
-        for leadtime in LEADTIMES:
-            TP = 0
-            FN = 0
-            
-            forecast_groups = utils.get_groups_above_threshold(forecast.sel(leadtime=leadtime), rp_val, min_duration=DURATION)
-            forecast_dates = np.array([forecast_group[0] + DURATION - 1 for forecast_group in forecast_groups])
-            forecast_detections = np.zeros(len(forecast_dates))
-            
-            for event_date in event_dates:
-                # Check if any events are around that date
-                days_offset = forecast_dates - event_date
-
-                detected = (days_offset >= -1 * days_before_buffer) & (days_offset <= days_after_buffer)
-                
-
-                # If there were any detections, it's  a TP. Otherwise a FP
-                if sum(detected):
-                    TP += 1
-                else:
-                    FN += 1
-                forecast_detections[detected] += 1
-                
-            FP = sum(forecast_detections == 0)
+        model_dates = utils.get_dates_list_from_data_array(model,  rp_val, min_duration=parameters.DURATION)
+        for leadtime in parameters.LEADTIMES:
+            forecast_dates = utils.get_dates_list_from_data_array(
+                forecast.sel(leadtime=leadtime), rp_val, min_duration=parameters.DURATION)
+            detection_stats = utils.get_detection_stats(true_event_dates=model_dates,
+                                                       forecasted_event_dates=forecast_dates,
+                                                       days_before_buffer=parameters.DAYS_BEFORE_BUFFER,
+                                                       days_after_buffer=parameters.DAYS_AFTER_BUFFER)
             df_station_stats = df_station_stats.append({
-                'station': station,
+                **{'station': station,
                 'leadtime': leadtime,
-                'rp': rp,
-                'TP': TP,
-                'FP': FP,
-                'FN': FN,
+                'rp': rp},
+                **detection_stats
             }, ignore_index=True)
 
-```
-
-```python
-df_station_stats['precision'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FP'].astype(int))
-df_station_stats['recall'] = df_station_stats['TP'].astype(int) / (df_station_stats['TP'].astype(int) + df_station_stats['FN'].astype(int))
+df_station_stats = utils.get_more_detection_stats(df_station_stats)
+df_station_stats
 ```
 
 ```python
@@ -126,12 +74,13 @@ plot_numbers = True
 plot_precision_recall = True
 leadtime_range = (1, 10)
 
-for istation, station in enumerate(FINAL_STATIONS):
+for istation, station in enumerate(parameters.FINAL_STATIONS):
     if plot_numbers:
         qs = ['TP', 'FP', 'FN']
         fig, ax = plt.subplots()
         for rp, ls in rp_dict.items():
-            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == MAIN_RP)]
+            data = df_station_stats[(df_station_stats['station'] == station) & 
+                                    (df_station_stats['rp'] == rp)]
             for iq, q in enumerate(qs):
                 ax.plot(data['leadtime'], data[q], ls=ls, c=f'C{iq}')
         ax.set_title(station)
@@ -152,7 +101,8 @@ for istation, station in enumerate(FINAL_STATIONS):
         qs = ['precision', 'recall']
         fig, ax = plt.subplots()
         for rp, ls in rp_dict.items():
-            data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == MAIN_RP)]
+            data = df_station_stats[(df_station_stats['station'] == station) & 
+                                    (df_station_stats['rp'] == rp)]
             for iq, q in enumerate(qs):
                 ax.plot(data['leadtime'], data[q], ls=ls, c=f'C{iq}')
         ax.set_title(station)
@@ -173,28 +123,27 @@ for istation, station in enumerate(FINAL_STATIONS):
 ```python
 # Print out some stats
 # Round to the nearest 5 for a presentation (10 seems a bit too coarse)
-def round_to_5(x):
-    return (np.around(x/5, decimals=0)*5).astype(int)
-for station in FINAL_STATIONS:
+rp = MAIN_RP
+for station in parameters.FINAL_STATIONS:
     data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp)]
-    data.loc[:, "POD"] = round_to_5(data["recall"].fillna(-1) * 100)
-    data.loc[:, "FAR"] = round_to_5((1 - data["precision"]).fillna(-1) * 100)
+    for q in ["POD", "FAR"]:
+        data.loc[:, q + "_rounded"] = math.round_to_n(data["POD"].fillna(-1) * 100, 5)
     print(station)
-    print(data[["leadtime", "POD", "FAR"]])
+    print(data[["leadtime", "POD_rounded", "FAR_rounded"]])
 ```
 
 ### Make plot showing event comparison
 
 ```python
-rp = 1.5
+rp = MAIN_RP
 leadtimes = [7, 3] # Longer first
 
-for station in FINAL_STATIONS:
+for station in parameters.FINAL_STATIONS:
 
     thresh = df_return_period.loc[rp, station]
     fig, axs = plt.subplots(3, figsize=(8,6))
-    observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + VERSION_LOC]
-    forecast = utils.get_glofas_forecast_summary(ds_glofas_reforecast)[station + VERSION_LOC].sel(percentile=MAIN_FORECAST_PROB)
+    observations = ds_glofas_reanalysis.reindex(time=ds_glofas_reforecast.time)[station + parameters.VERSION_LOC]
+    forecast = utils.get_glofas_forecast_summary(ds_glofas_reforecast)[station + parameters.VERSION_LOC].sel(percentile=MAIN_FORECAST_PROB)
     forecast_1 = forecast.sel(leadtime=leadtimes[0])
     forecast_2 = forecast.sel(leadtime=leadtimes[1])
     fig.supylabel('River dischange [m$^3$ s$^{-1}$]')
@@ -219,7 +168,7 @@ for station in FINAL_STATIONS:
         ax.minorticks_on()
         ax.axhline(thresh, c=c2, lw=0.5)
         ax.set_title(title)
-        for detection in utils.get_groups_above_threshold(y, thresh, DURATION):
+        for detection in utils.get_groups_above_threshold(y, thresh, parameters.DURATION):
             ax.plot(x[detection[0]], y[detection[0]], 'o', c=c2, lw=2, mfc='none')
 ```
 
@@ -232,7 +181,8 @@ stations = ['Asaraghat', 'Chisapani']
 fig, ax = plt.subplots()
 for istation, station in enumerate(stations):
     qs = ['precision', 'recall']
-    data = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == MAIN_RP)]
+    data = df_station_stats[(df_station_stats['station'] == station) & 
+                            (df_station_stats['rp'] == parameters.MAIN_RP)]
     for iq, q in enumerate(qs):
         ax.plot(data['leadtime'], data[q], ls=ls_list[istation], c=f'C{iq}')
 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -248,7 +198,7 @@ ax.legend()
 ```
 
 ```python
-rp = 1.5
+rp = MAIN_RP
 leadtimes = [1, 3, 5, 7, 10]
 for station in ['Asaraghat', 'Chisapani']:
     df = df_station_stats[(df_station_stats['station'] == station) & (df_station_stats['rp'] == rp) & (df_station_stats.leadtime.isin(leadtimes))]
