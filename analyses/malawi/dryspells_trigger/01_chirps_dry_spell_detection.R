@@ -111,14 +111,14 @@ region_list <- mwi_adm2[, c("ADM2_PCODE", "ADM2_EN", "geometry")]
 region_names <- as.data.frame(region_list) %>%
   dplyr::select(-geometry)
 
-# loop through layers/days to compile MAX values across layers/days
+# loop through layers/days to compile MAX values across layers/days into a dataframe
 data_max_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
   data_max_values <- computeLayerStat(layer = i, stat = max, raster_brick = data_masked, data_stat_values = data_max_values)
 }
 
-# loop through layers/days to compile MEAN values across layers/days
+# loop through layers/days to compile MEAN values across layers/days into a dataframe
 data_mean_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
@@ -814,7 +814,7 @@ data_long %>%
 # LOOK AT FALSE ALARMS
 ############
 # can comment out all code above and read the saved file
-# data_long_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_long_mean_values.RDS"))
+# data_long_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_long.RDS"))
 
 # distribution of rolling sums in southern region for Jan and Feb
 data_long_mean_values %>%
