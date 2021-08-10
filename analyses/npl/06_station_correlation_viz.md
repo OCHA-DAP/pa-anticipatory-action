@@ -8,7 +8,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 import xarray as xr
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
 ```
 
@@ -126,9 +126,9 @@ def visualize_station_overlay(
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=settings.COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
-df_return_period_glofas = pd.read_excel(settings.GLOFAS_RP_FILENAME)
+df_return_period_glofas = pd.read_excel(parameters.GLOFAS_RP_FILENAME)
 ```
 
 ```python
@@ -142,12 +142,12 @@ for station in primary_stations:
     
     #rp_val_event = int(df_return_period_glofas.loc[df_return_period_glofas['rp']==rp_event, station])
     rp_val_event = df_return_period.loc[rp_event, station]
-    da_primary = ds_glofas_reanalysis[station + settings.VERSION_LOC]
+    da_primary = ds_glofas_reanalysis[station + parameters.VERSION_LOC]
         
     for station_small in secondary_stations:
         
         rp_val_secondary = df_return_period.loc[rp_secondary, station_small]  
-        da_secondary = ds_glofas_reanalysis[station_small + settings.VERSION_LOC]
+        da_secondary = ds_glofas_reanalysis[station_small + parameters.VERSION_LOC]
         
         plt_title = f'What is water discharge at {station_small} when {station} triggers at {rp_event}-year RP?'
         save_title_line = f'line_{station_small}_{station}_{rp_secondary}_{rp_event}.png'
@@ -159,7 +159,7 @@ for station in primary_stations:
             da_secondary, 
             rp_val_event, 
             rp_val_secondary, 
-            settings.DURATION, 
+            parameters.DURATION, 
             days_buffer,
             plt_title, 
             hist_title, 
@@ -171,10 +171,10 @@ for station in primary_stations:
 #### Investigate relationship between stations with water level
 
 ```python
-df_wl = pd.read_csv(settings.WL_OUTPUT_FILENAME, index_col='date')
+df_wl = pd.read_csv(parameters.WL_OUTPUT_FILENAME, index_col='date')
 df_wl.index = pd.to_datetime(df_wl.index).rename('time')
 ds_wl = xr.Dataset.from_dataframe(df_wl)
-df_station_info = pd.read_excel(settings.DHM_STATION_INFO_FILENAME, index_col='station_name')
+df_station_info = pd.read_excel(parameters.DHM_STATION_INFO_FILENAME, index_col='station_name')
 ```
 
 ```python
@@ -204,7 +204,7 @@ for station in stations:
             da_secondary, 
             val_event, 
             val_secondary, 
-            settings.DURATION, 
+            parameters.DURATION, 
             days_buffer,
             plt_title, 
             hist_title, 

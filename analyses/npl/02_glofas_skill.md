@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, ScalarFormatter
 import numpy as np
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
 from src.utils_general.statistics import calc_mpe
 ```
@@ -22,9 +22,9 @@ MAIN_RP = 1.5 # RP used as a threshold to get extreme values
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=settings.COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 ds_glofas_reforecast = utils.get_glofas_reforecast(
-    country_iso3 = settings.COUNTRY_ISO3, leadtimes=settings.LEADTIMES,
+    country_iso3 = parameters.COUNTRY_ISO3, leadtimes=parameters.LEADTIMES,
     interp=False
 )
 ```
@@ -38,7 +38,7 @@ df_return_period = utils.get_return_periods(ds_glofas_reanalysis)
 ```python
 rp_label = [str(int(x)) for x in df_return_period.index]
 rp_label[0] = '1.5'
-for basin, stations in settings.STATIONS_BY_BASIN.items():
+for basin, stations in parameters.STATIONS_BY_BASIN.items():
     fig, ax = plt.subplots()
     ax.set_title(basin)
     for station in stations:
@@ -53,7 +53,7 @@ for basin, stations in settings.STATIONS_BY_BASIN.items():
 
 ```python
 def plot_crps(df_crps, title_suffix=None, ylog=False):
-    for basin, stations in settings.STATIONS_BY_MAJOR_BASIN.items():
+    for basin, stations in parameters.STATIONS_BY_MAJOR_BASIN.items():
         fig, ax = plt.subplots()
         for station in stations:
             crps = df_crps[station]
@@ -111,16 +111,16 @@ def plot_hist(da_observations, da_forecast, station_name, rp=None, leadtimes=Non
     ax.set_title(title)
 
 rp = MAIN_RP
-for stations in settings.STATIONS_BY_BASIN.values():
+for stations in parameters.STATIONS_BY_BASIN.values():
     for station in stations:
         da_observations =  ds_glofas_reanalysis[station]
         da_forecast = ds_glofas_reforecast[station]
-        plot_hist(da_observations, da_forecast, station, leadtimes=settings.LEADTIMES)
+        plot_hist(da_observations, da_forecast, station, leadtimes=parameters.LEADTIMES)
         rp_val = df_return_period.loc[rp, station]
         o = da_observations[da_observations > rp_val]
         # Needs at least about 50 vals to work, not sure why
         if len(o) > 50:
-            plot_hist(o, da_forecast, station, leadtimes=settings.LEADTIMES, rp=rp)
+            plot_hist(o, da_forecast, station, leadtimes=parameters.LEADTIMES, rp=rp)
 
 ```
 
@@ -129,7 +129,7 @@ for stations in settings.STATIONS_BY_BASIN.values():
 
 ```python
 rp = MAIN_RP
-for basin, stations in settings.STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in parameters.STATIONS_BY_MAJOR_BASIN.items():
     fig, ax = plt.subplots()
     for istation, station in enumerate(stations):
         da_observations =  ds_glofas_reanalysis[station]

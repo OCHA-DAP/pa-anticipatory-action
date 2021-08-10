@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.utils_general import statistics
 ```
 
@@ -20,13 +20,13 @@ STATIONS = [
 ### Check out the DHM WL data
 
 ```python
-df_station_info = pd.read_excel(settings.DHM_STATION_INFO_FILENAME, index_col='station_name', dtype={'station_number': object})
+df_station_info = pd.read_excel(parameters.DHM_STATION_INFO_FILENAME, index_col='station_name', dtype={'station_number': object})
 ```
 
 ```python
 for i, station in enumerate(STATIONS):
     station_number = df_station_info.at[station, 'station_number']
-    df_wl_station = pd.read_csv(settings.WL_RAW_DIR / settings.WL_INPUT_FILENAME.format(station_number),
+    df_wl_station = pd.read_csv(parameters.WL_RAW_DIR / parameters.WL_INPUT_FILENAME.format(station_number),
                        skiprows=1, 
                         header=None,
                         comment=' ',

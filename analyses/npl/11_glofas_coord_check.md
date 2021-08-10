@@ -8,14 +8,14 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.utils_general.utils import parse_yaml
 ```
 
 ```python
 
-GLOFAS_NEW_STATIONS = settings.DATA_DIR_PRIVATE / 'exploration/glb/glofas/Qgis_World_outlet_202104_20210421.csv'
-NEPAL_RAW_DATA_DIR = settings.DATA_DIR_PUBLIC / 'raw/npl/glofas/version_3/cems-glofas-historical/'
+GLOFAS_NEW_STATIONS = parameters.DATA_DIR_PRIVATE / 'exploration/glb/glofas/Qgis_World_outlet_202104_20210421.csv'
+NEPAL_RAW_DATA_DIR = parameters.DATA_DIR_PUBLIC / 'raw/npl/glofas/version_3/cems-glofas-historical/'
 STATIONS_YML = '../../src/nepal/config.yml'
 
 STATIONS = [

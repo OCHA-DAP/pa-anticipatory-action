@@ -11,13 +11,13 @@ from scipy.stats import genextreme as gev
 import xarray as xr
 import pandas as pd
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
 ```
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=settings.COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 ```
 
 ```python
@@ -27,7 +27,7 @@ df_rps_analytical = utils.get_return_periods(ds_glofas_reanalysis, years=years, 
 ```
 
 ```python
-glofas_rp = pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
+glofas_rp = pd.read_excel(parameters.GLOFAS_RP_FILENAME, index_col='rp')
 
 
 for i, station in enumerate(ds_glofas_reanalysis.keys()):

@@ -17,18 +17,18 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from bs4 import BeautifulSoup
 
-import npl_settings as settings
+import npl_parameters as parameters
 ```
 
 ```python
-GLOFAS_STATION_FILE = settings.DATA_DIR_PUBLIC / 'exploration/glb/glofas/station_list.pdf'
-GLOFAS_STATION_OUTPUT = settings.DATA_DIR_PUBLIC / 'exploration/npl/glofas/npl_glofas_stations.gpkg'
+GLOFAS_STATION_FILE = parameters.DATA_DIR_PUBLIC / 'exploration/glb/glofas/station_list.pdf'
+GLOFAS_STATION_OUTPUT = parameters.DATA_DIR_PUBLIC / 'exploration/npl/glofas/npl_glofas_stations.gpkg'
 
 # Be careful if you want to run this, it takes awhile
 # and you can easily reach max requests
 SCRAPE_GOV_STATIONS = False
 GOV_BASE_URL = f"http://www.hydrology.gov.np/#/basin"
-GOV_DIR =  settings.DATA_DIR_PUBLIC / 'npl/dhm'
+GOV_DIR =  parameters.DATA_DIR_PUBLIC / 'npl/dhm'
 GOV_STATION_FILENAME = GOV_DIR / 'npl_dhm_hydrology_stations.gpkg'
 GOV_BASIN_FILENAME = GOV_DIR / 'npl_dhm_hydrology_basins.csv'
 GOV_BASIN_SHAPEFILE = GOV_DIR / 'Nepal_Basin_final.kml'
@@ -42,7 +42,7 @@ STATION_OUTPUT = GOV_DIR / 'station_list_glofas_final.xlsx'
 STATION_OUTPUT_YAML = GOV_DIR / 'station_list_glofas_final.yml'
 
 # From Ragindra
-BASINS_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
+BASINS_SHAPEFILE = parameters.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
 
 # Final stations file
 STATIONS_FINAL = {

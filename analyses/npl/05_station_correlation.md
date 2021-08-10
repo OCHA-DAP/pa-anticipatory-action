@@ -10,7 +10,7 @@ import numpy as np
 from scipy.signal import correlate
 from scipy.interpolate import interp1d
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils, glofas
 
 ```
@@ -27,9 +27,9 @@ STATIONS_SEL = {
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=settings.COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
-df_return_period_glofas = pd.read_excel(settings.GLOFAS_RP_FILENAME)
+df_return_period_glofas = pd.read_excel(parameters.GLOFAS_RP_FILENAME)
 ```
 
 ## When do activations occur at the different stations
@@ -46,10 +46,10 @@ legend_title = 'RP'
 ```python
 events_all = {}
 
-for basin in settings.STATIONS_BY_BASIN.keys():
+for basin in parameters.STATIONS_BY_BASIN.keys():
     
     station_events = {}   
-    stations = settings.STATIONS_BY_BASIN[basin]
+    stations = parameters.STATIONS_BY_BASIN[basin]
     
     for istation, station in enumerate(stations):  
         
@@ -57,7 +57,7 @@ for basin in settings.STATIONS_BY_BASIN.keys():
         
         for rp in RP_LIST:
             rp_val=df_return_period.loc[rp, station]
-            df_activations = utils.get_dates_list_from_dataset(ds_glofas_reanalysis[station], rp_val, settings.DURATION)
+            df_activations = utils.get_dates_list_from_dataset(ds_glofas_reanalysis[station], rp_val, parameters.DURATION)
             rp_events[rp] = df_activations
             
         station_events[station] = rp_events
@@ -82,7 +82,7 @@ for basin, stations in STATIONS_SEL.items():
 
         for rp in rp_list:
             rp_val=df_return_period.loc[rp, station]
-            groups = utils.get_groups_above_threshold(observations, rp_val, settings.DURATION)
+            groups = utils.get_groups_above_threshold(observations, rp_val, parameters.DURATION)
             for group in groups:
                 idx = range(group[0], group[1])
                 ax.plot(x[idx], observations[idx], ls='-', 
@@ -140,7 +140,7 @@ for basin, stations in STATIONS_SEL.items():
 
             for rp in rp_list:
                 rp_val=df_return_period.loc[rp, station]
-                groups = utils.get_groups_above_threshold(observations, rp_val, settings.DURATION)
+                groups = utils.get_groups_above_threshold(observations, rp_val, parameters.DURATION)
                 for group in groups:
                     idx = range(group[0], group[1] + buffer)
                     ax.fill_between(x=x[idx], y1=istation, y2=istation+1, 
@@ -179,7 +179,7 @@ time = ds_glofas_reanalysis.time.values
 # Note that this is pretty crude because it only uses the 
 # date range of the initial event, and thus will depend on the order
 # of the event list.
-for basin, stations in settings.STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in parameters.STATIONS_BY_MAJOR_BASIN.items():
     event_dict = {}
     for rp in rp_list:
         event_dict[rp] = {}
@@ -257,7 +257,7 @@ corr_df = pd.DataFrame(index=stations, columns=stations)
 corr_df.index.name = 'station'
 
 stations = []
-for s in settings.STATIONS_BY_MAJOR_BASIN.values():
+for s in parameters.STATIONS_BY_MAJOR_BASIN.values():
     stations += s
 for station1 in stations:
     for station2 in stations:

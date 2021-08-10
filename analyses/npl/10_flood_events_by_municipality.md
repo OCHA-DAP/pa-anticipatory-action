@@ -7,7 +7,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
 
 pd.options.mode.chained_assignment = None 
@@ -24,12 +24,12 @@ KARNALI_BASINS = [
 ]
 KOSHI_WATERSHED = 'Saptakoshi'
 
-BASINS_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
-WATERSHED_SHAPEFILE = settings.RCO_DIR / 'shapefiles/Major_watershed.shp'
+BASINS_SHAPEFILE = parameters.RCO_DIR / 'shapefiles/Major_River_Basins.shp'
+WATERSHED_SHAPEFILE = parameters.RCO_DIR / 'shapefiles/Major_watershed.shp'
 
-PAST_EVENTS_FILENAME = settings.RCO_DIR / 'HistoricalReportedIncident_Municipality Level_AAPilot.xlsx'
+PAST_EVENTS_FILENAME = parameters.RCO_DIR / 'HistoricalReportedIncident_Municipality Level_AAPilot.xlsx'
 
-MUNICIPALITIES_OUTPUT_GEOPACKAGE = settings.RCO_DIR / 'shapefiles/municipalities_of_interest.gpkg'
+MUNICIPALITIES_OUTPUT_GEOPACKAGE = parameters.RCO_DIR / 'shapefiles/municipalities_of_interest.gpkg'
 ```
 
 ### Read in and clean data
@@ -38,8 +38,8 @@ Read in GloFAS data
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=settings.COUNTRY_ISO3)
-df_return_period =  pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
+    country_iso3=parameters.COUNTRY_ISO3)
+df_return_period =  pd.read_excel(parameters.GLOFAS_RP_FILENAME, index_col='rp')
 ```
 
 Read in events and clean
@@ -59,7 +59,7 @@ df_events = df_events.loc[df_events['Incident Date'] > ds_glofas_reanalysis.time
 Merge event data with admin
 
 ```python
-df_admin = (gpd.read_file(f'zip://{settings.ADMIN_SHAPEFILE}!{settings.ADMIN2_SHAPEFILE}')
+df_admin = (gpd.read_file(f'zip://{parameters.ADMIN_SHAPEFILE}!{parameters.ADMIN2_SHAPEFILE}')
             .rename(columns={'ADM2_PCODE': 'pcode'}))
 
 df_events = pd.merge(df_admin, df_events, how='right', left_on='pcode', right_on='pcode')
@@ -163,13 +163,13 @@ for basin, station in STATIONS.items():
             (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
         ]
         glofas_dates = utils.get_dates_list_from_dataset(
-            ds_glofas_reanalysis[station + settings.VERSION_LOC],
-            threshold=rp_val, min_duration=settings.DURATION
+            ds_glofas_reanalysis[station + parameters.VERSION_LOC],
+            threshold=rp_val, min_duration=parameters.DURATION
         )
         detection_stats = utils.get_detection_stats(true_event_dates=df_events_sub['date'].values,
                            forecasted_event_dates=glofas_dates,
-                            days_before_buffer=settings.DAYS_BEFORE_BUFFER,
-                            days_after_buffer=settings.DAYS_AFTER_BUFFER)
+                            days_before_buffer=parameters.DAYS_BEFORE_BUFFER,
+                            days_after_buffer=parameters.DAYS_AFTER_BUFFER)
                             
        
         df_station_stats = df_station_stats.append({
@@ -195,7 +195,7 @@ for basin, station in STATIONS.items():
         df_events_sub = df_events_high_impact[
             (df_events_high_impact['basin'] == basin) & (df_events_high_impact['impact_parameter'] == impact_parameter)
         ]
-        observations = ds_glofas_reanalysis[station + settings.VERSION_LOC].values
+        observations = ds_glofas_reanalysis[station + parameters.VERSION_LOC].values
         x = ds_glofas_reanalysis.time
         ax = axs[i]
         ax.plot(x, observations, lw=0.5)

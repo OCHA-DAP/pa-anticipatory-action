@@ -7,22 +7,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-import npl_settings as settings
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
 ```
 
 ```python
-STATIONS = [station + settings.VERSION_LOC for station in settings.FINAL_STATIONS]
+STATIONS = [station + parameters.VERSION_LOC for station in parameters.FINAL_STATIONS]
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=settings.COUNTRY_ISO3)[STATIONS]
+    country_iso3=parameters.COUNTRY_ISO3)[STATIONS]
 ds_glofas_reforecast = utils.get_glofas_reforecast(
-    country_iso3 = settings.COUNTRY_ISO3, leadtimes=settings.LEADTIMES, 
+    country_iso3 = parameters.COUNTRY_ISO3, leadtimes=parameters.LEADTIMES, 
     interp=False, shift_dates=False
 )[STATIONS]
 ds_glofas_forecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
 
-df_return_period =  pd.read_excel(settings.GLOFAS_RP_FILENAME, index_col='rp')
+df_return_period =  pd.read_excel(parameters.GLOFAS_RP_FILENAME, index_col='rp')
 ```
 
 ### Calculate the return periods
@@ -39,8 +39,8 @@ df_rps_obs_sub = utils.get_return_periods(
     years=years, method=method, extend_factor=extend_factor)
 
 df_rps_forecast_dict = {}
-for leadtime in settings.LEADTIMES:
-    ds = ds_glofas_forecast_summary.sel(leadtime=leadtime, percentile=settings.MAIN_FORECAST_PROB)
+for leadtime in parameters.LEADTIMES:
+    ds = ds_glofas_forecast_summary.sel(leadtime=leadtime, percentile=parameters.MAIN_FORECAST_PROB)
     df_rps_forecast_dict[leadtime] = utils.get_return_periods(ds, years=years, method=method, extend_factor=extend_factor)
 ```
 
@@ -55,8 +55,8 @@ for station in STATIONS:
     for leadtime, df_rps_forecast in df_rps_forecast_dict.items():
         ax.plot(df_rps_forecast[station], label=leadtime, alpha=0.75)
     ax.set_title(station[:-3])
-    rp_val = df_return_period.loc[settings.MAIN_RP, station[:-3]]
-    ax.axhline(rp_val, c='k', ls=':', lw=0.5, label=f"1 in {settings.MAIN_RP} y")
+    rp_val = df_return_period.loc[parameters.MAIN_RP, station[:-3]]
+    ax.axhline(rp_val, c='k', ls=':', lw=0.5, label=f"1 in {parameters.MAIN_RP} y")
     ax.axvline(2, c='k', ls=':', lw=0.5)
     ax.legend()
     ax.set_xlabel('Return period [years]')
@@ -73,7 +73,7 @@ for station in STATIONS:
 ```python
 for station in STATIONS:
     print(station)
-    rp_val = df_return_period.loc[settings.MAIN_RP, station[:-3]]
+    rp_val = df_return_period.loc[parameters.MAIN_RP, station[:-3]]
     for leadtime, df_rps_forecast in df_rps_forecast_dict.items():
         rp_equiv = df_rps_forecast.index[(df_rps_forecast[station] - rp_val).abs().argmin()]
         print(leadtime, f'{rp_equiv:.1f}')
