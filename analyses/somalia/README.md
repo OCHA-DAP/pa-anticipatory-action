@@ -1,21 +1,30 @@
-# Ethiopia Anticipatory Action
+# Somalia Anticipatory Action
 
-**Status**: Implemented. 
-Has been activated in  
+[![Generic badge](https://img.shields.io/badge/STATUS-IMPLEMENTED-%231EBFB3)](https://shields.io/)
+
+Has been activated in June 2020 and at the end of 2020. 
 Last updated: Aug 2021
 ## Background information
-The pilot on Anticipatory Action in Somalia was on food insecurity. 
-The trigger uses IPC as indicator from two organizations namely FewsNet and IPC global. 
+The pilot on Anticipatory Action in Somalia is on food insecurity. 
+The trigger uses IPC as indicator from two organizations, namely FewsNet and IPC global. 
 The trigger is evaluated at the country level. 
-The monitoring of the trigger is done by FSNAU so not by OCHA.  
+The monitoring of the trigger is done by FSNAU, so not by OCHA.  
 
 The trigger is as follows: 
 
-More background on the how and why of this trigger can be found 
-The activation of the trigger is described in  
+The projected national population in Phase 3 and above exceed 20%, 
+
+AND 
+
+(The national population in Phase 3 is projected to increase by 5 percentage points, OR 
+The projected national population in Phase 4 or above is 2.5%)
+
+The activation of the trigger is described [here](https://www.unocha.org/story/un-central-emergency-response-fund-supports-anticipatory-action-ethiopia-and-somalia)
+and [here](https://www.unocha.org/story/un-humanitarian-chief-release-140m-cerf-funds-anticipatory-action-projects)
+
 
 ## Overview of analysis
-The framework makes use of IPC analysis provided by FewsNet and Global IPC.
+The framework makes use of IPC analysis provided by FewsNet and IPC global.
 This folder contains notebooks to analyze historical IPC levels from both sources. 
 This analysis was used to determine the criteria. 
 In the `src` folder complementing scripts can be found. 
@@ -28,8 +37,8 @@ Both sources are open data.
 
 - FewsNet publishes thrice a year their classification containing current situation, near-term projections and medium-term projections. 
 This data is shared at livelihood level, and the scripts in this repository aggregate that to admin2,1,and 0 level. 
-- GlobalIPC publishes 1 to 2 times a year and uses a combination of livelihood zones and admin2 regions for reporting their classifications. 
-IPC global has been sharing data in Somalia since .. 
+- IPC global publishes 1 to 2 times a year and uses a combination of livelihood zones and admin2 regions for reporting their classifications. 
+IPC global has been sharing data in Somalia since 2017. 
 
 To compute the metrics we also make use of two Common Operational Datasets (CODs) from HDX
 namely the administrative boundaries and population statistics 

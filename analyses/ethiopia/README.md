@@ -1,9 +1,13 @@
 # Ethiopia Anticipatory Action
 
-**Status**: Implemented. Has been activated in December 2020 and February 2021. 
+[![Generic badge](https://img.shields.io/badge/STATUS-IMPLEMENTED-%231EBFB3)](https://shields.io/)
+
+The framework has been activated in December 2020 and February 2021. 
+No changes to the analytical work have been made after December 2020.   
+Last updated: August 2021
 
 ## Background information
-The pilot on Anticipatory Action in Ethiopia was focused on drought-related food insecurity. 
+The pilot on Anticipatory Action in Ethiopia is focused on drought-related food insecurity. 
 The trigger is based on a combination of food insecurity and precipitation forecasts. 
 
 The trigger is evaluated per admin1 region, and is met if any of the admin1 regions meets
@@ -32,8 +36,9 @@ and [methodological](https://docs.google.com/document/d/1yGNgp-jHm_uWwJJ4hJnbFMj
 The activation of the trigger is described in [this impact story](https://centre.humdata.org/predicting-drought-related-food-insecurity-in-ethiopia/).  
 
 ## Overview of analysis
-As of January 2021, the framework makes use of IPC analysis provided by FewsNet and Global IPC as well as seasonal precipitation forecasts provided by National Meteorological Agency (NMA) Ethiopia, ICPAC, IRI, and NMME.
-This folder contains notebooks to analyze historical IPC levels from both sources. 
+The framework makes use of IPC analysis provided by FewsNet and IPC global as well as seasonal precipitation forecasts provided by National Meteorological Agency (NMA) Ethiopia, ICPAC, IRI, and NMME.
+
+For the food insecurity part, this folder contains notebooks to analyze historical IPC levels from both sources. 
 This analysis was used to determine the criteria. 
 The `src` folder contains the scripts that retrieve the raw data and process it. 
 The scripts compute the percentage of population in each IPC phase and whether the food insecurity criterium is met.
@@ -62,8 +67,6 @@ We have access to it, but only share processed results.
 - [NMME](https://www.cpc.ncep.noaa.gov/products/international/nmme/probabilistic_seasonal/africa_nmme_prec_3catprb_FebIC_Mar2021-May2021.png)'s data is openly available. 
 
 ## Directory structure
-
-Modify the structure outlined below as needed. 
 
 ```
 
