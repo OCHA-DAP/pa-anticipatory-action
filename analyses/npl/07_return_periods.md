@@ -1,9 +1,8 @@
-```python
-from pathlib import Path
-import os
-import sys
-from importlib import reload
+We're finding a mismatch between our calculated return periods on those on the GloFAS web interface.
+Plot them against each other to compare. (Mismatch was due to incorrect coordinate multiples
+in the API calls, is now fixed)
 
+```python
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,24 +11,13 @@ from scipy.stats import genextreme as gev
 import xarray as xr
 import pandas as pd
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils
-reload(utils)
-```
-
-```python
-COUNTRY_ISO3 = 'npl'
-
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 ```
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 ```
 
 ```python
@@ -39,7 +27,7 @@ df_rps_analytical = utils.get_return_periods(ds_glofas_reanalysis, years=years, 
 ```
 
 ```python
-glofas_rp = pd.read_excel(GLOFAS_RP_FILENAME, index_col='rp')
+glofas_rp = pd.read_excel(parameters.GLOFAS_RP_FILENAME, index_col='rp')
 
 
 for i, station in enumerate(ds_glofas_reanalysis.keys()):

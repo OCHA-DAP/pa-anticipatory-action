@@ -13,6 +13,9 @@ sys.path.append(path_mod)
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.flooding.glofas.area import AreaFromShape
 from src.indicators.drought.config import Config
+from src.indicators.drought.ecmwf_seasonal.processing import (
+    compute_stats_per_admin,
+)
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
@@ -44,7 +47,7 @@ def main(download=True, process=True):
         ecmwf_forecast.download(country_iso3=COUNTRY_ISO3, area=area)
 
     if process:
-        ecmwf_forecast.process(country_iso3=COUNTRY_ISO3)
+        compute_stats_per_admin(country=COUNTRY_NAME, interpolate=False)
 
 
 if __name__ == "__main__":
