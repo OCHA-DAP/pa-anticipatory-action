@@ -35,12 +35,13 @@ The activation of the trigger is described in [this impact story](https://centre
 As of January 2021, the framework makes use of IPC analysis provided by FewsNet and Global IPC as well as seasonal precipitation forecasts provided by National Meteorological Agency (NMA) Ethiopia, ICPAC, IRI, and NMME.
 This folder contains notebooks to analyze historical IPC levels from both sources. 
 This analysis was used to determine the criteria. 
-In the `src` folder complementing scripts can be found. 
-These compute the percentage of population in each IPC phase and whether the food insecurity criterium is met.
+The `src` folder contains the scripts that retrieve the raw data and process it. 
+The scripts compute the percentage of population in each IPC phase and whether the food insecurity criterium is met.
+The data produced by these scripts are used in the notebooks. 
 
 For the drought part, several rainfall forecasts are compared in `eth_rainfall_aggregate.ipynb`. This data is download in `src`. 
 For the current trigger, the rainfall forecasts are evaluated based on the raw figures published 
-by the different organizations and thus the code in this repo is not used there.  
+by the different organizations and thus the code in this repo is currently not used for evaluation.  
 
 ## Data description
 
@@ -75,8 +76,7 @@ Modify the structure outlined below as needed.
 ```
 
 ## Reproducing this analysis
-
-Include guidance to:
-- Reproduce the required computational environment 
-- Run top-level scripts (if needed)
-- Configure paramerers
+From the directory `src/indicators/food_insecurity`, run `process_fewsnet_subnatpop.py` 
+and `process_globalipc.py` to retrieve and compute the FewsNet and IPC global data respectively.  
+After that run `src/ethiopia/eth_foodinsec_trigger.py` to compute the metrics of the trigger. 
+Several parameters from the `config.yml` are used in these scripts so make sure these are set correctly. 
