@@ -127,8 +127,8 @@ for (i in seq_along(1:nbr_layers)) {
 
 # saveRDS(data_max_values,paste0(dry_spell_processed_path, glue("data_max_values_2000_2021_r5.RDS"))
 saveRDS(data_mean_values, paste0(dry_spell_processed_path, glue("data_mean_values_{min_year}_{max_year}_r5.RDS")))
-# data_max_values <- readRDS(paste0(dry_spell_processed_path, "data_max_values_{min_year}_{max_year}_r5.RDS"))
-# data_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_mean_values_{min_year}_{max_year}_r5.RDS"))
+# data_max_values <- readRDS(paste0(dry_spell_processed_path, glue("data_max_values_{min_year}_{max_year}_r5.RDS")))
+# data_mean_values <- readRDS(paste0(dry_spell_processed_path, glue("data_mean_values_{min_year}_{max_year}_r5.RDS")))
 
 # select which values (mean or max) to use
 # data <- data_max_values
@@ -375,8 +375,8 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
   mutate(region = substr(pcode, 3, 3)) %>%
   mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
-# write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_{min_year}_{max_year}.csv"), row.names = FALSE)
-write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_{min_year}_{max_year}_mean_back.csv"), row.names = FALSE)
+# write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, glue("dry_spells_during_rainy_season_list_{min_year}_{max_year}.csv")), row.names = FALSE)
+write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, glue("dry_spells_during_rainy_season_list_{min_year}_{max_year}_mean_back.csv")), row.names = FALSE)
 
 # save full list of dry spells
 full_list_dry_spells <- dry_spells_details %>%
