@@ -816,7 +816,7 @@ data_long %>%
 # LOOK AT FALSE ALARMS
 ############
 # can comment out all code above and read the saved file
-# data_long_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_long.RDS"))
+# data_long_mean_values <- readRDS(paste0(dry_spell_processed_path, glue("data_long_mean_values_{min_year}_{max_year}.RDS")))
 
 # distribution of rolling sums in southern region for Jan and Feb
 data_long_mean_values %>%
