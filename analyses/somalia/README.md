@@ -2,29 +2,36 @@
 
 [![Generic badge](https://img.shields.io/badge/STATUS-IMPLEMENTED-%231EBFB3)](https://shields.io/)
 
-Has been activated in June 2020 and at the end of 2020. 
+Has been activated in June 2020 and in February 2021. 
 Last updated: Aug 2021
 ## Background information
 The pilot on Anticipatory Action in Somalia is on food insecurity. 
-The trigger uses IPC as indicator from two organizations, namely FewsNet and IPC global. 
+The trigger uses IPC as indicator which are provided 
+by the [Somalia Food Security and Nutrition Analysis Unit (FSNAU)](https://www.fsnau.org/ipc)
+and [FEWS NET](https://fews.net/east-africa/somalia).
 The trigger is evaluated at the country level. 
 The monitoring of the trigger is done by FSNAU, so not by OCHA.  
 
 The trigger is as follows: 
 
-The projected national population in Phase 3 and above exceed 20%, 
+The projected national population in IPC phase 3 and above exceeds 20%, 
 
-AND 
+AND EITHER
 
-(The national population in Phase 3 is projected to increase by 5 percentage points, OR 
-The projected national population in Phase 4 or above is 2.5%)
+(The national population in IPC phase 3 and above is projected to increase by 5 percentage points, 
+OR 
+
+The projected national population in IPC phase 4 and above exceeds 2.5%)
+
+An overview of the framework, including activities can be found [here].(https://reliefweb.int/sites/reliefweb.int/files/resources/210520-AA-Somalia-Pamphlet-VF-nologo.pdf)
 
 The activation of the trigger is described [here](https://www.unocha.org/story/un-central-emergency-response-fund-supports-anticipatory-action-ethiopia-and-somalia)
 and [here](https://www.unocha.org/story/un-humanitarian-chief-release-140m-cerf-funds-anticipatory-action-projects)
 
 
 ## Overview of analysis
-The framework makes use of IPC analysis provided by FewsNet and IPC global.
+The framework makes use of IPC analyses. In this repository data provided by 
+FewsNet and IPC global are analyzed since these are in a format that can be processed.
 This folder contains notebooks to analyze historical IPC levels from both sources. 
 This analysis was used to determine the criteria. 
 In the `src` folder complementing scripts can be found. 
