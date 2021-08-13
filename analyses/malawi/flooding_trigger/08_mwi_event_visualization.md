@@ -62,7 +62,7 @@ for station in stations_adm2.values():
 Create a plot for each event. For the dates around each flood onset, we want to see what both the GloFAS reanalysis (historical) and reforecast data look like. We'll pick a specific forecast probability and include forecasts from various leadtimes. The y-axis is scaled to the percentage of a given return period threshold. Lines on the graph have a stronger weight when the values exceed the threshold.
 
 ```python
-buffer_start = 5
+buffer_start = 15
 buffer_end = 30
 forecast_probability = 70
 rp = 2
@@ -75,7 +75,7 @@ for code, station, in stations_adm2.items():
     ncols = round(nevents/nrows)
     igroup = 1 
     
-    fig, axs = plt.subplots(nrows, ncols, figsize=(10,10), squeeze=False, sharey=True)
+    fig, axs = plt.subplots(nrows, ncols, figsize=(20,20), squeeze=False, sharey=True)
     
     for i in range(nrows):
 
@@ -94,7 +94,7 @@ for code, station, in stations_adm2.items():
                 for ix, leadtime in enumerate(LEADTIMES):
                     glofas_reforecast_sel = (
                         ds_glofas_reforecast_summary[code]
-                        .shift(time=-leadtime) # TODO: I'm actually a bit unsure of whether this shift needs to happen or not...
+                        #.shift(time=-leadtime) # TODO: I'm actually a bit unsure of whether this shift needs to happen or not...
                         .sel(leadtime=leadtime)
                         .sel(percentile=forecast_probability)
                         .sel(time=slice(glofas_start_date, glofas_end_date))
@@ -113,6 +113,7 @@ for code, station, in stations_adm2.items():
 
                 ax.plot(glofas_reanalysis_sel.time, glofas_reanalysis_sel.values, color='red', lw=1, alpha=0.3)
                 ax.plot(glofas_reanalysis_sel.time, reanalysis_trigger, color='red', lw=1)
+                ax.plot((flood_onset_date, flood_onset_date), (0.25, 1.25), lw=0.6, color='black')
                 
                 ax.set_title(f'{flood_onset_date.date()}', fontsize=8)
 
