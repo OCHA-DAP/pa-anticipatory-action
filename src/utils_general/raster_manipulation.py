@@ -1,7 +1,5 @@
 import logging
 import geopandas as gpd
-import numpy as np
-from rasterstats import zonal_stats
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -100,9 +98,14 @@ def fix_calendar(ds, timevar="F"):
 
 def compute_raster_statistics(
     boundary_path,
+    bound_col,
     raster_array,
-    raster_transform,
-    threshold,
+    lon_coord="lon",
+    lat_coord="lat",
+    all_touched=False,
+    geom_col="geometry",
+    # raster_transform,
+    # threshold,
     band=1,
     nodata=-9999,
     upscale_factor=None,
@@ -129,81 +132,48 @@ def compute_raster_statistics(
     Returns:
         df (Geodataframe): dataframe containing the computed statistics
     """
-    df = gpd.read_file(boundary_path)
-    # TODO: decide if we want to upsample and if yes, implement if
-    # upscale_factor: forecast_array, transform =
-    # resample_raster(raster_path, upscale_factor) else:
+    df_list = []
+    gdf = gpd.read_file(boundary_path)
 
-    # extract statistics for each polygon. all_touched=True includes all
-    # cells that touch a polygon, with all_touched=False only those with
-    # the center inside the polygon are counted.
-    df["max_cell"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            band=band,
-            nodata=nodata,
-        )
-    )["max"]
-    df["max_cell_touched"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            all_touched=True,
-            band=band,
-            nodata=nodata,
-        )
-    )["max"]
+    for a in gdf[bound_col].unique():
+        gdf_adm = gdf[gdf[bound_col] == a]
 
-    df["avg_cell"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            band=band,
-            nodata=nodata,
-        )
-    )["mean"]
-    df["avg_cell_touched"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            all_touched=True,
-            band=band,
-            nodata=nodata,
-        )
-    )["mean"]
+        da_clip = raster_array.rio.set_spatial_dims(
+            x_dim=lon_coord, y_dim=lat_coord
+        ).rio.clip(gdf_adm[geom_col], all_touched=all_touched)
+        # how to best do different stats?
+        grid_mean = da_clip.mean(
+            dim=[lon_coord, lat_coord], skipna=True
+        ).rename("mean_adm")
+        # call(da_clip, "mean")()
+        # grid_max = raster_clip.max(dim=[lon_coord, lat_coord]).rename(
+        #     {var_name: "max_cell"}
+        # )
+        # grid_quant90 = raster_clip.quantile(
+        #     0.9, dim=[lon_coord, lat_coord]
+        # ).rename({var_name: "10quant_cell"})
+        # grid_percth40 = (
+        #     raster_clip.where(raster_clip.prob >= 40).count(
+        #         dim=[lon_coord, lat_coord]
+        #     )
+        #     / raster_clip.count(dim=[lon_coord, lat_coord])
+        #     * 100
+        # )
+        # zonal_stats_xr = xr.merge(
+        #     [
+        #         grid_mean,
+        #         grid_min,
+        #         grid_max,
+        #         grid_std,
+        #         grid_quant90,
+        #         grid_percth40,
+        #         grid_dom,
+        #     ]
+        # )
 
-    # calculate the percentage of the area within an geographical area
-    # that has a value larger than threshold
-    forecast_binary = np.where(raster_array >= threshold, 1, 0)
-    bin_zonal = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=forecast_binary,
-            affine=raster_transform,
-            stats=["count", "sum"],
-            band=band,
-            nodata=nodata,
-        )
-    )
-    df["perc_threshold"] = bin_zonal["sum"] / bin_zonal["count"] * 100
-    bin_zonal_touched = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=forecast_binary,
-            affine=raster_transform,
-            all_touched=True,
-            stats=["count", "sum"],
-            band=band,
-            nodata=nodata,
-        )
-    )
-    df["perc_threshold_touched"] = (
-        bin_zonal_touched["sum"] / bin_zonal_touched["count"] * 100
-    )
+        df_adm = grid_mean.to_dataframe().reset_index()
+        df_adm[bound_col] = a
+        df_list.append(df_adm)
 
-    return df
+    df_zonal_stats = pd.concat(df_list)
+    return df_zonal_stats
