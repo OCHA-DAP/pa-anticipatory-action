@@ -3,6 +3,8 @@ import geopandas as gpd
 import pandas as pd
 import xarray as xr
 from typing import List
+import numpy as np
+from rasterstats import zonal_stats
 
 logger = logging.getLogger(__name__)
 
@@ -100,80 +102,47 @@ def fix_calendar(ds, timevar="F"):
 
 def compute_raster_statistics(
     boundary_path: str,
-    bound_col: str,
     raster_array: xr.DataArray,
-    lon_coord: str = "x",
-    lat_coord: str = "y",
     stats_list: List[str] = None,
-    quant_list: List[float] = None,
+    percentile_list: List[float] = None,
     all_touched: bool = False,
-    geom_col: str = "geometry",
 ):
     """
     Compute statistics of the raster_array per geographical region
-    defined in the boundary_path file
+    defined in the boundary_path file. The raster_array has to be 2D
     :param boundary_path: path to the shapefile
-    :param bound_col: name of the column containing the region names
     :param raster_array: DataArray containing the raster data.
     Needs to have a CRS.
-    Should not be a DataSet but DataArray
-    :param lon_coord: name of longitude dimension in raster_array
-    :param lat_coord: name of latitude dimension in raster_array
+    Should not be a DataSet but DataArray and should be 2D
     :param stats_list: list with function names indicating
     which stats to compute
-    :param quant_list: list with floats indicating which quantiles to compute
+    :param percentile_list: list with floats ranging from 0 to 100
+    indicating which percentiles to compute
     :param all_touched: if False, only cells with their centre within the
     region will be included when computing the stat.
     If True all cells touching the region will be included.
-    :param geom_col: name of the column in boundary_path
-    containing the polygon geometry
     :return: dataframe containing the computed statistics
     """
-    df_list = []
     gdf = gpd.read_file(boundary_path)
 
-    for a in gdf[bound_col].unique():
-        gdf_adm = gdf[gdf[bound_col] == a]
+    if stats_list is None:
+        stats_list = ["mean", "std", "min", "max", "sum", "count"]
 
-        da_clip = raster_array.rio.set_spatial_dims(
-            x_dim=lon_coord, y_dim=lat_coord
-        ).rio.clip(gdf_adm[geom_col], all_touched=all_touched)
+    if percentile_list is not None:
+        percentile_list_str = " ".join(
+            [f"percentile_{str(p)}" for p in percentile_list]
+        )
+        stats_list.append(percentile_list_str)
 
-        if stats_list is None:
-            stats_list = ["mean", "std", "min", "max", "sum", "count"]
+    df_zonal_stats = pd.DataFrame(
+        zonal_stats(
+            vectors=gdf,
+            raster=raster_array.values,
+            affine=raster_array.rio.transform(),
+            stats=stats_list,
+            nodata=np.nan,
+            all_touched=all_touched,
+        )
+    )
 
-        grid_stat_all = []
-        for s in stats_list:
-            if s == "count":
-                # count automatically ignores NaNs
-                # therefore skipna can also not be given as an argument
-                # implemented count cause needed for computing percentages
-                grid_stat = getattr(da_clip, s)(dim=[lon_coord, lat_coord])
-            else:
-                # if array only contains NaNs, "sum" will return 0
-                # while NaN might be preferred
-                # this can be fixed by setting the min_count arg
-                # but this arg is not present in the other function calls.
-                # therefore chose to leave it as it is
-                grid_stat = getattr(da_clip, s)(
-                    dim=[lon_coord, lat_coord], skipna=True
-                )
-            grid_stat = grid_stat.rename(f"{s}_adm")
-            grid_stat_all.append(grid_stat)
-
-        if quant_list is not None:
-            for q in quant_list:
-                grid_quant = da_clip.quantile(q, dim=[lon_coord, lat_coord])
-                grid_quant = grid_quant.drop("quantile").rename(
-                    f"{q}quant_adm"
-                )
-                grid_stat_all.append(grid_quant)
-
-        zonal_stats_xr = xr.merge(grid_stat_all)
-
-        df_adm = zonal_stats_xr.to_dataframe().reset_index()
-        df_adm[bound_col] = a
-        df_list.append(df_adm)
-
-    df_zonal_stats = pd.concat(df_list)
     return df_zonal_stats
