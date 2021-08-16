@@ -1,26 +1,41 @@
 
-computeLayerStat <- function(layer, stat, data_stat_values){
+computeLayerStat <- function(layer, stat, raster_brick, data_stat_values){
   
   # select 1 layer
-  data_layer <- subset(data_all, layer)
+  data_layer <- subset(raster_brick, layer)
   
   # extract values from raster cells and compute stat
   data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = stat, df = T)
   
-  # add daily stat to dataframe
+  # add daily stat to dataframe "data_stat_values"
   data_stat_values <- merge(data_stat_values, data_layer.stat, by = "ID", all.x = T)
   
   return(data_stat_values)
 }
 
 # can create mwi_adm variable in computeLayerStat but would need to go back and fix all adm2 scripts so creating new function for adm3 for now
-computeLayerStat_adm3 <- function(layer, stat, data_stat_values){
+computeLayerStat_adm3 <- function(layer, stat, raster_brick, data_stat_values){
   
   # select 1 layer
-  data_layer <- subset(data_all, layer)
+  data_layer <- subset(raster_brick, layer)
   
   # extract values from raster cells and compute stat
   data_layer.stat <- raster::extract(data_layer, mwi_adm3, fun = stat, df = T)
+  
+  # add daily stat to dataframe "data_stat_values"
+  data_stat_values <- merge(data_stat_values, data_layer.stat, by = "ID", all.x = T)
+  
+  return(data_stat_values)
+}
+
+# count number of pixels below threshold per adm2
+computePixelsBelowThreshold <- function(layer, data_stat_values, raster_brick, threshold){
+  
+  # select 1 layer
+  data_layer <- subset(raster_brick, layer)
+  
+  # extract values from raster cells and compute stat
+  data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = function(x,...)sum(x <= threshold), df = T)
   
   # add daily stat to dataframe
   data_stat_values <- merge(data_stat_values, data_layer.stat, by = "ID", all.x = T)
@@ -28,34 +43,19 @@ computeLayerStat_adm3 <- function(layer, stat, data_stat_values){
   return(data_stat_values)
 }
 
-# count number of pixels below threshold per adm2
-computePixelsBelowThreshold <- function(layer, data_frame, threshold){
-  
-  # select 1 layer
-  data_layer <- subset(data_all, layer)
-  
-  # extract values from raster cells and compute stat
-  data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = function(x,...)sum(x <= threshold), df = T)
-  
-  # add daily stat to dataframe
-  data_frame <- merge(data_frame, data_layer.stat, by = "ID", all.x = T)
-  
-  return(data_frame)
-}
-
 # count number of pixels in total and below threshold per adm2
-computePixelsPerADM2 <- function(layer, data_frame){
+computePixelsPerADM2 <- function(layer, raster_brick, data_stat_values){
   
   # select 1 layer
-  data_layer <- subset(data_all, layer)
+  data_layer <- subset(raster_brick, layer)
   
   # extract values from raster cells and compute stat
   data_layer.stat <- raster::extract(data_layer, mwi_adm2, fun = function(x,...)length(x), df = T)
   
   # add daily stat to dataframe
-  data_frame <- merge(data_frame, data_layer.stat, by = "ID", all.x = T)
+  data_stat_values <- merge(data_stat_values, data_layer.stat, by = "ID", all.x = T)
   
-  return(data_frame)
+  return(data_stat_values)
 }
 
 convertToLongFormat <- function(data.wideformat){
