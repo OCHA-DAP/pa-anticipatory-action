@@ -6,7 +6,7 @@ Has been activated in June 2020 and in February 2021.
 Last updated: Aug 2021
 ## Background information
 The pilot on Anticipatory Action in Somalia is on food insecurity. 
-The trigger uses IPC as indicator which are provided 
+The trigger uses Integrated Food Security Phase Classification (IPC) as indicator which are provided 
 by the [Somalia Food Security and Nutrition Analysis Unit (FSNAU)](https://www.fsnau.org/ipc)
 and [FEWS NET](https://fews.net/east-africa/somalia).
 The trigger is evaluated at the country level. 
@@ -14,16 +14,16 @@ The monitoring of the trigger is done by FSNAU, so not by OCHA.
 
 The trigger is as follows: 
 
-The projected national population in IPC phase 3 and above exceeds 20%, 
+- The projected national population in IPC phase 3 and above exceeds 20%, 
 
 AND EITHER
 
-(The national population in IPC phase 3 and above is projected to increase by 5 percentage points, 
+ - (The national population in IPC phase 3 and above is projected to increase by 5 percentage points, 
 OR 
 
-The projected national population in IPC phase 4 and above exceeds 2.5%)
+- The projected national population in IPC phase 4 and above exceeds 2.5%)
 
-An overview of the framework, including activities can be found [here].(https://reliefweb.int/sites/reliefweb.int/files/resources/210520-AA-Somalia-Pamphlet-VF-nologo.pdf)
+An overview of the framework, including activities can be found [here](https://reliefweb.int/sites/reliefweb.int/files/resources/210520-AA-Somalia-Pamphlet-VF-nologo.pdf).
 
 The activation of the trigger is described [here](https://www.unocha.org/story/un-central-emergency-response-fund-supports-anticipatory-action-ethiopia-and-somalia)
 and [here](https://www.unocha.org/story/un-humanitarian-chief-release-140m-cerf-funds-anticipatory-action-projects)
@@ -49,14 +49,6 @@ IPC global has been sharing data in Somalia since 2017.
 
 To compute the metrics we also make use of two Common Operational Datasets (CODs) from HDX
 namely the administrative boundaries and population statistics 
-
-## Directory structure
-```
-
-├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
-└── README.md                 <- Description of this project.
-
-```
 
 ## Reproducing this analysis
 From the directory `src/indicators/food_insecurity`, run `process_fewsnet_subnatpop.py` 

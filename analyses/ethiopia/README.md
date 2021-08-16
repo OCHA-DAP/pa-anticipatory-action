@@ -66,17 +66,6 @@ Not all forecasts are published in the same format:
 We have access to it, but only share processed results. 
 - [NMME](https://www.cpc.ncep.noaa.gov/products/international/nmme/probabilistic_seasonal/africa_nmme_prec_3catprb_FebIC_Mar2021-May2021.png)'s data is openly available. 
 
-## Directory structure
-
-```
-
-├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
-│
-├── scripts                   <- graphs for blog post    
-|
-└── README.md                 <- Description of this project.
-
-```
 
 ## Reproducing this analysis
 From the directory `src/indicators/food_insecurity`, run `process_fewsnet_subnatpop.py` 
