@@ -5,6 +5,7 @@ import xarray as xr
 from typing import List
 import numpy as np
 from rasterstats import zonal_stats
+import rioxarray  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ def fix_calendar(ds, timevar="F"):
 
 
 def compute_raster_statistics(
-    boundary_path: str,
+    gdf: gpd.GeoDataFrame,
     raster_array: xr.DataArray,
     stats_list: List[str] = None,
     percentile_list: List[float] = None,
@@ -110,7 +111,8 @@ def compute_raster_statistics(
     """
     Compute statistics of the raster_array per geographical region
     defined in the boundary_path file. The raster_array has to be 2D
-    :param boundary_path: path to the shapefile
+    :param gdf: geodataframe containing a row per area for which
+    the stats are computed
     :param raster_array: DataArray containing the raster data.
     Needs to have a CRS.
     Should not be a DataSet but DataArray and should be 2D
@@ -123,7 +125,6 @@ def compute_raster_statistics(
     If True all cells touching the region will be included.
     :return: dataframe containing the computed statistics
     """
-    gdf = gpd.read_file(boundary_path)
 
     if stats_list is None:
         stats_list = ["mean", "std", "min", "max", "sum", "count"]
