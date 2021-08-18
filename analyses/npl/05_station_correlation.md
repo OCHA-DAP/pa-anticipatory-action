@@ -1,60 +1,35 @@
+We want to know if the river discharge is correlated for stations in neighbouring basins
+
 ```python
-from pathlib import Path
-import os
-import sys
 from collections import Counter
 
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from scipy.signal import correlate
 from scipy.interpolate import interp1d
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[0]}/"
-sys.path.append(path_mod)
-
+import npl_parameters as parameters
 from src.indicators.flooding.glofas import utils, glofas
 
-mpl.rcParams['figure.dpi'] = 300
 ```
 
 ```python
-COUNTRY_ISO3 = 'npl'
-
-DURATION = 1 # Number of days that the GloFAS threshold should be exceeded
-
 RP_LIST = [2, 3, 5] # List of return period values to compare
-
-STATIONS = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat'],
-    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat'],
-    'Rapti': ['Kusum'],
-    'Bagmati': ['Rai_goan'],
-    'Babai': ['Chepang']
-}
-STATIONS_BY_MAJOR_BASIN = {
-    'Koshi': ['Chatara', 'Simle', 'Majhitar', 'Kampughat', 'Rai_goan'],
-    'Karnali': ['Chisapani', 'Asaraghat', 'Dipayal', 'Samajhighat', 'Kusum', 'Chepang'],
-}
 
 STATIONS_SEL = {
     'Karnali': ['Chisapani', 'Asaraghat'],
     'Rapti': ['Kusum'],
     'Babai': ['Chepang']
 }
-
-DATA_DIR = Path(os.environ["AA_DATA_DIR"]) 
-GLOFAS_DIR = DATA_DIR / "public/exploration/npl/glofas"
-GLOFAS_RP_FILENAME = GLOFAS_DIR / "glofas_return_period_values.xlsx"
 ```
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
-df_return_period_glofas = pd.read_excel(GLOFAS_RP_FILENAME)
+df_return_period_glofas = pd.read_excel(parameters.GLOFAS_RP_FILENAME)
 ```
 
 ## When do activations occur at the different stations
@@ -71,10 +46,10 @@ legend_title = 'RP'
 ```python
 events_all = {}
 
-for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
+for basin in parameters.STATIONS_BY_BASIN.keys():
     
     station_events = {}   
-    stations = STATIONS[basin]
+    stations = parameters.STATIONS_BY_BASIN[basin]
     
     for istation, station in enumerate(stations):  
         
@@ -82,7 +57,7 @@ for basin in ['Koshi', 'Karnali', 'Rapti', 'Bagmati', 'Babai']:
         
         for rp in RP_LIST:
             rp_val=df_return_period.loc[rp, station]
-            df_activations = utils.get_glofas_activations(ds_glofas_reanalysis[station], rp_val, DURATION)
+            df_activations = utils.get_dates_list_from_data_array(ds_glofas_reanalysis[station], rp_val, parameters.DURATION)
             rp_events[rp] = df_activations
             
         station_events[station] = rp_events
@@ -107,7 +82,7 @@ for basin, stations in STATIONS_SEL.items():
 
         for rp in rp_list:
             rp_val=df_return_period.loc[rp, station]
-            groups = utils.get_groups_above_threshold(observations, rp_val, DURATION)
+            groups = utils.get_groups_above_threshold(observations, rp_val, parameters.DURATION)
             for group in groups:
                 idx = range(group[0], group[1])
                 ax.plot(x[idx], observations[idx], ls='-', 
@@ -165,9 +140,7 @@ for basin, stations in STATIONS_SEL.items():
 
             for rp in rp_list:
                 rp_val=df_return_period.loc[rp, station]
-                groups = utils.get_groups_above_threshold(observations, rp_val, DURATION)
-                df_activations = utils.get_glofas_activations(ds[station], rp_val, DURATION)
-                #print(df_activations)
+                groups = utils.get_groups_above_threshold(observations, rp_val, parameters.DURATION)
                 for group in groups:
                     idx = range(group[0], group[1] + buffer)
                     ax.fill_between(x=x[idx], y1=istation, y2=istation+1, 
@@ -206,7 +179,7 @@ time = ds_glofas_reanalysis.time.values
 # Note that this is pretty crude because it only uses the 
 # date range of the initial event, and thus will depend on the order
 # of the event list.
-for basin, stations in STATIONS_BY_MAJOR_BASIN.items():
+for basin, stations in parameters.STATIONS_BY_MAJOR_BASIN.items():
     event_dict = {}
     for rp in rp_list:
         event_dict[rp] = {}
@@ -284,7 +257,7 @@ corr_df = pd.DataFrame(index=stations, columns=stations)
 corr_df.index.name = 'station'
 
 stations = []
-for s in STATIONS_BY_MAJOR_BASIN.values():
+for s in parameters.STATIONS_BY_MAJOR_BASIN.values():
     stations += s
 for station1 in stations:
     for station2 in stations:
@@ -324,48 +297,4 @@ offset_df.style.background_gradient(cmap='Greens_r', low=-500, high=500)
 
 ```python
 corr_df.style.background_gradient(cmap='Blues_r')
-```
-
-## Are activations between basins correlated? 
-
-Checking Koshi + Bagmati and Karnali + Babai + West Rapti. For each event in the secondary basin, check to see what the shortest time is to the nearest event in the primary basin.
-
-```python
-selected_stations = {
-    'Chatara': 'Koshi',
-    'Asaraghat':'Karnali'
-}
-
-correlated_stations = {
-    'Chatara': ['Bagmati'], 
-    'Asaraghat': ['Babai', 'Rapti']}
-
-RP = 3
-```
-
-```python
-small_basin_distances = {}
-
-for large_basin_station in correlated_stations: 
-    
-    for small_basin in correlated_stations[large_basin_station]:
-        
-        large_basin_events = events_all[selected_stations[large_basin_station]][large_basin_station][RP]
-        small_basin_events = events_all[small_basin][STATIONS[small_basin][0]][RP]
-      
-        for index, row in small_basin_events.iterrows():
-            
-            small_event_start = small_basin_events.loc[index, 'start_index']
-            start_distances = [small_event_start - large_event_start for large_event_start in large_basin_events['start_index']]
-            min_distance = min(start_distances, key=abs)
-            small_basin_events.loc[index, 'min_distance'] = min_distance
-        
-        plt.figure()
-        plt.hist(small_basin_events.min_distance)
-        
-        # What percent of events occur within +-30 days?
-        perc_short_distance = (small_basin_events.min_distance.abs()<30).sum() / len(small_basin_events.min_distance)
-        
-        # Save to new df in case wanting to do more with this
-        small_basin_distances[small_basin] = small_basin_events
 ```

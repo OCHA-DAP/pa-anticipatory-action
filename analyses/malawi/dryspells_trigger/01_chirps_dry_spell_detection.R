@@ -10,20 +10,21 @@
 library(tidyverse)
 library(sf)
 library(raster)
+library(glue)
 
 # load functions
-source("01b_chirps_dry_spells_functions.R")
+source("dryspells_trigger/01b_chirps_dry_spells_functions.R")
 
 # set options
 rasterOptions(maxmemory = 1e+09)
-options(scipen=999)
+options(scipen = 999)
 
 # set directory paths
 # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
 chirps_path <- paste0(data_dir, "/public/raw/glb/chirps/")
-dry_spell_processed_path <- paste0(data_dir,"/public/processed/mwi/dry_spells/")
+dry_spell_processed_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/")
 
 #####
 ## process shapefiles
@@ -44,18 +45,18 @@ mwi_adm2
 plot(mwi_adm2$geometry) # visual inspection
 
 mwi_adm2_spatial_extent <- st_bbox(mwi_adm2)
-mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select('ADM2_PCODE', 'ADM2_EN')
+mwi_adm2_ids <- as.data.frame(mwi_adm2) %>% dplyr::select("ADM2_PCODE", "ADM2_EN")
 
 # list years and adm2 regions to be analysed
-year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date("2000-01-01"), to = as.Date("2020-12-31"), by = 'year')))
+year_list <- data.frame(year = lubridate::year(seq.Date(from = as.Date(glue("{min_year}-01-01")), to = as.Date(glue("{max_year}-12-31")), by = "year")))
 year_by_adm2 <- crossing(year_list, mwi_adm2_ids$ADM2_PCODE) # create list with all year * ad2 combinations
-names(year_by_adm2)[2] <- 'pcode'
+names(year_by_adm2)[2] <- "pcode"
 year_by_adm2$year <- as.character(year_by_adm2$year)
 
-#####
-## process observational rainfall data (CHIRPS)
-#####
-
+# #####
+# ## process observational rainfall data (CHIRPS)
+# #####
+#
 # read in CHIRPS data (multiple multi-layer raster files) into a single stack
 s2000 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2000_p05.nc")) # each file has to be read in separately or layer names get lost
 s2001 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2001_p05.nc"))
@@ -78,14 +79,18 @@ s2017 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2017_p05.nc"))
 s2018 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2018_p05.nc"))
 s2019 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2019_p05.nc"))
 s2020 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2020_p05.nc"))
+s2021 <- raster::stack(paste0(chirps_path, "chirps_global_daily_2021_p05.nc"))
 
-s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s2008, s2009, s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020) # all files combined into a stack
+s2000_s2021 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s2008, s2009, s2010, s2011, s2012, s2013, s2014, s2015, s2016, s2017, s2018, s2019, s2020, s2021) # all files combined into a stack
 
 # crop and masked area outside of MWI
-s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm2_spatial_extent)) # crop converts to a brick - a single raster file
-data_masked <- mask(s2000_s2020_cropped, mask = mwi_adm2)
-# saveRDS(data_masked, paste0(dry_spell_processed_path, "data_2000_2020_r5.RDS")) # 5-deg resolution
-#data_masked <- readRDS(paste0(dry_spell_processed_path, "data_2000_2020_r5.RDS")) # 5-deg resolution
+s2000_s2021_cropped <- crop(x = s2000_s2021, y = extent(mwi_adm2_spatial_extent)) # crop() converts to a brick (= a single raster file)
+data_masked <- mask(s2000_s2021_cropped, mask = mwi_adm2)
+
+min_year <- "2000"
+max_year <- "2021"
+# saveRDS(data_masked, paste0(dry_spell_processed_path, glue("data_{min_year}_{max_year}_r5.RDS"))) # 5-deg resolution
+# data_masked <- readRDS(paste0(dry_spell_processed_path, glue("data_{min_year}_{max_year}_r5.RDS"))) # 5-deg resolution
 # plot(data_masked) # visual inspection
 
 # explore compiled raster file ("brick")
@@ -99,34 +104,34 @@ nbr_layers <- nlayers(data_masked)
 dim(data_masked) # (nrow, ncol, nlayers)
 yres(data_masked) # y-resolution
 xres(data_masked) # x-resolution
+data_masked
 
 # create list of regions
-region_list <- mwi_adm2[,c('ADM2_PCODE', 'ADM2_EN', 'geometry')]
+region_list <- mwi_adm2[, c("ADM2_PCODE", "ADM2_EN", "geometry")]
+region_names <- as.data.frame(region_list) %>%
+  dplyr::select(-geometry)
 
-# loop through layers/days to compile MAX values across layers/days
+# loop through layers/days to compile MAX values across layers/days into a dataframe
 data_max_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
-
-        data_max_values <- computeLayerStat(i, max, data_max_values)
-
+  data_max_values <- computeLayerStat(layer = i, stat = max, raster_brick = data_masked, data_stat_values = data_max_values)
 }
 
+# loop through layers/days to compile MEAN values across layers/days into a dataframe
 data_mean_values <- data.frame(ID = 1:nrow(mwi_adm2))
 
 for (i in seq_along(1:nbr_layers)) {
-
-  data_mean_values <- computeLayerStat(i, mean, data_mean_values)
-
+  data_mean_values <- computeLayerStat(layer = i, stat = mean, raster_brick = data_masked, data_stat_values = data_mean_values)
 }
 
-# saveRDS(data_max_values,paste0(dry_spell_processed_path, "data_max_values_2000_2020_r5.RDS"))
-# saveRDS(data_mean_values,paste0(dry_spell_processed_path, "data_mean_values_2000_2020_r5.RDS"))
-#data_max_values <- readRDS(paste0(dry_spell_processed_path, "data_max_values_2000_2020_r5.RDS"))
-#data_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_mean_values_2000_2020_r5.RDS"))
+# saveRDS(data_max_values,paste0(dry_spell_processed_path, glue("data_max_values_2000_2021_r5.RDS"))
+saveRDS(data_mean_values, paste0(dry_spell_processed_path, glue("data_mean_values_{min_year}_{max_year}_r5.RDS")))
+# data_max_values <- readRDS(paste0(dry_spell_processed_path, glue("data_max_values_{min_year}_{max_year}_r5.RDS")))
+# data_mean_values <- readRDS(paste0(dry_spell_processed_path, glue("data_mean_values_{min_year}_{max_year}_r5.RDS")))
 
 # select which values (mean or max) to use
-#data <- data_max_values
+# data <- data_max_values
 data <- data_mean_values
 
 #####
@@ -138,48 +143,48 @@ data_long <- convertToLongFormat(data)
 data_long$year <- lubridate::year(data_long$date)
 data_long$month <- lubridate::month(data_long$date)
 data_long$day <- lubridate::day(data_long$date)
-data_long$season_approx <- ifelse(data_long$month >= 10, data_long$year, ifelse(data_long$month <= 7, data_long$year - 1, 'outside rainy season')) # labels the rainy season which overlaps between two calendar years. uses first year as label.
+data_long$season_approx <- ifelse(data_long$month >= 10, data_long$year, ifelse(data_long$month <= 7, data_long$year - 1, "outside rainy season")) # labels the rainy season which overlaps between two calendar years. uses first year as label.
 
 # compute 5-day rolling sums
 data_long <- data_long %>%
-                      group_by(pcode) %>%
-                      computeRollingSum(., window = 5) %>%
-                      rename(rollsum_5d = rollsum)
+  group_by(pcode) %>%
+  computeRollingSum(., window = 5) %>%
+  rename(rollsum_5d = rollsum)
 
 # compute 10-day rolling sums
 data_long <- data_long %>%
-                          group_by(pcode) %>%
-                          computeRollingSum(., window = 10) %>%
-                          rename(rollsum_10d = rollsum)
+  group_by(pcode) %>%
+  computeRollingSum(., window = 10) %>%
+  rename(rollsum_10d = rollsum)
 
 # compute 14-day rolling sums
 data_long <- data_long %>%
-                          group_by(pcode) %>%
-                          computeRollingSum(., window = 14) %>%
-                          rename(rollsum_14d = rollsum)
+  group_by(pcode) %>%
+  computeRollingSum(., window = 14) %>%
+  rename(rollsum_14d = rollsum)
 
 # compute 15-day rolling sums
 data_long <- data_long %>%
-                          group_by(pcode) %>%
-                          computeRollingSum(., window = 15) %>%
-                          rename(rollsum_15d = rollsum)
+  group_by(pcode) %>%
+  computeRollingSum(., window = 15) %>%
+  rename(rollsum_15d = rollsum)
 
 # compute 15-day left-aligned rolling sums
 data_long <- data_long %>%
-                          group_by(pcode) %>%
-                          computeBackRollingSum(., window = 15) %>%
-                          rename(rollsum_15d_back = rollsum)
+  group_by(pcode) %>%
+  computeBackRollingSum(., window = 15) %>%
+  rename(rollsum_15d_back = rollsum)
 
 # label rainy days
-data_long$rainy_day_bin <-  ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
-data_long$rainy_day_bin_2mm <-  ifelse(data_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
+data_long$rainy_day_bin <- ifelse(data_long$total_prec >= 4, 1, 0) # rainy day defined as having received at least 4mm
+data_long$rainy_day_bin_2mm <- ifelse(data_long$total_prec >= 2, 1, 0) # rainy day defined as having received at least 2mm
 
-#saveRDS(data_long, paste0(dry_spell_processed_path, "data_long_mean_values.RDS"))
+saveRDS(data_long, paste0(dry_spell_processed_path, glue("data_long_mean_values_{min_year}_{max_year}.RDS")))
 
 #####
 ## identify rainy season onset/cessation/duration per year, adm2
 #####
-
+# data_long <- readRDS(paste0(dry_spell_processed_path, "data_long_mean_values.RDS"))
 # Rainy season onset: First day of a period after 1 Nov with at least 40mm of rain over 10 days AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 rainy_onsets <- findRainyOnset()
 
@@ -187,8 +192,8 @@ rainy_onsets <- findRainyOnset()
 rainy_cessations <- findRainyCessation()
 
 # combine onset and cessation dates
-rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c('ID', 'pcode', 'season_approx'), all.x = TRUE, all.y = TRUE) # keep partial years 2000 and 2020
-rainy_seasons <- merge(rainy_seasons, year_by_adm2, by.x = c('pcode', 'season_approx'), by.y = c('pcode', 'year'), all.x = T, all.y = T) # ensure a record is created for each adm2 for every year
+rainy_seasons <- merge(rainy_onsets, rainy_cessations, by = c("ID", "pcode", "season_approx"), all.x = TRUE, all.y = TRUE) # keep partial years
+rainy_seasons <- merge(rainy_seasons, year_by_adm2, by.x = c("pcode", "season_approx"), by.y = c("pcode", "year"), all.x = T, all.y = T) # ensure a record is created for each adm2 for every year
 
 # checks
 sum(ifelse(rainy_seasons$cessation_date < rainy_seasons$onset_date, 1, 0), na.rm = T) # sum indicates nbr of records for which cessation date precedes onset date
@@ -215,26 +220,30 @@ rainfall_during_rainy_seasons_list <- sqldf::sqldf("select m.*,
                                                from data_long m
                                                inner join rainy_seasons r
                                                on m.pcode = r.pcode
-                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude 1999 and 2020 rainy seasons because don't have onset/cessation dates for them
+                                                 and m.date between r.onset_date and r.cessation_date") # keep all records during a rainy season. Will exclude rainy seasons for which we don't have onset/cessation dates for them
 
 rainfall_during_rainy_seasons_stats <- rainfall_during_rainy_seasons_list %>%
-                                        group_by(pcode, season_approx) %>%
-                                        summarise(n_days = n(),
-                                                  rainy_season_rainfall = round(sum(total_prec), 1))
+  group_by(pcode, season_approx) %>%
+  summarise(
+    n_days = n(),
+    rainy_season_rainfall = round(sum(total_prec), 1)
+  )
 
 rainy_seasons_detail <- rainy_seasons %>%
-                                  left_join(rainfall_during_rainy_seasons_stats, by = c('pcode' = 'pcode', 'season_approx' = 'season_approx', 'rainy_season_duration' = 'n_days')) %>%
-                                  left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
-                                  dplyr::select(ID, pcode, ADM2_EN, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
+  left_join(rainfall_during_rainy_seasons_stats, by = c("pcode" = "pcode", "season_approx" = "season_approx", "rainy_season_duration" = "n_days")) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
+  dplyr::select(ID, pcode, ADM2_EN, season_approx, onset_date, onset_month, cessation_date, cessation_month, rainy_season_duration, rainy_season_rainfall)
 
 nrow(rainy_seasons) == nrow(rainy_seasons_detail) # check that all records were kept
 nrow(rainy_seasons_detail) / 32 == 22 # confirms there is a record for every year and every adm2
 
-rainy_seasons_detail <- rainy_seasons_detail %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+rainy_seasons_detail <- rainy_seasons_detail %>%
+  mutate(region = substr(pcode, 3, 3)) %>%
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
 # save results
-#write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, "rainy_seasons_detail_2000_2020.csv"), row.names = FALSE)
-#write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, "rainy_seasons_detail_2000_2020_mean_back.csv"), row.names = FALSE)
+# write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, glue("rainy_seasons_detail_{min_year}_{max_year}.csv"), row.names = FALSE))
+write.csv(rainy_seasons_detail, file = paste0(dry_spell_processed_path, glue("rainy_seasons_detail_{min_year}_{max_year}_mean_back.csv")), row.names = FALSE)
 
 #####
 ## explore rainy season patterns
@@ -255,27 +264,32 @@ prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$onset_month)
 prop.table(table(rainy_seasons_detail$ADM2_EN, rainy_seasons_detail$cessation_month), 1)
 
 rainy_seasons_summary_per_region <- rainy_seasons_detail %>%
-                                      mutate(nov1 = as.Date(paste0(season_approx, '-11-01'), format = "%Y-%m-%d"), # 1 nov before the onset of the season
-                                             onset_days_since_nov1 = as.numeric(difftime(onset_date, nov1, units = "days")), # count of days since 1 nov
-                                             cessation_days_since_nov1 = as.numeric(difftime(cessation_date, nov1, units = "days")), # count of days since 1 nov
-                                             rainy_season_at_least_125d = ifelse(rainy_season_duration >= 125, 1, 0)) %>% # 125 days is length of maize growing season
-                                      group_by(ADM2_EN) %>%
-                                      summarise(min_rainy_season_onset_postnov1 = min(onset_days_since_nov1, na.rm = T), # na.rm to remove incomplete seasons
-                                                max_rainy_season_onset_post1nov = max(onset_days_since_nov1, na.rm = T),
-                                                mean_rainy_season_onset_post1nov = mean(onset_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
-                                                min_rainy_season_cessation_postnov1 = min(cessation_days_since_nov1, na.rm = T),
-                                                max_rainy_season_cessation_postnov1 = max(cessation_days_since_nov1, na.rm = T),
-                                                mean_rainy_season_cessation_post1nov = mean(cessation_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
-                                                min_rainy_season_duration = min(rainy_season_duration, na.rm = T),
-                                                max_rainy_season_duration = max(rainy_season_duration, na.rm = T),
-                                                mean_rainy_season_duration = mean(rainy_season_duration, na.rm = T),
-                                                nbr_125d_seasons = sum(rainy_season_at_least_125d, na.rm = T),
-                                                min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T),
-                                                max_rainy_season_rainfall = max(rainy_season_rainfall, na.rm = T),
-                                                mean_rainy_season_rainfall = mean(rainy_season_rainfall, na.rm = T)) %>%
-                                      ungroup() %>%
-                                      unique() %>%
-                                      data.frame()
+  mutate(
+    nov1 = as.Date(paste0(season_approx, "-11-01"), format = "%Y-%m-%d"), # 1 nov before the onset of the season
+    onset_days_since_nov1 = as.numeric(difftime(onset_date, nov1, units = "days")), # count of days since 1 nov
+    cessation_days_since_nov1 = as.numeric(difftime(cessation_date, nov1, units = "days")), # count of days since 1 nov
+    rainy_season_at_least_125d = ifelse(rainy_season_duration >= 125, 1, 0)
+  ) %>%
+  # 125 days is length of maize growing season
+  group_by(ADM2_EN) %>%
+  summarise(
+    min_rainy_season_onset_postnov1 = min(onset_days_since_nov1, na.rm = T), # na.rm to remove incomplete seasons
+    max_rainy_season_onset_post1nov = max(onset_days_since_nov1, na.rm = T),
+    mean_rainy_season_onset_post1nov = mean(onset_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
+    min_rainy_season_cessation_postnov1 = min(cessation_days_since_nov1, na.rm = T),
+    max_rainy_season_cessation_postnov1 = max(cessation_days_since_nov1, na.rm = T),
+    mean_rainy_season_cessation_post1nov = mean(cessation_days_since_nov1, na.rm = T), # average nbr of days since 1 Nov
+    min_rainy_season_duration = min(rainy_season_duration, na.rm = T),
+    max_rainy_season_duration = max(rainy_season_duration, na.rm = T),
+    mean_rainy_season_duration = mean(rainy_season_duration, na.rm = T),
+    nbr_125d_seasons = sum(rainy_season_at_least_125d, na.rm = T),
+    min_rainy_season_rainfall = min(rainy_season_rainfall, na.rm = T),
+    max_rainy_season_rainfall = max(rainy_season_rainfall, na.rm = T),
+    mean_rainy_season_rainfall = mean(rainy_season_rainfall, na.rm = T)
+  ) %>%
+  ungroup() %>%
+  unique() %>%
+  data.frame()
 
 rainy_seasons_summary_per_region
 
@@ -284,12 +298,12 @@ rainy_seasons_summary_per_region
 #####
 
 # determine if each record is within that year's rainy season and if so, how many days into the season it is
-data_long <- merge(data_long, rainy_seasons, by = c('ID', 'pcode', 'season_approx'), all.x = T)
-data_long$during_rainy_season_bin <-  ifelse(data_long$date >= data_long$onset_date & data_long$date <= data_long$cessation_date, 1, 0)
+data_long <- merge(data_long, rainy_seasons, by = c("ID", "pcode", "season_approx"), all.x = T)
+data_long$during_rainy_season_bin <- ifelse(data_long$date >= data_long$onset_date & data_long$date <= data_long$cessation_date, 1, 0)
 data_long$nth_day_of_rainy_season <- ifelse(data_long$during_rainy_season_bin == 1, as.numeric(difftime(data_long$date, data_long$onset_date, units = "days") + 1), NA) # +1 so first day of rainy season is labelled "one"
 
 # find rainy streaks within each rainy season, adm2
-#rainy_streaks <- data_long %>%
+# rainy_streaks <- data_long %>%
 #                  filter(during_rainy_season_bin == 1) %>% # keep days during the rainy season
 #                  group_by(pcode, season_approx) %>%
 #                  arrange(pcode, date) %>% # sort in ascending order
@@ -302,21 +316,28 @@ data_long$rollsum_14d_less_than_2_bin <- ifelse(data_long$rollsum_14d <= 2, 1, 0
 
 # identify beginning, end and duration of dry spells per adm2 region (total <= 2mm)
 dry_spells_confirmation_dates <- data_long %>%
-                                  group_by(pcode) %>%
-                                  arrange(date) %>% # sort date in ascending order
-                                  mutate(streak_number = runlengthEncoding(rollsum_14d_less_than_2_bin)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14d rolling sum <= 2mm)
-                                  filter(rollsum_14d_less_than_2_bin == 1) %>% # keep streaks that meet the dry spell criterion
-                                  ungroup()
+  group_by(pcode) %>%
+  arrange(date) %>%
+  # sort date in ascending order
+  mutate(streak_number = runlengthEncoding(rollsum_14d_less_than_2_bin)) %>%
+  # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14d rolling sum <= 2mm)
+  filter(rollsum_14d_less_than_2_bin == 1) %>%
+  # keep streaks that meet the dry spell criterion
+  ungroup()
 
 dry_spells_list <- dry_spells_confirmation_dates %>%
-                        group_by(pcode, season_approx, streak_number) %>% # for each dry spell of every adm2 and rainy season
-                        summarize(dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (= 14d rolling sum of <= 2mm of rain)
-                                  dry_spell_first_date = dry_spell_confirmation - 13, # spell started 14th day prior to confirmation day (= first day with a 14d rolling sum below 2mm)
-                                  dry_spell_last_date = max(date),
-                                  dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)) %>% # do not compute total rainfall because 13 days before confirmation date not included in streak
-                        ungroup() %>%
-                        as.data.frame() %>%
-                        dplyr::select(-streak_number)
+  group_by(pcode, season_approx, streak_number) %>%
+  # for each dry spell of every adm2 and rainy season
+  summarize(
+    dry_spell_confirmation = min(date), # first day on which the dry spell criterion is met (= 14d rolling sum of <= 2mm of rain)
+    dry_spell_first_date = dry_spell_confirmation - 13, # spell started 14th day prior to confirmation day (= first day with a 14d rolling sum below 2mm)
+    dry_spell_last_date = max(date),
+    dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)
+  ) %>%
+  # do not compute total rainfall because 13 days before confirmation date not included in streak
+  ungroup() %>%
+  as.data.frame() %>%
+  dplyr::select(-streak_number)
 
 rainfall_during_dry_spells <- sqldf::sqldf("select m.*,
                                              l.dry_spell_confirmation,
@@ -328,50 +349,61 @@ rainfall_during_dry_spells <- sqldf::sqldf("select m.*,
                                             and m.date between l.dry_spell_first_date and l.dry_spell_last_date") # keep all records during a dry spell
 
 rainfall_during_dry_spells_stats <- rainfall_during_dry_spells %>%
-                                      group_by(pcode, dry_spell_confirmation) %>%
-                                      summarise(n_days = n(),
-                                                dry_spell_rainfall = round(sum(total_prec), 1))
+  group_by(pcode, dry_spell_confirmation) %>%
+  summarise(
+    n_days = n(),
+    dry_spell_rainfall = round(sum(total_prec), 1)
+  )
 
 dry_spells_details <- dry_spells_list %>%
-                        left_join(rainfall_during_dry_spells_stats, by = c('pcode' = 'pcode', 'dry_spell_confirmation' = 'dry_spell_confirmation', 'dry_spell_duration' = 'n_days'))
+  left_join(rainfall_during_dry_spells_stats, by = c("pcode" = "pcode", "dry_spell_confirmation" = "dry_spell_confirmation", "dry_spell_duration" = "n_days"))
 
 nrow(dry_spells_list) == nrow(dry_spells_details) # check that all records were kept
 
 # identify dry spells during rainy seasons
 dry_spells_during_rainy_season_list <- dry_spells_details %>%
-                                          left_join(rainy_seasons[, c('pcode', 'season_approx', 'onset_date', 'cessation_date')], by = c('pcode', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
-                                          mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season
-                                          filter(confirmation_date_during_rainy_season == 1) %>% # only keep dry spells that were confirmed during rainy season even if started before onset or ended after cessation
-                                          dplyr::select(pcode, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+  left_join(rainy_seasons[, c("pcode", "season_approx", "onset_date", "cessation_date")], by = c("pcode", "season_approx"), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
+  mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season
+  filter(confirmation_date_during_rainy_season == 1) %>% # only keep dry spells that were confirmed during rainy season even if started before onset or ended after cessation
+  dplyr::select(pcode, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
 # add region names for ease of communication
 dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
-                                          left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
-                                          dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
+  dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
-dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_2000_2020.csv"), row.names = FALSE)
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, "dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"), row.names = FALSE)
+dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
+  mutate(region = substr(pcode, 3, 3)) %>%
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+# write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, glue("dry_spells_during_rainy_season_list_{min_year}_{max_year}.csv")), row.names = FALSE)
+write.csv(dry_spells_during_rainy_season_list, file = paste0(dry_spell_processed_path, glue("dry_spells_during_rainy_season_list_{min_year}_{max_year}_mean_back.csv")), row.names = FALSE)
 
 # save full list of dry spells
 full_list_dry_spells <- dry_spells_details %>%
-                          left_join(rainy_seasons[, c('pcode', 'season_approx', 'onset_date', 'cessation_date')], by = c('pcode', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
-                          mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season
-                          dplyr::select(pcode, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
-#write.csv(full_list_dry_spells, file = paste0(dry_spell_processed_path, "full_list_dry_spells.csv"), row.names = FALSE)
+  left_join(rainy_seasons[, c("pcode", "season_approx", "onset_date", "cessation_date")], by = c("pcode", "season_approx"), all.x = T, all.y = T) %>%
+  # add rainy onset and cessation dates
+  left_join(region_names, by = c("pcode" = "ADM2_PCODE")) %>%
+  mutate(
+    during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0),
+    season_name = ifelse(during_rainy_season == 1, season_approx, "not during a rainy season")
+  ) %>%
+  # identifies dry spells that reached 14-d rolling sum (confirmation_date) during rainy season. NA = start/end of rainy season unknown
+  dplyr::select(pcode, ADM2_EN, season_name, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall, during_rainy_season)
+write.csv(full_list_dry_spells, file = paste0(dry_spell_processed_path, glue("full_list_dry_spells_{min_year}_{max_year}.csv")), row.names = FALSE)
 
 # summary stats per region
 rainy_season_dry_spells_summary_per_region <- dry_spells_during_rainy_season_list %>%
-                                                group_by(pcode, ADM2_EN) %>%
-                                                summarise(nbr_dry_spells = n(),
-                                                          mean_ds_duration = round(mean(dry_spell_duration),1),
-                                                          min_ds_duration = min(dry_spell_duration),
-                                                          max_ds_duration = max(dry_spell_duration)
-                                                          ) %>%
-                                                ungroup() %>%
-                                                as.data.frame()
+  group_by(pcode, ADM2_EN) %>%
+  summarise(
+    nbr_dry_spells = n(),
+    mean_ds_duration = round(mean(dry_spell_duration), 1),
+    min_ds_duration = min(dry_spell_duration),
+    max_ds_duration = max(dry_spell_duration)
+  ) %>%
+  ungroup() %>%
+  as.data.frame()
 
-rainy_season_dry_spells_summary_per_region <- merge(rainy_season_dry_spells_summary_per_region, mwi_adm2_ids, by.x = c('pcode', 'ADM2_EN'), by.y = c('ADM2_PCODE', 'ADM2_EN'), all.y = T) # ensure every region is in dataset
+rainy_season_dry_spells_summary_per_region <- merge(rainy_season_dry_spells_summary_per_region, mwi_adm2_ids, by.x = c("pcode", "ADM2_EN"), by.y = c("ADM2_PCODE", "ADM2_EN"), all.y = T) # ensure every region is in dataset
 rainy_season_dry_spells_summary_per_region$nbr_dry_spells <- ifelse(is.na(rainy_season_dry_spells_summary_per_region$nbr_dry_spells), 0, rainy_season_dry_spells_summary_per_region$nbr_dry_spells) # replace NAs with 0 under nbr of dry spells
 
 rainy_season_dry_spells_summary_per_region
@@ -381,27 +413,35 @@ rainy_season_dry_spells_summary_per_region
 ####
 
 streaks <- data_long %>%
-              group_by(pcode) %>%
-              arrange(date) %>% # sort date in ascending order
-              mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14 consecutive days with <= 4mm)
-              ungroup()
+  group_by(pcode) %>%
+  arrange(date) %>%
+  # sort date in ascending order
+  mutate(streak_number = runlengthEncoding(rainy_day_bin)) %>%
+  # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14 consecutive days with <= 4mm)
+  ungroup()
 
 consec_dry_days <- streaks %>%
-                     filter(rainy_day_bin == 0 & during_rainy_season_bin == 1) %>% # keep streaks of dry days during rainy season
-                     group_by(pcode, streak_number) %>%
-                     mutate(n_days_in_streak = n()) %>%
-                     ungroup()
+  filter(rainy_day_bin == 0 & during_rainy_season_bin == 1) %>%
+  # keep streaks of dry days during rainy season
+  group_by(pcode, streak_number) %>%
+  mutate(n_days_in_streak = n()) %>%
+  ungroup()
 
 
 dry_spells_daily_max <- consec_dry_days %>%
-                          filter(n_days_in_streak >= 14) %>% # keep streaks of dry days at least 14 days long
-                          group_by(pcode, season_approx, streak_number) %>% # for each dry spell of every adm2 and rainy season
-                          summarize(dry_spell_first_date = min(date), # first day of the streak
-                                    dry_spell_last_date = max(date),
-                                    dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)) %>% # do not compute total rainfall because 13 days before confirmation date not included in streak
-                          ungroup() %>%
-                          as.data.frame()
-                    #      dplyr::select(-streak_number)
+  filter(n_days_in_streak >= 14) %>%
+  # keep streaks of dry days at least 14 days long
+  group_by(pcode, season_approx, streak_number) %>%
+  # for each dry spell of every adm2 and rainy season
+  summarize(
+    dry_spell_first_date = min(date), # first day of the streak
+    dry_spell_last_date = max(date),
+    dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)
+  ) %>%
+  # do not compute total rainfall because 13 days before confirmation date not included in streak
+  ungroup() %>%
+  as.data.frame()
+#      dplyr::select(-streak_number)
 
 
 rainfall_during_daily_max_ds <- sqldf::sqldf("select m.*,
@@ -414,37 +454,40 @@ rainfall_during_daily_max_ds <- sqldf::sqldf("select m.*,
                                                 and m.date between dm.dry_spell_first_date and dm.dry_spell_last_date") # keep all records during a dry spell
 
 rainfall_during_daily_max_ds_stats <- rainfall_during_daily_max_ds %>%
-                                        group_by(pcode, streak_number) %>%
-                                        summarise(dry_spell_rainfall = round(sum(total_prec, na.rm = T), 1))
+  group_by(pcode, streak_number) %>%
+  summarise(dry_spell_rainfall = round(sum(total_prec, na.rm = T), 1))
 
 daily_max_dry_spells_details <- dry_spells_daily_max %>%
-                                  left_join(rainfall_during_daily_max_ds_stats, by = c('pcode' = 'pcode', 'streak_number' = 'streak_number'))
+  left_join(rainfall_during_daily_max_ds_stats, by = c("pcode" = "pcode", "streak_number" = "streak_number"))
 
 nrow(dry_spells_daily_max) == nrow(daily_max_dry_spells_details) # check that all records were kept
 
 
 # add district and region names for ease of communication
 daily_max_dry_spells_details <- daily_max_dry_spells_details %>%
-                                  left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
-                                  dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
+  dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
-daily_max_dry_spells_details <- daily_max_dry_spells_details %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+daily_max_dry_spells_details <- daily_max_dry_spells_details %>%
+  mutate(region = substr(pcode, 3, 3)) %>%
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
-#write.csv(daily_max_dry_spells_details, file = paste0(dry_spell_processed_path, "daily_mean_dry_spells_details_2000_2020.csv"), row.names = FALSE)
+# write.csv(daily_max_dry_spells_details, file = paste0(dry_spell_processed_path, glue("daily_mean_dry_spells_details_{min_year}_{max_year}.csv")), row.names = FALSE)
 
 
 # summary stats per region
 daily_max_dry_spells_summary_per_region <- daily_max_dry_spells_details %>%
-                                                group_by(pcode, ADM2_EN) %>%
-                                                summarise(nbr_dry_spells = n(),
-                                                          mean_ds_duration = round(mean(dry_spell_duration),1),
-                                                          min_ds_duration = min(dry_spell_duration),
-                                                          max_ds_duration = max(dry_spell_duration)
-                                                ) %>%
-                                                ungroup() %>%
-                                                as.data.frame()
+  group_by(pcode, ADM2_EN) %>%
+  summarise(
+    nbr_dry_spells = n(),
+    mean_ds_duration = round(mean(dry_spell_duration), 1),
+    min_ds_duration = min(dry_spell_duration),
+    max_ds_duration = max(dry_spell_duration)
+  ) %>%
+  ungroup() %>%
+  as.data.frame()
 
-daily_max_dry_spells_summary_per_region <- merge(daily_max_dry_spells_summary_per_region, mwi_adm2_ids, by.x = c('pcode', 'ADM2_EN'), by.y = c('ADM2_PCODE', 'ADM2_EN'), all.y = T) # ensure every region is in dataset
+daily_max_dry_spells_summary_per_region <- merge(daily_max_dry_spells_summary_per_region, mwi_adm2_ids, by.x = c("pcode", "ADM2_EN"), by.y = c("ADM2_PCODE", "ADM2_EN"), all.y = T) # ensure every region is in dataset
 daily_max_dry_spells_summary_per_region$nbr_dry_spells <- ifelse(is.na(daily_max_dry_spells_summary_per_region$nbr_dry_spells), 0, daily_max_dry_spells_summary_per_region$nbr_dry_spells) # replace NAs with 0 under nbr of dry spells
 
 daily_max_dry_spells_summary_per_region
@@ -456,23 +499,31 @@ daily_max_dry_spells_summary_per_region
 
 streaks_2mm <- data_long %>%
   group_by(pcode) %>%
-  arrange(date) %>% # sort date in ascending order
-  mutate(streak_number = runlengthEncoding(rainy_day_bin_2mm)) %>% # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14 consecutive days with <= 4mm)
+  arrange(date) %>%
+  # sort date in ascending order
+  mutate(streak_number = runlengthEncoding(rainy_day_bin_2mm)) %>%
+  # assign numbers to streaks of days that meet/don't meet the dry spell criterion (criterion: 14 consecutive days with <= 4mm)
   ungroup()
 
 consec_dry_days_2mm <- streaks_2mm %>%
-  filter(rainy_day_bin_2mm == 0 & during_rainy_season_bin == 1) %>% # keep streaks of dry days during rainy season
+  filter(rainy_day_bin_2mm == 0 & during_rainy_season_bin == 1) %>%
+  # keep streaks of dry days during rainy season
   group_by(pcode, streak_number) %>%
   mutate(n_days_in_streak = n()) %>%
   ungroup()
 
 
 dry_spells_daily_max_2mm <- consec_dry_days_2mm %>%
-  filter(n_days_in_streak >= 14) %>% # keep streaks of dry days at least 14 days long
-  group_by(pcode, season_approx, streak_number) %>% # for each dry spell of every adm2 and rainy season
-  summarize(dry_spell_first_date = min(date), # first day of the streak
-            dry_spell_last_date = max(date),
-            dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)) %>% # do not compute total rainfall because 13 days before confirmation date not included in streak
+  filter(n_days_in_streak >= 14) %>%
+  # keep streaks of dry days at least 14 days long
+  group_by(pcode, season_approx, streak_number) %>%
+  # for each dry spell of every adm2 and rainy season
+  summarize(
+    dry_spell_first_date = min(date), # first day of the streak
+    dry_spell_last_date = max(date),
+    dry_spell_duration = as.numeric(dry_spell_last_date - dry_spell_first_date + 1)
+  ) %>%
+  # do not compute total rainfall because 13 days before confirmation date not included in streak
   ungroup() %>%
   as.data.frame()
 #      dplyr::select(-streak_number)
@@ -488,37 +539,40 @@ rainfall_during_daily_max_ds_2mm <- sqldf::sqldf("select m.*,
                                                 and m.date between dm.dry_spell_first_date and dm.dry_spell_last_date") # keep all records during a dry spell
 
 rainfall_during_daily_max_ds_stats_2mm <- rainfall_during_daily_max_ds_2mm %>%
-                                            group_by(pcode, streak_number) %>%
-                                            summarise(dry_spell_rainfall = round(sum(total_prec, na.rm = T), 1))
+  group_by(pcode, streak_number) %>%
+  summarise(dry_spell_rainfall = round(sum(total_prec, na.rm = T), 1))
 
 daily_max_dry_spells_details_2mm <- dry_spells_daily_max_2mm %>%
-                                  left_join(rainfall_during_daily_max_ds_stats_2mm, by = c('pcode' = 'pcode', 'streak_number' = 'streak_number'))
+  left_join(rainfall_during_daily_max_ds_stats_2mm, by = c("pcode" = "pcode", "streak_number" = "streak_number"))
 
 nrow(dry_spells_daily_max_2mm) == nrow(daily_max_dry_spells_details_2mm) # check that all records were kept
 
 
 # add district and region names for ease of communication
 daily_max_dry_spells_details_2mm <- daily_max_dry_spells_details_2mm %>%
-                                  left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE')) %>%
-                                  dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
+  dplyr::select(pcode, ADM2_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
-daily_max_dry_spells_details_2mm <- daily_max_dry_spells_details_2mm %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+daily_max_dry_spells_details_2mm <- daily_max_dry_spells_details_2mm %>%
+  mutate(region = substr(pcode, 3, 3)) %>%
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
-#write.csv(daily_max_dry_spells_details_2mm, file = paste0(dry_spell_processed_path, "daily_mean_dry_spells_details_2mm_2000_2020.csv"), row.names = FALSE)
+# write.csv(daily_max_dry_spells_details_2mm, file = paste0(dry_spell_processed_path, glue("daily_mean_dry_spells_details_2mm_{min_year}_{max_year}.csv")), row.names = FALSE)
 
 
 # summary stats per region
 daily_max_dry_spells_summary_per_region_2mm <- daily_max_dry_spells_details_2mm %>%
-                                              group_by(pcode, ADM2_EN) %>%
-                                              summarise(nbr_dry_spells = n(),
-                                                        mean_ds_duration = round(mean(dry_spell_duration),1),
-                                                        min_ds_duration = min(dry_spell_duration),
-                                                        max_ds_duration = max(dry_spell_duration)
-                                              ) %>%
-                                              ungroup() %>%
-                                              as.data.frame()
+  group_by(pcode, ADM2_EN) %>%
+  summarise(
+    nbr_dry_spells = n(),
+    mean_ds_duration = round(mean(dry_spell_duration), 1),
+    min_ds_duration = min(dry_spell_duration),
+    max_ds_duration = max(dry_spell_duration)
+  ) %>%
+  ungroup() %>%
+  as.data.frame()
 
-daily_max_dry_spells_summary_per_region_2mm <- merge(daily_max_dry_spells_summary_per_region_2mm, mwi_adm2_ids, by.x = c('pcode', 'ADM2_EN'), by.y = c('ADM2_PCODE', 'ADM2_EN'), all.y = T) # ensure every region is in dataset
+daily_max_dry_spells_summary_per_region_2mm <- merge(daily_max_dry_spells_summary_per_region_2mm, mwi_adm2_ids, by.x = c("pcode", "ADM2_EN"), by.y = c("ADM2_PCODE", "ADM2_EN"), all.y = T) # ensure every region is in dataset
 daily_max_dry_spells_summary_per_region_2mm$nbr_dry_spells <- ifelse(is.na(daily_max_dry_spells_summary_per_region_2mm$nbr_dry_spells), 0, daily_max_dry_spells_summary_per_region_2mm$nbr_dry_spells) # replace NAs with 0 under nbr of dry spells
 
 daily_max_dry_spells_summary_per_region_2mm
@@ -528,25 +582,47 @@ daily_max_dry_spells_summary_per_region_2mm
 #####
 
 # label region of the district
-rainy_season_dry_spells_summary_per_region <- rainy_season_dry_spells_summary_per_region %>% mutate(region = substr(pcode, 3, 3)) %>% mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
+rainy_season_dry_spells_summary_per_region <- rainy_season_dry_spells_summary_per_region %>%
+  mutate(region = substr(pcode, 3, 3)) %>%
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern")))
 
 # how frequently have rainy-season dry spells occurred over the years and across regions/districts?
 summary(rainy_season_dry_spells_summary_per_region$nbr_dry_spells)
 prop.table(table(rainy_season_dry_spells_summary_per_region$nbr_dry_spells))
 
 # how many and which districts/regions have not had a rainy-season dry spell?
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(ADM2_EN)) # districts
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% dplyr::select(ADM2_EN) %>% unique()
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells == 0) %>%
+  summarise(n = n_distinct(ADM2_EN)) # districts
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells == 0) %>%
+  dplyr::select(ADM2_EN) %>%
+  unique()
 
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% summarise(n = n_distinct(region)) # regions
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells == 0) %>% dplyr::select(region) %>% unique()
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells == 0) %>%
+  summarise(n = n_distinct(region)) # regions
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells == 0) %>%
+  dplyr::select(region) %>%
+  unique()
 
 # how many and which districts/regions have had a rainy-season dry spells?
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(ADM2_EN)) # districts
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% dplyr::select(ADM2_EN) %>% unique()
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells > 0) %>%
+  summarise(n = n_distinct(ADM2_EN)) # districts
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells > 0) %>%
+  dplyr::select(ADM2_EN) %>%
+  unique()
 
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% summarise(n = n_distinct(region)) # regions
-rainy_season_dry_spells_summary_per_region %>% filter(nbr_dry_spells > 0) %>% dplyr::select(region) %>% unique()
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells > 0) %>%
+  summarise(n = n_distinct(region)) # regions
+rainy_season_dry_spells_summary_per_region %>%
+  filter(nbr_dry_spells > 0) %>%
+  dplyr::select(region) %>%
+  unique()
 
 # when did the dry spells start in each district?
 prop.table(table(lubridate::month(dry_spells_during_rainy_season_list$dry_spell_first_date)))
@@ -560,65 +636,71 @@ prop.table(table(dry_spells_during_rainy_season_list$ADM2_EN, lubridate::month(d
 # Viz
 ####
 map_original_def <- mwi_adm2 %>%
-  left_join(rainy_season_dry_spells_summary_per_region, by = c('ADM2_PCODE' = 'pcode', 'ADM2_EN' = 'ADM2_EN')) %>%
+  left_join(rainy_season_dry_spells_summary_per_region, by = c("ADM2_PCODE" = "pcode", "ADM2_EN" = "ADM2_EN")) %>%
   ggplot() +
-        geom_sf(aes(fill = nbr_dry_spells)) +
-        scale_fill_continuous(type = "viridis", "Number of dry spells",
-                              breaks=c(0, 4, 8, 12),
-                              limits=c(0,12)) +
-        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ggtitle('Dry spells during 2000-2020', subtitle = "14-day period with cumulative rainfall <= 2mm") +
-  labs(caption="Mean values per district, CHIRPS")
+  geom_sf(aes(fill = nbr_dry_spells)) +
+  scale_fill_continuous(
+    type = "viridis", "Number of dry spells",
+    breaks = c(0, 4, 8, 12),
+    limits = c(0, 12)
+  ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  ggtitle(glue("Dry spells during {min_year}-{max_year}"), subtitle = "14-day period with cumulative rainfall <= 2mm") +
+  labs(caption = "Mean values per district, CHIRPS")
 
 map_consec2mm_def <- mwi_adm2 %>%
-  left_join(daily_max_dry_spells_summary_per_region_2mm, by = c('ADM2_PCODE' = 'pcode', 'ADM2_EN' = 'ADM2_EN')) %>%
+  left_join(daily_max_dry_spells_summary_per_region_2mm, by = c("ADM2_PCODE" = "pcode", "ADM2_EN" = "ADM2_EN")) %>%
   ggplot() +
   geom_sf(aes(fill = nbr_dry_spells)) +
-  scale_fill_continuous(type = "viridis", "Number of dry spells",
-                        breaks=c(0, 4, 8, 12),
-                        limits=c(0,12)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ggtitle('Dry spells during 2000-2020', subtitle = "14 consecutive days with <= 2mm rainfall daily") +
-  labs(caption="Mean values per district, CHIRPS")
+  scale_fill_continuous(
+    type = "viridis", "Number of dry spells",
+    breaks = c(0, 4, 8, 12),
+    limits = c(0, 12)
+  ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  ggtitle(glue("Dry spells during {min_year}-{max_year}"), subtitle = "14 consecutive days with <= 2mm rainfall daily") +
+  labs(caption = "Mean values per district, CHIRPS")
 
 map_consec4mm_def <- mwi_adm2 %>%
-  left_join(daily_max_dry_spells_summary_per_region, by = c('ADM2_PCODE' = 'pcode', 'ADM2_EN' = 'ADM2_EN')) %>%
+  left_join(daily_max_dry_spells_summary_per_region, by = c("ADM2_PCODE" = "pcode", "ADM2_EN" = "ADM2_EN")) %>%
   ggplot() +
   geom_sf(aes(fill = nbr_dry_spells)) +
-  scale_fill_continuous(type = "viridis", "Number of dry spells",
-                        breaks=c(0, 4, 8, 12),
-                        limits=c(0,12)) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  ggtitle('Dry spells during 2000-2020', subtitle = "14 consecutive days with <= 4mm rainfall daily") +
-  labs(caption="Mean values per district, CHIRPS")
+  scale_fill_continuous(
+    type = "viridis", "Number of dry spells",
+    breaks = c(0, 4, 8, 12),
+    limits = c(0, 12)
+  ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  ggtitle(glue("Dry spells during {min_year}-{max_year}"), subtitle = "14 consecutive days with <= 4mm rainfall daily") +
+  labs(caption = "Mean values per district, CHIRPS")
 
-#gridExtra::grid.arrange(map_original_def, map_consec2mm_def, map_consec4mm_def, nrow = 1) # for viewing in console only
+# gridExtra::grid.arrange(map_original_def, map_consec2mm_def, map_consec4mm_def, nrow = 1) # for viewing in console only
 grob <- gridExtra::arrangeGrob(map_original_def, map_consec2mm_def, map_consec4mm_def, nrow = 1) # creates object that can be saved programmatically
-#ggsave(file=paste0(dry_spell_processed_path, "dry_spell_plots/definition_comparison.png"), grob)
+# ggsave(file=paste0(dry_spell_processed_path, "dry_spell_plots/definition_comparison.png"), grob)
 
 ####
 # Explore dry spell durations based on 2mm cumulative definition
 ####
 
 durations <- rainfall_during_dry_spells_stats %>%
-                                      mutate(region = substr(pcode, 3, 3)) %>%
-                                      mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
-                                      left_join(mwi_adm2_ids, by = c('pcode'= 'ADM2_PCODE'))
+  mutate(region = substr(pcode, 3, 3)) %>%
+  mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE"))
 # roll up at adm1
 durations %>%
   ggplot(aes(x = n_days, color = region, fill = region)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
   xlab("Number of days in spell") +
   ylab("Number of dry spells * adm2") +
-  ggtitle("Duration of Dry Spells per Region 2000-2020") +
+  ggtitle(glue("Duration of Dry Spells per Region {min_year}-{max_year}")) +
   facet_wrap(~region)
 
 durations %>% # same as above but bars shown side-by-side
   ggplot(aes(x = n_days, color = region, fill = region)) +
-  geom_histogram(alpha = 0.6, binwidth = 5, position = "dodge" ) +
+  geom_histogram(alpha = 0.6, binwidth = 5, position = "dodge") +
   xlab("Number of days in spell") +
   ylab("Number of dry spells * adm2") +
-  ggtitle("Duration of Dry Spells per Region 2000-2020")
+  ggtitle(glue("Duration of Dry Spells per Region {min_year}-{max_year}"))
 
 # at adm2
 
@@ -627,7 +709,7 @@ durations %>%
   geom_histogram(alpha = 0.6, binwidth = 5) +
   xlab("Number of days in spell") +
   ylab("Number of dry spells") +
-  ggtitle("Duration of Dry Spells per District 2000-2020") +
+  ggtitle(glue("Duration of Dry Spells per District {min_year}-{max_year}")) +
   facet_wrap(~ADM2_EN)
 
 # compare with nbr of days with <= 2mm during rainy_season
@@ -638,24 +720,24 @@ data_long %>%
   group_by(region, season_approx) %>%
   summarise(n_dry_days = n()) %>%
   ungroup() %>%
-  ggplot(aes(x=n_dry_days, color = region, fill = region)) +
+  ggplot(aes(x = n_dry_days, color = region, fill = region)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
-  facet_wrap(~ region) +
+  facet_wrap(~region) +
   ylab("Nbr of adm2 * years")
 
 data_long %>%
-  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
   filter(during_rainy_season_bin == 1 & rainy_day_bin_2mm == 0) %>%
   group_by(ADM2_EN, season_approx) %>%
   summarise(n_dry_days = n()) %>%
   ungroup() %>%
-  ggplot(aes(x=n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
+  ggplot(aes(x = n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
-  facet_wrap(~ ADM2_EN) +
+  facet_wrap(~ADM2_EN) +
   ylab("Nbr of years")
 
 data_long %>%
-  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
   filter(during_rainy_season_bin == 1 & rainy_day_bin_2mm == 0) %>%
   group_by(ADM2_EN, season_approx) %>%
   summarise(n_dry_days = n()) %>%
@@ -670,24 +752,24 @@ data_long %>%
   group_by(region, season_approx) %>%
   summarise(n_dry_days = n()) %>%
   ungroup() %>%
-  ggplot(aes(x=n_dry_days, color = region, fill = region)) +
+  ggplot(aes(x = n_dry_days, color = region, fill = region)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
-  facet_wrap(~ region) +
+  facet_wrap(~region) +
   ylab("Nbr of adm2 * years")
 
 data_long %>%
-  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
   filter(during_rainy_season_bin == 1 & rainy_day_bin == 0) %>%
   group_by(ADM2_EN, season_approx) %>%
   summarise(n_dry_days = n()) %>%
   ungroup() %>%
-  ggplot(aes(x=n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
+  ggplot(aes(x = n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
-  facet_wrap(~ ADM2_EN) +
+  facet_wrap(~ADM2_EN) +
   ylab("Nbr of years")
 
 data_long %>%
-  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
   filter(during_rainy_season_bin == 1 & rainy_day_bin == 0) %>%
   group_by(ADM2_EN, season_approx) %>%
   summarise(n_dry_days = n()) %>%
@@ -698,30 +780,31 @@ data_long %>%
 data_long %>%
   mutate(region = substr(pcode, 3, 3)) %>%
   mutate(region = ifelse(region == 3, "Southern", ifelse(region == 2, "Central", "Northern"))) %>%
-  mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>% # rainy day defined as having received at least 8mm
+  mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>%
+  # rainy day defined as having received at least 8mm
   filter(during_rainy_season_bin == 1 & rainy_day_bin_8mm == 0) %>%
   group_by(region, season_approx) %>%
   summarise(n_dry_days = n()) %>%
   ungroup() %>%
-  ggplot(aes(x=n_dry_days, color = region, fill = region)) +
+  ggplot(aes(x = n_dry_days, color = region, fill = region)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
-  facet_wrap(~ region) +
+  facet_wrap(~region) +
   ylab("Nbr of adm2 * years")
 
 data_long %>%
-  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
   mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>%
   filter(during_rainy_season_bin == 1 & rainy_day_bin_8mm == 0) %>%
   group_by(ADM2_EN, season_approx) %>%
   summarise(n_dry_days = n()) %>%
   ungroup() %>%
-  ggplot(aes(x=n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
+  ggplot(aes(x = n_dry_days, color = ADM2_EN, fill = ADM2_EN)) +
   geom_histogram(alpha = 0.6, binwidth = 5) +
-  facet_wrap(~ ADM2_EN) +
+  facet_wrap(~ADM2_EN) +
   ylab("Nbr of years")
 
 data_long %>%
-  left_join(mwi_adm2_ids, by = c('pcode' = 'ADM2_PCODE')) %>%
+  left_join(mwi_adm2_ids, by = c("pcode" = "ADM2_PCODE")) %>%
   mutate(rainy_day_bin_8mm = ifelse(total_prec >= 8, 1, 0)) %>%
   filter(during_rainy_season_bin == 1 & rainy_day_bin_8mm == 0) %>%
   group_by(ADM2_EN, season_approx) %>%
@@ -732,22 +815,27 @@ data_long %>%
 ############
 # LOOK AT FALSE ALARMS
 ############
-#can comment out all code above and read the saved file
-# data_long_mean_values <- readRDS(paste0(dry_spell_processed_path, "data_long_mean_values.RDS"))
+# can comment out all code above and read the saved file
+# data_long_mean_values <- readRDS(paste0(dry_spell_processed_path, glue("data_long_mean_values_{min_year}_{max_year}.RDS")))
 
 # distribution of rolling sums in southern region for Jan and Feb
 data_long_mean_values %>%
-  mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
-  filter(southern_region == 1 & month %in% c(1,2)) %>%
+  mutate(southern_region = ifelse(startsWith(pcode, "MW3") == TRUE, 1, 0)) %>%
+  # identify southern region records
+  filter(southern_region == 1 & month %in% c(1, 2)) %>%
   summary()
 
 # compute max/min 10-day rolling sum per month for southern region
 fa <- data_long_mean_values %>%
-        mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
-        filter(southern_region == 1) %>% # select records for southern region
-        group_by(year, month) %>%
-        summarise(max_10d_sum = max(round(rollsum_10d, 0), na.rm = T),
-                  min_10d_sum = min(round(rollsum_10d,0), na.rm = T))
+  mutate(southern_region = ifelse(startsWith(pcode, "MW3") == TRUE, 1, 0)) %>%
+  # identify southern region records
+  filter(southern_region == 1) %>%
+  # select records for southern region
+  group_by(year, month) %>%
+  summarise(
+    max_10d_sum = max(round(rollsum_10d, 0), na.rm = T),
+    min_10d_sum = min(round(rollsum_10d, 0), na.rm = T)
+  )
 
 # was there a day within a 10d period with a rolling sum <= 10?
 fa$with_10d_10mm <- ifelse(fa$min_10d_sum <= 10, 1, 0)
@@ -755,35 +843,35 @@ fa$with_10d_10mm <- ifelse(fa$min_10d_sum <= 10, 1, 0)
 write.csv(fa, file = paste0(dry_spell_processed_path, "mwi_chirps_10days_le10mm.csv"), row.names = FALSE)
 
 # descriptive stats of max_10d_sum and min_10d_sum for Jan and Feb
-fa %>% 
+fa %>%
   filter(month %in% c(1, 2)) %>%
   summary()
-  
+
 # distribution of min roll_sum10d per month, then in Jan and Feb
-ggplot(fa, aes(min_10d_sum)) + geom_histogram()
+ggplot(fa, aes(min_10d_sum)) +
+  geom_histogram()
 
-fa %>% 
+fa %>%
   filter(month %in% c(1, 2)) %>%
-  ggplot(aes(min_10d_sum)) + geom_histogram()
+  ggplot(aes(min_10d_sum)) +
+  geom_histogram()
 
-# distribution of 10-day rolling sums 
+# distribution of 10-day rolling sums
 data_long_mean_values %>%
-  mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
+  mutate(southern_region = ifelse(startsWith(pcode, "MW3") == TRUE, 1, 0)) %>% # identify southern region records
   filter(southern_region == 1) %>% # select records for southern region %>%
   ggplot(aes(rollsum_10d)) +
-  geom_histogram() 
+  geom_histogram()
 #+  xlim(0, 30)
 
-# distribution of 14-day rolling sums 
+# distribution of 14-day rolling sums
 data_long_mean_values %>%
-  mutate(southern_region = ifelse(startsWith(pcode, 'MW3') == TRUE, 1, 0)) %>% # identify southern region records
+  mutate(southern_region = ifelse(startsWith(pcode, "MW3") == TRUE, 1, 0)) %>% # identify southern region records
   filter(southern_region == 1) %>% # select records for southern region %>%
   ggplot(aes(rollsum_14d)) +
-  geom_histogram()   
-  # xlim(0, 30)
+  geom_histogram()
+# xlim(0, 30)
 
 #### TO DO / NEXT STEPS
 # planting season: Effective planting season start: Two consecutive 10-day periods with at least 20mm of rain each (WFP) after 1 Nov.
 # dry spell timing in days since planting
-
-  

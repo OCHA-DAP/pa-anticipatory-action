@@ -306,7 +306,7 @@ ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
 ax.set_xlabel("Total monthly precipitation (mm)")
 ax.get_legend().set_title("Dry spell occurred")
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_boxplot_{month_str}_southern_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
 ```
 
 ```python
@@ -351,7 +351,7 @@ ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Percentage of months that are correctly categorized for the given threshold")
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_ds_days_month}{min_adm_ds_month}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_threshold_missfalse_{month_str}_{adm_str}_ds{min_ds_days_month}{min_adm_ds_month}.png"))
 ```
 
 ```python
@@ -374,7 +374,7 @@ ax.set_ylabel("Dry spell in ADMIN1 during month")
 ax.set_xlabel(f"<={int(t_intersection)} mm precipitation during month")
 plt.show()
 fig.tight_layout()
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_confusionmatrix_ds{min_ds_days_month}{min_adm_ds_month}_th{int(t_intersection)}_adm1.png"))
+# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_monthly_precipitation_confusionmatrix_{month_str}_{adm_str}_ds{min_ds_days_month}{min_adm_ds_month}_th{int(t_intersection)}.png"))
 ```
 
 #### Compute misses/false alarms per month
@@ -522,8 +522,8 @@ ax.get_legend().set_title("Dry spell occurred")
 
 ```python
 #compute tp,tn,fp,fn
-y_target =  df_southern_countmonth_decjanfeb.dry_spell
-threshold_list=np.arange(0,df_southern_countmonth_decjanfeb.mean_cell.max() - df_southern_countmonth_decjanfeb.mean_cell.max()%10,10)
+y_target =  df_comb_ds_4mm_southern_selm.dry_spell
+threshold_list=np.arange(0,df_comb_ds_4mm_southern_selm.mean_cell.max() - df_southern_countmonth_decjanfeb.mean_cell.max()%10,10)
 df_pr_decjanfeb=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
 for t in threshold_list:
     y_predicted = np.where(df_southern_countmonth_decjanfeb.mean_cell<=t,1,0)

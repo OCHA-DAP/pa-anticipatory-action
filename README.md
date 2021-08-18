@@ -18,7 +18,7 @@ The AA frameworks that are implemented and/or currently under development are di
 Three of these frameworks have had at least one activation as of June 2021:
 - [Bangladesh, flood](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/)
 - [Ethiopia, drought-related food insecurity](https://centre.humdata.org/predicting-drought-related-food-insecurity-in-ethiopia/)
-- [Somalia, food insecurity](https://www.unocha.org/story/un-central-emergency-response-fund-supports-anticipatory-action-ethiopia-and-somalia)
+- [Somalia, food insecurity](https://reliefweb.int/sites/reliefweb.int/files/resources/210520-AA-Somalia-Pamphlet-VF-nologo.pdf)
 
 The other countries with frameworks under development as of June 2021 are:
 - Malawi, dry spells & floods
@@ -40,9 +40,9 @@ We are always happy to discuss ideas, so don't hesitate to contact us.
 The pages below hold documented examples of some of the analyses that are held in this repository. Many of these pages are components of larger, potentially still in progress, pieces of work for an AA pilot. 
 
 #### Malawi
-- [Identifying historical dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/historical_dry_spells_description.html)
-- [Baseline overview of factors relating to dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/mwi_impact_summary.html)
-- [Forecasting dry spells](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/notebooks/mwi_technical_background_pilot.html)
+- [Identifying historical dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_historical_dry_spells_description.html)
+- [Baseline overview of factors relating to dry spells in Malawi](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_impact_summary.html)
+- [Forecasting dry spells](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_dry_spells_indicator_analyses.html)
 
 #### Bangladesh
 - [Analysis of satellite imagery to identify past flooding](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bgd/validation/summary_flooding.html)
@@ -98,3 +98,8 @@ The structure of the directory is as follows:
 ```
 The naming conventions for the data source directories are available in 
 [this spreadsheet](https://docs.google.com/spreadsheets/d/155buqH6hcox2IG54NSRkdIjiLcPDmrs6JcjwjdFFA8g/edit?usp=sharing)
+
+#### Development
+All code is formatted according to [black](https://github.com/psf/black) and [flake8](https://flake8.pycqa.org/en/latest/) guidelines. 
+The repo is set-up to use [pre-commit](https://github.com/pre-commit/pre-commit). So please run `pre-commit install` the first time you are editing. 
+Thereafter all commits will be checked against black and flake8 guidelines

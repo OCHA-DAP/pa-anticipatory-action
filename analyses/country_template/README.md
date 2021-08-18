@@ -1,6 +1,16 @@
 # [COUNTRY NAME] Anticipatory Action
 
-##  Table of Contents
+Indicate pilot status with one of the following badges. Provide 1-2 sentences of context and the date that this was last updated. 
+
+[![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20DEVELOPMENT-%23007CE0)](https://shields.io/)
+
+[![Generic badge](https://img.shields.io/badge/STATUS-ENDORSED-%231EBFB3)](https://shields.io/)
+
+[![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20REVISION-%23CCCCCC)](https://shields.io/)
+
+[![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23007CE0)](https://shields.io/) 
+
+##  Table of Contents [if necessary]
 1. [Background Information](#background-information)
 2. [Overview of analysis](#overview-of-analysis)
 3. [Data description](#data-description)
@@ -22,7 +32,7 @@ What is the basic process of the analysis contained within this repository?
 - Why were these datasets selected?
 - Are there any limitations with these datasets that one should be aware of when running the analysis and interpreting results?
 
-## Directory structure
+## Directory structure [if necessary]
 
 Modify the structure outlined below as needed. 
 
