@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst,Rmd
+  formats: ipynb,md:myst
   text_representation:
     extension: .md
     format_name: myst
@@ -101,7 +101,7 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-iri_ds, iri_transform = get_iri_data(config, download=False)
+iri_ds = get_iri_data(config, download=False)
 ```
 
 these are the variables of the forecast data, where C indicates the tercile (below-average, normal, or above-average).  
@@ -115,7 +115,7 @@ iri_ds
 :tags: [remove_cell]
 
 gdf_adm1=gpd.read_file(adm1_bound_path)
-iri_clip=iri_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(gdf_adm1.geometry.apply(mapping), iri_ds.rio.crs, all_touched=True)
+iri_clip=iri_ds.rio.clip(gdf_adm1.geometry.apply(mapping), iri_ds.rio.crs, all_touched=True)
 ```
 
 ```{code-cell} ipython3
@@ -242,14 +242,15 @@ for ax in g.axes.flat:
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-def interpolate_ds(ds,transform,upscale_factor):
+def interpolate_ds(ds,transform,upscale_factor,lon_coord="longitude",lat_coord="latitude"):
     # Interpolated data
-    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims["lon"] * upscale_factor)
-    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims["lat"] * upscale_factor)
+    new_lon = np.linspace(ds[lon_coord][0], ds[lon_coord][-1], ds.dims[lon_coord] * upscale_factor)
+    new_lat = np.linspace(ds[lat_coord][0], ds[lat_coord][-1], ds.dims[lat_coord] * upscale_factor)
 
     #choose nearest as interpolation method to assure no new values are introduced but instead old values are divided into smaller raster cells
-    dsi = ds.interp(lat=new_lat, lon=new_lon,method="nearest")
-#     transform_interp=transform*transform.scale(len(ds.lon)/len(dsi.lon),len(ds.lat)/len(dsi.lat))
+    #TODO: also change this to lat_coord and lon_coord somehow
+    dsi = ds.interp(latitude=new_lat, longitude=new_lon,method="nearest")
+#     transform_interp=transform*transform.scale(len(ds.longitude)/len(dsi.longitude),len(ds.latitude)/len(dsi.latitude))
     
     return dsi#, transform_interp
 ```
@@ -300,7 +301,7 @@ we select the region of interest, shown below
 :tags: [hide_input]
 
 #testing if correct area
-iri_interp_reg=iri_clip_interp.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.clip(gdf_reg.geometry.apply(mapping), iri_clip_interp.rio.crs, all_touched=False)
+iri_interp_reg=iri_clip_interp.rio.clip(gdf_reg.geometry.apply(mapping), iri_clip_interp.rio.crs, all_touched=False)
 g=iri_interp_reg.sel(L=1,C=0,F="2018-03").prob.plot(
     cmap=mpl.cm.YlOrRd, 
     cbar_kwargs={
@@ -319,7 +320,7 @@ ax.axis("off");
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-def compute_zonal_stats_xarray(raster,shapefile,lon_coord="lon",lat_coord="lat",var_name="prob"):
+def compute_zonal_stats_xarray(raster,shapefile,lon_coord="longitude",lat_coord="latitude",var_name="prob"):
     raster_clip=raster.rio.set_spatial_dims(x_dim=lon_coord,y_dim=lat_coord).rio.clip(shapefile.geometry.apply(mapping),raster.rio.crs,all_touched=False)
     grid_mean = raster_clip.mean(dim=[lon_coord,lat_coord]).rename({var_name: "mean_cell"})
     grid_min = raster_clip.min(dim=[lon_coord,lat_coord]).rename({var_name: "min_cell"})
