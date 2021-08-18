@@ -4,7 +4,7 @@ library(dplyr)
 library(gifski)
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
-bgd_dir <- paste0(data_dir, '/exploration/bangladesh')
+bgd_dir <- paste0(data_dir, '/private/exploration/bgd/to_organize')
 
 shp_adm <- st_read(paste0(bgd_dir, '/ADM_Shp/bgd_admbnda_adm4_bbs_20201113.shp'))
 shp_river <- st_read(paste0(bgd_dir, '/ADM_Shp/river_extent.shp'))
@@ -24,6 +24,6 @@ map <- tm_shape(shp_fs) + tm_fill(col='flooded_fraction', palette = 'GnBu', titl
             panel.label.bg.color = '#ffffff',
             panel.label.color = 'black')
 
-#tmap_animation(map, 'flood_time_series.gif', delay=75)
+tmap_animation(map, 'flood_time_series.gif', delay=75)
 
 

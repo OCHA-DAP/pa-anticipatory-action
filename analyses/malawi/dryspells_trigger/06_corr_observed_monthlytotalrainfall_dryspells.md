@@ -522,8 +522,8 @@ ax.get_legend().set_title("Dry spell occurred")
 
 ```python
 #compute tp,tn,fp,fn
-y_target =  df_southern_countmonth_decjanfeb.dry_spell
-threshold_list=np.arange(0,df_southern_countmonth_decjanfeb.mean_cell.max() - df_southern_countmonth_decjanfeb.mean_cell.max()%10,10)
+y_target =  df_comb_ds_4mm_southern_selm.dry_spell
+threshold_list=np.arange(0,df_comb_ds_4mm_southern_selm.mean_cell.max() - df_southern_countmonth_decjanfeb.mean_cell.max()%10,10)
 df_pr_decjanfeb=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
 for t in threshold_list:
     y_predicted = np.where(df_southern_countmonth_decjanfeb.mean_cell<=t,1,0)

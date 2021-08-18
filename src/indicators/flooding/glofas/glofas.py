@@ -95,11 +95,7 @@ class Glofas:
         cdsapi.Client().retrieve(
             name=self.cds_name,
             request=self._get_query(
-                area=area,
-                version=version,
-                year=year,
-                month=month,
-                leadtime=leadtime,
+                area=area, version=version, year=year, month=month, leadtime=leadtime,
             ),
             target=filepath,
         )
@@ -222,9 +218,7 @@ class Glofas:
         leadtime: [int, list] = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_iso3=country_iso3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=country_iso3, version=version, leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         # Netcdf seems to have problems overwriting; delete the file if
@@ -259,9 +253,7 @@ class Glofas:
         leadtime: [int, list] = None,
     ):
         filepath = self._get_processed_filepath(
-            country_iso3=country_iso3,
-            version=version,
-            leadtime=leadtime,
+            country_iso3=country_iso3, version=version, leadtime=leadtime,
         )
         return xr.load_dataset(filepath)
 
@@ -296,10 +288,7 @@ class GlofasReanalysis(Glofas):
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             super()._download(
-                country_iso3=country_iso3,
-                area=area,
-                year=year,
-                version=version,
+                country_iso3=country_iso3, area=area, year=year, version=version,
             )
 
     def process(
@@ -312,9 +301,7 @@ class GlofasReanalysis(Glofas):
         logger.info(f"Processing GloFAS Reanalysis v{version}")
         filepath_list = [
             self._get_raw_filepath(
-                country_iso3=country_iso3,
-                version=version,
-                year=year,
+                country_iso3=country_iso3, version=version, year=year,
             )
             for year in range(self.year_min, self.year_max + 1)
         ]
@@ -331,9 +318,7 @@ class GlofasReanalysis(Glofas):
             )
         # Write out the new dataset to a file
         self._write_to_processed_file(
-            country_iso3=country_iso3,
-            version=version,
-            ds=ds_new,
+            country_iso3=country_iso3, version=version, ds=ds_new,
         )
 
 
@@ -424,9 +409,7 @@ class GlofasForecastBase(Glofas):
             if not split_by_leadtimes:
                 coord_names += ["step"]
             ds_new = _get_station_dataset(
-                stations=stations,
-                ds=ds,
-                coord_names=coord_names,
+                stations=stations, ds=ds, coord_names=coord_names,
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(
