@@ -520,6 +520,9 @@ for l in unique_lt:
             df_pr_perlt_m.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
             df_pr_perlt_m.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
             df_pr_perlt_m.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
+            df_pr_perlt_m.loc[t,"num_dates"]=len(y_predicted)
+            df_pr_perlt_m.loc[t,"perc_trig"]=df_pr_perlt_m.loc[t,"num_trig"]/df_pr_perlt_m.loc[t,"num_dates"]
+            df_pr_perlt_m.loc[t,"rp"]=round(1/(df_pr_perlt_m.loc[t,"perc_trig"]+0.0001))
             df_pr_perlt_m.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
             df_pr_perlt_m.loc[t,"leadtime"]=int(l)
             df_pr_perlt_m.loc[t,"month"]=m
@@ -528,16 +531,119 @@ for l in unique_lt:
 df_pr_sep_lt_m=pd.concat(pr_list).sort_values(["leadtime","threshold"])
 df_pr_sep_lt_m.threshold=df_pr_sep_lt_m.threshold.astype(int)
 df_pr_sep_lt_m.leadtime=df_pr_sep_lt_m.leadtime.astype(int)
-df_pr_sep_lt_m["detection_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{int(x.month_ds)}% ({int(x.tp)}/{int(x.tp+x.fn)})",axis=1)
+df_pr_sep_lt_m["detection_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_ds)}% ({int(x.tp)}/{int(x.tp+x.fn)})",axis=1)
 df_pr_sep_lt_m["false_alarm_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_false_alarm_rate)}% ({int(x.fp)}/{int(x.tp+x.fp)})",axis=1)
+df_pr_sep_lt_m["return_period"]=df_pr_sep_lt_m.apply(lambda x: f"1/{int(x.rp)} years ({int(x.num_trig)}/{int(x.num_dates)})",axis=1)
 ```
 
 ```python
-df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin([2,4]))][["month","threshold","leadtime","detection_rate","false_alarm_rate"]].sort_values(["month","leadtime","threshold"])
+df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin([2,4]))][["month","threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["month","leadtime","threshold"])
 ```
 
 ```python
+df_pr_sep_lt_m_sel.head()
+```
+
+```python
+# df_pr_sep_lt_m_sel=df_pr_sep_lt_m_sel.replace("1/10000 years (0/20)","-")
 # df_pr_sep_lt_m_sel.to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_detect_falsealarm_thresholds_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
+```
+
+```python
+#compute the statistics per year. 
+# It is only looked at if during any of the months in the year a dry spell was observed 
+# and/or forecasted precipitation was below the threshold
+# i.e. the months don't have to match
+df_ds_for["year"]=df_ds_for.date_month.dt.year
+pr_list=[]
+threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+unique_lt=df_ds_for.leadtime.unique()
+
+for m in unique_lt:
+    df_pr_year_perlt=pd.DataFrame(threshold_list,columns=["threshold"]).set_index(['threshold'])
+    df_ds_for_lt=df_ds_for[df_ds_for.leadtime==m]
+    
+    
+    for t in threshold_list:
+        df_ds_for_lt["below_th"]=np.where(df_ds_for_lt.mean_cell<=t,1,0)
+        df_ds_for_lt_year=df_ds_for_lt.groupby("year").max()
+        y_target =  df_ds_for_lt_year.dry_spell
+        y_predicted = df_ds_for_lt_year.below_th
+
+        cm = confusion_matrix(y_target=y_target, 
+                              y_predicted=y_predicted)
+        tn,fp,fn,tp=cm.flatten()
+        df_pr_year_perlt.loc[t,["precision","recall","num_trig","detection_rate"]]=tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+        df_pr_year_perlt.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
+        df_pr_year_perlt.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+        df_pr_year_perlt.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+        df_pr_year_perlt.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
+        df_pr_year_perlt.loc[t,"num_dates"]=len(y_predicted)
+        df_pr_year_perlt.loc[t,"perc_trig"]=df_pr_year_perlt.loc[t,"num_trig"]/df_pr_year_perlt.loc[t,"num_dates"]
+        df_pr_year_perlt.loc[t,"rp"]=round(1/(df_pr_year_perlt.loc[t,"perc_trig"]+0.0001))
+        df_pr_year_perlt.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
+        df_pr_year_perlt.loc[t,"leadtime"]=m
+    df_pr_year_perlt=df_pr_year_perlt.reset_index()
+    pr_list.append(df_pr_year_perlt)
+df_pr_year_sep_lt=pd.concat(pr_list).sort_values(["leadtime","threshold"])
+df_pr_year_sep_lt.threshold=df_pr_year_sep_lt.threshold.astype(int)
+df_pr_year_sep_lt.leadtime=df_pr_year_sep_lt.leadtime.astype(int)
+df_pr_year_sep_lt["detection_rate"]=df_pr_year_sep_lt.apply(lambda x: f"{math.ceil(x.month_ds)}% ({int(x.tp)}/{int(x.tp+x.fn)})",axis=1)
+df_pr_year_sep_lt["false_alarm_rate"]=df_pr_year_sep_lt.apply(lambda x: f"{math.ceil(x.month_false_alarm_rate)}% ({int(x.fp)}/{int(x.tp+x.fp)})",axis=1)
+df_pr_year_sep_lt["return_period"]=df_pr_year_sep_lt.apply(lambda x: f"1/{int(x.rp)} years ({int(x.num_trig)}/{int(x.num_dates)})",axis=1)
+```
+
+```python
+df_pr_year_sep_lt_sel=df_pr_year_sep_lt[(df_pr_year_sep_lt.threshold>=160)&(df_pr_year_sep_lt.threshold<=220)&(df_pr_year_sep_lt.leadtime.isin([2,4]))][["threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["leadtime","threshold"])
+```
+
+```python
+df_pr_year_sep_lt_sel
+```
+
+```python
+# df_pr_year_sep_lt_sel.leadtime=df_pr_year_sep_lt_sel.leadtime-1
+# df_pr_year_sep_lt_sel.to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_detect_falsealarm_thresholds_perc_{int(probability*100)}_{adm_str}_peryear.csv"),index=False)
+```
+
+```python
+#same but now also separated by month instead of only by leadtime
+pr_list=[]
+threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+unique_lt=df_ds_for.leadtime.unique()
+unique_months=df_ds_for.month_name.unique()
+
+for l in unique_lt:
+    for m in unique_months:
+        df_pr_perlt_m=pd.DataFrame(threshold_list,columns=["threshold"]).set_index(['threshold'])
+        df_ds_for_lt_m=df_ds_for[(df_ds_for.leadtime==l)&(df_ds_for.month_name==m)]
+        y_target =  df_ds_for_lt_m.dry_spell
+
+        for t in threshold_list:
+            y_predicted = np.where(df_ds_for_lt_m.mean_cell<=t,1,0)
+
+            cm = confusion_matrix(y_target=y_target, 
+                                  y_predicted=y_predicted)
+            tn,fp,fn,tp=cm.flatten()
+            df_pr_perlt_m.loc[t,["precision","recall","num_trig","detection_rate"]]=tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
+            df_pr_perlt_m.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
+            df_pr_perlt_m.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+            df_pr_perlt_m.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+            df_pr_perlt_m.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
+            df_pr_perlt_m.loc[t,"num_dates"]=len(y_predicted)
+            df_pr_perlt_m.loc[t,"perc_trig"]=df_pr_perlt_m.loc[t,"num_trig"]/df_pr_perlt_m.loc[t,"num_dates"]
+            df_pr_perlt_m.loc[t,"rp"]=round(1/(df_pr_perlt_m.loc[t,"perc_trig"]+0.0001))
+            df_pr_perlt_m.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
+            df_pr_perlt_m.loc[t,"leadtime"]=int(l)
+            df_pr_perlt_m.loc[t,"month"]=m
+        df_pr_perlt_m=df_pr_perlt_m.reset_index()
+        pr_list.append(df_pr_perlt_m)
+df_pr_sep_lt_m=pd.concat(pr_list).sort_values(["leadtime","threshold"])
+df_pr_sep_lt_m.threshold=df_pr_sep_lt_m.threshold.astype(int)
+df_pr_sep_lt_m.leadtime=df_pr_sep_lt_m.leadtime.astype(int)
+df_pr_sep_lt_m["detection_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_ds)}% ({int(x.tp)}/{int(x.tp+x.fn)})",axis=1)
+df_pr_sep_lt_m["false_alarm_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_false_alarm_rate)}% ({int(x.fp)}/{int(x.tp+x.fp)})",axis=1)
+df_pr_sep_lt_m["return_period"]=df_pr_sep_lt_m.apply(lambda x: f"1/{int(x.rp)} years ({int(x.num_trig)}/{int(x.num_dates)})",axis=1)
 ```
 
 #### Set threshold and compute performance
