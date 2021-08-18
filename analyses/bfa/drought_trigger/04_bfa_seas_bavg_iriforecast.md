@@ -555,6 +555,14 @@ stats_jul[stats_jul["40th_bavg_cell"]>=10]
 ```
 
 ```{code-cell} ipython3
+stats_mar
+```
+
+```{code-cell} ipython3
+stats_jul
+```
+
+```{code-cell} ipython3
 #across all months with leadtime_mar
 stats_region_bavg_ltmar=stats_region_bavg.loc[(stats_region_bavg.L==leadtime_mar)]
 stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"]>=10]
