@@ -94,7 +94,6 @@ for code, station, in stations_adm2.items():
                 for ix, leadtime in enumerate(LEADTIMES):
                     glofas_reforecast_sel = (
                         ds_glofas_reforecast_summary[code]
-                        #.shift(time=-leadtime) # TODO: I'm actually a bit unsure of whether this shift needs to happen or not...
                         .sel(leadtime=leadtime)
                         .sel(percentile=forecast_probability)
                         .sel(time=slice(glofas_start_date, glofas_end_date))
