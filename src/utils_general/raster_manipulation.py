@@ -3,8 +3,6 @@ import geopandas as gpd
 import pandas as pd
 import xarray as xr
 from typing import List
-import numpy as np
-from rasterstats import zonal_stats
 import rioxarray  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -102,54 +100,6 @@ def fix_calendar(ds, timevar="F"):
 
 
 def compute_raster_statistics(
-    gdf: gpd.GeoDataFrame,
-    raster_array: xr.DataArray,
-    stats_list: List[str] = None,
-    percentile_list: List[float] = None,
-    all_touched: bool = False,
-):
-    """
-    Compute statistics of the raster_array per geographical region
-    defined in the boundary_path file. The raster_array has to be 2D
-    :param gdf: geodataframe containing a row per area for which
-    the stats are computed
-    :param raster_array: DataArray containing the raster data.
-    Needs to have a CRS.
-    Should not be a DataSet but DataArray and should be 2D
-    :param stats_list: list with function names indicating
-    which stats to compute
-    :param percentile_list: list with floats ranging from 0 to 100
-    indicating which percentiles to compute
-    :param all_touched: if False, only cells with their centre within the
-    region will be included when computing the stat.
-    If True all cells touching the region will be included.
-    :return: dataframe containing the computed statistics
-    """
-
-    if stats_list is None:
-        stats_list = ["mean", "std", "min", "max", "sum", "count"]
-
-    if percentile_list is not None:
-        percentile_list_str = " ".join(
-            [f"percentile_{str(p)}" for p in percentile_list]
-        )
-        stats_list.append(percentile_list_str)
-
-    df_zonal_stats = pd.DataFrame(
-        zonal_stats(
-            vectors=gdf,
-            raster=raster_array.values,
-            affine=raster_array.rio.transform(),
-            stats=stats_list,
-            nodata=np.nan,
-            all_touched=all_touched,
-        )
-    )
-
-    return df_zonal_stats
-
-
-def compute_raster_statistics_clip(
     gdf: gpd.GeoDataFrame,
     bound_col: str,
     raster_array: xr.DataArray,

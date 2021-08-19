@@ -1,7 +1,7 @@
 import xarray as xr
 import pandas as pd
 from src.utils_general.raster_manipulation import (
-    compute_raster_statistics_clip,
+    compute_raster_statistics,
 )
 from shapely.geometry import Polygon
 from pandas._testing import assert_frame_equal
@@ -24,7 +24,7 @@ def test_compute_raster_statistics():
     }
     gdf = gpd.GeoDataFrame(d)
 
-    df_stats = compute_raster_statistics_clip(
+    df_stats = compute_raster_statistics(
         gdf, "name", da, stats_list=["min", "max", "mean", "count", "sum"]
     )
     df_expected = pd.DataFrame(
