@@ -8,7 +8,7 @@ library(tidyverse)
 library(ztable)
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
-bfa_dir <- paste0(data_dir, '/raw/burkina_faso/')
+bfa_dir <- paste0(data_dir, '/public/exploration/bfa/')
 
 # UNIT OF ANALYSIS = ADM1 (Region)
 # 13 regions in total

@@ -24,7 +24,7 @@ Analysis last updated `r Sys.Date()`
 <br>
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
-source("../notebooks/01_data_summary.R")
+source("../drought_trigger/01_data_summary.R")
 library(kableExtra)
 library(knitr)
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
