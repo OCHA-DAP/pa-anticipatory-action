@@ -8,7 +8,7 @@ Indicate pilot status with one of the following badges. Provide 1-2 sentences of
 
 [![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20REVISION-%23CCCCCC)](https://shields.io/)
 
-[![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23007CE0)](https://shields.io/) 
+[![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23F2645A)](https://shields.io/) 
 
 ##  Table of Contents [if necessary]
 1. [Background Information](#background-information)
