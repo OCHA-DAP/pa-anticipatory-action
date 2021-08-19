@@ -1,6 +1,6 @@
 # CERF Anticipatory Action Pilot in South Sudan
 
- [![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23007CE0)](https://shields.io/) 
+ [![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23F2645A)](https://shields.io/) 
 
  Initial exploration of data done in April 2021. 
  Currently the analytical work is on hold.  
