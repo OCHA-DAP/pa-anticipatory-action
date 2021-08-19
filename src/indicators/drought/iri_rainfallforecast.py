@@ -90,7 +90,9 @@ def clean_iri_data(
 
     if os.path.exists(output_path):
         os.remove(output_path)
-
+    # The Coordinate Reference System (CRS) is EPSG:4326 but this isn't
+    # included in the attributes, so add
+    iri_ds.rio.write_crs(config.IRI_CRS, inplace=True)
     iri_ds.to_netcdf(output_path)
 
 
@@ -124,11 +126,5 @@ def get_iri_data(
         clean_iri_data(iri_filepath_raw, iri_filepath_clean, config)
 
     iri_ds = xr.open_dataset(iri_filepath_clean)
-    # The iri data is in EPSG:4326 but this isn't included in the
-    # filedata (at least from experience) This Coordinate Reference
-    # System (CRS) information is later on needed
-    # for some reason it doesn't work to write this to a file,
-    # so add it when opening the dataset
-    iri_ds = iri_ds.rio.write_crs(config.IRI_CRS)
 
     return iri_ds
