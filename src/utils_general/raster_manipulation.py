@@ -112,7 +112,9 @@ def compute_raster_statistics(
 ):
     """
     Compute statistics of the raster_array per geographical region
-    defined in the boundary_path file
+    defined in the gdf
+    the area covered by the gdf should be a subset of that
+    covered by raster_array
     :param gdf: geodataframe containing a row per area for which
     the stats are computed
     :param bound_col: name of the column containing the region names
