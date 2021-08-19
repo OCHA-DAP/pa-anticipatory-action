@@ -42,5 +42,7 @@ def test_compute_raster_statistics():
     # is not needed
     assert_frame_equal(df_stats, df_expected, check_dtype=False)
 
-
-# test that sum/count is conserved
+    # only should apply in cases the gdf exactly covers
+    # the da, which is with this test data
+    sum_gdf = 21
+    assert df_stats["sum_name"].sum() == sum_gdf
