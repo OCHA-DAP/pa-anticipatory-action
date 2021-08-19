@@ -190,7 +190,6 @@ def compute_raster_statistics_clip(
         da_clip = raster_array.rio.set_spatial_dims(
             x_dim=lon_coord, y_dim=lat_coord
         ).rio.clip(gdf_adm[geom_col], all_touched=all_touched)
-
         if stats_list is None:
             stats_list = ["mean", "std", "min", "max", "sum", "count"]
 
@@ -212,7 +211,6 @@ def compute_raster_statistics_clip(
                 )
             grid_stat = grid_stat.rename(f"{s}_{bound_col}")
             grid_stat_all.append(grid_stat)
-            print(grid_stat.values)
         if percentile_list is not None:
             for q in percentile_list:
                 grid_quant = da_clip.quantile(q, dim=[lon_coord, lat_coord])
@@ -220,12 +218,18 @@ def compute_raster_statistics_clip(
                     f"{q}quant_{bound_col}"
                 )
                 grid_stat_all.append(grid_quant)
-
-        zonal_stats_xr = xr.merge(grid_stat_all)
-        print(zonal_stats_xr)
-        df_adm = zonal_stats_xr.to_dataframe().reset_index()
+        # if dims is 0, it throws an error when merging
+        # and then converting to a df
+        # this occurs when the input da is 2D
+        if grid_stat_all[0].dims == ():
+            df_adm = pd.DataFrame(
+                {da_stat.name: [da_stat.values] for da_stat in grid_stat_all}
+            )
+        else:
+            zonal_stats_xr = xr.merge(grid_stat_all)
+            df_adm = zonal_stats_xr.to_dataframe().reset_index()
         df_adm[bound_col] = a
         df_list.append(df_adm)
 
-    df_zonal_stats = pd.concat(df_list)
+    df_zonal_stats = pd.concat(df_list).reset_index(drop=True)
     return df_zonal_stats
