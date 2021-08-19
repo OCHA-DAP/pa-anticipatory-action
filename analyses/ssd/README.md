@@ -14,7 +14,7 @@
  ## Overview of analysis
  The analysis explores the monthly precipiation in ADMIN1 regions in South Sudan. 
  It then makes a first attempt to link this to the extent of flooded area. 
- An overview of the analysis can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/analyses/ssd/docs/ssd_doc_corr_floodscan_monthlyprecip.html), 
+ An overview of the analysis can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/ssd/docs/ssd_doc_corr_floodscan_monthlyprecip.html), 
  which is produced from the files in `docs`. 
 
  ## Data description
