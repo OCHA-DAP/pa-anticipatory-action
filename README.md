@@ -56,7 +56,9 @@ Create a virtual environment and install the requirements with
    ``` bash
    pip install -r requirements.txt
    ```
-If an error occurs you might have to install spatialindex, on MacOS this can be done with `brew install spatialindex`
+If an error occurs you might have to install spatialindex, on MacOS this can be done with `brew install spatialindex`. 
+
+Many scripts will also require access to the [Climate Data Store](https://cds.climate.copernicus.eu/cdsapp#!/home). Set up instructions can be found [here](https://cds.climate.copernicus.eu/api-how-to).
 
 The indicators and analyses folders contain more specific information on the data, processing and how to run the scripts. 
 
