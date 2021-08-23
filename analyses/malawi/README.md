@@ -6,6 +6,42 @@ Two types of shocks to anticipate to are explored:
 
 ## Dry spells
 
+[![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20REVISION-%23CCCCCC)](https://shields.io/)
+
+A trigger has been proposed and is currently under revision by the larger Anticipatory Action team. 
+
+Last update: Aug 2021
+
+### Background information
+In Malawi the pilot is focussed on two shocks, of which one is dry spells. For the trigger, a dry spell is defined as
+a period of 14 consecutive days with no more than 2 millimiters of cumulative precipitation. 
+
+The first step of the trigger development was to create a historical dataset of dry spells. 
+Thereafter the correlation of dry spells with several **observed** indicators was explored. 
+Based on this exploration the correlation of forecasts and dry spells was explored. 
+
+Based on these results it was chosen to use ECMWF's seasonal forecast, 
+which forecast total precipitation per month. 
+
+### Overview of analysis 
+The historical dataset is described [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_historical_dry_spells_description.html).
+An overview on the work of linking historical dry spells to impact indicators can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_impact_summary.html) 
+Most of the code in this directory is aimed to understand the correlation of dry spells and 
+observed and forecasted meteorological indicators is described in this [summary document](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_dry_spells_indicator_analyses.html).  
+
+The scripts and notebooks feeding into these written summaries can be found in `dryspells_trigger` 
+where the files are numbered based on the flow of the summary document.  
+
+### Data description
+As source for observational data, [CHIRPS](https://www.chc.ucsb.edu/data/chirps) was used. 
+This data is publicly available. It is updated every month but has a daily frequency.
+The final forecasting source that is used for the trigger is ECMWF's seasonal forecast. 
+This data is openly available through [Copernicus](https://cds.climate.copernicus.eu/cdsapp#!/dataset/seasonal-monthly-single-levels?tab=overview). 
+It is updated every month and provides monthly precipitation for 0 to 5 months ahead. 
+Other data sources included ENSO, CHIRPSGEFS and ARC2. References to these can be found in the summary document. 
+
+### Reproducing this analysis
+Make sure to have the CHIRPS and ECMWF data clipped to Malawi, for which scripts can be found in `src/malawi`
 
 ## Flooding
 
