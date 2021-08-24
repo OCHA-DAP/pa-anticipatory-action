@@ -1,4 +1,4 @@
-# CERF Anticipatory Action Pilot in Burkina Faso
+# Burkina Faso Anticipatory Action
 
 [![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20DEVELOPMENT-%23007CE0)](https://shields.io/)
 
