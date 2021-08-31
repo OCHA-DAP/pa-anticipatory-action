@@ -4,15 +4,16 @@
 
 ## Background information
 
+Work on the Bangladesh pilot began in early 2020. 
 Building on the work by individual agencies, such as the IFRC, WFP, FAO 
-and NGOs, the pilot will methodologically combine three components, 
+and NGOs, the pilot has methodologically combined three components, 
 scaling-up anticipatory humanitarian action in Bangladesh:
 
 i) A robust forecasting embedded in a clear decision-making process 
-(the model). The pilot will use a government run and endorsed early warning 
-system, combining a 10-day probabilistic flood forecast for operational 
+(the model). The pilot uses a government run and endorsed early warning 
+system, combining a 15-day probabilistic flood forecast for operational 
 readiness and a 5-day deterministic flood forecast for activation of 
-anticipatory action. This trigger has been successfully used by IFRC and 
+anticipatory action. A similar trigger has been successfully used by IFRC and 
 WFP in the past.
   
 ii) Pre-agreed, coordinated, multi-sectoral actions that can fundamentally 
@@ -20,38 +21,58 @@ alter the trajectory of the crisis (the action plan). Given the short lead
 times of the forecasts, cash is a major component of the pilot. Bringing 
 together the reach of WFP and IFRC (through the BDRCS), up to 70,000 
 households could receive $53 each about 5 days ahead of a flood. In addition, 
-FAO would preposition animal fodder and vaccinate livestock against waterborne 
-diseases. UNFPA would distribute dignity and hygiene kits, and communication 
+FAO will preposition animal fodder and vaccinate livestock against waterborne 
+diseases. UNFPA will distribute dignity and hygiene kits, and communication 
 material preventing sexual and gender-based violence. In the future, other 
 actions could be integrated, including better early warning systems or 
-prepositioning of essential medicine. Unfortunately, due to COVID-19, these 
-options were deemed unrealistic for the upcoming monsoon season. An inter-agency 
-lens would be applied to determining the selection criteria for beneficiaries 
+prepositioning of essential medicine. An inter-agency 
+lens is applied to determining the selection criteria for beneficiaries 
 to ensure the most vulnerable people benefit from the anticipatory action.
 
 iii) Pre-arranged finance (the money).
-CERF set aside around $5 million [pending final plan and confirmation] for 
-anticipatory action for floods in Bangladesh. This funding will become 
-available immediately once the defined trigger is reached to active the 
-actions described above. In addition, the pilot seeks to amplify and coordinate 
-similar anticipatory action pilots at the agency scale, including from WFP, 
+CERF has set aside around $5 million annually for anticipatory action for floods in Bangladesh. 
+This funding will become available immediately once the defined trigger is reached 
+to activate the actions described above. In addition, the pilot seeks to amplify 
+and coordinate similar anticipatory action pilots at the agency scale, including from WFP, 
 IFRC, and others.
+
+On 4 July 2020, the readiness trigger was activated, and CERF
+[released $5.2 million](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/)
+to FAO, WFP, and UNFPA. The action trigger was activated several
+days later, allowing the organizations to provide aid to 200,000
+before peak flooding was reached.
 
 ## Overview of analysis
 
 The analysis within this repository contains two components. 
 
-1. **Trigger analysis**: Processing FFWC and GLOFAS forecasting data, 
-   used to trigger this pilot's anticipatory action. 
-2. **Pilot evaluation**: Calculating historical estimates of flooding 
-   extent over time in five high priority districts (Bogra, Gaibandha, 
-   Jamalpur, Kurigram, Sirajganj). This work is largely based on an analysis 
-   of Sentinel-1 SAR imagery in Google Earth Engine, accessible 
-   [here](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). 
-   This imagery processing methodology is adapted from 
-   [guidance from the UN-SPIDER Knowledge Portal](https://un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step). The results of the historical flood analysis are summarized in [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bangladesh/validation/summary_flooding.html).
+### 1. Trigger analysis 
+
+Processing FFWC and GLOFAS forecasting data, 
+used to trigger this pilot's anticipatory action. 
+
+### 2. Pilot evaluation 
+
+Calculating historical estimates of flooding 
+extent over time in five high priority districts (Bogra, Gaibandha, 
+Jamalpur, Kurigram, Sirajganj). This work is largely based on an analysis 
+of Sentinel-1 SAR imagery in Google Earth Engine, accessible 
+[here](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). 
+This imagery processing methodology is adapted from 
+[guidance from the UN-SPIDER Knowledge Portal](https://un-spider.org/advisory-support/recommended-practices/recommended-practice-google-earth-engine-flood-mapping/step-by-step). The results of the historical flood analysis are summarized in [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bangladesh/validation/summary_flooding.html).
 
 ## Data description
+
+### 1. Trigger analysis
+
+All [GloFAS](https://www.globalfloods.eu/) was downloaded from the
+[Climate Data Store](https://cds.climate.copernicus.eu/#!/home),
+see the section on [reproducing the analysis](#reproducing-this-analysis)
+
+The FFWC data has been provided to us privately and unfortunately is
+not public at this time. 
+
+### 2. Pilot evaluation
 
 All input and output files are stored in a private Google Drive folder. 
 We're working to make part of this publicly available.
@@ -67,13 +88,31 @@ The content within this repository is structured as follows:
 │   └── config.yml             <- Parameters to configure the analysis
 │
 ├── trigger_development       <- Scripts related to the trigger analysis
-│
+│   ├── utils             
+│   │   └── utils.py          <- Utiltiy methods for the trigger development scripts and notebooks 
+│   ├── 01_get_glofas_data.py  <- [defunct] Download GloFAS data
+│   ├── 02_glofas_prediction_error.py <- Plot the forecast error 
+│   ├── 03_historical_validation_triggers.py <- Compare GloFAS model with past events 
+│   ├── 04_glofas_station_comparison.py <- Determine time between stations along Jamuna river
+│   ├── 05_trigger_analysis.md <- More detailed analysis of event coincidence with GloFAS peaks
+│   ├── 06_glofas_skill.md     <- Detailed GloFAS model skill evaluation
+│   ├── 07_ffwc_river_discharge.md <- Comparison of FFWC and GloFAS river discharge
+│   └── 08_glofas_model_update.md  <- Revised analysis with GloFAS v3
 └── README.md                 <- Description of this project
 ```
 
 ## Reproducing this analysis 
 
-#### Historical flooding analysis
+### 1. Trigger analysis
+
+Prepare your setup according to the 
+[top-level README](https://github.com/OCHA-DAP/pa-anticipatory-action#getting-started)
+(install requirements, create data directory environment variable).
+Run `python src/bangladesh/get_glofas_data.py` and 
+`python src/bangladesh/get_glofas_data_old_model.py` to dowqnload and process the
+GloFAS model v3 and v2 data, respectively. 
+
+### 2. Pilot evaluation
 
 1. Generate shapefiles that delineate flood extent over time using 
    [this Google Earth Engine Script](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). 
@@ -111,4 +150,3 @@ The content within this repository is structured as follows:
    ```
    python analyses/bangladesh/pilot_evaluation/scripts/make_plots.py
    ```
-
