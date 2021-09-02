@@ -1,4 +1,3 @@
-import unittest
 from unittest import mock
 from pathlib import Path
 
@@ -30,8 +29,8 @@ def test_expand_dims():
 @mock.patch("src.indicators.flooding.glofas.glofas.cdsapi.Client.retrieve")
 @mock.patch("src.indicators.flooding.glofas.glofas.Path.mkdir")
 @mock.patch.object(glofas, "DATA_DIR", Path("/tmp"))
-class TestDownload(unittest.TestCase):
-    def setUp(self):
+class TestDownload:
+    def setup_class(self):
         self.country_iso3 = "abc"
         self.area = Area(north=1, south=-2, east=3, west=-4)
         self.year = 2000
