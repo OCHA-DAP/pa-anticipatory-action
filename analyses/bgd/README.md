@@ -2,6 +2,9 @@
 
 [![Generic badge](https://img.shields.io/badge/STATUS-ENDORSED-%231EBFB3)](https://shields.io/)
 
+Activated in July 2020, monitored in 2021.
+Last updated: Sep 2021
+
 ## Background information
 
 Work on the Bangladesh pilot began in early 2020. 
@@ -86,19 +89,9 @@ The content within this repository is structured as follows:
 │   ├── notebooks              <- Notebooks with 'one-off' analyses
 │   ├── scripts                <- Reusable scripts
 │   └── config.yml             <- Parameters to configure the analysis
-│
-├── trigger_development       <- Scripts related to the trigger analysis
-│   ├── utils             
-│   │   └── utils.py          <- Utiltiy methods for the trigger development scripts and notebooks 
-│   ├── 01_get_glofas_data.py  <- [defunct] Download GloFAS data
-│   ├── 02_glofas_prediction_error.py <- Plot the forecast error 
-│   ├── 03_historical_validation_triggers.py <- Compare GloFAS model with past events 
-│   ├── 04_glofas_station_comparison.py <- Determine time between stations along Jamuna river
-│   ├── 05_trigger_analysis.md <- More detailed analysis of event coincidence with GloFAS peaks
-│   ├── 06_glofas_skill.md     <- Detailed GloFAS model skill evaluation
-│   ├── 07_ffwc_river_discharge.md <- Comparison of FFWC and GloFAS river discharge
-│   └── 08_glofas_model_update.md  <- Revised analysis with GloFAS v3
-└── README.md                 <- Description of this project
+├── trigger_development        <- Scripts related to the trigger analysis
+│   └── utils                  <- Utiltiy methods for the trigger development scripts and notebooks 
+└── README.md                  <- Description of this project
 ```
 
 ## Reproducing this analysis 
