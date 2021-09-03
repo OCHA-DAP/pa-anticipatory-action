@@ -173,37 +173,47 @@ class TestProcess:
         self.station_name = "fake_station"
         self.stations = {self.station_name: Station(lon=5.05, lat=10.05)}
         self.leadtimes = [10, 20]
-        self.raw_data = TestProcess.get_raw_data()
 
     @staticmethod
-    def get_raw_data():
+    def get_raw_data(
+        number_coord=None, include_step=False, include_history=False
+    ):
         rng = np.random.default_rng(12345)
-        # define data with variable attributes
-        coords = {
-            "latitude": [10.15, 10.05, 9.95],
-            "longitude": [4.95, 5.05, 5.25, 5.35],
-            "time": pd.date_range("2014-09-06", periods=2),
-        }
-        dis24 = 5000 + 100 * rng.random(
-            [len(coord) for coord in coords.values()]
-        )
-        return xr.Dataset(
-            {"dis24": (list(coords.keys()), dis24)}, coords=coords
-        )
+        coords = {}
+        if number_coord is not None:
+            coords["number"] = number_coord
+        coords["time"] = pd.date_range("2014-09-06", periods=2)
+        if include_step:
+            coords["step"] = [np.datetime64(n + 1, "D") for n in range(5)]
+        coords["latitude"] = [10.15, 10.05, 9.95]
+        coords["longitude"] = [4.95, 5.05, 5.25, 5.35]
+        dims = list(coords.keys())
+        if number_coord is not None and isinstance(number_coord, int):
+            dims = dims[1:]
+        dis24 = 5000 + 100 * rng.random([len(coords[dim]) for dim in dims])
+        attrs = {}
+        if include_history:
+            attrs = {"history": "fake history"}
+        return xr.Dataset({"dis24": (dims, dis24)}, coords=coords, attrs=attrs)
 
-    def get_processed_data(self):
-        # define data with variable attributes
+    def get_processed_data(self, number_coord=None, include_step=False):
+        raw_data = TestProcess.get_raw_data(include_step)
         station = self.stations[self.station_name]
-        dis24 = self.raw_data["dis24"].sel(
+        dis24 = raw_data["dis24"].sel(
             longitude=station.lon, latitude=station.lat, method="nearest"
         )
-        coords = {"time": self.raw_data.time}
+        coords = {}
+        if number_coord is not None:
+            coords = {"number": number_coord}
+        coords["time"] = raw_data.time
+        if include_step:
+            coords["step"] = raw_data.step()
         return xr.Dataset(
             {self.station_name: (list(coords.keys()), dis24)}, coords=coords
         )
 
     def test_reanalysis_process(self, fake_open_mfdataset):
-        fake_open_mfdataset.return_value = self.raw_data
+        fake_open_mfdataset.return_value = self.get_raw_data()
         glofas_reanalysis = glofas.GlofasReanalysis()
         glofas_reanalysis.year_min, glofas_reanalysis.year_max = (2000, 2001)
         output_filepath = glofas_reanalysis.process(
@@ -212,3 +222,34 @@ class TestProcess:
         )
         output_ds = xr.load_dataset(output_filepath)
         assert output_ds.equals(self.get_processed_data())
+
+    def test_reforecast_process(self, fake_open_mfdataset):
+        # First return control forecast (cf), which only has one ensemble
+        # member, then return perturbed forecast (pf) with several
+        fake_open_mfdataset.side_effect = [
+            TestProcess.get_raw_data(
+                number_coord=0, include_step=True, include_history=True
+            ),
+            TestProcess.get_raw_data(
+                number_coord=[1, 2, 3, 4, 5, 6],
+                include_step=True,
+                include_history=True,
+            ),
+        ]
+        glofas_reforecast = glofas.GlofasReforecast()
+        glofas_reforecast.year_min, glofas_reforecast.year_max = (
+            {3: 2000},
+            2001,
+        )
+        output_filepath = glofas_reforecast.process(
+            country_iso3=self.country_iso3,
+            stations=self.stations,
+            leadtimes=self.leadtimes,
+        )
+        print(output_filepath)
+        output_ds = xr.load_dataset(output_filepath)
+        assert output_ds.equals(
+            self.get_processed_data(
+                number_coord=[0, 1, 2, 3, 4, 5, 6, 7], include_step=True
+            )
+        )
