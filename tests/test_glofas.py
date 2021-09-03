@@ -3,9 +3,13 @@ from pathlib import Path
 
 import numpy as np
 import xarray as xr
+import pandas as pd
 
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import Area
+from src.indicators.flooding.glofas.area import Area, Station
+
+
+TMP_PATH = Path("/tmp")
 
 
 def test_expand_dims():
@@ -28,13 +32,13 @@ def test_expand_dims():
 
 @mock.patch("src.indicators.flooding.glofas.glofas.cdsapi.Client.retrieve")
 @mock.patch("src.indicators.flooding.glofas.glofas.Path.mkdir")
-@mock.patch.object(glofas, "DATA_DIR", Path("/tmp"))
+@mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 class TestDownload:
     def setup_class(self):
         self.country_iso3 = "abc"
         self.area = Area(north=1, south=-2, east=3, west=-4)
         self.year = 2000
-        self.leadtime = [10, 20]
+        self.leadtimes = [10, 20]
         self.expected_area = [1.05, -4.05, -2.05, 3.05]
         self.expected_months = [str(x + 1).zfill(2) for x in range(12)]
         self.expected_days = [str(x + 1).zfill(2) for x in range(31)]
@@ -74,7 +78,7 @@ class TestDownload:
         glofas_forecast.download(
             country_iso3=self.country_iso3,
             area=self.area,
-            leadtimes=self.leadtime,
+            leadtimes=self.leadtimes,
             year_min=self.year,
             year_max=self.year,
         )
@@ -133,7 +137,7 @@ class TestDownload:
         glofas_reforecast.download(
             country_iso3=self.country_iso3,
             area=self.area,
-            leadtimes=self.leadtime,
+            leadtimes=self.leadtimes,
             year_min=self.year,
             year_max=self.year,
         )
@@ -146,7 +150,7 @@ class TestDownload:
         glofas_reforecast.download(
             country_iso3=self.country_iso3,
             area=self.area,
-            leadtimes=self.leadtime[:1],
+            leadtimes=self.leadtimes[:1],
             year_min=self.year,
             year_max=self.year,
             split_by_leadtimes=True,
@@ -159,3 +163,52 @@ class TestDownload:
             f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000_lt10d.grib"
         )
         fake_retrieve.assert_called_with(**expected_args)
+
+
+@mock.patch("src.indicators.flooding.glofas.glofas.xr.open_mfdataset")
+@mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
+class TestProcess:
+    def setup_class(self):
+        self.country_iso3 = "abc"
+        self.station_name = "fake_station"
+        self.stations = {self.station_name: Station(lon=5.05, lat=10.05)}
+        self.leadtimes = [10, 20]
+        self.raw_data = TestProcess.get_raw_data()
+
+    @staticmethod
+    def get_raw_data():
+        rng = np.random.default_rng(12345)
+        # define data with variable attributes
+        coords = {
+            "latitude": [10.15, 10.05, 9.95],
+            "longitude": [4.95, 5.05, 5.25, 5.35],
+            "time": pd.date_range("2014-09-06", periods=2),
+        }
+        dis24 = 5000 + 100 * rng.random(
+            [len(coord) for coord in coords.values()]
+        )
+        return xr.Dataset(
+            {"dis24": (list(coords.keys()), dis24)}, coords=coords
+        )
+
+    def get_processed_data(self):
+        # define data with variable attributes
+        station = self.stations[self.station_name]
+        dis24 = self.raw_data["dis24"].sel(
+            longitude=station.lon, latitude=station.lat, method="nearest"
+        )
+        coords = {"time": self.raw_data.time}
+        return xr.Dataset(
+            {self.station_name: (list(coords.keys()), dis24)}, coords=coords
+        )
+
+    def test_reanalysis_process(self, fake_open_mfdataset):
+        fake_open_mfdataset.return_value = self.raw_data
+        glofas_reanalysis = glofas.GlofasReanalysis()
+        glofas_reanalysis.year_min, glofas_reanalysis.year_max = (2000, 2001)
+        output_filepath = glofas_reanalysis.process(
+            country_iso3=self.country_iso3,
+            stations=self.stations,
+        )
+        output_ds = xr.load_dataset(output_filepath)
+        assert output_ds.equals(self.get_processed_data())
