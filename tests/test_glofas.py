@@ -1,5 +1,6 @@
 from unittest import mock
 from pathlib import Path
+import shutil
 
 import numpy as np
 import xarray as xr
@@ -9,7 +10,7 @@ from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import Area, Station
 
 
-TMP_PATH = Path("/tmp")
+TMP_PATH = Path("/tmp/glofas_test")
 
 
 def test_expand_dims():
@@ -34,7 +35,7 @@ def test_expand_dims():
 @mock.patch("src.indicators.flooding.glofas.glofas.Path.mkdir")
 @mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 class TestDownload:
-    def setup_class(self):
+    def setup(self):
         self.country_iso3 = "abc"
         self.area = Area(north=1, south=-2, east=3, west=-4)
         self.year = 2000
@@ -66,7 +67,7 @@ class TestDownload:
                 "hydrological_model": "lisflood",
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}"
+                f"{TMP_PATH}/public/raw/{self.country_iso3}"
                 "/glofas/version_3/cems-glofas-historical"
                 f"/{self.country_iso3}_cems-glofas-historical_v3_2000.grib"
             ),
@@ -100,7 +101,7 @@ class TestDownload:
                 "leadtime_hour": self.expected_leadtime,
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}"
+                f"{TMP_PATH}/public/raw/{self.country_iso3}"
                 f"/glofas/version_3/cems-glofas-forecast"
                 f"/{self.country_iso3}_cems-glofas-forecast_v3_2000.grib"
             ),
@@ -126,7 +127,7 @@ class TestDownload:
                 "leadtime_hour": self.expected_leadtime,
             },
             "target": Path(
-                f"/tmp/public/raw/{self.country_iso3}"
+                f"{TMP_PATH}/public/raw/{self.country_iso3}"
                 f"/glofas/version_3/cems-glofas-reforecast"
                 f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000.grib"
             ),
@@ -158,7 +159,7 @@ class TestDownload:
         expected_args = self.get_reforecast_expected_args()
         expected_args["request"]["leadtime_hour"] = self.expected_leadtime[:1]
         expected_args["target"] = Path(
-            f"/tmp/public/raw/{self.country_iso3}"
+            f"{TMP_PATH}/public/raw/{self.country_iso3}"
             f"/glofas/version_3/cems-glofas-reforecast"
             f"/{self.country_iso3}_cems-glofas-reforecast_v3_2000_lt10d.grib"
         )
@@ -168,15 +169,23 @@ class TestDownload:
 @mock.patch("src.indicators.flooding.glofas.glofas.xr.open_mfdataset")
 @mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 class TestProcess:
-    def setup_class(self):
+    def setup(self):
         self.country_iso3 = "abc"
         self.station_name = "fake_station"
         self.stations = {self.station_name: Station(lon=5.05, lat=10.05)}
         self.leadtimes = [10, 20]
+        self.numbers = [0, 1, 2, 3, 4, 5, 6]
+
+    @staticmethod
+    def teardown():
+        shutil.rmtree(TMP_PATH)
 
     @staticmethod
     def get_raw_data(
-        number_coord=None, include_step=False, include_history=False
+        number_coord: [list, int] = None,
+        include_step: bool = False,
+        include_history: bool = False,
+        dis24: np.ndarray = None,
     ):
         rng = np.random.default_rng(12345)
         coords = {}
@@ -190,14 +199,22 @@ class TestProcess:
         dims = list(coords.keys())
         if number_coord is not None and isinstance(number_coord, int):
             dims = dims[1:]
-        dis24 = 5000 + 100 * rng.random([len(coords[dim]) for dim in dims])
+        if dis24 is None:
+            dis24 = 5000 + 100 * rng.random([len(coords[dim]) for dim in dims])
         attrs = {}
         if include_history:
             attrs = {"history": "fake history"}
         return xr.Dataset({"dis24": (dims, dis24)}, coords=coords, attrs=attrs)
 
-    def get_processed_data(self, number_coord=None, include_step=False):
-        raw_data = TestProcess.get_raw_data(include_step)
+    def get_processed_data(
+        self,
+        number_coord: [list, int] = None,
+        include_step: bool = False,
+        dis24: np.ndarray = None,
+    ):
+        raw_data = TestProcess.get_raw_data(
+            number_coord=number_coord, include_step=include_step, dis24=dis24
+        )
         station = self.stations[self.station_name]
         dis24 = raw_data["dis24"].sel(
             longitude=station.lon, latitude=station.lat, method="nearest"
@@ -207,7 +224,7 @@ class TestProcess:
             coords = {"number": number_coord}
         coords["time"] = raw_data.time
         if include_step:
-            coords["step"] = raw_data.step()
+            coords["step"] = raw_data.step
         return xr.Dataset(
             {self.station_name: (list(coords.keys()), dis24)}, coords=coords
         )
@@ -224,18 +241,20 @@ class TestProcess:
         assert output_ds.equals(self.get_processed_data())
 
     def test_reforecast_process(self, fake_open_mfdataset):
-        # First return control forecast (cf), which only has one ensemble
-        # member, then return perturbed forecast (pf) with several
-        fake_open_mfdataset.side_effect = [
-            TestProcess.get_raw_data(
-                number_coord=0, include_step=True, include_history=True
-            ),
-            TestProcess.get_raw_data(
-                number_coord=[1, 2, 3, 4, 5, 6],
-                include_step=True,
-                include_history=True,
-            ),
-        ]
+        cf_raw = TestProcess.get_raw_data(
+            number_coord=self.numbers[0],
+            include_step=True,
+            include_history=True,
+        )
+        pf_raw = TestProcess.get_raw_data(
+            number_coord=self.numbers[1:],
+            include_step=True,
+            include_history=True,
+        )
+        expected_dis24 = np.concatenate(
+            (cf_raw["dis24"].values[np.newaxis, ...], pf_raw["dis24"].values)
+        )
+        fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
         glofas_reforecast = glofas.GlofasReforecast()
         glofas_reforecast.year_min, glofas_reforecast.year_max = (
             {3: 2000},
@@ -246,10 +265,11 @@ class TestProcess:
             stations=self.stations,
             leadtimes=self.leadtimes,
         )
-        print(output_filepath)
         output_ds = xr.load_dataset(output_filepath)
         assert output_ds.equals(
             self.get_processed_data(
-                number_coord=[0, 1, 2, 3, 4, 5, 6, 7], include_step=True
+                number_coord=self.numbers,
+                include_step=True,
+                dis24=expected_dis24,
             )
         )
