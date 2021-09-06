@@ -1,9 +1,10 @@
 import logging
+from typing import List
+
 import geopandas as gpd
 import pandas as pd
-import xarray as xr
-from typing import List
 import rioxarray  # noqa: F401
+import xarray as xr
 
 logger = logging.getLogger(__name__)
 
