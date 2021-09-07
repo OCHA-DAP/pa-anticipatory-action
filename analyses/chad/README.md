@@ -7,7 +7,7 @@ Framework development to continue in preparation for the 2022 season.
 
 Last updated: Sep 2021
 
-##  Table of Contents [if necessary]
+##  Table of Contents
 1. [Background Information](#background-information)
 2. [Overview of analysis](#overview-of-analysis)
 3. [Data description](#data-description)
