@@ -22,7 +22,7 @@ from src.utils_general.utils import config_logger
 
 
 def main(download, config=None):
-    country = "malawi"
+    country = "mwi"
     bins = np.arange(30, 70, 5)
     pubyear = 2020
     pubmonth = 12

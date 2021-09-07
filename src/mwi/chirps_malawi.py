@@ -18,7 +18,7 @@ from src.indicators.drought.chirps_rainfallobservations import (
 def main(download, config=None):
     if config is None:
         config = Config()
-    country = "malawi"
+    country = "mwi"
     parameters = config.parameters(country)
     output_dir = os.path.join(
         config.DIR_PATH, config.ANALYSES_DIR, country, "results", "drought"

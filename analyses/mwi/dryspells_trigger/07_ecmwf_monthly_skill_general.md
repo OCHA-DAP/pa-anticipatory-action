@@ -54,7 +54,7 @@ hdx_blue='#66B0EC'
 #### Set config values
 
 ```python
-country="malawi"
+country="mwi"
 config=Config()
 parameters = config.parameters(country)
 country_iso3=parameters["iso3_code"]

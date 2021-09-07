@@ -44,7 +44,7 @@ from src.utils_general.statistics import get_return_periods_dataframe
 #### Set config values
 
 ```python
-country="malawi"
+country="mwi"
 config=Config()
 parameters = config.parameters(country)
 country_iso3=parameters["iso3_code"]

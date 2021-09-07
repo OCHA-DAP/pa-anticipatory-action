@@ -19,7 +19,6 @@ from src.indicators.drought.config import Config
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
-COUNTRY_NAME = "malawi"
 COUNTRY_ISO3 = "mwi"
 CONFIG = Config()
 DATA_PUBLIC_DIR = Path(CONFIG.DATA_DIR) / CONFIG.PUBLIC_DIR
@@ -54,7 +53,7 @@ def main(download=False, process=True):
                 download_chirpsgefs(pd.to_datetime(d), CONFIG, days)
         if process:
             compute_stats_rainyseason(
-                COUNTRY_NAME,
+                COUNTRY_ISO3,
                 CONFIG,
                 ADM_LEVEL,
                 days,

@@ -66,7 +66,7 @@ from src.utils_general.plotting import plot_spatial_columns
 #### Set config values
 
 ```python
-country="malawi"
+country="mwi"
 config=Config()
 parameters = config.parameters(country)
 country_iso3=parameters["iso3_code"]

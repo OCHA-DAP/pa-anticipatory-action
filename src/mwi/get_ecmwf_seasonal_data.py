@@ -20,10 +20,9 @@ from src.indicators.drought.ecmwf_seasonal.processing import (
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
-COUNTRY_NAME = "malawi"
+COUNTRY_ISO3 = "mwi"
 config = Config()
-PARAMETERS = config.parameters(COUNTRY_NAME)
-COUNTRY_ISO3 = PARAMETERS["iso3_code"]
+PARAMETERS = config.parameters(COUNTRY_ISO3)
 COUNTRY_DIR = os.path.join(
     config.DIR_PATH, config.PUBLIC_DIR, config.ANALYSES_DIR, COUNTRY_ISO3
 )
@@ -47,7 +46,7 @@ def main(download=True, process=True):
         ecmwf_forecast.download(country_iso3=COUNTRY_ISO3, area=area)
 
     if process:
-        compute_stats_per_admin(country=COUNTRY_NAME, interpolate=False)
+        compute_stats_per_admin(country=COUNTRY_ISO3, interpolate=False)
 
 
 if __name__ == "__main__":
