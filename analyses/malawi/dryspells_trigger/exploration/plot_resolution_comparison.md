@@ -43,9 +43,9 @@ Read in data.
 
 ```python
 # Admin boundaries
-df_adm3 = gpd.read_file(ADM1_SHP)
+df_adm3 = gpd.read_file(ADM3_SHP)
 df_adm2 = gpd.read_file(ADM2_SHP)
-df_adm1 = gpd.read_file(ADM3_SHP)
+df_adm1 = gpd.read_file(ADM1_SHP)
 
 # ARC2 precipitation
 ds = rioxarray.open_rasterio(ARC2_FILEPATH,masked=True).squeeze().to_dataset()
