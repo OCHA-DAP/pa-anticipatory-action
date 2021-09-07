@@ -107,7 +107,7 @@ def compute_raster_statistics(
     lon_coord: str = "x",
     lat_coord: str = "y",
     stats_list: List[str] = None,
-    percentile_list: List[float] = None,
+    percentile_list: List[int] = None,
     all_touched: bool = False,
     geom_col: str = "geometry",
 ):
@@ -126,7 +126,7 @@ def compute_raster_statistics(
     :param lat_coord: name of latitude dimension in raster_array
     :param stats_list: list with function names indicating
     which stats to compute
-    :param percentile_list: list with floats ranging from 0 to 1
+    :param percentile_list: list with integers ranging from 0 to 100
     indicating which percentiles to compute
     :param all_touched: if False, only cells with their centre within the
     region will be included when computing the stat.
@@ -137,40 +137,42 @@ def compute_raster_statistics(
     """
     df_list = []
 
-    for a in gdf[bound_col].unique():
-        gdf_adm = gdf[gdf[bound_col] == a]
+    if stats_list is None:
+        stats_list = ["mean", "std", "min", "max", "sum", "count"]
+
+    for bound_id in gdf[bound_col].unique():
+        gdf_adm = gdf[gdf[bound_col] == bound_id]
 
         da_clip = raster_array.rio.set_spatial_dims(
             x_dim=lon_coord, y_dim=lat_coord
         ).rio.clip(gdf_adm[geom_col], all_touched=all_touched)
-        if stats_list is None:
-            stats_list = ["mean", "std", "min", "max", "sum", "count"]
 
         grid_stat_all = []
-        for s in stats_list:
-            if s == "count":
-                # count automatically ignores NaNs
-                # therefore skipna can also not be given as an argument
-                # implemented count cause needed for computing percentages
-                grid_stat = getattr(da_clip, s)(dim=[lon_coord, lat_coord])
-            else:
-                # if array only contains NaNs, "sum" will return 0
-                # while NaN might be preferred
-                # this can be fixed by setting the min_count arg
-                # but this arg is not present in the other function calls.
-                # therefore chose to leave it as it is
-                grid_stat = getattr(da_clip, s)(
-                    dim=[lon_coord, lat_coord], skipna=True
-                )
-            grid_stat = grid_stat.rename(f"{s}_{bound_col}")
+        for stat in stats_list:
+            # count automatically ignores NaNs
+            # therefore skipna can also not be given as an argument
+            # implemented count cause needed for computing percentages
+            kwargs = {} if stat == "count" else {"skipna": True}
+            # makes sum return NaN instead of 0 if array
+            # only contains NaNs
+            if stat == "sum":
+                kwargs["min_count"] = 1
+            grid_stat = getattr(da_clip, stat)(
+                dim=[lon_coord, lat_coord], **kwargs
+            )
+            grid_stat = grid_stat.rename(f"{stat}_{bound_col}")
             grid_stat_all.append(grid_stat)
         if percentile_list is not None:
-            for q in percentile_list:
-                grid_quant = da_clip.quantile(q, dim=[lon_coord, lat_coord])
+            for quant in percentile_list:
+                quant_float = quant / 100
+                grid_quant = da_clip.quantile(
+                    quant_float, dim=[lon_coord, lat_coord]
+                )
                 grid_quant = grid_quant.drop("quantile").rename(
-                    f"{q}quant_{bound_col}"
+                    f"{quant}quant_{bound_col}"
                 )
                 grid_stat_all.append(grid_quant)
+
         # if dims is 0, it throws an error when merging
         # and then converting to a df
         # this occurs when the input da is 2D
@@ -181,7 +183,7 @@ def compute_raster_statistics(
         else:
             zonal_stats_xr = xr.merge(grid_stat_all)
             df_adm = zonal_stats_xr.to_dataframe().reset_index()
-        df_adm[bound_col] = a
+        df_adm[bound_col] = bound_id
         df_list.append(df_adm)
 
     df_zonal_stats = pd.concat(df_list).reset_index(drop=True)

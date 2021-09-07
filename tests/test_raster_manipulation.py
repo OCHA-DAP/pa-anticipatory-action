@@ -25,8 +25,13 @@ def test_compute_raster_statistics():
     gdf = gpd.GeoDataFrame(d)
 
     df_stats = compute_raster_statistics(
-        gdf, "name", da, stats_list=["min", "max", "mean", "count", "sum"]
+        gdf,
+        "name",
+        da,
+        stats_list=["min", "max", "mean", "count", "sum"],
+        percentile_list=[25, 50],
     )
+
     df_expected = pd.DataFrame(
         {
             "min_name": {0: 1, 1: 3},
@@ -34,6 +39,10 @@ def test_compute_raster_statistics():
             "mean_name": {0: 3.0, 1: 4.5},
             "count_name": {0: 4, 1: 2},
             "sum_name": {0: 12, 1: 9},
+            # quantile is computed with linear interpolation see
+            # https://stackoverflow.com/questions/48799231/numpy-percentiles-with-linear-interpolation-wrong-value/48799350
+            "25quant_name": {0: 1.75, 1: 3.75},
+            "50quant_name": {0: 3.0, 1: 4.5},
             "name": {0: "hi", 1: "bye"},
         },
     )
