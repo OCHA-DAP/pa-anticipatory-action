@@ -9,7 +9,7 @@ Last updated: September 2021
 ## Background information
 
 The pilot on Anticipatory Action in Nepal is focused on monsoon flooding,
-particularly in the Saptakoshi Watershed (located http://www.hydrology.gov.np/#/?_k=etlhwbin the east)
+particularly in the Saptakoshi Watershed (located in the east)
 and the Karnali, West Rapti and Babi basins (located in the west). 
 The trigger is based on [GlofAS](https://www.globalfloods.eu/) 
 river discharge forecasts at Chatara and Chisapani stations, combined with 
