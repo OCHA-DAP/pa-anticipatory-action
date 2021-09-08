@@ -1,22 +1,23 @@
-import pandas as pd
-import os
-import geopandas as gpd
-from rasterstats import zonal_stats
-import numpy as np
-from pathlib import Path
 import logging
-from tqdm import tqdm
+import os
 import sys
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from rasterstats import zonal_stats
+from tqdm import tqdm
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
 from src.indicators.food_insecurity.config import Config
 from src.indicators.food_insecurity.utils import (
-    parse_args,
+    compute_percentage_columns,
     download_fewsnet,
     download_worldpop,
-    compute_percentage_columns,
+    parse_args,
 )
 from src.utils_general.utils import config_logger
 

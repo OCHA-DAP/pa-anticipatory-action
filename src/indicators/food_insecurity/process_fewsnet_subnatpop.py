@@ -1,15 +1,19 @@
-import geopandas as gpd
-import pandas as pd
-import os
-import numpy as np
 import logging
+import os
 import sys
 from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
-from src.indicators.food_insecurity.utils import parse_args, download_fewsnet
+from src.indicators.food_insecurity.utils import (
+    download_fewsnet,
+    parse_args,
+)
 from src.utils_general.utils import config_logger, convert_to_numeric
 
 logger = logging.getLogger(__name__)

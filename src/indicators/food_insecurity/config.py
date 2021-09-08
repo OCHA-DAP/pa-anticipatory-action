@@ -1,9 +1,10 @@
-import os
-from pathlib import Path
-from src.utils_general.utils import parse_yaml
-from datetime import datetime
 import ftplib
+import os
 import re
+from datetime import datetime
+from pathlib import Path
+
+from src.utils_general.utils import parse_yaml
 
 
 def retrieve_worldpop_dirname():

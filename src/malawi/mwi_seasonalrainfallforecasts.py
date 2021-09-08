@@ -1,23 +1,25 @@
-from pathlib import Path
-import sys
 import os
-import numpy as np
+import sys
+from pathlib import Path
+
 import cftime
+import numpy as np
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 
+from src.indicators.drought.config import Config
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
 from src.indicators.drought.nmme_rainfallforecast import get_nmme_data
+from src.indicators.drought.utils import parse_args
 from src.utils_general.plotting import (
-    plot_spatial_columns,
     plot_raster_boundaries,
     plot_raster_boundaries_clip,
+    plot_spatial_columns,
 )
-from src.utils_general.raster_manipulation import compute_raster_statistics
-
-from src.indicators.drought.config import Config
-from src.indicators.drought.utils import parse_args
+from src.utils_general.raster_manipulation import (
+    compute_raster_statistics,
+)
 from src.utils_general.utils import config_logger
 
 

@@ -1,8 +1,8 @@
 from collections import namedtuple
 from typing import Dict, List
 
-from shapely.geometry import Polygon
 import numpy as np
+from shapely.geometry import Polygon
 
 GLOFAS_ROUND_VAL = 0.1
 GLOFAS_OFFSET_VAL = 0.05

@@ -1,16 +1,19 @@
 """Download raster data from GLOFAS and extracts time series of water
 discharge in selected locations, matching the FFWC stations data."""
 import logging
+import os
+import sys
 
 # TODO: remove this after making top-level
 from pathlib import Path
-import os
-import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import AreaFromStations, Station
+from src.indicators.flooding.glofas.area import (
+    AreaFromStations,
+    Station,
+)
 
 # Location of stations on the Jamuna/Brahmaputra river from
 # http://www.ffwc.gov.bd/index.php/googlemap?id=20 Some lat lon

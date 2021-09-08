@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 from pathlib import Path
+
 import rasterio
 
 # TODO: understand rioxarray vs xarray rioxarray seems to do a better
@@ -11,12 +12,12 @@ import rasterio
 import rioxarray
 import xarray as xr
 
-from src.utils_general.utils import download_ftp
 from src.utils_general.raster_manipulation import (
-    invert_latlon,
     change_longitude_range,
     fix_calendar,
+    invert_latlon,
 )
+from src.utils_general.utils import download_ftp
 
 logger = logging.getLogger(__name__)
 

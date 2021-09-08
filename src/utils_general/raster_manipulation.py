@@ -1,8 +1,9 @@
 import logging
+
 import geopandas as gpd
 import numpy as np
-from rasterstats import zonal_stats
 import pandas as pd
+from rasterstats import zonal_stats
 
 logger = logging.getLogger(__name__)
 

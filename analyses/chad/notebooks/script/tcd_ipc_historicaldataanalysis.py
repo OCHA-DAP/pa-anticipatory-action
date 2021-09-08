@@ -14,25 +14,25 @@
 
 # ### Have to add nov-2020, dec-2020,jan-2021
 
-import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.dates as dates
 import math
-import matplotlib.ticker as plticker
 import warnings
+
+import matplotlib
+import matplotlib.dates as dates
+import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
+import numpy as np
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
-
 
 country = "chad"
 admin_level = 1
