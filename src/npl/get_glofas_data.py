@@ -22,7 +22,7 @@ LEADTIMES = [
 ]  # for v3 correct coords only went to lead time 10 days
 # LEADTIMES = [x + 1 for x in range(20)]
 
-STATIONS = parse_yaml("src/nepal/config.yml")["glofas"]["stations"]
+STATIONS = parse_yaml("src/npl/config.yml")["glofas"]["stations"]
 
 SHAPEFILE_BASE_DIR = (
     Path(os.environ["AA_DATA_DIR"])

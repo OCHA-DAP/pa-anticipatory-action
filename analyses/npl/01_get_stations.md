@@ -82,7 +82,7 @@ cnums_lat_lon = {
 table_list = []
 for i in range(2):
     table = tables[i]
-    # Select only nepal
+    # Select only npl
     table = table[table[0] == 'Nepal Asia']
     # Select only neeeded columns
     table = table[[1, 2, 3, 4, 5, 7] + cnums_lat_lon[i]]
