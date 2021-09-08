@@ -229,18 +229,7 @@ class TestProcess:
             {self.station_name: (list(coords.keys()), dis24)}, coords=coords
         )
 
-    def test_reanalysis_process(self, fake_open_mfdataset):
-        fake_open_mfdataset.return_value = self.get_raw_data()
-        glofas_reanalysis = glofas.GlofasReanalysis()
-        glofas_reanalysis.year_min, glofas_reanalysis.year_max = (2000, 2001)
-        output_filepath = glofas_reanalysis.process(
-            country_iso3=self.country_iso3,
-            stations=self.stations,
-        )
-        output_ds = xr.load_dataset(output_filepath)
-        assert output_ds.equals(self.get_processed_data())
-
-    def test_reforecast_process(self, fake_open_mfdataset):
+    def get_enxemble_raw(self):
         cf_raw = TestProcess.get_raw_data(
             number_coord=self.numbers[0],
             include_step=True,
@@ -254,6 +243,21 @@ class TestProcess:
         expected_dis24 = np.concatenate(
             (cf_raw["dis24"].values[np.newaxis, ...], pf_raw["dis24"].values)
         )
+        return cf_raw, pf_raw, expected_dis24
+
+    def test_reanalysis_process(self, fake_open_mfdataset):
+        fake_open_mfdataset.return_value = self.get_raw_data()
+        glofas_reanalysis = glofas.GlofasReanalysis()
+        glofas_reanalysis.year_min, glofas_reanalysis.year_max = (2000, 2001)
+        output_filepath = glofas_reanalysis.process(
+            country_iso3=self.country_iso3,
+            stations=self.stations,
+        )
+        output_ds = xr.load_dataset(output_filepath)
+        assert output_ds.equals(self.get_processed_data())
+
+    def test_reforecast_process(self, fake_open_mfdataset):
+        cf_raw, pf_raw, expected_dis24 = self.get_enxemble_raw()
         fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
         glofas_reforecast = glofas.GlofasReforecast()
         glofas_reforecast.year_min, glofas_reforecast.year_max = (
@@ -261,6 +265,28 @@ class TestProcess:
             2001,
         )
         output_filepath = glofas_reforecast.process(
+            country_iso3=self.country_iso3,
+            stations=self.stations,
+            leadtimes=self.leadtimes,
+        )
+        output_ds = xr.load_dataset(output_filepath)
+        assert output_ds.equals(
+            self.get_processed_data(
+                number_coord=self.numbers,
+                include_step=True,
+                dis24=expected_dis24,
+            )
+        )
+
+    def test_forecast_process(self, fake_open_mfdataset):
+        cf_raw, pf_raw, expected_dis24 = self.get_enxemble_raw()
+        fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
+        glofas_forecast = glofas.GlofasReforecast()
+        glofas_forecast.year_min, glofas_forecast.year_max = (
+            {3: 2000},
+            2001,
+        )
+        output_filepath = glofas_forecast.process(
             country_iso3=self.country_iso3,
             stations=self.stations,
             leadtimes=self.leadtimes,
