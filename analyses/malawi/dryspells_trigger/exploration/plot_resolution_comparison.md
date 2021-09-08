@@ -70,6 +70,7 @@ f, ax = plt.subplots(figsize=(11, 10))
 ds_clip.sel(T='2000-02-01').to_array().plot(cmap=plt.cm.Blues, ax=ax)
 df_adm2.plot(ax=ax, facecolor="none", edgecolor="black", lw=0.35)
 df_adm1.plot(ax=ax, facecolor="none", edgecolor="black", lw=1)
+df_adm2.apply(lambda x: ax.annotate(text = x.ADM2_EN, xy=x.geometry.centroid.coords[0], fontsize=4, ha='center'), axis=1)# plot adm2 labels
 ax.axis('off')
 ax.set(title="ADM2 boundary with ARC2")
 plt.savefig(PLOT_DIR / 'arc2_adm2.png')
