@@ -23,7 +23,7 @@ has a 70% probability or higher of exceeding the 1-in-2-year return period value
 The action trigger is somewhat more complex: either the 3-day GloFAS river 
 discharge forecast has a 70% probability or higher of exceeding the 1-in-2-year
 return period, or the government measured water level reaches or 
-exceeds the danger leve. Furthermore, in either case the government-issued
+exceeds the danger level. Furthermore, in either case the government-issued
 flood forecast bulletin must predict flood warnings for the targeted 
 river basins.
 
@@ -48,7 +48,7 @@ not public at this time.
 The content within this repository is structured as follows: 
 ```
 ├── *.md                       <- Analysis notebooks
-├── nple_parameters.py         <- Shared parameters
+├── npl_parameters.py         <- Shared parameters
 └── README.md                  <- Description of this project
 ```
 
