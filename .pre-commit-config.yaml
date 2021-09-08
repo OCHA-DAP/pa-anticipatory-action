@@ -4,20 +4,15 @@ repos:
       rev: v2.2.0
       hooks:
         - id: seed-isort-config
-#    - repo: https://github.com/pycqa/isort
-#      rev: 5.8.0
-#      hooks:
-#        - id: isort
-#          args: ["--profile", "black", "--filter-files"]
-    - repo: https://github.com/psf/black
-      rev: 21.6b0
-      hooks:
-        - id: black
     - repo: https://github.com/PyCQA/isort
       rev: 5.6.4
       hooks:
         - id: isort
-          args: [ '--profile', 'black', --line-length=72]
+          args: [ '--profile', 'black', --line-length=72 ]
+    - repo: https://github.com/psf/black
+      rev: 21.6b0
+      hooks:
+        - id: black
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v2.4.0
       hooks:
