@@ -209,7 +209,7 @@ df_ds_grouped
 ```
 
 ```python
-# df_ds_grouped.to_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_dry_spells.csv"))
+# df_ds_grouped.to_csv(os.path.join(country_data_exploration_dir,"arc2","mwi_arc2_dry_spells.csv"))
 ```
 
 ```python
