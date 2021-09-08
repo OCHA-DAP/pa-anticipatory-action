@@ -17,9 +17,7 @@ from src.utils_general.plotting import (
     plot_raster_boundaries_clip,
     plot_spatial_columns,
 )
-from src.utils_general.raster_manipulation import (
-    compute_raster_statistics,
-)
+from src.utils_general.raster_manipulation import compute_raster_statistics
 from src.utils_general.utils import config_logger
 
 

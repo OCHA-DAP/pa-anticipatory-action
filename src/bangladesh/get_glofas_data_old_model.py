@@ -10,10 +10,7 @@ from pathlib import Path
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import (
-    AreaFromStations,
-    Station,
-)
+from src.indicators.flooding.glofas.area import AreaFromStations, Station
 
 # Location of stations on the Jamuna/Brahmaputra river from
 # http://www.ffwc.gov.bd/index.php/googlemap?id=20 Some lat lon

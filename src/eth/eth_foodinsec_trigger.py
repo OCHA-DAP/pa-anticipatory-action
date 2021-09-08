@@ -22,9 +22,7 @@ from src.indicators.food_insecurity.ipc_definemetrics import (
     define_trigger_increase,
     define_trigger_percentage,
 )
-from src.indicators.food_insecurity.utils import (
-    compute_percentage_columns,
-)
+from src.indicators.food_insecurity.utils import compute_percentage_columns
 
 warnings.filterwarnings("ignore")
 

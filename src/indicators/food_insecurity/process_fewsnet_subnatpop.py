@@ -10,10 +10,7 @@ import pandas as pd
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
-from src.indicators.food_insecurity.utils import (
-    download_fewsnet,
-    parse_args,
-)
+from src.indicators.food_insecurity.utils import download_fewsnet, parse_args
 from src.utils_general.utils import config_logger, convert_to_numeric
 
 logger = logging.getLogger(__name__)
