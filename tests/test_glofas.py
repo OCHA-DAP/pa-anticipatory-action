@@ -173,6 +173,7 @@ class TestProcess:
         self.country_iso3 = "abc"
         self.station_name = "fake_station"
         self.stations = {self.station_name: Station(lon=5.05, lat=10.05)}
+        self.year = 2000
         self.leadtimes = [10, 20]
         self.numbers = [0, 1, 2, 3, 4, 5, 6]
 
@@ -248,10 +249,11 @@ class TestProcess:
     def test_reanalysis_process(self, fake_open_mfdataset):
         fake_open_mfdataset.return_value = self.get_raw_data()
         glofas_reanalysis = glofas.GlofasReanalysis()
-        glofas_reanalysis.year_min, glofas_reanalysis.year_max = (2000, 2001)
         output_filepath = glofas_reanalysis.process(
             country_iso3=self.country_iso3,
             stations=self.stations,
+            year_min=self.year,
+            year_max=self.year,
         )
         output_ds = xr.load_dataset(output_filepath)
         assert output_ds.equals(self.get_processed_data())
@@ -260,14 +262,12 @@ class TestProcess:
         cf_raw, pf_raw, expected_dis24 = self.get_enxemble_raw()
         fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
         glofas_reforecast = glofas.GlofasReforecast()
-        glofas_reforecast.year_min, glofas_reforecast.year_max = (
-            {3: 2000},
-            2001,
-        )
         output_filepath = glofas_reforecast.process(
             country_iso3=self.country_iso3,
             stations=self.stations,
             leadtimes=self.leadtimes,
+            year_min=self.year,
+            year_max=self.year,
         )
         output_ds = xr.load_dataset(output_filepath)
         assert output_ds.equals(
@@ -282,14 +282,12 @@ class TestProcess:
         cf_raw, pf_raw, expected_dis24 = self.get_enxemble_raw()
         fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
         glofas_forecast = glofas.GlofasReforecast()
-        glofas_forecast.year_min, glofas_forecast.year_max = (
-            {3: 2000},
-            2001,
-        )
         output_filepath = glofas_forecast.process(
             country_iso3=self.country_iso3,
             stations=self.stations,
             leadtimes=self.leadtimes,
+            year_min=self.year,
+            year_max=self.year,
         )
         output_ds = xr.load_dataset(output_filepath)
         assert output_ds.equals(
