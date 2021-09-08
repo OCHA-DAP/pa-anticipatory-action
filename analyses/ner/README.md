@@ -42,4 +42,4 @@ Forecasts, groundtruth dataset, impact data collated by IRI in collaboration wit
 
 ## Reproducing this analysis
 
-Non-applicable.
+N/A
