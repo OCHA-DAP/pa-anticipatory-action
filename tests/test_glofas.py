@@ -1,11 +1,11 @@
 from unittest import mock
 from pathlib import Path
-import shutil
 from typing import List
 
 import numpy as np
 import xarray as xr
 import pandas as pd
+import pytest
 
 from src.indicators.flooding.glofas import glofas
 from src.indicators.flooding.glofas.area import Area, Station
@@ -37,6 +37,7 @@ def test_expand_dims():
 
 @mock.patch("src.indicators.flooding.glofas.glofas.cdsapi.Client.retrieve")
 @mock.patch("src.indicators.flooding.glofas.glofas.Path.mkdir")
+# Can use static tmp path here since nothing is saved
 @mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 class TestDownload:
     def setup(self):
@@ -194,9 +195,9 @@ class TestDownload:
 
 
 @mock.patch("src.indicators.flooding.glofas.glofas.xr.open_mfdataset")
-@mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 class TestProcess:
-    def setup(self):
+    @pytest.fixture(autouse=True)  # Required voodoo for tmpdir
+    def setup(self, tmp_path):
         """
         Initialize shared parameters
         """
@@ -206,16 +207,9 @@ class TestProcess:
         self.year = 2000
         self.leadtimes = [10, 20]
         self.numbers = [0, 1, 2, 3, 4, 5, 6]
-
-    @staticmethod
-    def teardown():
-        """
-        The GloFAS DATA_DIR is set by os.environ, but since it's global
-        it's initialized at import and I'm unable to pass the mock a return
-        value at the module level (i.e. so that pytest tmpdir can be used).
-        Therefore this teardown is used to manually remove the directory.
-        """
-        shutil.rmtree(TMP_PATH)
+        # Need to mock within the class in order to pass tmp_dir
+        # (otherwise a decorator would be better)
+        self.mock_data_dir = mock.patch.object(glofas, "DATA_DIR", tmp_path)
 
     @staticmethod
     def get_raw_data(
@@ -313,15 +307,16 @@ class TestProcess:
         GlofasReanslysis with default parameters is as expected
         """
         fake_open_mfdataset.return_value = self.get_raw_data()
-        glofas_reanalysis = glofas.GlofasReanalysis()
-        output_filepath = glofas_reanalysis.process(
-            country_iso3=self.country_iso3,
-            stations=self.stations,
-            year_min=self.year,
-            year_max=self.year,
-        )
-        output_ds = xr.load_dataset(output_filepath)
-        assert output_ds.equals(self.get_processed_data())
+        with self.mock_data_dir:
+            glofas_reanalysis = glofas.GlofasReanalysis()
+            output_filepath = glofas_reanalysis.process(
+                country_iso3=self.country_iso3,
+                stations=self.stations,
+                year_min=self.year,
+                year_max=self.year,
+            )
+            output_ds = xr.load_dataset(output_filepath)
+            assert output_ds.equals(self.get_processed_data())
 
     def test_reforecast_process(self, fake_open_mfdataset):
         """
@@ -330,22 +325,23 @@ class TestProcess:
         """
         cf_raw, pf_raw, expected_dis24 = self.get_enxemble_raw()
         fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
-        glofas_reforecast = glofas.GlofasReforecast()
-        output_filepath = glofas_reforecast.process(
-            country_iso3=self.country_iso3,
-            stations=self.stations,
-            leadtimes=self.leadtimes,
-            year_min=self.year,
-            year_max=self.year,
-        )
-        output_ds = xr.load_dataset(output_filepath)
-        assert output_ds.equals(
-            self.get_processed_data(
-                number_coord=self.numbers,
-                include_step=True,
-                dis24=expected_dis24,
+        with self.mock_data_dir:
+            glofas_reforecast = glofas.GlofasReforecast()
+            output_filepath = glofas_reforecast.process(
+                country_iso3=self.country_iso3,
+                stations=self.stations,
+                leadtimes=self.leadtimes,
+                year_min=self.year,
+                year_max=self.year,
             )
-        )
+            output_ds = xr.load_dataset(output_filepath)
+            assert output_ds.equals(
+                self.get_processed_data(
+                    number_coord=self.numbers,
+                    include_step=True,
+                    dis24=expected_dis24,
+                )
+            )
 
     def test_forecast_process(self, fake_open_mfdataset):
         """
@@ -354,19 +350,20 @@ class TestProcess:
         """
         cf_raw, pf_raw, expected_dis24 = self.get_enxemble_raw()
         fake_open_mfdataset.side_effect = [cf_raw, pf_raw]
-        glofas_forecast = glofas.GlofasReforecast()
-        output_filepath = glofas_forecast.process(
-            country_iso3=self.country_iso3,
-            stations=self.stations,
-            leadtimes=self.leadtimes,
-            year_min=self.year,
-            year_max=self.year,
-        )
-        output_ds = xr.load_dataset(output_filepath)
-        assert output_ds.equals(
-            self.get_processed_data(
-                number_coord=self.numbers,
-                include_step=True,
-                dis24=expected_dis24,
+        with self.mock_data_dir:
+            glofas_forecast = glofas.GlofasReforecast()
+            output_filepath = glofas_forecast.process(
+                country_iso3=self.country_iso3,
+                stations=self.stations,
+                leadtimes=self.leadtimes,
+                year_min=self.year,
+                year_max=self.year,
             )
-        )
+            output_ds = xr.load_dataset(output_filepath)
+            assert output_ds.equals(
+                self.get_processed_data(
+                    number_coord=self.numbers,
+                    include_step=True,
+                    dis24=expected_dis24,
+                )
+            )
