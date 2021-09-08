@@ -10,9 +10,7 @@ Last updated: Sep 2021
 ##  Table of Contents
 1. [Background Information](#background-information)
 2. [Overview of analysis](#overview-of-analysis)
-3. [Data description](#data-description)
-4. [Directory structure](#directory-structure)
-5. [Reproducing this analysis](#reproducing-this-analysis)
+3. [Directory structure](#directory-structure)
 
 ## Background information
 
@@ -21,10 +19,6 @@ Anticipatory action in Chad aims to preemptively respond to floods and drought.
 ## Overview of analysis
 
 CHD provides technical guidance on developing triggers for AA and has not performed analysis for this framework's trigger. CHD has provided a risk overview for the country that can be found under `notebooks`.
-
-## Data description
-
-N/A
 
 ## Directory structure
 
@@ -41,7 +35,3 @@ N/A
 └── README.md                 <- Description of this project.
 
 ```
-
-## Reproducing this analysis
-
-N/A
