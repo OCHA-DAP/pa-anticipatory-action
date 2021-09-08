@@ -9,7 +9,7 @@ from typing import List
 import xarray as xr
 import cdsapi
 
-from src.indicators.flooding.glofas.area import Area
+from src.utils_general.area import Area
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"

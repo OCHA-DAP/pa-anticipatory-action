@@ -10,7 +10,7 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import (
+from src.utils_general.area import (
     AreaFromShape,
     Station,
 )

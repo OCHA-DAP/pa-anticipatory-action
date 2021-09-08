@@ -1,6 +1,6 @@
 from shapely.geometry import Polygon
 
-from src.indicators.flooding.glofas.area import (
+from src.utils_general.area import (
     Station,
     AreaFromStations,
     AreaFromShape,

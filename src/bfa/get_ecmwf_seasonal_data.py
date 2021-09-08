@@ -11,7 +11,7 @@ import sys
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
-from src.indicators.flooding.glofas.area import AreaFromShape
+from src.utils_general.area import AreaFromShape
 from src.indicators.drought.config import Config
 
 logging.basicConfig(level=logging.INFO, force=True)
