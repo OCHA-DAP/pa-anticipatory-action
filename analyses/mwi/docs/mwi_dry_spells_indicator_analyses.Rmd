@@ -18,7 +18,7 @@ link-citations: true
 ## Background
 This document summaries the data analyses that were performed to link the occurrence of a dry spell with various climatological indicators. This work was done for OCHA's Anticipatory Action pilot in Malawi related to dry spells. It explores: the relations with climatic indicators (observational data), the skill of a seasonal and 15-day forecast to predict dry spells, and the ability to observe dry spells in almost real-time. All work presented here was done by the Centre for Humanitarian Data with indispensable help from technical partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action) and includes more detail on the analyses presented in this document. 
 
-This work uses a list of historical dry spells and rainy seasons that was created as part of this project. The list of historical events can be [downloaded on HDX](https://data.humdata.org/dataset/historical-dry-spells-in-malawi). Further information and analyses of historical dry spells can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/historical_dry_spells_description_mean.html). 
+This work uses a list of historical dry spells and rainy seasons that was created as part of this project. The list of historical events can be [downloaded on HDX](https://data.humdata.org/dataset/historical-dry-spells-in-malawi). Further information and analyses of historical dry spells can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/mwi/docs/historical_dry_spells_description_mean.html). 
 
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}

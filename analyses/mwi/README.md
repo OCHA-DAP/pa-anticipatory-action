@@ -24,10 +24,10 @@ Based on these results it was chosen to use ECMWF's seasonal forecast,
 which forecast total precipitation per month. 
 
 ### Overview of analysis 
-The historical dataset is described [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_historical_dry_spells_description.html).
-An overview on the work of linking historical dry spells to impact indicators can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_impact_summary.html) 
+The historical dataset is described [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/mwi/docs/mwi_historical_dry_spells_description.html).
+An overview on the work of linking historical dry spells to impact indicators can be found [here](https://ocha-dap.github.io/pa-anticipatory-action/analyses/mwi/docs/mwi_impact_summary.html) 
 Most of the code in this directory is aimed to understand the correlation of dry spells and 
-observed and forecasted meteorological indicators is described in this [summary document](https://ocha-dap.github.io/pa-anticipatory-action/analyses/malawi/docs/mwi_dry_spells_indicator_analyses.html).  
+observed and forecasted meteorological indicators is described in this [summary document](https://ocha-dap.github.io/pa-anticipatory-action/analyses/mwi/docs/mwi_dry_spells_indicator_analyses.html).  
 
 The scripts and notebooks feeding into these written summaries can be found in `dryspells_trigger` 
 where the files are numbered based on the flow of the summary document.  
@@ -41,7 +41,7 @@ It is updated every month and provides monthly precipitation for 0 to 5 months a
 Other data sources included ENSO, CHIRPSGEFS and ARC2. References to these can be found in the summary document. 
 
 ### Reproducing this analysis
-Make sure to have the CHIRPS and ECMWF data clipped to Malawi, for which scripts can be found in `src/malawi`
+Make sure to have the CHIRPS and ECMWF data clipped to Malawi, for which scripts can be found in `src/mwi`
 
 ## Flooding
 
@@ -64,7 +64,7 @@ Key parameters for the analysis; such as return period threshold, forecast leadt
 
 ### Data description
 
-Code to download and process GloFAS data for Malawi can be found in the ```src/malawi``` directory, from within which you should run:  
+Code to download and process GloFAS data for Malawi can be found in the ```src/mwi``` directory, from within which you should run:  
 
 ```
 python get_glofas_data.py
