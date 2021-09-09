@@ -16,6 +16,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.drought.config import Config
 from src.utils_general.statistics import calc_crps
+from src.utils_general.raster_manipulation import compute_raster_statistics
 
 logger = logging.getLogger(__name__)
 
@@ -112,12 +113,21 @@ def compute_stats_per_admin(
             )
         else:
             ds_sel = ds.sel(time=date)
-            df = compute_zonal_stats(
-                ds_sel,
-                ds_sel.rio.transform(),
-                adm_boundaries_path,
-                parameters[f"shp_adm{adm_level}c"],
+            print(ds_sel)
+            gdf_adm = gpd.read_file(adm_boundaries_path)
+            df = compute_raster_statistics(
+                gdf_adm,
+                "ADM1_EN",
+                ds_sel.rio.write_crs("EPSG:4326"),
+                lon_coord="longitude",
+                lat_coord="latitude",
             )
+            # df = compute_zonal_stats(
+            #     ds_sel,
+            #     ds_sel.rio.transform(),
+            #     adm_boundaries_path,
+            #     parameters[f"shp_adm{adm_level}c"],
+            # )
 
             df["date"] = date_dt
             df.to_csv(output_path)
@@ -139,7 +149,6 @@ def compute_zonal_stats(
         for number in ds.number.values:
             df = gpd.read_file(adm_path)[[adm_col, "geometry"]]
             ds_date = ds.sel(number=number, leadtime=leadtime)
-
             df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
                 zonal_stats(
                     vectors=df,
