@@ -18,7 +18,7 @@ mpl.rcParams['figure.dpi'] = 200
 
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
-SKILL_DIR = DATA_DIR / 'exploration/bangladesh/GLOFAS_Data'
+SKILL_DIR = DATA_DIR / 'exploration/bgd/GLOFAS_Data'
 SKILL_FILE = 'forecast_skill.csv'
 LEADTIMES_V2 = [5, 10, 15, 20, 25, 30]
 MAIN_VERSION = 3
