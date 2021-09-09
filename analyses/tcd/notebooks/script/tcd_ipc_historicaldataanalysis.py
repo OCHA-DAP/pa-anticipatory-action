@@ -34,7 +34,7 @@ sys.path.append(path_mod)
 from indicators.food_insecurity.config import Config
 
 
-country = "chad"
+country = "tcd"
 admin_level = 1
 # suffix of filenames
 suffix = ""
