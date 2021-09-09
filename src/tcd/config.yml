@@ -1,0 +1,27 @@
+iso3_code: tcd
+iso2_code: td
+path_admin0_shp: tcd_admbnda_adm0_ocha/tcd_admbnda_adm0_ocha.shp
+path_admin1_shp: tcd_admbnda_adm1_ocha/tcd_admbnda_adm1_ocha.shp
+path_admin2_shp: tcd_admbnda_adm2_ocha_20170615/tcd_admbnda_adm2_ocha_20170615.shp
+shp_adm0c: admin0Name
+shp_adm1c: admin1Name
+shp_adm2c: admin2Name
+
+foodinsecurity:
+  region: west-africa
+  regioncode: WA
+  fewsnet_dates_add: ["202011","202012","202101"]
+  fewsnet_dates_remove: ["201810"]
+  pop_filename: admpop_adm2_projections.csv #Downloaded from https://data.humdata.org/dataset/population-statistics-of-chad
+  pop_col: Proj2020_Total
+  adm1c_pop: admin1Name_fr
+  adm2c_pop: admin2Name_fr
+  pop_adm1_mapping:
+    Guera: Guéra
+    Hadjer Lamis: Hadjer-Lamis
+    Ouaddai: Ouaddaï
+    Tandjile: Tandjilé
+  pop_adm2_mapping:
+    Bahr-Koh: Bahr-Köh
+    Tandjilé Ouest: Tandjile Ouest
+  globalipc_adm_mapping:
