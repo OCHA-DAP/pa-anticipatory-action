@@ -1,0 +1,43 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+pagetitle: 'Docs Template' # Change title to something appropriate for your work
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+<br> 
+<br>
+<br>
+
+# Documentation Template
+Analysis last updated `r Sys.Date()`
+
+<br>
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+# source("") # Link to external script
+library(kableExtra)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+
+Copy this basic template to get started with creating an R Markdown file to document an analysis.
+
+
+```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
+
+# Put a figure in here, for example 
+
+```
+
