@@ -1,6 +1,6 @@
 ---
 title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
-pagetitle: 'Docs Template'
+pagetitle: 'Docs Template' # Change title to something appropriate for your work
 output:
   html_document:
     df_print: paged
@@ -41,11 +41,3 @@ Copy this basic template to get started with creating an R Markdown file to docu
 
 ```
 
-
-## Heading 1
-
-### Sub heading 1.1
-
-### Sub heading 1.2
-
-## Heading 2
