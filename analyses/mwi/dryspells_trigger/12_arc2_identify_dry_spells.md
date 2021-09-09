@@ -148,7 +148,7 @@ def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thres
 # #This takes several hours --> better do it in a .py script
 # #compute statistics on adm2 level per date
 # df=alldates_statistics(ds_rolling,ds_rolling.rio.transform(),adm2_bound_path)
-# df.drop("geometry",axis=1).to_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_precip_long.csv"))
+# df.drop("geometry",axis=1).to_csv(os.path.join(country_data_exploration_dir,"arc2","mwi_arc2_precip_long.csv"))
 ```
 
 ```python
@@ -209,7 +209,7 @@ df_ds_grouped
 ```
 
 ```python
-# df_ds_grouped.to_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_dry_spells.csv"))
+# df_ds_grouped.to_csv(os.path.join(country_data_exploration_dir,"arc2","mwi_arc2_dry_spells.csv"))
 ```
 
 ```python

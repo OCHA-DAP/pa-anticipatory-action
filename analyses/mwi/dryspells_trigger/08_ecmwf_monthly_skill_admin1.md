@@ -151,7 +151,7 @@ lt_str="".join([str(l) for l in sel_leadtime])
 ```
 
 #### Forecast
-For this notebook we directly load the statistics per admin1 and therafter aggregate across the ensemble members. These stats are computed with `src/malawi/get_ecmwf_seasonal_data.py` 
+For this notebook we directly load the statistics per admin1 and therafter aggregate across the ensemble members. These stats are computed with `src/mwi/get_ecmwf_seasonal_data.py` 
 In other notebooks we explored the skill per raster cell and ensemble member. 
 Note: The statistics over the whole admin region per ensemble member were first computed, after which we combine the ensemble models with different percentile thresholds. While we think this methodology makes sense, one could also argue to first group by the ensemble members and then aggregating to the admin. This was also tested and no large differences were found. 
 

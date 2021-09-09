@@ -2,7 +2,7 @@
 
 [![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20DEVELOPMENT-%23007CE0)](https://shields.io/)
 
-Ongoing work since April 2021. Will not be monitored before March 2022. 
+Ongoing work since April 2021. Trigger work completed but framework still under development. Will not be monitored before March 2022. 
 
 Last updated: Aug 2021
 

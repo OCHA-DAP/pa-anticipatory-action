@@ -20,7 +20,7 @@ rasterOptions(maxmemory = 1e+09)
 # set directory paths
 # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 data_dir <- Sys.getenv("AA_DATA_DIR")
-shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
+shapefile_path <- paste0(data_dir, "/raw/mwi/Shapefiles/mwi_adm_nso_20181016_shp")
 chirps_path <- paste0(data_dir, "/raw/drought/chirps")
 
 #####
@@ -83,8 +83,8 @@ s2000_s2020 <- stack(s2000, s2001, s2002, s2003, s2004, s2005, s2006, s2007, s20
 s2000_s2020_cropped <- crop(x = s2000_s2020, y = extent(mwi_adm3_spatial_extent)) # crop converts to a brick - a single raster file
 
 # save or read as a raster file. Identical to adm2, adm1. (do not save as RDS or tif as it changes the variable names)
-#writeRaster(s2000_s2020_cropped, filename = paste0(data_dir, '/processed/malawi/dry_spells/s2000_s2020_cropped.grd'), bandorrder='BIL', overwrite=TRUE)
-#s2000_s2020_cropped <- brick(paste0(data_dir, "/processed/malawi/dry_spells/s2000_s2020_cropped.grd")) # read in raster (brick) file
+#writeRaster(s2000_s2020_cropped, filename = paste0(data_dir, '/processed/mwi/dry_spells/s2000_s2020_cropped.grd'), bandorrder='BIL', overwrite=TRUE)
+#s2000_s2020_cropped <- brick(paste0(data_dir, "/processed/mwi/dry_spells/s2000_s2020_cropped.grd")) # read in raster (brick) file
  
 data_all <- s2000_s2020_cropped
 nbr_layers <- nlayers(data_all)
@@ -125,8 +125,8 @@ data_mean_values <- all_years_values_adm3s %>%
                           group_by(ID) %>%
                           summarise(across(2:nbr_layers+1, mean))
 
-# saveRDS(data_mean_values, paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5_adm3.RDS"))
-#data_mean_values <- readRDS(paste0(data_dir, "/processed/malawi/dry_spells/data_mean_values_2000_2020_r5_adm3.RDS")) 
+# saveRDS(data_mean_values, paste0(data_dir, "/processed/mwi/dry_spells/data_mean_values_2000_2020_r5_adm3.RDS"))
+#data_mean_values <- readRDS(paste0(data_dir, "/processed/mwi/dry_spells/data_mean_values_2000_2020_r5_adm3.RDS")) 
 
 data <- data_mean_values
 
@@ -228,7 +228,7 @@ rainy_seasons_detail <- rainy_seasons_detail %>%
                           left_join(mwi_adm3[, c('ADM3_PCODE', 'ADM2_PCODE', 'ADM2_EN', 'ADM1_PCODE', 'ADM1_EN')], by = c('pcode'= 'ADM3_PCODE'))
 
 # save results without geometry column
-#write.csv(rainy_seasons_detail[, -15], file = paste0(data_dir, "/processed/malawi/dry_spells/rainy_seasons_detail_2000_2020_ADM3.csv"), row.names = FALSE)
+#write.csv(rainy_seasons_detail[, -15], file = paste0(data_dir, "/processed/mwi/dry_spells/rainy_seasons_detail_2000_2020_ADM3.csv"), row.names = FALSE)
 
 #####
 ## explore rainy season patterns
@@ -324,7 +324,7 @@ dry_spells_during_rainy_season_list <- dry_spells_during_rainy_season_list %>%
                                           left_join(mwi_adm3, by = c('pcode'= 'ADM3_PCODE')) %>%
                                           dplyr::select(pcode, ADM3_EN, ADM2_EN, ADM1_EN, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
 
-#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/malawi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_adm3.csv"), row.names = FALSE)
+#write.csv(dry_spells_during_rainy_season_list, file = paste0(data_dir, "/processed/mwi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_adm3.csv"), row.names = FALSE)
 
 
 # save full list of dry spells
@@ -332,7 +332,7 @@ full_list_dry_spells <- dry_spells_details %>%
                           left_join(rainy_seasons[, c('pcode', 'season_approx', 'onset_date', 'cessation_date')], by = c('pcode', 'season_approx'), all.x = T, all.y = T) %>% # add rainy onset and cessation dates
                           mutate(confirmation_date_during_rainy_season = ifelse(dry_spell_confirmation >= onset_date & dry_spell_confirmation <= cessation_date, 1, 0)) %>% # identifies dry spells that reached 14-d rolling sum during rainy season 
                           dplyr::select(pcode, season_approx, dry_spell_first_date, dry_spell_last_date, dry_spell_duration, dry_spell_rainfall)
-#write.csv(full_list_dry_spells, file = paste0(data_dir, "/processed/malawi/dry_spells/full_list_dry_spells_adm3.csv"), row.names = FALSE)
+#write.csv(full_list_dry_spells, file = paste0(data_dir, "/processed/mwi/dry_spells/full_list_dry_spells_adm3.csv"), row.names = FALSE)
 
 # summary stats per TA 
 rainy_season_dry_spells_summary_per_ta <- dry_spells_during_rainy_season_list %>% 

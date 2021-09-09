@@ -6,7 +6,7 @@ To determine the skill for dry spells, two parameters have to be set. Namely the
 
 Note that due to the small number of historically observed dry spells, the statistical significance is low.    
 
-The dry spells are determined in [this script](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/1589debf38eee928d323414e254f7d811d577108/analyses/malawi/scripts/mwi_chirps_dry_spell_detection.R) and ECMWF's forecast can be processed by [this script](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/e7ad2ac3a250912b713ab55fe45ed995d944ffc7/analyses/malawi/notebooks/read_in_data.py). [This notebook](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/mwi-corranalys/analyses/malawi/notebooks/mwi_monthlytotal_corr_dryspells_adm1.md) explores the relation between observed monthly precipitation and observed dry spells
+The dry spells are determined in [this script](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/1589debf38eee928d323414e254f7d811d577108/analyses/mwi/scripts/mwi_chirps_dry_spell_detection.R) and ECMWF's forecast can be processed by [this script](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/e7ad2ac3a250912b713ab55fe45ed995d944ffc7/analyses/malawi/notebooks/read_in_data.py). [This notebook](https://github.com/OCHA-DAP/pa-anticipatory-action/blob/mwi-corranalys/analyses/malawi/notebooks/mwi_monthlytotal_corr_dryspells_adm1.md) explores the relation between observed monthly precipitation and observed dry spells
 
 ```python
 %load_ext autoreload

@@ -4,11 +4,11 @@ library(sf)
 # Setup -------------------------------------------------------------------
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
-shapefile_path <- paste0(data_dir, "/raw/malawi/Shapefiles/mwi_adm_nso_20181016_shp")
+shapefile_path <- paste0(data_dir, "/raw/mwi/Shapefiles/mwi_adm_nso_20181016_shp")
 
 shp_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
 
-wrsi_dir <- paste0(data_dir, '/exploration/malawi/wrsi/')
+wrsi_dir <- paste0(data_dir, '/exploration/mwi/wrsi/')
 wrsi_files <- list.files(path=wrsi_dir, pattern = "do.bil")
 wrsi_files <- paste0(wrsi_dir, wrsi_files)
 

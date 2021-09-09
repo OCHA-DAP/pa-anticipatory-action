@@ -8,10 +8,10 @@ library(tmap)
 # Get overall config params and read in data
 data_dir <- Sys.getenv("AA_DATA_DIR")
 data_private_dir <- Sys.getenv('AA_DATA_PRIVATE_DIR')
-config <- read_yaml('../../src/malawi/config.yml')
-shp_adm2 <- st_read(paste0(data_dir, '/raw/malawi/Shapefiles/', config$path_admin2_shp))
-shp_adm3 <- st_read(paste0(data_dir, '/raw/malawi/Shapefiles/', config$path_admin3_shp))
-df_mvac_floods <- read.csv(paste0(data_private_dir, "/processed/malawi/mvac_dodma_flood_info.csv"))
+config <- read_yaml('../../src/mwi/config.yml')
+shp_adm2 <- st_read(paste0(data_dir, '/raw/mwi/Shapefiles/', config$path_admin2_shp))
+shp_adm3 <- st_read(paste0(data_dir, '/raw/mwi/Shapefiles/', config$path_admin3_shp))
+df_mvac_floods <- read.csv(paste0(data_private_dir, "/processed/mwi/mvac_dodma_flood_info.csv"))
 stations <- config$glofas$stations
 stations <- data.frame(do.call(rbind.data.frame, stations))
 
@@ -58,7 +58,7 @@ df_mvac_floods_district <- df_mvac_floods %>%
   filter(District %in% c('Chikwawa', 'Nsanje'))%>%
   full_join(shp_stations, by=c('District'='ADM2_EN'))
 
-write.csv(df_mvac_floods_district, paste0(data_private_dir, '/processed/malawi/mvac_dodma_flood_district.csv'), row.names = FALSE)
-write.csv(df_mvac_floods_ta, paste0(data_private_dir, '/processed/malawi/mvac_dodma_flood_ta.csv'), row.names = FALSE)
+write.csv(df_mvac_floods_district, paste0(data_private_dir, '/processed/mwi/mvac_dodma_flood_district.csv'), row.names = FALSE)
+write.csv(df_mvac_floods_ta, paste0(data_private_dir, '/processed/mwi/mvac_dodma_flood_ta.csv'), row.names = FALSE)
 
 

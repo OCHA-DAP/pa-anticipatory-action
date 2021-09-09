@@ -13,7 +13,7 @@ RAINY_END <- 4
 # Get overall config params and read in data
 data_dir <- Sys.getenv("AA_DATA_DIR")
 data_private_dir <- paste0(data_dir, '/private')
-config <- read_yaml('../../src/malawi/config.yml')
+config <- read_yaml('../../src/mwi/config.yml')
 
 df_floodscan <- read.csv(paste0(data_private_dir, '/processed/mwi/floodscan/mwi_floodscan_stats_adm2.csv'))
 
