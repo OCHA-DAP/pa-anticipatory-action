@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       warning = FALSE)
 library(tidyverse)
 library(fuzzyjoin)
+library(lubridate)
 
 # file paths
 
@@ -41,6 +42,7 @@ these out prior to comparing the various dry spell identification methods.
 arc2_center_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_dry_spells_during_rainy_season.csv"),
                            col_types = "_ccDDDdd") %>%
   select(pcode,
+         ADM2_EN,
          arc2_center_start = dry_spell_first_date,
          arc2_center_confirmation = dry_spell_confirmation,
          arc2_center_end = dry_spell_last_date,
@@ -50,6 +52,7 @@ arc2_center_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_dry_spells_during_ra
 arc2_touch_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_touching_dry_spells_during_rainy_season.csv"),
                           col_types = "_ccDDDd") %>%
   select(pcode,
+         ADM2_EN,
          arc2_touch_start = dry_spell_first_date,
          arc2_touch_confirmation = dry_spell_confirmation,
          arc2_touch_end = dry_spell_last_date,
@@ -58,6 +61,7 @@ arc2_touch_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_touching_dry_spells_d
 
 chirps_df <- read_csv(paste0(process_dir, "/dry_spells/dry_spells_during_rainy_season_list_2000_2021_mean_back.csv")) %>%
   transmute(pcode,
+            ADM2_EN,
             chirps_start = dry_spell_first_date,
             chirps_confirmation = dry_spell_first_date + 13,
             chirps_end = dry_spell_last_date,
@@ -161,15 +165,21 @@ arc2_chirps_df <- bind_rows(arc2_chirps_lj1,
   filter(!(n() > 1 & is.na(arc2_center_start))) %>%
   group_by(pcode, chirps_start) %>%
   filter(!(n() > 1 & is.na(arc2_center_start) & !is.na(chirps_start))) %>%
-  ungroup()
+  ungroup() %>%
+  select(-starts_with("ADM2_EN"))
 
 # get simple ADM2_EN data set
-purrr::map(list(
+adm2_df <- map(list(
   arc2_center_df,
   arc2_touch_df,
   chirps_df
-), ~ select(.x, pcode, ADM2_EN))
+), ~ select(.x, pcode, ADM2_EN)) %>%
+  bind_rows() %>%
+  distinct()
 
+# add ADM2_EN to main data frame
+arc2_chirps_df <- arc2_chirps_df %>%
+  left_join(adm2_df, by = "pcode")
 ```
 
 At a basic level, we detect about 1/3 more dry spells using ARC2 data than using CHIRPS data,
@@ -198,7 +208,6 @@ arc2_chirps_df %>%
 
 We can see above a breakdown of dry spell detection by method. Interestingly, where
 CHIRPS detects a dry spells, both ARC2 methods either also detect one or don't.
-Where dry spells are detected by CHIRPS and at 
 
 ```{r onset-comparison, echo = FALSE}
 arc2_chirps_df %>%
@@ -229,3 +238,60 @@ From above, we can see that the dry spell detection using CHIRPS always detects 
 spell **after** it has been detected by ARC2. This is reassuring news for the switch
 to ARC2 for the observational trigger. However, what does it look like where
 CHIRPS has data and ARC2 is missing it?
+
+### Trigger activation
+
+Let's consider if we're using these datasets for trigger activation and how they would
+compare. We will only consider dry spells that are confirmed at some point in January
+and February. Let's just quickly look at the number of dry spells detected this time period
+for each method to start.
+
+```{r trigger-chirps}
+chirps_df %>%
+  filter(month(chirps_confirmation) <= 2) %>%
+  mutate(trigger_year = year(chirps_confirmation)) %>%
+  group_by(trigger_year) %>%
+  summarize(n_triggers = n(),
+            .groups = "drop")
+```
+
+```{r trigger-center}
+arc2_center_df %>%
+  filter(month(arc2_center_confirmation) <= 2) %>%
+  mutate(trigger_year = year(arc2_center_confirmation)) %>%
+  group_by(trigger_year) %>%
+  summarize(n_triggers = n(),
+            .groups = "drop")
+```
+
+```{r trigger-touch}
+arc2_touch_df %>%
+  filter(month(arc2_touch_confirmation) <= 2) %>%
+  mutate(trigger_year = year(arc2_touch_confirmation)) %>%
+  group_by(trigger_year) %>%
+  summarize(n_triggers = n(),
+            .groups = "drop")
+```
+
+Given that the 2 ARC2 methods are so similar, we likely only need to look at the centroid method.
+This is because based on the matrix above, there are only 6 dry spells detected through
+the touch method not detected through the centroid method, but all but one of those
+is a city area. Alternatively, the centroid method would result in 8 triggers not captured
+by the touch method. However, only one of these is an urban area and the other 7
+are south-central districts in the southern region.
+
+```{r get-rid-of-touch}
+arc2_chirps_df %>%
+  filter(arc2_touch_ds, !arc2_centroid_ds) %>%
+  transmute(ADM2_EN, trigger_year = year(arc2_touch_confirmation))
+```
+
+```{r keep-that-centroid}
+arc2_chirps_df %>%
+  filter(!arc2_touch_ds, arc2_centroid_ds) %>%
+  transmute(ADM2_EN, trigger_year = year(arc2_center_confirmation))
+```
+
+Although the centroid method fails to capture Zomba City (due to a lack of raster
+centroid for ARC2 data), it seems sufficient to consider vs. CHIRPS excluding the
+touching raster method.
