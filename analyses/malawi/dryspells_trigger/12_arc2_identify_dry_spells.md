@@ -50,6 +50,7 @@ arc2_dir = os.path.join(country_data_exploration_dir,"arc2")
 arc2_filepath = os.path.join(arc2_dir, "arc2_20002020_approxmwi.nc")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
+adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 ```
 
 ### Download the data
@@ -149,6 +150,10 @@ def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thres
 # #compute statistics on adm2 level per date
 # df=alldates_statistics(ds_rolling,ds_rolling.rio.transform(),adm2_bound_path)
 # df.drop("geometry",axis=1).to_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_precip_long.csv"))
+
+# run statistics just on ARC2 data raw, not rolling sum
+df=alldates_statistics(ds_clip,ds_clip.rio.transform(),adm2_bound_path)
+df.drop("geometry",axis=1).to_csv(os.path.join(drought_data_exploration_dir,"arc2","mwi_arc2_precip_long_raw.csv"))
 ```
 
 ```python
