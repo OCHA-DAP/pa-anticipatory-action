@@ -1,0 +1,231 @@
+---
+title: "MWI: Compare ARC2 and CHIRPS"
+author: "Seth Caldwell"
+date: "13/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+library(tidyverse)
+library(fuzzyjoin)
+
+# file paths
+
+data_dir <- Sys.getenv("AA_DATA_DIR")
+expl_dir <- paste0(data_dir, "/public/exploration/mwi")
+process_dir <- paste0(data_dir, "/public/processed/mwi")
+```
+
+## Initial data loading and wrangling
+
+Alright, so first we need to load in the data that has already been processed. We have
+3 files, one for CHIRPS data, and 2 for ARC2 data, all aggregated at the ADM2 level.
+All datasets contain dry spells identified through that particular dataset, and filtered
+to only occur during rainy seasons identified using CHIRPS data.
+
+Since the rainy season definitions would slightly vary using ARC2 definitions,
+some of the dry spells recorded captured in those datasets may be instead the
+onset of the dry season and not captured if we defined the rainy season using ARC2
+data. After some exploration, I found that for ARC2 dry spells with a duration `> 30`,
+for both the centroids and touching method, only a single one of the
+20 and 18 dry spells respectively overlapped with a CHIRPS identified dry spell, and
+none had a dry spell confirmation in January or February. Thus, I explicitly filter
+these out prior to comparing the various dry spell identification methods.
+
+```{r loading}
+# data loading
+
+arc2_center_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_dry_spells_during_rainy_season.csv"),
+                           col_types = "_ccDDDdd") %>%
+  select(pcode,
+         arc2_center_start = dry_spell_first_date,
+         arc2_center_confirmation = dry_spell_confirmation,
+         arc2_center_end = dry_spell_last_date,
+         arc2_center_duration = dry_spell_duration) %>%
+  filter(arc2_center_duration <= 30)
+
+arc2_touch_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_touching_dry_spells_during_rainy_season.csv"),
+                          col_types = "_ccDDDd") %>%
+  select(pcode,
+         arc2_touch_start = dry_spell_first_date,
+         arc2_touch_confirmation = dry_spell_confirmation,
+         arc2_touch_end = dry_spell_last_date,
+         arc2_touch_duration = dry_spell_duration) %>%
+  filter(arc2_touch_duration <= 30)
+
+chirps_df <- read_csv(paste0(process_dir, "/dry_spells/dry_spells_during_rainy_season_list_2000_2021_mean_back.csv")) %>%
+  transmute(pcode,
+            chirps_start = dry_spell_first_date,
+            chirps_confirmation = dry_spell_first_date + 13,
+            chirps_end = dry_spell_last_date,
+            chirps_duration = dry_spell_duration)
+```
+
+With the 3 separate datasets loaded, we can use the `fuzzyjoin` package to join the
+datasets together (with some repititive filtering after) to capture all overlapping
+dry spells to examine in detail how the 3 separate methods for dry spell identification
+compare for each incident in particular.
+
+```{r wrangling}
+# joining ARC2 touch and center dry spells to get all overlaps
+
+arc2_center_lj1 <- fuzzy_full_join(
+  arc2_center_df,
+  arc2_touch_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_center_start" = "arc2_touch_start",
+    "arc2_center_start" = "arc2_touch_end"
+  ))
+
+arc2_center_lj2 <- fuzzy_full_join(
+  arc2_center_df,
+  arc2_touch_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_center_end" = "arc2_touch_start",
+    "arc2_center_end" = "arc2_touch_end"
+  ))
+
+arc2_overlap_df <- bind_rows(arc2_center_lj1,
+          arc2_center_lj2) %>%
+  mutate(pcode.x = ifelse(is.na(pcode.x), pcode.y, pcode.x)) %>%
+  rename(pcode = pcode.x) %>%
+  select(-pcode.y) %>%
+  distinct() %>%
+  group_by(pcode, arc2_center_start) %>%
+  filter(!(n() > 1 & is.na(arc2_touch_start))) %>% # drop duplicate row of center
+  ungroup()
+
+# now joining with CHIRPS to get additional overlaps
+
+arc2_chirps_lj1 <- fuzzy_full_join(
+  arc2_overlap_df,
+  chirps_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_center_start" = "chirps_start",
+    "arc2_center_start" = "chirps_end"
+  ))
+
+arc2_chirps_lj2 <- fuzzy_full_join(
+  arc2_overlap_df,
+  chirps_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_center_end" = "chirps_start",
+    "arc2_center_end" = "chirps_end"
+  ))
+
+arc2_chirps_lj3 <- fuzzy_full_join(
+  arc2_overlap_df,
+  chirps_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_touch_start" = "chirps_start",
+    "arc2_touch_start" = "chirps_end"
+  ))
+
+arc2_chirps_lj4 <- fuzzy_full_join(
+  arc2_overlap_df,
+  chirps_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_touch_end" = "chirps_start",
+    "arc2_touch_end" = "chirps_end"
+  ))
+
+arc2_chirps_df <- bind_rows(arc2_chirps_lj1,
+                            arc2_chirps_lj2,
+                            arc2_chirps_lj3,
+                            arc2_chirps_lj4) %>%
+  distinct() %>%
+  mutate(pcode.x = ifelse(is.na(pcode.x), pcode.y, pcode.x)) %>%
+  rename(pcode = pcode.x) %>%
+  select(-pcode.y) %>% 
+  # clean up duplicate joined rows
+  group_by(pcode, arc2_center_start, arc2_touch_start) %>%
+  filter(!(n() > 1 & is.na(chirps_start))) %>%
+  group_by(pcode, arc2_center_start, chirps_start) %>%
+  filter(!(n() > 1 & is.na(arc2_touch_start))) %>%
+  group_by(pcode, chirps_start, arc2_touch_start) %>%
+  filter(!(n() > 1 & is.na(arc2_center_start))) %>%
+  group_by(pcode, chirps_start) %>%
+  filter(!(n() > 1 & is.na(arc2_center_start) & !is.na(chirps_start))) %>%
+  ungroup()
+
+# get simple ADM2_EN data set
+purrr::map(list(
+  arc2_center_df,
+  arc2_touch_df,
+  chirps_df
+), ~ select(.x, pcode, ADM2_EN))
+
+```
+
+At a basic level, we detect about 1/3 more dry spells using ARC2 data than using CHIRPS data,
+with `r nrow(arc2_center_df)` and `r nrow(arc2_touch_df)` detected with the centroid and touching methods
+respectively, and only `r nrow(chirps_df)` using CHIRPS. Let's compare how and when
+dry spells are detected by each method.
+
+```{r detection-matrix}
+arc2_chirps_df <- mutate(arc2_chirps_df,
+  chirps_ds = !is.na(chirps_confirmation),
+  arc2_centroid_ds = !is.na(arc2_center_confirmation),
+  arc2_touch_ds = !is.na(arc2_touch_confirmation)
+)
+
+arc2_chirps_df %>%
+  select(CHIRPS = chirps_ds,
+         `ARC2 (Centroid)` = arc2_centroid_ds,
+         `ARC2 (Touching)` = arc2_touch_ds) %>%
+  group_by_all() %>%
+  summarize(Occurrences = n(),
+            .groups = "drop") %>%
+  mutate(across(-Occurrences, ~ ifelse(.x, "Detected", "Not detected"))) %>%
+  arrange(desc(Occurrences)) %>%
+  knitr::kable()
+```
+
+We can see above a breakdown of dry spell detection by method. Interestingly, where
+CHIRPS detects a dry spells, both ARC2 methods either also detect one or don't.
+Where dry spells are detected by CHIRPS and at 
+
+```{r onset-comparison, echo = FALSE}
+arc2_chirps_df %>%
+  filter(!is.na(chirps_start), !is.na(arc2_center_start)) %>%
+  mutate(center_chirps = chirps_start - arc2_center_start,
+         touch_chirps = chirps_start - arc2_touch_start) %>%
+  arrange(touch_chirps) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_longer(c(center_chirps, touch_chirps),
+               names_to = "arc2_method",
+               values_to = "day_diff") %>%
+  mutate(arc2_method = ifelse(arc2_method == "touch_chirps",
+                              "Centroid / Touching",
+                              "Centroid only")) %>%
+  ggplot(aes(x = row_id, y = day_diff, color = arc2_method)) +
+  geom_point(position = "dodge", size = 3) +
+  coord_flip() +
+  theme_minimal() +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(y = "Days since ARC2 detection",
+       title = "CHIRPS dry spell detection relative to ARC2 dry spell, days between") +
+  scale_color_manual(values = c("Centroid / Touching" = "black", "Centroid only" = "grey"))
+```
+
+From above, we can see that the dry spell detection using CHIRPS always detects the dry
+spell **after** it has been detected by ARC2. This is reassuring news for the switch
+to ARC2 for the observational trigger. However, what does it look like where
+CHIRPS has data and ARC2 is missing it?
