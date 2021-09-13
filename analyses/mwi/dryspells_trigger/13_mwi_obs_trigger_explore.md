@@ -5,9 +5,6 @@ from pathlib import Path
 import sys
 import os
 
-import rioxarray
-from shapely.geometry import mapping
-import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
