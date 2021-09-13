@@ -46,8 +46,9 @@ df['dry_spell_confirmation'] = pd.to_datetime(df['dry_spell_confirmation'])
 Keep only dry spells that were confirmed within the monitoring period of Jan 1 - Feb 28. This means that the dry spells could begin as early as Dec 18th.
 
 ```python
-monitoring_start = "2014-01-01" # The year doesn't matter here
-monitoring_end = "2014-02-28" # The year doesn't matter here
+# The year doesn't matter here
+monitoring_start = "2014-01-01"
+monitoring_end = "2014-02-28" 
 
 monitoring = pd.Series(pd.date_range(monitoring_start, monitoring_end))
 monitoring_no_year = monitoring.map(lambda x: x.strftime("%m-%d"))
@@ -82,51 +83,92 @@ Output statistics include:
 - `mult_cases`: number of years that have multiple cases where the trigger would be met
 
 ```python
-threshs = range(1, 6) # Different options for number of regions
+def calc_stats(df_activations, threshs = range(1,6)):
+    
+    df_stats = pd.DataFrame(columns = ['thresh', 'tot_act', 'tot_years', 'freq_act', 'freq_years', 'mult_cases'])
+    
+    for thresh in threshs: 
 
-df_stats = pd.DataFrame(columns = ['thresh', 'tot_act', 'tot_years', 'freq_act', 'freq_years', 'mult_cases'])
+        df_activations_filter = df_activations[df_activations['n_adm2'] >= thresh]
 
-for thresh in threshs: 
+        tot_act = len(df_activations_filter.index)
+        tot_years = len(df_activations_filter.year.unique())
+        freq_act = tot_act / N_YEARS
+        freq_years = tot_years / N_YEARS
 
-    df_activations_filter = df_activations[df_activations['n_adm2'] >= thresh]
+        count_mult = df_activations_filter.groupby('year').size().reset_index(name='n_mult_years')
+        mult_cases = len(count_mult[count_mult['n_mult_years'] > 1])
 
-    tot_act = len(df_activations_filter.index)
-    tot_years = len(df_activations_filter.year.unique())
-    freq_act = tot_act / N_YEARS
-    freq_years = tot_years / N_YEARS
+        row = {
+            'thresh': thresh, 
+            'tot_act': tot_act, 
+            'tot_years': tot_years, 
+            'freq_act': freq_act, 
+            'freq_years': freq_years, 
+            'mult_cases': mult_cases
+        }
 
-    count_mult = df_activations_filter.groupby('year').size().reset_index(name='n_mult_years')
-    mult_cases = len(count_mult[count_mult['n_mult_years'] > 1])
-
-    row = {
-        'thresh': thresh, 
-        'tot_act': tot_act, 
-        'tot_years': tot_years, 
-        'freq_act': freq_act, 
-        'freq_years': freq_years, 
-        'mult_cases': mult_cases
-    }
-
-    df_stats = df_stats.append(row, ignore_index=True)
+        df_stats = df_stats.append(row, ignore_index=True)
+    return df_stats
 ```
 
 ```python
-df_stats
+df_stats_single = calc_stats(df_activations)
 ```
 
-Plot to explore the results.
+Now explore the results if we add a buffer around when we consider different admin regions to be simultaneously triggering. For example, many of the dry spells are confirmed within several days of each other, but they aren't counted as happening together with the above method. If we identify dry spells occurring in multiple admin regions within a matter of days of each other, we should probably count these together.
 
 ```python
-plt.plot(df_stats['thresh'], df_stats['freq_years'], label='Trigger once / season')
-plt.plot(df_stats['thresh'], df_stats['freq_act'], label='Trigger multiple / season')
+buffer = 7 # Days of buffer to consider dry spells co-occurring
+
+df_buf = df_activations.copy()
+df_buf['match'] = 0
+
+count = 1
+
+for index, row in df_buf.iterrows():
+    
+    try: 
+    
+        d1 = df_buf.loc[index, 'dry_spell_confirmation']  
+        d2 = df_buf.loc[index + 1, 'dry_spell_confirmation']
+        
+        df_buf.loc[index, 'match'] = count
+
+        if (d1 + dt.timedelta(days = buffer)) >= d2:           
+            df_buf.loc[index+1, 'match'] = count
+            
+        else:           
+            count += 1
+    
+    except KeyError as e:
+        print(f'KeyError at index {e}')
+        
+df_activations_buf = df_buf.groupby(['match'])['n_adm2'].sum().reset_index(name='n_adm2')
+df_activations_buf = df_activations_buf.merge(df_buf[['match', 'year']], on='match', how='left').drop_duplicates()
+```
+
+Calculate the same statistics as above.
+
+```python
+df_stats_cumulative = calc_stats(df_activations_buf)
+```
+
+Make plots of all results. Compare across various thresholds and between the single vs cumulative method of dry spell detection.
+
+```python
+df_stats_single
+```
+
+```python
+df_stats_cumulative
+```
+
+```python
+plt.plot(df_stats_single['thresh'], df_stats_single['freq_act'], label='Single: Trigger mult / season')
+plt.plot(df_stats_cumulative['thresh'], df_stats_cumulative['freq_act'], label='Cumulative: Trigger mult / season')
 plt.legend()
 plt.ylabel('Frequency of occurrence')
 plt.xlabel('Number of admin regions with dry spell')
 plt.show()
-```
-
-Now explore the results if we add a buffer around when we consider different admin regions to be simultaneously triggering. For example, many of the dry spells are confirmed within several days of each other, but they aren't counted as happening together with the above method. If identify dry spells occurring in multiple admin regions within a matter of days of each other, we should probably count these together.
-
-```python
-# TODO
 ```
