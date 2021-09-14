@@ -1,4 +1,5 @@
 from shapely.geometry import Polygon
+from geopandas import GeoSeries
 
 from src.utils_general.area import (
     Station,
@@ -25,12 +26,17 @@ def test_get_area_from_stations():
 
 def test_get_list_for_api():
     area = AreaFromStations(FAKE_STATIONS, buffer=0)
-    assert area.list_for_api() == [1.05, -4.05, -2.05, 3.05]
+    assert area.list_for_api(round_val=0.1, offset_val=0.05) == [
+        1.05,
+        -4.05,
+        -2.05,
+        3.05,
+    ]
 
 
 def test_get_area_from_shape():
     n, s, e, w = (1, -2, 3, -4)
-    shape = Polygon([(e, n), (e, s), (w, s), (w, n)])
+    shape = GeoSeries([Polygon([(e, n), (e, s), (w, s), (w, n)])])
     area = AreaFromShape(shape)
     assert area.north == n
     assert area.south == s

@@ -14,7 +14,11 @@ class Area:
         self.east = east
         self.west = west
 
-    def list_for_api(self, do_not_round: bool = False) -> List[float]:
+    def list_for_api(
+        self,
+        round_val: float = None,
+        offset_val: float = None,
+    ) -> List[float]:
         """
         List the coordinates in the order that they're needed for the
         API :param do_not_round: Don't round to the format x.y5, which
@@ -23,18 +27,38 @@ class Area:
         toggled :return: List of coordinates in the correct order for
         the API (north, west, south, east)
         """
-        if do_not_round:
+        if round_val is None and offset_val is None:
             return [self.north, self.west, self.south, self.east]
         # Round North and East up, South and West down (to maximize area)
-        north = self._round_coord(coord=self.north, direction="up")
-        east = self._round_coord(coord=self.east, direction="up")
-        south = self._round_coord(coord=self.south, direction="down")
-        west = self._round_coord(coord=self.west, direction="down")
+        north = self._round_coord(
+            coord=self.north,
+            direction="up",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
+        east = self._round_coord(
+            coord=self.east,
+            direction="up",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
+        south = self._round_coord(
+            coord=self.south,
+            direction="down",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
+        west = self._round_coord(
+            coord=self.west,
+            direction="down",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
         return [north, west, south, east]
 
     @staticmethod
     def _round_coord(
-        coord: float, direction: str, round_val=0.1, offset_val=0.05
+        coord: float, direction: str, round_val, offset_val
     ) -> float:
         """
         Rounding coordinates
