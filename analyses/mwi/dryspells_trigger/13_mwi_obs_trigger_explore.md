@@ -27,7 +27,7 @@ DATA_DIR = Path(config.DATA_DIR)
 
 RAW_DIR =  DATA_DIR / config.PUBLIC_DIR / config.RAW_DIR / COUNTRY_ISO3
 ARC2_DIR = DATA_DIR / config.PUBLIC_DIR / 'exploration' / COUNTRY_ISO3 / 'arc2'
-DRY_SPELLS = 'mwi_arc2_dry_spells.csv'
+DRY_SPELLS = 'mwi_arc2_centroid_dry_spells.csv'
 PLOT_DIR = DATA_DIR / 'public' / 'processed' / COUNTRY_ISO3 / 'plots' / 'dry_spells' / 'arc2'
 
 N_YEARS = 21 # Dry spells based on 21 years of ARC2 data - from 2000-2020, inclusive
