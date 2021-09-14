@@ -12,12 +12,15 @@ knitr::opts_chunk$set(echo = TRUE,
 library(tidyverse)
 library(fuzzyjoin)
 library(lubridate)
+library(sf)
+library(cowplot)
 
 # file paths
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
 expl_dir <- paste0(data_dir, "/public/exploration/mwi")
 process_dir <- paste0(data_dir, "/public/processed/mwi")
+shapefile_dir <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
 ```
 
 ## Initial data loading and wrangling
@@ -39,7 +42,7 @@ these out prior to comparing the various dry spell identification methods.
 ```{r loading}
 # data loading
 
-arc2_center_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_dry_spells_during_rainy_season.csv"),
+arc2_center_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_centroid_dry_spells_during_rainy_season.csv"),
                            col_types = "_ccDDDdd") %>%
   select(pcode,
          ADM2_EN,
@@ -59,13 +62,36 @@ arc2_touch_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_touching_dry_spells_d
          arc2_touch_duration = dry_spell_duration) %>%
   filter(arc2_touch_duration <= 30)
 
-chirps_df <- read_csv(paste0(process_dir, "/dry_spells/dry_spells_during_rainy_season_list_2000_2021_mean_back.csv")) %>%
+chirps_df <- read_csv(paste0(
+  process_dir, 
+  "/dry_spells/v1/archive/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"
+)) %>%
   transmute(pcode,
             ADM2_EN,
             chirps_start = dry_spell_first_date,
             chirps_confirmation = dry_spell_first_date + 13,
             chirps_end = dry_spell_last_date,
             chirps_duration = dry_spell_duration)
+
+# shapefile loading
+adm0 <- st_read(paste0(shapefile_dir, "/mwi_admbnda_adm0_nso_20181016.shp"))
+adm1 <- st_read(paste0(shapefile_dir, "/mwi_admbnda_adm1_nso_20181016.shp"))
+adm2 <- st_read(paste0(shapefile_dir, "/mwi_admbnda_adm2_nso_20181016.shp"))
+
+# daily values loading
+arc2_daily_df <- read_csv(paste0(expl_dir, "/arc2/mwi_arc2_precip_long_raw.csv"),
+                          col_types = "____c_______D__dd______") %>%
+  rename(pcode = ADM2_PCODE,
+         arc2_centroid = mean_cell,
+         arc2_touch = mean_cell_touched)
+
+chirps_daily_df <- readRDS(paste0(process_dir, "/dry_spells/v1/data_long_mean_values_2000_2021.RDS")) %>%
+  ungroup() %>%
+  select(pcode, date, chirps = total_prec)
+
+daily_df <- inner_join(arc2_daily_df,
+                       chirps_daily_df,
+                       by = c("pcode", "date"))
 ```
 
 With the 3 separate datasets loaded, we can use the `fuzzyjoin` package to join the
@@ -182,6 +208,8 @@ arc2_chirps_df <- arc2_chirps_df %>%
   left_join(adm2_df, by = "pcode")
 ```
 
+### Simple comparison
+
 At a basic level, we detect about 1/3 more dry spells using ARC2 data than using CHIRPS data,
 with `r nrow(arc2_center_df)` and `r nrow(arc2_touch_df)` detected with the centroid and touching methods
 respectively, and only `r nrow(chirps_df)` using CHIRPS. Let's compare how and when
@@ -239,6 +267,81 @@ spell **after** it has been detected by ARC2. This is reassuring news for the sw
 to ARC2 for the observational trigger. However, what does it look like where
 CHIRPS has data and ARC2 is missing it?
 
+### Geographic comparison
+
+```{r geo-compare}
+arc2_missing_plot <- arc2_chirps_df %>%
+  filter(chirps_ds, !arc2_touch_ds) %>%
+  group_by(pcode) %>%
+  summarize(count = n()) %>%
+  right_join(adm2, by = c("pcode" = "ADM2_PCODE")) %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = count)) +
+  scale_fill_gradient(na.value = "white",
+                      breaks = 1:5) +
+  geom_sf(data = adm1, fill = NA, size = 0.75) +
+  coord_sf(datum = NA) +
+  theme_minimal() +
+  labs(title = "Dry spells only detected using CHIRPS") +
+  theme(plot.title.position = "plot")
+
+chirps_missing_plot <- arc2_chirps_df %>%
+  filter(!chirps_ds, arc2_touch_ds, arc2_centroid_ds) %>%
+  group_by(pcode) %>%
+  summarize(count = n()) %>%
+  right_join(adm2, by = c("pcode" = "ADM2_PCODE")) %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = count)) +
+  scale_fill_gradient(na.value = "white",
+                      breaks = 1:5) +
+  geom_sf(data = adm1, fill = NA, size = 0.75) +
+  coord_sf(datum = NA) +
+  theme_minimal() +
+  labs(title = "Dry spells only detected using ARC2",
+       subtitle = "(both centroid and touching method)") +
+  theme(plot.title.position = "plot")
+
+plot_grid(arc2_missing_plot, chirps_missing_plot)
+```
+
+```{r geo-compare-arc2}
+centroid_missing_plot <- arc2_chirps_df %>%
+  filter(arc2_centroid_ds, !arc2_touch_ds) %>%
+  group_by(pcode) %>%
+  summarize(count = n()) %>%
+  right_join(adm2, by = c("pcode" = "ADM2_PCODE")) %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = count)) +
+  scale_fill_gradient(na.value = "white",
+                      breaks = 1:5) +
+  geom_sf(data = adm1, fill = NA, size = 0.75) +
+  coord_sf(datum = NA) +
+  theme_minimal() +
+  labs(title = "Dry spells only detected using centroids") +
+  theme(plot.title.position = "plot")
+
+touch_missing_plot <- arc2_chirps_df %>%
+  filter(!arc2_centroid_ds, arc2_touch_ds) %>%
+  group_by(pcode) %>%
+  summarize(count = n()) %>%
+  right_join(adm2, by = c("pcode" = "ADM2_PCODE")) %>%
+  st_as_sf() %>%
+  ggplot() +
+  geom_sf(aes(fill = count)) +
+  scale_fill_gradient(na.value = "white",
+                      breaks = 1:5) +
+  geom_sf(data = adm1, fill = NA, size = 0.75) +
+  coord_sf(datum = NA) +
+  theme_minimal() +
+  labs(title = "Dry spells only detected using touching") +
+  theme(plot.title.position = "plot")
+
+plot_grid(centroid_missing_plot, touch_missing_plot)
+```
+
 ### Trigger activation
 
 Let's consider if we're using these datasets for trigger activation and how they would
@@ -295,3 +398,86 @@ arc2_chirps_df %>%
 Although the centroid method fails to capture Zomba City (due to a lack of raster
 centroid for ARC2 data), it seems sufficient to consider vs. CHIRPS excluding the
 touching raster method.
+
+### Daily value comparisons
+
+First, let's do some 2d histograms to examine the distribution of various calculation methods.
+What do we see between the centroid and touching raster methods applied?
+
+```{r 2d-histo-arc}
+daily_df %>%
+  ggplot(aes(x = arc2_centroid,
+             y = arc2_touch)) +
+  geom_bin2d(bins = 200) +
+  theme_bw() +
+  geom_abline(intercept = 0)
+```
+
+While it looks like the touching method might skew higher (if just slightly) at
+higher levels of rainfall, we are more concerned at their behavior at lower levels.
+
+```{r 2d-histo-arc-1}
+daily_df %>%
+  filter(arc2_centroid <= 1 | arc2_touch <= 1) %>%
+  ggplot(aes(x = arc2_centroid,
+             y = arc2_touch)) +
+  geom_bin2d(bins = 50) +
+  theme_bw() +
+  geom_abline(intercept = 0)
+```
+
+And above we can see that the centroid method in general trends much higher at these levels.
+This intuitively makes sense as the touching method takes the average of more raster
+cells than the centroid method, so will tend to regress toward the mean at the extremes.
+Anyway, given their similar results in identifying dry spells and the results above,
+should be fine to simply compare the centroid method against CHIRPS and not the
+touching method.
+
+```{r 2d-histo-chirps}
+daily_df %>%
+  ggplot(aes(x = arc2_centroid,
+             y = chirps)) +
+  geom_bin2d(bins = 200) +
+  theme_bw() +
+  geom_abline(intercept = 0)
+```
+
+```{r 2d-histo-chirps-2}
+daily_df %>%
+  filter(arc2_centroid <= 0.2 | chirps <= 0.2)%>%
+  ggplot(aes(x = arc2_centroid,
+             y = chirps)) +
+  geom_bin2d(bins = 200) +
+  theme_bw() +
+  geom_abline(intercept = 0)
+```
+
+The above graph is obviously difficult to interpret given some of the extreme values.
+We could limit the axes, but might be more intuititive to graph instead the differences.
+```{r diff-chirps}
+daily_df %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw()
+```
+
+```{r diff-chirps-2}
+daily_df %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  filter(arc2_centroid <= 0.2 | chirps <= 0.2) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw()
+```
+
+```{r diff-chirps-excl0}
+daily_df %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  filter(arc2_centroid <= 0.2 | chirps <= 0.2) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw() +
+  scale_y_continuous(limits = c(0, 6000))
+```
+
