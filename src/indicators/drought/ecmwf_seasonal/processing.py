@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 import geopandas as gpd
 from rasterstats import zonal_stats
-import rioxarray
 import logging
 
 import numpy as np
@@ -82,14 +81,19 @@ def compute_stats_per_admin(
 
     if interpolate:
         # read observed data to get resolution to interpolate to
-        ds_chirps = read_chirps_data(config, country_iso3)
         # interpolate forecast data such that it has the same resolution
         # as the observed values using "nearest" as interpolation method
         # and not "linear" because the forecasts are designed to have
         # sharp edged and not be smoothed
-        ds = ds.interp(
-            latitude=ds_chirps["y"], longitude=ds_chirps["x"], method="nearest"
+        # now standard upsampling 4 times, can be made variable
+        new_lon = np.arange(
+            ds.longitude[0] - 0.125, ds.longitude[-1] + 0.25, 0.25
         )
+        new_lat = np.arange(
+            ds.latitude[0] + 0.125, ds.latitude[-1] - 0.25, -0.25
+        )
+
+        ds = ds.interp(latitude=new_lat, longitude=new_lon, method="nearest")
 
     # loop over dates
     if date_list is None:
@@ -325,21 +329,3 @@ def get_crps_ecmwf(
         )
         df_crps.loc[leadtime, "crps"] = crps
     return df_crps
-
-
-def read_chirps_data(config, country_iso3):
-    chirps_country_data_exploration_dir = os.path.join(
-        config.DATA_DIR,
-        config.PUBLIC_DIR,
-        "exploration",
-        country_iso3,
-        "chirps",
-    )
-    chirps_monthly_country_path = os.path.join(
-        chirps_country_data_exploration_dir,
-        f"chirps_{country_iso3.lower()}_monthly.nc",
-    )
-    ds_chirps = rioxarray.open_rasterio(
-        chirps_monthly_country_path, masked=True
-    )
-    return ds_chirps
