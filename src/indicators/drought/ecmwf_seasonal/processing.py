@@ -55,7 +55,11 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
 
 
 def compute_stats_per_admin(
-    country, adm_level=1, use_cache=True, interpolate=True
+    country,
+    adm_level=1,
+    use_cache=True,
+    interpolate=True,
+    date_list=None,
 ):
     config = Config()
     parameters = config.parameters(country)
@@ -88,7 +92,9 @@ def compute_stats_per_admin(
         )
 
     # loop over dates
-    for date in ds.time.values:
+    if date_list is None:
+        date_list = ds.time.values
+    for date in date_list:
         date_dt = pd.to_datetime(date)
         if interpolate:
             output_filename = (
@@ -113,7 +119,6 @@ def compute_stats_per_admin(
             )
         else:
             ds_sel = ds.sel(time=date)
-            print(ds_sel)
             gdf_adm = gpd.read_file(adm_boundaries_path)
             df = compute_raster_statistics(
                 gdf_adm,
