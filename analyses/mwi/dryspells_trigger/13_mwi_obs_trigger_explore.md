@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import datetime as dt
+import dataframe_image as dfi
 
 mpl.rcParams['figure.dpi'] = 300
 ```
@@ -65,10 +66,13 @@ Look into various scenarios for activating, based on different thresholds for nu
 ```python
 df_activations = df_filtered.groupby('dry_spell_confirmation').size().reset_index(name='n_adm2')
 df_activations['year'] = df_activations['dry_spell_confirmation'].dt.year
+
+df_activations_save = df_activations.rename(columns={'dry_spell_confirmation': 'Confirmation date', 'n_adm2': 'Number ADM2', 'year': 'Year'})
+dfi.export(df_activations_save, 'df_activations.png')
 ```
 
 ```python
-df_activations
+df_activations_save
 ```
 
 Output statistics include: 
