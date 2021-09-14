@@ -10,6 +10,7 @@ shp_adm1c: "ADM1_EN"
 shp_adm2c: "ADM2_EN"
 crs_degrees: 4326 # EPSG code of coordinate system to use in degrees
 crs_meters: 20936 # EPSG code of coordinate system to use in meters (https://epsg.io/20936)
+version: 1
 
 foodinsecurity:
   region: "southern-africa"
