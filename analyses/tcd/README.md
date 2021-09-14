@@ -28,10 +28,6 @@ CHD provides technical guidance on developing triggers for AA and has not perfor
 │
 ├── results                   <- Results from analysis which may include model outputs, figures, reports.  
 |
-├── scripts                   <- Scripts to perform generalized data processing and analysis steps. These scripts may be applied in the notebooks.    
-|
-├── config.yml                <- config file to specify country specific variables   
-|
 └── README.md                 <- Description of this project.
 
 ```
