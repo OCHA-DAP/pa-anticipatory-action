@@ -3,7 +3,7 @@ combines all dates into one dataframe."""
 from pathlib import Path
 import logging
 import time
-import datetime
+from datetime import datetime, timezone
 import os
 from typing import List
 import xarray as xr
@@ -135,7 +135,7 @@ class EcmwfSeasonal:
             if month is None
             else str(month).zfill(2),
             "leadtime_month": [str(x) for x in leadtimes],
-            "area": area.list_for_api(),
+            "area": area.list_for_api(round_val=1, offset_val=0),
         }
         logger.debug(f"Query: {query}")
         return query
@@ -228,7 +228,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             f"Downloading ECMWF seasonal forecast v{version} for years"
             f" {self.year_min} - {self.year_max}"
         )
-        current_date = datetime.datetime.now()
+        current_date = datetime.now(timezone.utc)
         month_range = range(1, 13) if split_by_month else [None]
         if leadtimes is None:
             leadtimes = DEFAULT_LEADTIMES
@@ -241,7 +241,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                     # forecast becomes available on the 13th of the month
                     max_month = (
                         current_date.month
-                        if current_date.day >= 13
+                        if current_date.day >= 13 and current_date.hour >= 12
                         else current_date.month - 1
                     )
                     month_range = range(1, max_month + 1)
