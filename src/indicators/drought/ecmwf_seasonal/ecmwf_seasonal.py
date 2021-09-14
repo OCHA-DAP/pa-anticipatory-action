@@ -241,7 +241,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                     # forecast becomes available on the 13th of the month
                     max_month = (
                         current_date.month
-                        if current_date.day >= 13 and current_date.hour >= 12
+                        if current_date.day > 13
+                        or (current_date.day == 13 and current_date.hour >= 12)
                         else current_date.month - 1
                     )
                     month_range = range(1, max_month + 1)
