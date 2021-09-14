@@ -152,37 +152,41 @@ def compute_raster_statistics(
             # count automatically ignores NaNs
             # therefore skipna can also not be given as an argument
             # implemented count cause needed for computing percentages
-            kwargs = {} if stat == "count" else {"skipna": True}
+            kwargs = {}
+            if stat != "count":
+                kwargs["skipna"] = True
             # makes sum return NaN instead of 0 if array
             # only contains NaNs
             if stat == "sum":
                 kwargs["min_count"] = 1
             grid_stat = getattr(da_clip, stat)(
                 dim=[lon_coord, lat_coord], **kwargs
-            )
-            grid_stat = grid_stat.rename(f"{stat}_{bound_col}")
+            ).rename(f"{stat}_{bound_col}")
             grid_stat_all.append(grid_stat)
+
         if percentile_list is not None:
-            for quant in percentile_list:
-                quant_float = quant / 100
-                grid_quant = da_clip.quantile(
-                    quant_float, dim=[lon_coord, lat_coord]
-                )
-                grid_quant = grid_quant.drop("quantile").rename(
-                    f"{quant}quant_{bound_col}"
-                )
-                grid_stat_all.append(grid_quant)
+            grid_quant = [
+                da_clip.quantile(quant / 100, dim=[lon_coord, lat_coord])
+                .drop("quantile")
+                .rename(f"{quant}quant_{bound_col}")
+                for quant in percentile_list
+            ]
+            grid_stat_all.extend(grid_quant)
 
         # if dims is 0, it throws an error when merging
         # and then converting to a df
         # this occurs when the input da is 2D
-        if grid_stat_all[0].dims == ():
+        if not grid_stat_all[0].dims:
             df_adm = pd.DataFrame(
                 {da_stat.name: [da_stat.values] for da_stat in grid_stat_all}
             )
         else:
             zonal_stats_xr = xr.merge(grid_stat_all)
-            df_adm = zonal_stats_xr.to_dataframe().reset_index()
+            df_adm = (
+                zonal_stats_xr.to_dataframe()
+                .drop("spatial_ref", axis=1)
+                .reset_index()
+            )
         df_adm[bound_col] = bound_id
         df_list.append(df_adm)
 
