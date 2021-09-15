@@ -34,10 +34,11 @@ Since the rainy season definitions would slightly vary using ARC2 definitions,
 some of the dry spells recorded captured in those datasets may be instead the
 onset of the dry season and not captured if we defined the rainy season using ARC2
 data. After some exploration, I found that for ARC2 dry spells with a duration `> 30`,
-for both the centroids and touching method, only a single one of the
+for both the centroids and touching method, only a single one of those
 20 and 18 dry spells respectively overlapped with a CHIRPS identified dry spell, and
 none had a dry spell confirmation in January or February. Thus, I explicitly filter
-these out prior to comparing the various dry spell identification methods.
+these 38 dry spells out from the two methods prior to comparing the various dry
+spell identification methods.
 
 ```{r loading}
 # data loading
@@ -71,7 +72,8 @@ chirps_df <- read_csv(paste0(
             chirps_start = dry_spell_first_date,
             chirps_confirmation = dry_spell_first_date + 13,
             chirps_end = dry_spell_last_date,
-            chirps_duration = dry_spell_duration)
+            chirps_duration = dry_spell_duration) %>%
+  filter(str_detect(ADM2_EN, "MW3"))
 
 # shapefile loading
 adm0 <- st_read(paste0(shapefile_dir, "/mwi_admbnda_adm0_nso_20181016.shp"))
@@ -122,8 +124,30 @@ arc2_center_lj2 <- fuzzy_full_join(
     "arc2_center_end" = "arc2_touch_end"
   ))
 
+arc2_center_lj3 <- fuzzy_full_join(
+  arc2_touch_df,
+  arc2_center_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_touch_end" = "arc2_center_start",
+    "arc2_touch_end" = "arc2_center_end"
+  ))
+
+arc2_center_lj4 <- fuzzy_full_join(
+  arc2_touch_df,
+  arc2_center_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "arc2_touch_start" = "arc2_center_start",
+    "arc2_touch_start" = "arc2_center_end"
+  ))
+
 arc2_overlap_df <- bind_rows(arc2_center_lj1,
-          arc2_center_lj2) %>%
+                             arc2_center_lj2,
+                             arc2_center_lj3,
+                             arc2_center_lj4) %>%
   mutate(pcode.x = ifelse(is.na(pcode.x), pcode.y, pcode.x)) %>%
   rename(pcode = pcode.x) %>%
   select(-pcode.y) %>%
@@ -174,25 +198,68 @@ arc2_chirps_lj4 <- fuzzy_full_join(
     "arc2_touch_end" = "chirps_end"
   ))
 
+arc2_chirps_lj5 <- fuzzy_full_join(
+  chirps_df,
+  arc2_overlap_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "chirps_start" = "arc2_touch_start",
+    "chirps_start" = "arc2_touch_end"
+  ))
+
+arc2_chirps_lj6 <- fuzzy_full_join(
+  chirps_df,
+  arc2_overlap_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "chirps_end" = "arc2_touch_start",
+    "chirps_end" = "arc2_touch_end"
+  ))
+
+arc2_chirps_lj7 <- fuzzy_full_join(
+  chirps_df,
+  arc2_overlap_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "chirps_start" = "arc2_center_start",
+    "chirps_start" = "arc2_center_end"
+  ))
+
+arc2_chirps_lj8 <- fuzzy_full_join(
+  chirps_df,
+  arc2_overlap_df,
+  match_fun = list(`==`, `>=`, `<=`),
+  by = c(
+    "pcode" = "pcode",
+    "chirps_end" = "arc2_center_start",
+    "chirps_end" = "arc2_center_end"
+  ))
+
 arc2_chirps_df <- bind_rows(arc2_chirps_lj1,
                             arc2_chirps_lj2,
                             arc2_chirps_lj3,
-                            arc2_chirps_lj4) %>%
-  distinct() %>%
+                            arc2_chirps_lj4,
+                            arc2_chirps_lj5,
+                            arc2_chirps_lj6,
+                            arc2_chirps_lj7,
+                            arc2_chirps_lj8) %>%
   mutate(pcode.x = ifelse(is.na(pcode.x), pcode.y, pcode.x)) %>%
   rename(pcode = pcode.x) %>%
-  select(-pcode.y) %>% 
+  select(-pcode.y, -starts_with("ADM2_EN")) %>% 
+  distinct() %>%
   # clean up duplicate joined rows
   group_by(pcode, arc2_center_start, arc2_touch_start) %>%
-  filter(!(n() > 1 & is.na(chirps_start))) %>%
+  filter(!(n() > 1 & is.na(chirps_start) & !is.na(arc2_center_start) & !is.na(arc2_touch_start))) %>%
   group_by(pcode, arc2_center_start, chirps_start) %>%
-  filter(!(n() > 1 & is.na(arc2_touch_start))) %>%
+  filter(!(n() > 1 & is.na(arc2_touch_start) & !is.na(arc2_center_start) & !is.na(chirps_start))) %>%
   group_by(pcode, chirps_start, arc2_touch_start) %>%
-  filter(!(n() > 1 & is.na(arc2_center_start))) %>%
+  filter(!(n() > 1 & is.na(arc2_center_start) & !is.na(chirps_start) & !is.na(arc2_touch_start))) %>%
   group_by(pcode, chirps_start) %>%
   filter(!(n() > 1 & is.na(arc2_center_start) & !is.na(chirps_start))) %>%
-  ungroup() %>%
-  select(-starts_with("ADM2_EN"))
+  ungroup()
 
 # get simple ADM2_EN data set
 adm2_df <- map(list(
@@ -236,6 +303,8 @@ arc2_chirps_df %>%
 
 We can see above a breakdown of dry spell detection by method. Interestingly, where
 CHIRPS detects a dry spells, both ARC2 methods either also detect one or don't.
+We should be comfortable just comparing CHIRPS dry spells to a
+single ARC2 method given these similarities.
 
 ```{r onset-comparison, echo = FALSE}
 arc2_chirps_df %>%
@@ -258,7 +327,8 @@ arc2_chirps_df %>%
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank()) +
   labs(y = "Days since ARC2 detection",
-       title = "CHIRPS dry spell detection relative to ARC2 dry spell, days between") +
+       title = "CHIRPS dry spell detection relative to ARC2 dry spell, days between",
+       subtitle = "For dry spells detected using both CHIRPS and ARC2") +
   scale_color_manual(values = c("Centroid / Touching" = "black", "Centroid only" = "grey"))
 ```
 
@@ -351,7 +421,8 @@ for each method to start.
 
 ```{r trigger-chirps}
 chirps_df %>%
-  filter(month(chirps_confirmation) <= 2) %>%
+  filter(month(chirps_confirmation) <= 2,
+         str_detect(pcode, "MW3")) %>%
   mutate(trigger_year = year(chirps_confirmation)) %>%
   group_by(trigger_year) %>%
   summarize(n_triggers = n(),
@@ -360,7 +431,8 @@ chirps_df %>%
 
 ```{r trigger-center}
 arc2_center_df %>%
-  filter(month(arc2_center_confirmation) <= 2) %>%
+  filter(month(arc2_center_confirmation) <= 2,
+         str_detect(pcode, "MW3")) %>%
   mutate(trigger_year = year(arc2_center_confirmation)) %>%
   group_by(trigger_year) %>%
   summarize(n_triggers = n(),
@@ -369,7 +441,8 @@ arc2_center_df %>%
 
 ```{r trigger-touch}
 arc2_touch_df %>%
-  filter(month(arc2_touch_confirmation) <= 2) %>%
+  filter(month(arc2_touch_confirmation) <= 2,
+         str_detect(pcode, "MW3")) %>%
   mutate(trigger_year = year(arc2_touch_confirmation)) %>%
   group_by(trigger_year) %>%
   summarize(n_triggers = n(),
@@ -408,9 +481,14 @@ What do we see between the centroid and touching raster methods applied?
 daily_df %>%
   ggplot(aes(x = arc2_centroid,
              y = arc2_touch)) +
-  geom_bin2d(bins = 200) +
+  stat_bin2d(aes(fill = log(..density..)),
+             bins = 200) +
   theme_bw() +
-  geom_abline(intercept = 0)
+  geom_abline(intercept = 0) +
+  theme(legend.position = "none") +
+  labs(title = "2D histogram, log scale",
+       x = "ARC2 (centroid) precipitation",
+       y = "ARC2 (touching) precipitation")
 ```
 
 While it looks like the touching method might skew higher (if just slightly) at
@@ -421,9 +499,15 @@ daily_df %>%
   filter(arc2_centroid <= 1 | arc2_touch <= 1) %>%
   ggplot(aes(x = arc2_centroid,
              y = arc2_touch)) +
-  geom_bin2d(bins = 50) +
+  geom_bin2d(bins = 50,
+             aes(fill = log(..density..))) +
   theme_bw() +
-  geom_abline(intercept = 0)
+  geom_abline(intercept = 0) +
+  theme(legend.position = "none") +
+  labs(title = "2D histogram, log scale",
+       subtitle = "Only dates where at least one metric measures <= 0.2mm",
+       x = "ARC2 (centroid) precipitation",
+       y = "ARC2 (touching) precipitation")
 ```
 
 And above we can see that the centroid method in general trends much higher at these levels.
@@ -437,9 +521,14 @@ touching method.
 daily_df %>%
   ggplot(aes(x = arc2_centroid,
              y = chirps)) +
-  geom_bin2d(bins = 200) +
+  geom_bin2d(bins = 200,
+             aes(fill = log(..density..))) +
   theme_bw() +
-  geom_abline(intercept = 0)
+  geom_abline(intercept = 0) +
+  theme(legend.position = "none") +
+  labs(title = "2D histogram, log scale",
+       x = "ARC2 (centroid) precipitation",
+       y = "CHIRPS precipitation")
 ```
 
 ```{r 2d-histo-chirps-2}
@@ -447,19 +536,29 @@ daily_df %>%
   filter(arc2_centroid <= 0.2 | chirps <= 0.2)%>%
   ggplot(aes(x = arc2_centroid,
              y = chirps)) +
-  geom_bin2d(bins = 200) +
+  geom_bin2d(bins = 200,
+             aes(fill = log(..density..))) +
   theme_bw() +
-  geom_abline(intercept = 0)
+  geom_abline(intercept = 0) +
+  theme(legend.position = "none") +
+  labs(title = "2D histogram, log scale",
+       subtitle = "Only dates where at least one metric measures <= 0.2mm",
+       x = "ARC2 (centroid) precipitation",
+       y = "CHIRPS precipitation")
 ```
 
 The above graph is obviously difficult to interpret given some of the extreme values.
 We could limit the axes, but might be more intuititive to graph instead the differences.
+
 ```{r diff-chirps}
 daily_df %>%
   mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
   ggplot(aes(x = chirps_arc2_diff)) +
   geom_histogram(bins = 60) +
-  theme_bw()
+  theme_bw() +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       x = "Chirps - ARC2",
+       y = "Count")
 ```
 
 ```{r diff-chirps-2}
@@ -468,7 +567,11 @@ daily_df %>%
   filter(arc2_centroid <= 0.2 | chirps <= 0.2) %>%
   ggplot(aes(x = chirps_arc2_diff)) +
   geom_histogram(bins = 60) +
-  theme_bw()
+  theme_bw() +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       subtitle = "Only dates where at least one metric measures <= 0.2mm",
+       x = "Chirps - ARC2",
+       y = "Count")
 ```
 
 ```{r diff-chirps-excl0}
@@ -478,6 +581,182 @@ daily_df %>%
   ggplot(aes(x = chirps_arc2_diff)) +
   geom_histogram(bins = 60) +
   theme_bw() +
-  scale_y_continuous(limits = c(0, 6000))
+  scale_y_continuous(limits = c(0, 6000)) +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       subtitle = "Only dates where at least one metric measures <= 0.2mm; zoomed",
+       x = "Chirps - ARC2",
+       y = "Count")
+```
+### January / February comparisons
+
+Since our action trigger will be monitored only in January and February 2022,
+important to validate the comparability of ARC2 and CHIRPS across that period
+solely to ensure the broader trends still hold true (which indicate that ARC2 is
+as sufficient if not preferable for dry spell detection).
+
+```{r diff-chirps-feb}
+daily_df %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  filter(lubridate::month(date) <= 2) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw() +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       subtitle = "January and February only",
+       x = "Chirps - ARC2",
+       y = "Count")
 ```
 
+```{r diff-chirps-2-feb}
+daily_df %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  filter(arc2_centroid <= 0.2 | chirps <= 0.2,
+         lubridate::month(date) <= 2) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw() +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       subtitle = "January and February only; only dates where at least one metric measures <= 0.2mm",
+       x = "Chirps - ARC2",
+       y = "Count")
+```
+We can again see that CHIRPS data in this period does indeed follow the same trend.
+
+### During mismatched dry spells
+
+Another final piece of checking to do would be to see what is going on with
+daily values in the periods where one method detects a dry spell but the other
+detects no overlapping dry spell at all.
+
+```{r arc2-no-spell}
+arc2_no_spell_daily <- arc2_chirps_df %>%
+  filter(chirps_ds, !arc2_centroid_ds) %>%
+  fuzzy_inner_join(
+    daily_df,
+    match_fun = list(`==`, `<=`, `>=`),
+    by = c(
+      "pcode" = "pcode",
+      "chirps_start" = "date",
+      "chirps_end" = "date"
+    )) %>%
+  select(pcode = pcode.x,
+         date,
+         chirps,
+         arc2_centroid)
+
+arc2_no_spell_daily %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw() +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       subtitle = "Only dates where CHIRPS detected a dry spell but none was detected by ARC2",
+       x = "Chirps - ARC2",
+       y = "Count")
+```
+
+Clearly, by defining our subset, we see many instances where the CHIRPS measured
+precipitation is lower than ARC2. But where is actually coming about?
+
+```{r arc2-missing-why}
+arc2_no_spell_daily %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid,
+         chirps_type = ifelse(chirps > 0, "> 0mm", "0mm"),
+         ) %>%
+  group_by(chirps_type) %>%
+  summarize(`ARC2 0mm` = sum(arc2_centroid == 0, na.rm = T),
+            `ARC2 > 0mm` = sum(arc2_centroid > 0, na.rm = T),
+            `ARC2 > 0mm & > chirps` = sum(arc2_centroid > 0 & arc2_centroid > chirps, na.rm = T))
+```
+From the above, it's clear that the vast majority of the time, ARC2 and CHIRPS align,
+just that there are instances where CHIRPS measures 0 precipitation but ARC2 measures
+some, and another 8 where both ARC2 and CHIRPS measure precipitation but CHIRPS
+measures none.
+
+```{r arc2-ts-graph}
+arc2_no_spell_daily %>%
+  filter(!is.na(arc2_centroid)) %>%
+  mutate(g = paste(pcode, lubridate::year(date), sep = ", ")) %>%
+  group_by(g) %>%
+  arrange(date, .by_group = TRUE) %>%
+  mutate(id = row_number()) %>%
+  ggplot(aes(x = id)) +
+  geom_line(aes(y = chirps), color = "grey") +
+  geom_line(aes(y = arc2_centroid)) +
+  facet_wrap(~g, scales = "free") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank()) +
+  labs(x = "Days of dry spell",
+       y = "Precipitation",
+       title = "Precipitation values of ARC2 and CHIRPS during CHIRPS dry spells",
+       subtitle = "ARC2 values in black")
+```
+Aha! Very informative! It's quite clear that in all but one of the dry spells,
+ARC2 is measuring "extreme" spikes in precipitation surrounding primarily days with
+none. In some instances, like MW209 or MW203, these are spikes also measured by CHIRPS, just
+with higher precipitation recorded by ARC2. In the majority, however, the spikes 
+are registered solely by ARC2, whereas CHIRPS records little to no precipitation.
+
+### Flip it!
+
+Just for a bit of extra exploration, let's quickly run the same code to assess
+CHIRPS daily values where CHIRPS doesn't detect an overlapping dry spell when
+ARC2 detects one.
+
+```{r chirps-no-spell}
+chirps_no_spell_daily <- arc2_chirps_df %>%
+  filter(!chirps_ds, arc2_centroid_ds) %>%
+  fuzzy_inner_join(
+    daily_df,
+    match_fun = list(`==`, `<=`, `>=`),
+    by = c(
+      "pcode" = "pcode",
+      "arc2_center_start" = "date",
+      "arc2_center_end" = "date"
+    )) %>%
+  select(pcode = pcode.x,
+         date,
+         chirps,
+         arc2_centroid)
+
+chirps_no_spell_daily %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid) %>%
+  ggplot(aes(x = chirps_arc2_diff)) +
+  geom_histogram(bins = 60) +
+  theme_bw() +
+  labs(title = "Precipitation difference, CHIRPS - ARC2",
+       subtitle = "Only dates where CHIRPS detected a dry spell but none was detected by ARC2",
+       x = "Chirps - ARC2",
+       y = "Count")
+```
+
+```{r chirps-missing-why}
+chirps_no_spell_daily %>%
+  mutate(chirps_arc2_diff = chirps - arc2_centroid,
+         arc2_type = ifelse(arc2_centroid > 0, "> 0mm", "0mm"),
+         ) %>%
+  group_by(arc2_type) %>%
+  summarize(`CHIRPS 0mm` = sum(chirps == 0, na.rm = T),
+            `CHIRPS > 0mm` = sum(chirps > 0, na.rm = T),
+            `CHIRPS > 0mm & > chirps` = sum(chirps > 0 & chirps > arc2_centroid, na.rm = T))
+```
+
+```{r chirps-ts-graph}
+chirps_no_spell_daily %>%
+  mutate(g = paste0(pcode, lubridate::year(date))) %>%
+  group_by(g) %>%
+  arrange(date, .by_group = TRUE) %>%
+  mutate(id = row_number()) %>%
+  ggplot(aes(x = id)) +
+  geom_line(aes(y = chirps)) +
+  geom_line(aes(y = arc2_centroid), color = "grey") +
+  facet_wrap(~g, scales = "free") +
+  theme_minimal() +
+  theme(axis.text.x = element_blank()) +
+  labs(x = "Days of dry spell",
+       y = "Precipitation",
+       title = "Precipitation values of ARC2 and CHIRPS during ARC2 dry spells",
+       subtitle = "CHIRPS values in black")
+```
+
+Contrary to ARC2 values were detecting dry spells
