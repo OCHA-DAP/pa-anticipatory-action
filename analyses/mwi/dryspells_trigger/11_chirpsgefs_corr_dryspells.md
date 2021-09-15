@@ -66,16 +66,18 @@ from src.utils_general.plotting import plot_spatial_columns
 #### Set config values
 
 ```python
-country="mwi"
+country_iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
+parameters = config.parameters(country_iso3)
+
 data_public_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR)
 country_data_raw_dir = os.path.join(data_public_dir,config.RAW_DIR,country_iso3)
 country_data_processed_dir = os.path.join(data_public_dir,config.PROCESSED_DIR,country_iso3)
 country_data_exploration_dir = os.path.join(data_public_dir,"exploration",country_iso3)
-dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
+dry_spells_exploration_dir = os.path.join(country_data_exploration_dir,"dry_spells", f"v{parameters['version']}")
+dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells", f"v{parameters['version']}")
 chirpsgefs_processed_dir=os.path.join(country_data_processed_dir,"chirpsgefs")
+dry_spells_processed_archive_dir = os.path.join(dry_spells_processed_dir, "archive")
 
 #we have different methodologies of computing dryspells and rainy season
 #this notebook chooses one, which is indicated by the files being used
@@ -100,11 +102,11 @@ adm_col="ADM2_EN"
 #we have different methodologies of computing dryspells and rainy season
 #this notebook chooses one, which is indicated by the files being used
 if ds_meth=="mean_2mm":
-    dry_spells_list_path=os.path.join(dry_spells_processed_dir,f"dry_spells_during_rainy_season_list_2000_2020_mean_back.csv")
+    dry_spells_list_path=os.path.join(dry_spells_processed_archive_dir,f"dry_spells_during_rainy_season_list_2000_2020_mean_back.csv")
 elif ds_meth=="consecutive_days_2mm":
-    dry_spells_list_path=os.path.join(dry_spells_processed_dir,f"daily_mean_dry_spells_details_2mm_2000_2020.csv")
+    dry_spells_list_path=os.path.join(dry_spells_processed_archive_dir,f"daily_mean_dry_spells_details_2mm_2000_2020.csv")
 elif ds_meth=="consecutive_days_4mm":
-    dry_spells_list_path=os.path.join(dry_spells_processed_dir,f"daily_mean_dry_spells_details_2000_2020.csv")
+    dry_spells_list_path=os.path.join(dry_spells_processed_archive_dir,f"daily_mean_dry_spells_details_2000_2020.csv")
 ```
 
 #### Load CHIRPS-GEFS data
@@ -250,7 +252,7 @@ plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so c
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_15days_density.png"))
+# plt.savefig(os.path.join(dry_spells_exploration_dir, "plot_MWI_chirpsgefs_15days_density.png"))
 ```
 
 ```python
@@ -270,7 +272,7 @@ plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so c
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+# plt.savefig(os.path.join(dry_spells_exploration_dir,"plot_MWI_chirpsgefs_density.png"))
 ```
 
 ```python
@@ -290,7 +292,7 @@ plt.subplots_adjust(left=0.2, right=0.8, top=0.8, bottom=0.2)  # shrink fig so c
 cbar_ax = g.fig.add_axes([.85, .25, .05, .4])  # x, y, width, height
 plt.colorbar(cax=cbar_ax)
 g.ax_joint.legend()
-# plt.savefig(os.path.join(country_data_exploration_dir,"dryspells","plot_MWI_chirpsgefs_density.png"))
+# plt.savefig(os.path.join(dry_spells_exploration_dir,"plot_MWI_chirpsgefs_density.png"))
 ```
 
 ```python
@@ -384,7 +386,7 @@ df_ds_daterange.rename(columns={0:"date"},inplace=True)
 #all dates in this dataframe had an observed dry spell, so add that information
 df_ds_daterange["dryspell_obs"]=1
 
-```python
+```
 df_ds_daterange.head()
 ```
 
@@ -711,9 +713,9 @@ for threshold in threshold_list:
     plt.ylabel("Observed dry spell")
     plt.title(f"{threshold}mm threshold")
     plt.show()
-    # df_pr.to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
+    # df_pr.to_csv(os.path.join(dry_spells_processed_dir,"chirpsgefs",f"chirpsgefs_{ds_meth}_precision_recall_thresholds.csv"))
     fig_cm.tight_layout()
-    # fig_cm.savefig(os.path.join(country_data_processed_dir,"plots","dry_spells","chirpsgefs",f"{country_iso3}_cm_chirpsgefs_{ds_meth}_thresh_{threshold}mm.png"))
+    # fig_cm.savefig(os.path.join(dry_spells_processed_dir,"chirpsgefs",f"{country_iso3}_cm_chirpsgefs_{ds_meth}_thresh_{threshold}mm.png"))
 ```
 
 ### Experiment extent
@@ -844,7 +846,7 @@ df_dates_viz_filled=df_dates_viz_filled[df_dates_viz_filled.date.dt.year<=2020]
 ```
 
 ```python
-# df_dates_viz_filled.drop(["ID_obs"],axis=1).to_csv(os.path.join(country_data_processed_dir,"dry_spells","chirpsgefs",f"dryspells_chirpsgefs_dates_viz_{ds_meth}_th{threshold}.csv"))
+# df_dates_viz_filled.drop(["ID_obs"],axis=1).to_csv(os.path.join(dry_spells_processed_dir,"chirpsgefs",f"dryspells_chirpsgefs_dates_viz_{ds_meth}_th{threshold}.csv"))
 ```
 
 #### Plot raw raster values

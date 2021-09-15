@@ -37,14 +37,15 @@ from src.indicators.drought.config import Config
 ```
 
 ```python
-country="mwi"
+country_iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
+parameters = config.parameters(country_iso3)
+
 country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,country_iso3)
 country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,country_iso3)
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
-dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
+dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells", f"v{parameters['version']}")
+dry_spells_exploration_dir=os.path.join(country_data_exploration_dir,"dry_spells", f"v{parameters['version']}")
 
 arc2_dir = os.path.join(country_data_exploration_dir,"arc2")
 arc2_filepath = os.path.join(arc2_dir, "arc2_20002020_approxmwi.nc")
@@ -219,7 +220,7 @@ df_ds_grouped["season_approx"]=np.where(df_ds_grouped.dry_spell_first_date.dt.mo
 
 ```python
 #path to data start and end rainy season
-df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean_back.csv"))
+df_rain=pd.read_csv(os.path.join(dry_spells_processed_dir,"rainy_seasons_detail_2000_2021_mean_back.csv"))
 df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
 df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
 ```
@@ -323,7 +324,7 @@ df_ds_both_filled
 ```
 
 ```python
-# df_ds_both_filled.to_csv(os.path.join(country_data_exploration_dir,"dryspells",f"dryspells_arc2_dates_viz_th2.csv"))
+# df_ds_both_filled.to_csv(os.path.join(dry_spells_exploration_dir,f"dryspells_arc2_dates_viz_th2.csv"))
 ```
 
 ```python

@@ -53,23 +53,22 @@ from src.indicators.drought.config import Config
 #### Set config values
 
 ```python
-country="mwi"
+iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-iso3=parameters["iso3_code"]
+parameters = config.parameters(iso3)
 
 country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,iso3)
 country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,iso3)
 
-dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
-plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells")
+dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells", f"v{parameters['version']}")
+plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells", f"v{parameters['version']}")
 plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 #includes all dry spells also outside rainy season
-all_dry_spells_list_path=os.path.join(dry_spells_processed_dir,"full_list_dry_spells.csv")
+all_dry_spells_list_path=os.path.join(dry_spells_processed_dir,"archive","full_list_dry_spells.csv")
 #only includes dry spells within rainy season
-all_dry_spells_4mm_list_path=os.path.join(dry_spells_processed_dir,"daily_mean_dry_spells_details_4mm_2000_2020.csv")
+all_dry_spells_4mm_list_path=os.path.join(dry_spells_processed_dir,"archive","daily_mean_dry_spells_details_4mm_2000_2020.csv")
 monthly_precip_adm1_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
 monthly_precip_adm2_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin2.csv")
 ```
@@ -461,7 +460,7 @@ threshold
 ```python
 df_daterange_comb=refactor_data_hm(df_comb_countmonth_southern,threshold)
 df_daterange_comb_southern_selm = df_daterange_comb[(df_daterange_comb.ADM1_EN=="Southern")&(df_daterange_comb.date.dt.month.isin(months_sel))]
-# df_daterange_comb_southern_selm.to_csv(os.path.join(country_data_processed_dir,"dry_spells","seasonal",f"monthly_dryspellobs_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold}_southern_{month_str}.csv"))
+# df_daterange_comb_southern_selm.to_csv(os.path.join(dry_spells_processed_dir,"seasonal",f"monthly_dryspellobs_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold}_southern_{month_str}.csv"))
 ```
 
 ### ADMIN1 with definition of dry spell of <=4mm/day
@@ -660,7 +659,7 @@ df_daterange_comb_4mm=refactor_data_hm(df_countmonth_4mm_southern,threshold_4mm)
 
 ```python
 df_daterange_comb_4mm_southern_selm = df_daterange_comb_4mm[(df_daterange_comb_4mm.ADM1_EN=="Southern")&(df_daterange_comb_4mm.date.dt.month.isin(months_sel))]
-# df_daterange_comb_4mm_southern_selm.to_csv(os.path.join(country_data_processed_dir,"dry_spells","seasonal",f"monthly_dryspellobs_4mm_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold_4mm}_southern_{month_str}.csv"))
+# df_daterange_comb_4mm_southern_selm.to_csv(os.path.join(dry_spells_processed_dir,"seasonal",f"monthly_dryspellobs_4mm_ds{min_ds_days_month}{min_adm_ds_month}_adm1_th{threshold_4mm}_southern_{month_str}.csv"))
 ```
 
 ### ADMIN2
