@@ -107,6 +107,8 @@ GloFAS model v3 and v2 data, respectively.
 
 ### 2. Pilot evaluation
 
+*SEPT 2021: Many of the scripts and notebooks for this work haven't been refactored to align with recent restructuring of the data and source code for this repository. Paths to datasets will likely need to be adjusted for the code to run.*
+
 1. Generate shapefiles that delineate flood extent over time using 
    [this Google Earth Engine Script](https://code.earthengine.google.com/0fe2c1f3b2cf8ef6fe9aa81382b00191). 
    Within the script, the following parameters can be changed: 1) start 
