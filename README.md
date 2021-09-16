@@ -48,7 +48,7 @@ The pages below hold documented examples of some of the analyses that are held i
 - [Analysis of satellite imagery to identify past flooding](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bgd/validation/summary_flooding.html)
 
 #### Burkina Faso
-- [Baseline overview of risk and vulnerability](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bfa/notebooks/bfa_risk_overview.html)
+- [Baseline overview of risk and vulnerability](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bfa/docs/bfa_risk_overview.html)
 
 ## Getting started
 
