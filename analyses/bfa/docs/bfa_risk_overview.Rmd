@@ -1,5 +1,5 @@
 ---
-title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1iA6mT5_60wp-Ue0In6zbrj00xoBqPkov" style="height:40px;float:left; margin:10px" />'
 pagetitle: BFA Risk Analysis - Anticipatory Action
 output:
   html_document:
