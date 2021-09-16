@@ -73,7 +73,7 @@ chirps_df <- read_csv(paste0(
             chirps_confirmation = dry_spell_first_date + 13,
             chirps_end = dry_spell_last_date,
             chirps_duration = dry_spell_duration) %>%
-  filter(str_detect(ADM2_EN, "MW3"))
+  filter(str_detect(pcode, "MW3"))
 
 # shapefile loading
 adm0 <- st_read(paste0(shapefile_dir, "/mwi_admbnda_adm0_nso_20181016.shp"))
@@ -149,6 +149,7 @@ arc2_overlap_df <- bind_rows(arc2_center_lj1,
                              arc2_center_lj3,
                              arc2_center_lj4) %>%
   mutate(pcode.x = ifelse(is.na(pcode.x), pcode.y, pcode.x)) %>%
+  select(-starts_with("ADM2")) %>%
   rename(pcode = pcode.x) %>%
   select(-pcode.y) %>%
   distinct() %>%
@@ -631,6 +632,7 @@ detects no overlapping dry spell at all.
 ```{r arc2-no-spell}
 arc2_no_spell_daily <- arc2_chirps_df %>%
   filter(chirps_ds, !arc2_centroid_ds) %>%
+  mutate(ds_uid = paste(pcode, lubridate::year(chirps_confirmation), sep = ", ")) %>%
   fuzzy_inner_join(
     daily_df,
     match_fun = list(`==`, `<=`, `>=`),
@@ -640,6 +642,7 @@ arc2_no_spell_daily <- arc2_chirps_df %>%
       "chirps_end" = "date"
     )) %>%
   select(pcode = pcode.x,
+         ds_uid,
          date,
          chirps,
          arc2_centroid)
@@ -676,14 +679,13 @@ measures none.
 ```{r arc2-ts-graph}
 arc2_no_spell_daily %>%
   filter(!is.na(arc2_centroid)) %>%
-  mutate(g = paste(pcode, lubridate::year(date), sep = ", ")) %>%
-  group_by(g) %>%
+  group_by(ds_uid) %>%
   arrange(date, .by_group = TRUE) %>%
   mutate(id = row_number()) %>%
   ggplot(aes(x = id)) +
   geom_line(aes(y = chirps), color = "grey") +
   geom_line(aes(y = arc2_centroid)) +
-  facet_wrap(~g, scales = "free") +
+  facet_wrap(~ds_uid, scales = "free") +
   theme_minimal() +
   theme(axis.text.x = element_blank()) +
   labs(x = "Days of dry spell",
@@ -691,11 +693,15 @@ arc2_no_spell_daily %>%
        title = "Precipitation values of ARC2 and CHIRPS during CHIRPS dry spells",
        subtitle = "ARC2 values in black")
 ```
+
 Aha! Very informative! It's quite clear that in all but one of the dry spells,
 ARC2 is measuring "extreme" spikes in precipitation surrounding primarily days with
 none. In some instances, like MW209 or MW203, these are spikes also measured by CHIRPS, just
 with higher precipitation recorded by ARC2. In the majority, however, the spikes 
 are registered solely by ARC2, whereas CHIRPS records little to no precipitation.
+
+Note that the MW310 2020 graph shows no overlapping dry spell because the ARC2
+detected a dry spell that was over 200 days and was thus removed during filtering.
 
 ### Flip it!
 
@@ -706,6 +712,7 @@ ARC2 detects one.
 ```{r chirps-no-spell}
 chirps_no_spell_daily <- arc2_chirps_df %>%
   filter(!chirps_ds, arc2_centroid_ds) %>%
+  mutate(ds_uid = paste(pcode, lubridate::year(arc2_center_confirmation), sep = ", ")) %>%
   fuzzy_inner_join(
     daily_df,
     match_fun = list(`==`, `<=`, `>=`),
@@ -715,6 +722,7 @@ chirps_no_spell_daily <- arc2_chirps_df %>%
       "arc2_center_end" = "date"
     )) %>%
   select(pcode = pcode.x,
+         ds_uid,
          date,
          chirps,
          arc2_centroid)
@@ -741,16 +749,15 @@ chirps_no_spell_daily %>%
             `CHIRPS > 0mm & > chirps` = sum(chirps > 0 & chirps > arc2_centroid, na.rm = T))
 ```
 
-```{r chirps-ts-graph}
+```{r chirps-ts-graph, fig.height = 15}
 chirps_no_spell_daily %>%
-  mutate(g = paste0(pcode, lubridate::year(date))) %>%
-  group_by(g) %>%
+  group_by(ds_uid) %>%
   arrange(date, .by_group = TRUE) %>%
   mutate(id = row_number()) %>%
   ggplot(aes(x = id)) +
   geom_line(aes(y = chirps)) +
   geom_line(aes(y = arc2_centroid), color = "grey") +
-  facet_wrap(~g, scales = "free") +
+  facet_wrap(~ds_uid, scales = "free", ncol = 3) +
   theme_minimal() +
   theme(axis.text.x = element_blank()) +
   labs(x = "Days of dry spell",
@@ -759,4 +766,6 @@ chirps_no_spell_daily %>%
        subtitle = "CHIRPS values in black")
 ```
 
-Contrary to ARC2 values were detecting dry spells
+Contrary to ARC2 values were detecting dry spells, it looks like the CHIRPS data
+is not always just a singular spike, but often consistent measures of precipitation
+across the ARC2 identified dry spell. 
