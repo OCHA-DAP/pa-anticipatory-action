@@ -749,7 +749,7 @@ chirps_no_spell_daily %>%
             `CHIRPS > 0mm & > chirps` = sum(chirps > 0 & chirps > arc2_centroid, na.rm = T))
 ```
 
-```{r chirps-ts-graph, fig.height = 15}
+```{r chirps-ts-graph, fig.height = 6}
 chirps_no_spell_daily %>%
   group_by(ds_uid) %>%
   arrange(date, .by_group = TRUE) %>%
@@ -757,7 +757,7 @@ chirps_no_spell_daily %>%
   ggplot(aes(x = id)) +
   geom_line(aes(y = chirps)) +
   geom_line(aes(y = arc2_centroid), color = "grey") +
-  facet_wrap(~ds_uid, scales = "free", ncol = 3) +
+  facet_wrap(~ds_uid, scales = "free", ncol = 5) +
   theme_minimal() +
   theme(axis.text.x = element_blank()) +
   labs(x = "Days of dry spell",
