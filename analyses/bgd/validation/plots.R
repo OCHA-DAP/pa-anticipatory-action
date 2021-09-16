@@ -150,7 +150,7 @@ compare_survey_frac <- function(df_sent_adm4, df_gaus_adm4, df_int){
   
   df_int_frac <- df_int %>%
     drop_na(Interview_1)%>%
-    select(ADM4_EN, ADM4_PCODE, flood_fraction, Interview_1, Interview_2, Interview_3, date)%>%
+    dplyr::select(ADM4_EN, ADM4_PCODE, flood_fraction, Interview_1, Interview_2, Interview_3, date)%>%
     mutate(date = as.Date(date))%>%
     left_join(df_gaus_adm4_pcode, by=c('ADM4_PCODE'='PCODE', 'date'='DATE'))%>%
     mutate(FLOOD_EXTENT = FLOOD_EXTENT*100) %>%

@@ -1,9 +1,11 @@
 ---
-title: "Dry Spells in Malawi"
-author: "By Centre for Humanitarian Data"
-date: "`r Sys.Date()`"
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+pagetitle: MWI Dry Spells - Anticipatory Action
 output:
   html_document:
+    css: ../../country_template/docs/style.css
+    includes:
+      in_header: ../../country_template/docs/header.html
     df_print: paged
     toc: true
     toc_float: true
@@ -14,6 +16,13 @@ bibliography: ["mwi_bibliography.bib"]
 biblio-style: "apalike"
 link-citations: true
 ---
+
+<br> 
+<br>
+<br>
+
+# Dry Spells in Malawi
+Analysis last updated `r Sys.Date()`
 
 ### Background
 <!-- Dry spell is defined as unique start date - adm2 combination -->
@@ -31,8 +40,8 @@ knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```{r data-load-formatting}
 data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/')
-rainy_seasons_detail <- read.csv(file = paste0(data_dir, "/public/processed/mwi/dry_spells/rainy_seasons_detail_2000_2020_mean_back.csv"))
-dry_spells_during_rainy_season_list <- read.csv(file = paste0(data_dir, "/public/processed/mwi/dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv"))
+rainy_seasons_detail <- read.csv(file = paste0(data_dir, "/public/processed/mwi/dry_spells/v1/rainy_seasons_detail_2000_2021_mean_back.csv"))
+dry_spells_during_rainy_season_list <- read.csv(file = paste0(data_dir, "/public/processed/mwi/dry_spells/v1/dry_spells_during_rainy_season_list_2000_2021_mean_back.csv"))
 
 rainy_seasons_detail$onset_date <- as.Date(rainy_seasons_detail$onset_date, format = "%Y-%m-%d")
 rainy_seasons_detail$cessation_date <- as.Date(rainy_seasons_detail$cessation_date, format = "%Y-%m-%d")
@@ -231,7 +240,7 @@ ggplot(rainy_seasons_detail %>% filter(season_approx %in% 2000:2019), aes(x=fact
 A dry spell was included if at least 1 day on which the criterion was met fell during the rainy season. In other words, a dry spell was included when it overlapped with the rainy season, even if it started before or ended after it. The graph presents the occurences of dry spells over time. Each line indicates a district, i.e. the more red lines at the same time the more widespread the dry spell was.
 A summary per district follows in table format.
 &nbsp;
-![](`r paste0(exploration_dry_spell_dir, 'mwi_viz_hm_dry_spell_mean_adm2.png')`)
+![](`r paste0(exploration_dry_spell_dir, 'v1/mwi_viz_hm_dry_spell_mean_adm2.png')`)
 
 
 ```{r dry-spells}

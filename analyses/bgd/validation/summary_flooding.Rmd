@@ -1,9 +1,11 @@
 ---
-title: "Estimating flooding dynamics and magnitude in Bangladesh"
-author: "By the Centre for Humanitarian Data and MapAction"
-date: "`r Sys.Date()`"
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+pagetitle: BGD Flooding - Anticipatory Action
 output:
   html_document:
+    css: ../../country_template/docs/style.css
+    includes:
+      in_header: ../../country_template/docs/header.html
     df_print: paged
     toc: yes
     toc_float: yes
@@ -14,6 +16,13 @@ output:
 editor_options:
   chunk_output_type: inline
 ---
+
+<br> 
+<br>
+<br>
+
+# Estimating flooding dynamics and magnitude in Bangladesh
+Analysis last updated `r Sys.Date()`
 
 ## Introduction
 

@@ -8,7 +8,7 @@ dry_spell_dir <- paste0(data_dir, '/public/processed/mwi/dry_spells/')
 enso_dir <- paste0(data_dir,'/public/raw/glb/enso/')
 # filenames depend on aggregation methodology of dry spells from raster to admin/
 plot_dir <-paste0(data_dir, '/public/processed/mwi/plots/dry_spells/enso/')
-dry_spells_list_path <- paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean_back.csv')
+dry_spells_list_path <- paste0(dry_spell_dir, 'v1/dry_spells_during_rainy_season_list_2000_2021_mean_back.csv')
 
 ############################# Definitions ##############################################
 #3 month periods within rainy season were set as [SON, OND, NDJ, DJF, JFM, FMA, MAM].

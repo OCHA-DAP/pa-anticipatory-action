@@ -1,9 +1,11 @@
 ---
-title: "Forecasting dry spells in Malawi"
-author: "By Centre for Humanitarian Data"
-date: "`r Sys.Date()`"
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+pagetitle: MWI Dry Spell Forecasting - Anticipatory Action
 output:
   html_document:
+    css: ../../country_template/docs/style.css
+    includes:
+      in_header: ../../country_template/docs/header.html
     df_print: paged
     toc: true
     toc_float: true
@@ -14,6 +16,13 @@ bibliography: ["mwi_bibliography.bib"]
 biblio-style: "apalike"
 link-citations: true
 ---
+
+<br> 
+<br>
+<br>
+
+# Forecasting dry spells in Malawi
+Analysis last updated `r Sys.Date()`
 
 ## Background
 This document summaries the data analyses that were performed to link the occurrence of a dry spell with various climatological indicators. This work was done for OCHA's Anticipatory Action pilot in Malawi related to dry spells. It explores: the relations with climatic indicators (observational data), the skill of a seasonal and 15-day forecast to predict dry spells, and the ability to observe dry spells in almost real-time. All work presented here was done by the Centre for Humanitarian Data with indispensable help from technical partners. All the code is openly available [here](https://github.com/OCHA-DAP/pa-anticipatory-action) and includes more detail on the analyses presented in this document. 
@@ -32,7 +41,7 @@ knitr::opts_chunk$set(include = FALSE) # do not print output by default
 data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 plot_dir <-paste0(data_dir,'/public/processed/mwi/plots/dry_spells')
 enso_plot_dir <- paste0(plot_dir,'/enso')
-exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/')
+exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/v1/')
 
 ```
 ### Definitions
