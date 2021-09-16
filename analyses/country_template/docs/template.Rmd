@@ -3,6 +3,9 @@ title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GD
 pagetitle: 'Docs Template' # Change title to something appropriate for your work
 output:
   html_document:
+    css: style.css
+    includes:
+      in_header: header.html
     df_print: paged
     toc: yes
     toc_float: yes
