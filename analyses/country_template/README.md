@@ -8,14 +8,7 @@ Indicate pilot status with one of the following badges. Provide 1-2 sentences of
 
 [![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20REVISION-%23CCCCCC)](https://shields.io/)
 
-[![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23007CE0)](https://shields.io/) 
-
-##  Table of Contents [if necessary]
-1. [Background Information](#background-information)
-2. [Overview of analysis](#overview-of-analysis)
-3. [Data description](#data-description)
-4. [Directory structure](#directory-structure)
-5. [Reproducing this analysis](#reproducing-this-analysis)
+[![Generic badge](https://img.shields.io/badge/STATUS-ON%20HOLD-%23F2645A)](https://shields.io/) 
 
 ## Background information
 
@@ -34,17 +27,13 @@ What is the basic process of the analysis contained within this repository?
 
 ## Directory structure [if necessary]
 
-Modify the structure outlined below as needed. 
+If this directory contains many subdirectories, use this section to provide an overview of how things are structured, potentially expanding on the example provided below. Feel free to omit this section if the sub-directory structure is relatively simple.
 
 ```
 
-├── notebooks                 <- Jupyter notebooks that contain a walkthrough of data analysis steps. 
-│
-├── results                   <- Results from analysis which may include model outputs, figures, reports.  
+├── <shock>_trigger           <- Analytical work relating to <shock>. 
 |
-├── scripts                   <- Scripts to perform generalized data processing and analysis steps. These scripts may be applied in the notebooks.    
-|
-├── config.yml                <- config file to specify country specific variables   
+├── docs                      <- Documentation of analytical work.
 |
 └── README.md                 <- Description of this project.
 
