@@ -68,7 +68,7 @@ def clean_iri_data(
     # due to a wrong naming of the calendar variable it cannot do this
     # automatically Thus first load with decode_times=False and then
     # change the calendar variable and decode the months later
-    iri_ds = xr.open_dataset(
+    iri_ds = xr.load_dataset(
         input_path, decode_times=False, drop_variables="C"
     )
 
@@ -78,12 +78,11 @@ def clean_iri_data(
     )
     iri_ds = change_longitude_range(iri_ds, lon_coord=config.IRI_LON)
 
-    # rename to standardized lon and lat name
-
     # fix dates
     iri_ds = fix_calendar(iri_ds, timevar="F")
     iri_ds = xr.decode_cf(iri_ds)
 
+    # rename to standardized lon and lat name
     iri_ds = iri_ds.rename(
         {config.IRI_LON: config.LONGITUDE, config.IRI_LAT: config.LATITUDE}
     )
@@ -125,6 +124,6 @@ def get_iri_data(
         download_iri(iri_auth, iri_filepath_raw, config)
         clean_iri_data(iri_filepath_raw, iri_filepath_clean, config)
 
-    iri_ds = xr.open_dataset(iri_filepath_clean)
+    iri_ds = xr.load_dataset(iri_filepath_clean)
 
     return iri_ds
