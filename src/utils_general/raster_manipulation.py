@@ -1,9 +1,10 @@
 import logging
+from typing import List
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
-from rasterstats import zonal_stats
+import rioxarray  # noqa: F401
+import xarray as xr
 
 logger = logging.getLogger(__name__)
 
@@ -100,111 +101,94 @@ def fix_calendar(ds, timevar="F"):
 
 
 def compute_raster_statistics(
-    boundary_path,
-    raster_array,
-    raster_transform,
-    threshold,
-    band=1,
-    nodata=-9999,
-    upscale_factor=None,
+    gdf: gpd.GeoDataFrame,
+    bound_col: str,
+    raster_array: xr.DataArray,
+    lon_coord: str = "x",
+    lat_coord: str = "y",
+    stats_list: List[str] = None,
+    percentile_list: List[int] = None,
+    all_touched: bool = False,
+    geom_col: str = "geometry",
 ):
     """
     Compute statistics of the raster_array per geographical region
-    defined in the boundary_path file
-    Currently several methods are implemented, namely the maximum
-    and mean per region, and the percentage of the area with a value
-    larger than threshold.
-    For all three methods, two variations are implemented:
-    one where all raster cells touching a region are counted,
-    and one where only the raster cells that have their center within
-    the region are counted.
-    Args:
-        boundary_path (str): path to the shapefile
-        raster_array (numpy array): array containing the raster data
-        raster_transform (numpy array): array containing the
-        transformation of the raster data, this is related to the CRS
-        threshold (float): minimum probability of a raster cell to count
-        that cell as meeting the criterium
-        upscale_factor: currently not implemented
-
-    Returns:
-        df (Geodataframe): dataframe containing the computed statistics
+    defined in the gdf
+    the area covered by the gdf should be a subset of that
+    covered by raster_array
+    :param gdf: geodataframe containing a row per area for which
+    the stats are computed
+    :param bound_col: name of the column containing the region names
+    :param raster_array: DataArray containing the raster data.
+    Needs to have a CRS.
+    Should not be a DataSet but DataArray
+    :param lon_coord: name of longitude dimension in raster_array
+    :param lat_coord: name of latitude dimension in raster_array
+    :param stats_list: list with function names indicating
+    which stats to compute
+    :param percentile_list: list with integers ranging from 0 to 100
+    indicating which percentiles to compute
+    :param all_touched: if False, only cells with their centre within the
+    region will be included when computing the stat.
+    If True all cells touching the region will be included.
+    :param geom_col: name of the column in boundary_path
+    containing the polygon geometry
+    :return: dataframe containing the computed statistics
     """
-    df = gpd.read_file(boundary_path)
-    # TODO: decide if we want to upsample and if yes, implement if
-    # upscale_factor: forecast_array, transform =
-    # resample_raster(raster_path, upscale_factor) else:
+    df_list = []
 
-    # extract statistics for each polygon. all_touched=True includes all
-    # cells that touch a polygon, with all_touched=False only those with
-    # the center inside the polygon are counted.
-    df["max_cell"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            band=band,
-            nodata=nodata,
-        )
-    )["max"]
-    df["max_cell_touched"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            all_touched=True,
-            band=band,
-            nodata=nodata,
-        )
-    )["max"]
+    if stats_list is None:
+        stats_list = ["mean", "std", "min", "max", "sum", "count"]
 
-    df["avg_cell"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            band=band,
-            nodata=nodata,
-        )
-    )["mean"]
-    df["avg_cell_touched"] = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=raster_array,
-            affine=raster_transform,
-            all_touched=True,
-            band=band,
-            nodata=nodata,
-        )
-    )["mean"]
+    for bound_id in gdf[bound_col].unique():
+        gdf_adm = gdf[gdf[bound_col] == bound_id]
 
-    # calculate the percentage of the area within an geographical area
-    # that has a value larger than threshold
-    forecast_binary = np.where(raster_array >= threshold, 1, 0)
-    bin_zonal = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=forecast_binary,
-            affine=raster_transform,
-            stats=["count", "sum"],
-            band=band,
-            nodata=nodata,
-        )
-    )
-    df["perc_threshold"] = bin_zonal["sum"] / bin_zonal["count"] * 100
-    bin_zonal_touched = pd.DataFrame(
-        zonal_stats(
-            vectors=df,
-            raster=forecast_binary,
-            affine=raster_transform,
-            all_touched=True,
-            stats=["count", "sum"],
-            band=band,
-            nodata=nodata,
-        )
-    )
-    df["perc_threshold_touched"] = (
-        bin_zonal_touched["sum"] / bin_zonal_touched["count"] * 100
-    )
+        da_clip = raster_array.rio.set_spatial_dims(
+            x_dim=lon_coord, y_dim=lat_coord
+        ).rio.clip(gdf_adm[geom_col], all_touched=all_touched)
 
-    return df
+        grid_stat_all = []
+        for stat in stats_list:
+            # count automatically ignores NaNs
+            # therefore skipna can also not be given as an argument
+            # implemented count cause needed for computing percentages
+            kwargs = {}
+            if stat != "count":
+                kwargs["skipna"] = True
+            # makes sum return NaN instead of 0 if array
+            # only contains NaNs
+            if stat == "sum":
+                kwargs["min_count"] = 1
+            grid_stat = getattr(da_clip, stat)(
+                dim=[lon_coord, lat_coord], **kwargs
+            ).rename(f"{stat}_{bound_col}")
+            grid_stat_all.append(grid_stat)
+
+        if percentile_list is not None:
+            grid_quant = [
+                da_clip.quantile(quant / 100, dim=[lon_coord, lat_coord])
+                .drop("quantile")
+                .rename(f"{quant}quant_{bound_col}")
+                for quant in percentile_list
+            ]
+            grid_stat_all.extend(grid_quant)
+
+        # if dims is 0, it throws an error when merging
+        # and then converting to a df
+        # this occurs when the input da is 2D
+        if not grid_stat_all[0].dims:
+            df_adm = pd.DataFrame(
+                {da_stat.name: [da_stat.values] for da_stat in grid_stat_all}
+            )
+        else:
+            zonal_stats_xr = xr.merge(grid_stat_all)
+            df_adm = (
+                zonal_stats_xr.to_dataframe()
+                .drop("spatial_ref", axis=1)
+                .reset_index()
+            )
+        df_adm[bound_col] = bound_id
+        df_list.append(df_adm)
+
+    df_zonal_stats = pd.concat(df_list).reset_index(drop=True)
+    return df_zonal_stats

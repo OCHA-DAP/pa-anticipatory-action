@@ -10,7 +10,7 @@ from scipy.stats import norm
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
-from src.bangladesh import get_glofas_data as ggd
+from src.bgd import get_glofas_data as ggd
 from src.indicators.flooding.glofas import glofas
 
 pd.options.mode.chained_assignment = None
