@@ -7,6 +7,7 @@ library(lubridate)
 library(zoo)
 library(raster)
 library(ggcorrplot)
+library(glue)
 
 # -------------------------------------------------------------------------
 # Exploring agricultural stress and related impacts in Malawi
@@ -14,6 +15,7 @@ library(ggcorrplot)
 
 
 # Setup -------------------------------------------------------------------
+VERSION =1 
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
@@ -23,9 +25,10 @@ shp_adm1 <- st_read(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp")
 
 processed_country_dir <- paste0(data_dir,"/public/processed/mwi/")
 exploration_country_dir <- paste0(data_dir,"/public/exploration/mwi/")
+dry_spell_processed_dir <- paste0(processed_country_dir, glue("dry_spells/v{VERSION}/"))
 
-df_dryspells <- read.csv(paste0(processed_country_dir, 'dry_spells/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv'))
-df_dryspells_px <- read.csv(paste0(processed_country_dir, 'dry_spells/ds_counts_per_pixel_adm1.csv'))
+df_dryspells <- read.csv(paste0(dry_spell_processed_dir, 'dry_spells_during_rainy_season_list_2000_2021_mean_back.csv'))
+df_dryspells_px <- read.csv(paste0(dry_spell_processed_dir, 'ds_counts_per_pixel_adm1.csv'))
 
 df_crop <- read.csv(paste0(exploration_country_dir, 'crop_production/agriculture-and-rural-development_mwi.csv'))
 df_asi <- read.csv(paste0(exploration_country_dir, 'ASI/malawi_asi_dekad.csv'))
@@ -222,7 +225,7 @@ df_wrsi_season <- wrsi_min_na %>%
 
 # Monthly temperature -----------------------------------------------------
 
-temp_dir = paste0(processed_country_dir, 'dry_spells/gee_output/')
+temp_dir = paste0(dry_spell_processed_dir, 'gee_output/')
 
 temp_files <- list.files(path = temp_dir, pattern='mwi_adm1_ecmwf-era5-monthly_median')
 

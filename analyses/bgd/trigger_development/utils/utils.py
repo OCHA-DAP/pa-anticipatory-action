@@ -11,7 +11,7 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.glofas import glofas
-from src.bangladesh import get_glofas_data as ggd
+from src.bgd import get_glofas_data as ggd
 
 pd.options.mode.chained_assignment = None
 
@@ -57,7 +57,9 @@ def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
     glofas_forecast = glofas.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
-            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3,
+            version=version,
+            leadtime=leadtime,
         )[STATION]
         for leadtime in leadtimes
     }
@@ -71,7 +73,9 @@ def get_glofas_reforecast(
     glofas_reforecast = glofas.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
-            country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
+            country_iso3=ggd.COUNTRY_ISO3,
+            version=version,
+            leadtime=leadtime,
         )[STATION]
         for leadtime in leadtimes
     }

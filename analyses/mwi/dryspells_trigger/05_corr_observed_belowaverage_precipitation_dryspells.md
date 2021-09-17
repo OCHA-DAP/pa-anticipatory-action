@@ -43,19 +43,18 @@ from src.indicators.drought.config import Config
 #### Set config values
 
 ```python
-country="mwi"
+country_iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-country_iso3 = parameters["iso3_code"]
+parameters = config.parameters(country_iso3)
 
 public_data_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR
 country_data_processed_dir = public_data_dir / config.PROCESSED_DIR / country_iso3
 
-dry_spells_dir=country_data_processed_dir / "dry_spells"
+dry_spells_dir=country_data_processed_dir / "dry_spells" / f"v{parameters['version']}"
 chirps_country_dir = country_data_processed_dir / "chirps"
-plots_dir=country_data_processed_dir / "plots" / "dry_spells"
+plots_dir=country_data_processed_dir / "plots" / "dry_spells" / f"v{parameters['version']}"
 plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
-dry_spells_mean_aggr_adm2_path=os.path.join(dry_spells_dir,"dry_spells_during_rainy_season_list_2000_2020_mean_back.csv")
+dry_spells_mean_aggr_adm2_path=os.path.join(dry_spells_dir,"archive", "dry_spells_during_rainy_season_list_2000_2020_mean_back.csv")
 belowavg_seas_adm2_path=os.path.join(chirps_country_dir,"chirps_seasonal_below_average_precipitation.csv")
 belowavg_monthly_adm2_path=os.path.join(chirps_country_dir,"chirps_monthly_below_average_precipitation.csv")
 ```
@@ -90,7 +89,7 @@ df_belowavg_seas.date_month=pd.to_datetime(df_belowavg_seas.date_month).dt.to_pe
 
 ```python
 #path to data start and end rainy season
-df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean_back.csv"))
+df_rain=pd.read_csv(os.path.join(dry_spells_dir , "archive" , "rainy_seasons_detail_2000_2020_mean_back.csv"))
 df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
 df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
 ```
@@ -497,7 +496,7 @@ df_belowavg_month
 
 ```python
 #path to data start and end rainy season
-df_rain=pd.read_csv(os.path.join(country_data_processed_dir,"dry_spells","rainy_seasons_detail_2000_2020_mean.csv"))
+df_rain=pd.read_csv(os.path.join(dry_spells_dir,"archive","rainy_seasons_detail_2000_2020_mean.csv"))
 df_rain["onset_date"]=pd.to_datetime(df_rain["onset_date"])
 df_rain["cessation_date"]=pd.to_datetime(df_rain["cessation_date"])
 ```
@@ -749,4 +748,16 @@ df_apr_bavgy[["Below average rainfall","Number of dry spells"]].groupby("Below a
 
 ```python
 df_apr_bavgadm=df_apr[["ADM1_EN","year","dry_spell","below_average"]].groupby(["ADM1_EN","year","below_average"],as_index=False).sum()
+```
+
+```python
+
+```
+
+```python
+
+```
+
+```python
+
 ```

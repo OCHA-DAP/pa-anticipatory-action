@@ -1,14 +1,18 @@
 library(tidyverse)
 library(ggplot2)
 library(flextable)
+library(glue)
+
+# Set parameters
+VERSION = 1
 
 # Set data directories.
 data_dir <- Sys.getenv("AA_DATA_DIR")
-dry_spell_dir <- paste0(data_dir, '/public/processed/mwi/dry_spells/')
+dry_spell_dir <- paste0(data_dir, glue('/public/processed/mwi/dry_spells/v{VERSION}/'))
 enso_dir <- paste0(data_dir,'/public/raw/glb/enso/')
 # filenames depend on aggregation methodology of dry spells from raster to admin/
-plot_dir <-paste0(data_dir, '/public/processed/mwi/plots/dry_spells/enso/')
-dry_spells_list_path <- paste0(dry_spell_dir, 'dry_spells_during_rainy_season_list_2000_2020_mean_back.csv')
+plot_dir <-paste0(data_dir, glue('/public/processed/mwi/plots/dry_spells/v{VERSION}/enso/'))
+dry_spells_list_path <- paste0(dry_spell_dir, 'archive/dry_spells_during_rainy_season_list_2000_2020_mean_back.csv')
 
 ############################# Definitions ##############################################
 #3 month periods within rainy season were set as [SON, OND, NDJ, DJF, JFM, FMA, MAM].

@@ -44,18 +44,16 @@ from src.utils_general.statistics import get_return_periods_dataframe
 #### Set config values
 
 ```python
-country="mwi"
+country_iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
+parameters = config.parameters(country_iso3)
 
 country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,country_iso3)
 country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,country_iso3)
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
 private_country_data_raw_dir=os.path.join(config.DATA_DIR,config.PRIVATE_DIR,config.RAW_DIR,country_iso3)
-monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells","monthly_precipitation")
-monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells","monthly_precipitation")
-dry_spell_processed_dir=os.path.join(country_data_processed_dir,"dry_spells")
+monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells", f"v{parameters['version']}", "monthly_precipitation")
+dry_spell_processed_dir=os.path.join(country_data_processed_dir,"dry_spells", f"v{parameters['version']}")
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
@@ -189,7 +187,7 @@ def load_monthly_drydays_precip(daily_precip_path,
 
 ```python
 #should contain the same data as data_mean_values_long but this file seems a bit newer
-daily_precip_adm2_path=os.path.join(country_data_processed_dir,"dry_spells","data_mean_values_long_5day.csv")
+daily_precip_adm2_path=os.path.join(dry_spell_processed_dir,"data_mean_values_long_5day.csv")
 ```
 
 ```python
