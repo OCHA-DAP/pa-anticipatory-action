@@ -24,37 +24,42 @@ from src.indicators.food_insecurity.ipc_definemetrics import (
 )
 
 admin_level = 0
-country = "somalia"
+iso3 = "som"
 # suffix of filenames
-suffix = ""
+suffix_fn = ""  # "202106"
+suffix_ipcg = ""
+suffix_output = ""  # "202106"
 config = Config()
-parameters = config.parameters(country)
+parameters = config.parameters(iso3)
 
-country_data_raw_dir = os.path.join(
-    config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower()
-)
+country_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, iso3.lower())
 glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, "glb")
 country_data_processed_dir = os.path.join(
-    config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower()
+    config.DATA_PUBLIC_PROCESSED_DIR, iso3.lower()
 )
 
 fewsnet_dir = os.path.join(
     country_data_processed_dir, config.FEWSWORLDPOP_PROCESSED_DIR
 )
 fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(
-    country=country, admin_level=admin_level, suffix=suffix
+    iso3=iso3, admin_level=admin_level, suffix=suffix_fn
 )
 globalipc_dir = os.path.join(
     country_data_processed_dir, config.GLOBALIPC_PROCESSED_DIR
 )
 globalipc_path = os.path.join(
-    globalipc_dir, f"{country}_globalipc_admin{admin_level}{suffix}.csv"
+    globalipc_dir, f"{iso3}_globalipc_admin{admin_level}{suffix_ipcg}.csv"
 )
 
 adm_bound_path = os.path.join(
     country_data_raw_dir,
     config.SHAPEFILE_DIR,
     parameters[f"path_admin{admin_level}_shp"],
+)
+
+output_dir = os.path.join(country_data_processed_dir, "trigger_metrics")
+output_path = os.path.join(
+    output_dir, f"{iso3}_foodinsec_trigger{suffix_output}.csv"
 )
 
 
@@ -64,7 +69,6 @@ df_gipc = pd.read_csv(globalipc_path)
 df_gipc["source"] = "GlobalIPC"
 
 df = pd.concat([df_fn, df_gipc])
-df = df.replace(0, np.nan)
 df["date"] = pd.to_datetime(df["date"])
 df["year"] = df["date"].dt.year
 df["month"] = df["date"].dt.month
@@ -105,11 +109,4 @@ df["threshold_reached_ML2"] = np.where(
 
 df.loc[df.date == "2020-10-01", "period_ML1"] = "Oct 2020 - Jan 2021"
 df.loc[df.date == "2020-10-01", "period_ML2"] = "Feb 2021 - May 2021"
-df.to_csv(
-    os.path.join(
-        "dashboard",
-        "data",
-        "foodinsecurity",
-        f"{country}_foodinsec_trigger.csv",
-    )
-)
+df.to_csv(output_path, index=False)

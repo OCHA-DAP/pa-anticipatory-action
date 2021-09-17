@@ -1,22 +1,24 @@
-import pandas as pd
-import os
-import geopandas as gpd
-from rasterstats import zonal_stats
-import numpy as np
-from pathlib import Path
 import logging
-from tqdm import tqdm
+import os
 import sys
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from rasterstats import zonal_stats
+from tqdm import tqdm
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
 from src.indicators.food_insecurity.config import Config
 from src.indicators.food_insecurity.utils import (
-    parse_args,
+    compute_percentage_columns,
     download_fewsnet,
     download_worldpop,
-    compute_percentage_columns,
+    fewsnet_validperiod,
+    parse_args,
 )
 from src.utils_general.utils import config_logger
 
@@ -34,78 +36,6 @@ def retrieve_admcols(admin_level, config):
         logger.error(f"Admin level {admin_level} hasn't been implemented")
 
     return adm_cols
-
-
-def fewsnet_validperiod(row):
-    """
-    Add the period for which FewsNet's projections are valid. Till 2016
-    FN published a report 4 times a year, where each projection period
-    had a validity of 3 months From 2017 this has changed to thrice a
-    year, where each projection period has a validity of 4 months Args:
-    row: row of dataframe containing the date the FN data was published
-    (i.e. CS period) as timestamp
-
-    Returns:
-
-    """
-    # make own mapping, to be able to use mod 12 to calculate months of
-    # projections
-    month_abbr = {
-        1: "Jan",
-        2: "Feb",
-        3: "Mar",
-        4: "Apr",
-        5: "May",
-        6: "Jun",
-        7: "Jul",
-        8: "Aug",
-        9: "Sep",
-        10: "Oct",
-        11: "Nov",
-        0: "Dec",
-    }
-    year = row["date"].year
-    month = row["date"].month
-    if year <= 2015:
-        if month == 10:
-            year_ml2 = year + 1
-        else:
-            year_ml2 = year
-        period_ML1 = (
-            f"{month_abbr[month]} - {month_abbr[(month + 2) % 12]} {year}"
-        )
-        period_ML2 = (
-            f"{month_abbr[(month + 3) % 12]} - {month_abbr[(month + 5) % 12]}"
-            f" {year_ml2}"
-        )
-    if year > 2015:
-        if month == 2:
-            year_ml1 = year
-            year_ml2 = year
-        elif month == 6:
-            year_ml1 = year
-            year_ml2 = year + 1
-        elif month == 10:
-            year_ml1 = year + 1
-            year_ml2 = year + 1
-        else:
-            logger.info(
-                "Period of ML1 and ML2 cannot be added for non-regular"
-                f" publishing date {year}-{month}. Add manually."
-            )
-            row["period_ML1"] = np.nan
-            row["period_ML2"] = np.nan
-            return row
-        period_ML1 = (
-            f"{month_abbr[month]} - {month_abbr[(month + 3) % 12]} {year_ml1}"
-        )
-        period_ML2 = (
-            f"{month_abbr[(month + 4) % 12]} - {month_abbr[(month + 7) % 12]}"
-            f" {year_ml2}"
-        )
-    row["period_ML1"] = period_ML1
-    row["period_ML2"] = period_ML2
-    return row
 
 
 def compute_total_admin_population(df_fews, admin_path, pop_path, config):
@@ -179,6 +109,12 @@ def compute_total_admin_population(df_fews, admin_path, pop_path, config):
                 f" ({perc_ipcclass:.2f}%) of the population is assigned to an"
                 " IPC class. Check your FewsNet source data and processing"
             )
+    # round numeric values to integers
+    # due to worldpop there can be float number of people so round them
+    df_fews = df_fews.applymap(
+        lambda x: int(round(x, 0)) if isinstance(x, (int, float)) else x
+    )
+
     return df_fews
 
 
@@ -187,14 +123,16 @@ def assign_population_fewsnet(
 ):
     """
     Compute the population per IPC phase per adm2 region by using the
-    livelihoods defined in fews_path Args: fews_path: path to the
-    shapefile with FewsNet data adm_path: path to the shapefile with
-    admin boundaries pop_path: path to the raster file with population
-    data date: date of the data in fews_path period: period of FewsNet
-    prediction: CS (current), ML1 (near-term projection) or ML2
-    (medium-term projection) adm1c: column name of the admin1 level
-    name, in adm_path data adm2c: column name of the admin2 level name,
-    in adm_path data
+    livelihoods defined in fews_path
+    Args:
+    fews_path: path to the shapefile with FewsNet data
+    adm_path: path to the shapefile with admin boundaries
+    pop_path: path to the raster file with population data
+    date: date of the data in fews_path
+    period: period of FewsNet prediction: CS (current),
+    ML1 (near-term projection) or ML2 (medium-term projection)
+    adm1c: column name of the admin1 level name, in adm_path data
+    dm2c: column name of the admin2 level name,in adm_path data
 
     Returns: df_gp: DataFrame with the population per IPC phase per
         Admin2
@@ -253,8 +191,7 @@ def assign_population_fewsnet(
 
 
 def process_fewsnet_worldpop(
-    country,
-    country_iso3,
+    iso3,
     admin_level,
     dates,
     folder_fews,
@@ -262,7 +199,7 @@ def process_fewsnet_worldpop(
     admin_path,
     region,
     regionabb,
-    country_iso2,
+    iso2,
     result_folder,
     suffix,
     config,
@@ -272,18 +209,19 @@ def process_fewsnet_worldpop(
     phase per date-admin combination The results are saved to a csv, one
     containing the admin2 calculations and one the admin1.
 
-    Args: dates: list of dates for which FewsNet data should be included
+    Args:
+        dates: list of dates for which FewsNet data should be included
         folder_fews: path to folder that contains the FewsNet data
         folder_pop: path to folder that contains the population data
         admin_path: path to the shapefile with admin boundaries
-        shp_adm1c: column name of the admin1 level name, in adm_path
-        data shp_adm2c: column name of the admin2 level name, in
-        adm_path data region: region that the fewsnet data covers, e.g.
-        "east-africa" regionabb: abbreviation of the region that the
-        fewsnet data covers, e.g. "EA" iso2_code: iso2 code of the
-        country of interest result_folder: path to folder to which to
-        save the output suffix: string to attach to the output files
-        name
+        shp_adm1c: column name of the admin1 level name, in adm_path data
+        shp_adm2c: column name of the admin2 level name, in adm_path data
+        region: region that the fewsnet data covers, e.g. "east-africa"
+        regionabb: abbreviation of the region that the fewsnet data covers,
+        e.g. "EA"
+        iso2_code: iso2 code of the country of interest
+        result_folder: path to folder to which to save the output
+        suffix: string to attach to the output files name
     """
     df = gpd.GeoDataFrame()
     adm_cols = retrieve_admcols(admin_level, config)
@@ -310,8 +248,8 @@ def process_fewsnet_worldpop(
                 f"{fews_region_filename}",
             )
             fews_country_filename = config.FEWSNET_FILENAME.format(
-                region=country_iso2.upper(),
-                regionabb=country_iso2.upper(),
+                region=iso2.upper(),
+                regionabb=iso2.upper(),
                 date=d,
                 period=period.upper(),
             )
@@ -331,14 +269,14 @@ def process_fewsnet_worldpop(
 
             # path to population data
             pop_filename = config.WORLDPOP_FILENAME.format(
-                country_iso3=country_iso3, year=d[:4]
+                iso3=iso3, year=d[:4]
             )
             pop_path = f"{folder_pop}/{pop_filename}"
             # bit of ugly fix, but use worldpop data of previous year if
             # that of current year does not exist
             if not os.path.exists(pop_path):
                 pop_filename_prev_year = config.WORLDPOP_FILENAME.format(
-                    country_iso3=country_iso3, year=int(d[:4]) - 1
+                    iso3=iso3, year=int(d[:4]) - 1
                 )
                 pop_path = f"{folder_pop}/{pop_filename_prev_year}"
             if os.path.exists(pop_path) and fews_path:
@@ -393,7 +331,7 @@ def process_fewsnet_worldpop(
             os.path.join(
                 result_folder,
                 config.FEWSWORLDPOP_PROCESSED_FILENAME.format(
-                    country=country.lower(),
+                    iso3=iso3.lower(),
                     admin_level=str(admin_level),
                     suffix=suffix,
                 ),
@@ -406,7 +344,7 @@ def process_fewsnet_worldpop(
 
 
 def retrieve_fewsnet_worldpop(
-    country, admin_level, suffix="", download=False, config=None
+    iso3, admin_level, suffix="", download=False, config=None
 ):
     """
     This script computes the population per IPC phase per data - admin2
@@ -414,17 +352,18 @@ def retrieve_fewsnet_worldpop(
     data, which publishes their data in shapefiles, of three periods
     namely current situation (CS), near-term projection (ML1) and
     mid-term projection (ML2) The IPC phases range from 1 to 5, and
-    missing values are indicated by 99. Args: country_iso3: string with
-    iso3 code suffix: string to attach to the output files name
+    missing values are indicated by 99.
+    Args:
+    iso3: string with iso3 code
+    suffix: string to attach to the output files name
     config_file: path to config file
     """
 
     if config is None:
         config = Config()
-    parameters = config.parameters(country)
+    parameters = config.parameters(iso3)
 
-    country_iso2 = parameters["iso2_code"]
-    country_iso3 = parameters["iso3_code"]
+    iso2 = parameters["iso2_code"]
     region = parameters["foodinsecurity"]["region"]
     regioncode = parameters["foodinsecurity"]["regioncode"]
 
@@ -452,13 +391,11 @@ def retrieve_fewsnet_worldpop(
 
     if download:
         for d in fewsnet_dates:
-            download_fewsnet(
-                d, country_iso2, region, regioncode, fewsnet_raw_dir
-            )
+            download_fewsnet(d, iso2, region, regioncode, fewsnet_raw_dir)
         years = [x[:4] for x in fewsnet_dates]
         years_unique = set(years)
         for y in years_unique:
-            download_worldpop(country_iso3, y, worldpop_dir, config)
+            download_worldpop(iso3, y, worldpop_dir, config)
 
     adminbound_path = os.path.join(
         country_data_raw_dir,
@@ -472,8 +409,7 @@ def retrieve_fewsnet_worldpop(
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     process_fewsnet_worldpop(
-        country,
-        country_iso3,
+        iso3,
         admin_level,
         fewsnet_dates,
         fewsnet_raw_dir,
@@ -481,7 +417,7 @@ def retrieve_fewsnet_worldpop(
         adminbound_path,
         region,
         regioncode,
-        country_iso2,
+        iso2,
         output_dir,
         suffix,
         config,
@@ -493,7 +429,7 @@ if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
     retrieve_fewsnet_worldpop(
-        args.country.lower(),
+        args.iso3.lower(),
         int(args.admin_level),
         args.suffix,
         args.download_data,
