@@ -133,12 +133,6 @@ def compute_stats_per_admin(
                 lon_coord="longitude",
                 lat_coord="latitude",
             )
-            # df = compute_zonal_stats(
-            #     ds_sel,
-            #     ds_sel.rio.transform(),
-            #     adm_boundaries_path,
-            #     parameters[f"shp_adm{adm_level}c"],
-            # )
 
             df["date"] = date_dt
             df.to_csv(output_path)
