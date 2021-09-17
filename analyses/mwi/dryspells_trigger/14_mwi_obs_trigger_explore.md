@@ -1,4 +1,4 @@
-rainy_df.first_date.dt.month## Observational trigger frequency
+## Observational trigger frequency
 
 ```python
 from pathlib import Path
@@ -6,6 +6,7 @@ import sys
 import os
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import datetime as dt
@@ -146,7 +147,68 @@ My intuition is that we are okay not activating the trigger for 2020. Cursory se
 
 I therefore would recommend that we DO include dry spells confirmed in March, but only monitoring until March 7th. Maintaining the `>=3` ADM2 trigger would keep the same return period and observed years where we would meet the action trigger, while also capturing some late onset dry spells without significant overlap into the dry season (only one instance in our observed data from 2020).
 
+### Rainy season onset
 
+```python
+daily_df.sort_values(by = ['ADM2_PCODE', 'date'], axis = 0, inplace = True, ignore_index = True)
+
+# rolling forwards
+
+daily_df['rainfall_40mm_10d_prior'] = daily_df \
+    .groupby('ADM2_PCODE')['mean_cell'] \
+    .apply(lambda x: x.rolling(window=10).sum() >= 40) \
+    .reset_index(drop = True)
+
+# rolling backwards
+
+daily_df['rainfall_2mm_10d_ahead'] = daily_df \
+    .groupby('ADM2_PCODE')['mean_cell'] \
+    .apply(lambda x: x.rolling(window=10).sum().shift(-9) < 2) \
+    .reset_index(drop = True)
+
+# no 10 consecutive in 30
+
+daily_df['no_10_consec'] = daily_df \
+    .groupby('ADM2_PCODE')['rainfall_2mm_10d_ahead'] \
+    .apply(lambda x: x.rolling(window=21).sum().shift(-20).shift(-1) == 0) \
+    .reset_index(drop = True)
+
+# get rainy season onset
+
+rainy_onset_df = daily_df[daily_df.rainfall_40mm_10d_prior & daily_df.no_10_consec]
+rainy_onset_df = rainy_onset_df[(rainy_onset_df.date.dt.month == 12) | (rainy_onset_df.date.dt.month <= 2) | ((rainy_onset_df.date.dt.month == 11) & (rainy_onset_df.date.dt.day >= 10))]
+rainy_onset_df['season'] = np.where(rainy_onset_df.date.dt.month >= 11,
+                                    rainy_onset_df.date.dt.strftime('%Y') + "-" + (rainy_onset_df.date.dt.year + 1).map(str),
+                                    (rainy_onset_df.date.dt.year - 1).map(str) + "-" + rainy_onset_df.date.dt.year.map(str))
+
+rainy_onset_df.reset_index(drop=True,inplace=True)
+
+rainy_onset_df = rainy_onset_df \
+    .loc[rainy_onset_df.groupby(['ADM2_PCODE', 'season'])['date'].idxmin()] \
+    .reset_index(drop=True) \
+    [['ADM2_PCODE', 'date', 'season']] \
+    .assign(year = lambda x: x.season.str.split('-').str[1].map(int),
+            rainy_season_onset = lambda x: x.date - pd.DateOffset(days=9)) \
+    .rename(columns = {'ADM2_PCODE':'pcode'}) \
+    .drop('date', axis = 1)
+            
+rainy_onset_df
+```
+
+Okay, now we can merge back in with old dataset to compare with our triggers.
+
+```python
+new_onset_ds = pd.merge(df_filtered,
+                        rainy_onset_df,
+                        how = 'left',
+                        on=['pcode', 'year'])
+
+
+new_onset_ds['overlap_dry_season'] = pd.to_datetime(new_onset_ds.dry_spell_first_date) <= new_onset_ds.rainy_season_onset
+new_onset_ds = new_onset_ds[['pcode', 'dry_spell_confirmation', 'dry_spell_first_date', 'dry_spell_last_date', 'dry_spell_duration', 'overlap_dry_season', 'rainy_season_onset', 'no_year']]
+
+new_onset_ds[new_onset_ds.overlap_dry_season]
+```
 
 ## Output statistics
 
