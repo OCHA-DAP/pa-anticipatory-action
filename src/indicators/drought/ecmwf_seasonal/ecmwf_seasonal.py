@@ -34,23 +34,30 @@ class EcmwfSeasonal:
         cds_name: str,
         dataset: List[str],
         dataset_variable_name: str,
+        use_incorrect_area_coords: bool = False,
     ):
         """Create an instance of a EcmwfSeasonal object, from which you
         can download and process raw data, and read in the processed
         data.
 
         :param year_min: The earliest year that the dataset is
-        available. :param year_max: The most recent that the dataset is
-        available :param cds_name: The name of the dataset in CDS :param
-        dataset: The sub-datasets that you would like to download (as a
-        list of strings) :param dataset_variable_name: The variable name
+        available.
+        :param year_max: The most recent that the dataset is
+        available
+        :param cds_name: The name of the dataset in CDS
+        :param dataset: The sub-datasets that you would like to download (as a
+        list of strings)
+        :param dataset_variable_name: The variable name
         with which to pass the above datasets in the CDS query
+        :param use_incorrect_area_coords: Generally not meant to be used,
+        needed for backward compatibility with some historical data
         """
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
         self.dataset = dataset
         self.dataset_variable_name = dataset_variable_name
+        self.use_incorrect_area_coords = use_incorrect_area_coords
 
     def _download(
         self,
@@ -110,7 +117,12 @@ class EcmwfSeasonal:
         directory = (
             RAW_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / self.cds_name
         )
-        filename = f"{country_iso3}_{self.cds_name}_v{version}_{year}"
+        if self.use_incorrect_area_coords:
+            directory = directory / "incorrect_coords"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if self.use_incorrect_area_coords:
+            filename += "_incorrect-coords"
+        filename += f"_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
         filename += ".grib"
@@ -135,7 +147,10 @@ class EcmwfSeasonal:
             if month is None
             else str(month).zfill(2),
             "leadtime_month": [str(x) for x in leadtimes],
-            "area": area.list_for_api(round_val=1, offset_val=0),
+            "area": area.list_for_api(
+                round_val=None if self.use_incorrect_area_coords else 1,
+                offset_val=None if self.use_incorrect_area_coords else 0,
+            ),
         }
         logger.debug(f"Query: {query}")
         return query
@@ -190,6 +205,8 @@ class EcmwfSeasonal:
 
     def _get_processed_filepath(self, country_iso3: str, version: int) -> Path:
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if self.use_incorrect_area_coords:
+            filename += "_incorrect-coords"
         filename += ".nc"
         return (
             PROCESSED_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / filename
@@ -207,13 +224,14 @@ class EcmwfSeasonal:
 
 
 class EcmwfSeasonalForecast(EcmwfSeasonal):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
-            year_min=2000,
+            year_min=1993,
             year_max=2021,
             cds_name="seasonal-monthly-single-levels",
             dataset=["monthly_mean"],
             dataset_variable_name="product_type",
+            **kwargs,
         )
 
     def download(

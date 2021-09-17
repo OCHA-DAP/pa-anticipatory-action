@@ -20,14 +20,16 @@ from src.utils_general.raster_manipulation import compute_raster_statistics
 logger = logging.getLogger(__name__)
 
 
-def get_ecmwf_forecast(country_iso3, version: int = 5):
+def get_ecmwf_forecast(
+    country_iso3: str, version: int = 5, **kwargs
+) -> xr.Dataset:
     """
     Retrieve the processed dataset with the forecast for each
     publication date and corresponding lead times Args: version: version
     of forecast model that was used (only changes once every couple of
     years)
     """
-    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
+    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(**kwargs)
     ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
         country_iso3=country_iso3,
         version=version,
