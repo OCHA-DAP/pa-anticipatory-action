@@ -1,3 +1,5 @@
+# TODO: this scripts needs serious refactoring
+
 import calendar
 import os
 import sys
@@ -94,14 +96,12 @@ def main(download, config=None):
     df_bound = gpd.read_file(adm_path)
 
     provider = "IRI"
-    iri_ds, iri_transform = get_iri_data(config, download=download)
+    iri_ds = get_iri_data(config, download=download)
     iri_ds = iri_ds.rename({"prob": "prob_below"})
     # C indicates the tercile where 0=below average
     iri_ds_sel = iri_ds.sel(L=leadtime, F=pubdate_cf_iri, C=0)
 
-    iri_ds_clip = iri_ds_sel.rio.set_spatial_dims(
-        x_dim="lon", y_dim="lat"
-    ).rio.clip(
+    iri_ds_clip = iri_ds_sel.rio.clip(
         df_bound.geometry.apply(mapping), df_bound.crs, all_touched=True
     )
     print("IRI max value", iri_ds_clip[config.LOWERTERCILE].max())
@@ -122,7 +122,7 @@ def main(download, config=None):
     )
     # comput statistics per admin
     iri_df = compute_raster_statistics(
-        adm_path, iri_ds_sel_array, iri_transform, 50
+        adm_path, iri_ds_sel_array, iri_ds_sel_array.rio.transform(), 50
     )
 
     # TODO: someting is broken with the plot_spatial_columns function

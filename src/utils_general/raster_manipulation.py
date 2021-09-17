@@ -9,7 +9,11 @@ import xarray as xr
 logger = logging.getLogger(__name__)
 
 
-def invert_latlon(ds):
+def invert_latlon(
+    ds,
+    lon_coord: str,
+    lat_coord: str,
+):
     """
     This function checks for inversion of latitude and longitude
     and changes them if needed
@@ -19,8 +23,6 @@ def invert_latlon(ds):
     with the largest number.
     Some functions, such as zonal_stats, produce wrong results when
     these coordinates are flipped.
-    The dataset given as input (ds) should have its lat coordinates
-    named "lat" and lon coordinates "lon"
     Function largely copied from
     https://github.com/perrygeo/python-rasterstats/issues/218
     Args:
@@ -31,10 +33,10 @@ def invert_latlon(ds):
         da (xarray dataset): dataset containing the variables
         and flipped coordinates
     """
-    lat_start = ds.lat[0].item()
-    lat_end = ds.lat[ds.dims["lat"] - 1].item()
-    lon_start = ds.lon[0].item()
-    lon_end = ds.lon[ds.dims["lon"] - 1].item()
+    lat_start = ds[lat_coord][0].item()
+    lat_end = ds[lat_coord][ds.dims[lat_coord] - 1].item()
+    lon_start = ds[lon_coord][0].item()
+    lon_end = ds[lon_coord][ds.dims[lon_coord] - 1].item()
     if lat_start < lat_end:
         lat_status = "north down"
     else:
@@ -49,7 +51,7 @@ def invert_latlon(ds):
         logger.info(
             "Dataset was north down, latitude coordinates have been flipped"
         )
-        ds = ds.reindex(lat=ds["lat"][::-1])
+        ds = ds.reindex({lat_coord: ds[lat_coord][::-1]})
     # TODO: implement longitude inversion
     if lon_status == "inverted":
         logger.error("Inverted longitude still needs to be implemented..")
@@ -63,19 +65,24 @@ def invert_latlon(ds):
 # -180 180,
 # while for IRI CAMS observational terciles outputs are wrong WHEN
 # changing to -180 180 instead of 0 360...
-def change_longitude_range(ds):
+def change_longitude_range(
+    ds,
+    lon_coord: str,
+):
     """
     If longitude ranges from 0 to 360,
     change it to range from -180 to 180.
-    Assumes the name of the longitude coordinates is "lon"
     Args:
         ds (xarray dataset): dataset that should be transformed
+        lon_coord: name of the longitude coordinate
 
     Returns:
         ds_lon (xarray dataset): dataset with transformed longitude
         coordinates
     """
-    ds_lon = ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180)).sortby("lon")
+    ds_lon = ds.assign_coords(
+        {lon_coord: (((ds[lon_coord] + 180) % 360) - 180)}
+    ).sortby(lon_coord)
     return ds_lon
 
 
