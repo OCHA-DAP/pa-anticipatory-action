@@ -1,4 +1,4 @@
-## Observational trigger frequency
+rainy_df.first_date.dt.month## Observational trigger frequency
 
 ```python
 from pathlib import Path
@@ -29,6 +29,7 @@ DATA_DIR = Path(config.DATA_DIR)
 RAW_DIR =  DATA_DIR / config.PUBLIC_DIR / config.RAW_DIR / COUNTRY_ISO3
 ARC2_DIR = DATA_DIR / config.PUBLIC_DIR / 'exploration' / COUNTRY_ISO3 / 'arc2'
 DRY_SPELLS = 'mwi_arc2_centroid_dry_spells.csv'
+DAILY_RAIN = 'mwi_arc2_precip_long_raw.csv'
 PLOT_DIR = DATA_DIR / 'public' / 'processed' / COUNTRY_ISO3 / 'plots' / 'dry_spells' / 'arc2'
 
 N_YEARS = 21 # Dry spells based on 21 years of ARC2 data - from 2000-2020, inclusive
@@ -38,15 +39,16 @@ Read in the dry spells data and convert data types.
 
 ```python
 df = pd.read_csv(ARC2_DIR / DRY_SPELLS)
+daily_df = pd.read_csv(ARC2_DIR / DAILY_RAIN, parse_dates = ['date'])
 df['dry_spell_confirmation'] = pd.to_datetime(df['dry_spell_confirmation'])
 ```
 
-Keep only dry spells that were confirmed within the monitoring period of Jan 1 - Feb 28. This means that the dry spells could begin as early as Dec 18th.
+Keep only dry spells that were confirmed within the monitoring period of Jan 1 - March 7. This means that the dry spells could begin as early as Dec 18th and late as February 21.
 
 ```python
 # The year doesn't matter here
 monitoring_start = "2014-01-01"
-monitoring_end = "2014-02-28" 
+monitoring_end = "2014-03-14" 
 
 monitoring = pd.Series(pd.date_range(monitoring_start, monitoring_end))
 monitoring_no_year = monitoring.map(lambda x: x.strftime("%m-%d"))
@@ -74,6 +76,79 @@ dfi.export(df_activations_save, 'df_activations.png')
 ```python
 df_activations_save
 ```
+
+Let's examine what these additional activations in late February (confirmed in March) would look like.
+
+```python
+df_filtered[df_filtered.no_year.str.startswith("03")]
+```
+
+I guess the concern here is that we might be picking up dry spells that overlap with the dry season (as defined in ARC2). This is pretty clear on the long duration dry spells, but let's see how it looks elsewhere. By definition it must start on the 15th of March at the earliest, so we can see pretty clearly those that can't overlap with the dry season.
+
+```python
+daily_df.sort_values(by = ['ADM2_PCODE', 'date'], axis = 0, inplace = True, ignore_index = True)
+
+# rolling backwards
+
+daily_df['rolling_rainfall'] = daily_df \
+    .groupby('ADM2_PCODE')['mean_cell'] \
+    .apply(lambda x: x.rolling(window=15).sum().shift(-14)) \
+    .reset_index(drop = True)
+
+# capture rainy season groups, all code here piecemeal for checking
+daily_df['rain_less_25'] = daily_df['rolling_rainfall'] <= 25
+daily_df['year'] = daily_df.date.dt.year
+
+# get all dry spells
+
+rainy_df = daily_df[(daily_df.rain_less_25) & ((daily_df.date.dt.month >= 4) | ((daily_df.date.dt.month == 3) & (daily_df.date.dt.day >= 29)))] \
+    .groupby(['ADM2_PCODE', 'year']) \
+    .agg(
+      pcode = ('ADM2_PCODE','unique'),
+      year = ('year','unique'),
+      dry_season_confirmation = ('date','min')
+     ) \
+    .reset_index(drop = True) \
+    .assign(pcode = lambda x: x.pcode.str[0],
+            year = lambda x: x.year.str[0],
+            dry_season_first_date = lambda x: x.dry_season_confirmation - pd.to_timedelta(14, unit = 'd'))
+```
+
+Let's merge this back into the dry spell data to see how many of the dry spells confirmed in March would be overlapping with the dry season.
+
+```python
+df_filtered['year'] = df_filtered.dry_spell_confirmation.dt.year
+new_ds = pd.merge(df_filtered,
+                  rainy_df,
+                  how = 'left',
+                  on=['pcode', 'year'])
+
+
+new_ds['overlap_dry_season'] = pd.to_datetime(new_ds.dry_spell_last_date) >= new_ds.dry_season_first_date
+new_ds = new_ds[['pcode', 'dry_spell_confirmation', 'dry_spell_first_date', 'dry_spell_last_date', 'dry_spell_duration', 'overlap_dry_season', 'dry_season_first_date', 'no_year']]
+
+new_ds[new_ds.no_year.str.startswith("03")]
+```
+
+From above, we can see that many of these dry spell activations into March overlap with the beginning of the dry season, as it would be defined using ARC2. Often, this occurs when the confirmation occurs past the 7th of March, so that more than half of the dry spell is taking place within March. This is the case in 2005, where all dry spells overlap with the dry season onset and in 2020, where 5 of 9 detected dry spells overlap with the onset of the dry season. The other 4 did not overlap with the dry season, although there was only a few day gap between the cessation of the dry spell and dry season onset.
+
+The decision here really comes down to how we view these dry spells activated in 2020. Even ignoring dry season overlap, for all other years, there would be no change in activation based on these additional dry spells (there would be only 1 detected in 2002 and the trigger would've already been hit in 2005 and 2011).
+
+So, how do we view the 2020 dry spells? Some general thoughts are:
+
+- If we set a limit that at least half of the dry spell must occur in February (detect on or before March 7th), based on not wanting to overlap with the dry season onset, we would not have any additional activations based on our `>=3` trigger. We would still capture what appear to be legitimate dry spells in the rainy season in 2002 and 2011, while only capturing 2 dry spells in 2000. So it comes down to if we would have been okay missing the 2020 dry spells.
+
+- For 2020, could we be conflating an early onset dry season with dry spells during the rainy season? I have seen this referenced in the literature as an issue (shortened rainy seasons), but is this something we want to capture with this trigger? The March 15th reference for rainy season cessation comes for a paper nearly 20 years old now, so it might be out of date regarding the seasonality in Malawi? It looks fairly clear that in 2005, for instance, the dry spells detected at the tail end of the period (only 1 day following in February) are simply capturing the dry season onset.
+
+- If this is simply capturing a shortened rainy season, we could consider for V2 looking into capturing when the rainy season begins and the possibility of the cessation of the rainy season early. For instance, continuing to monitor for dry spells following March 7th and if we detect a situation like in 2020, triggering something based on the detection of a shortened rainy season (depending on its onset that year). For this round, we just want to be comfortable NOT activating in 2020 even though there were 9 separate ADM2 areas with a dry spell detected.
+
+My intuition is that we are okay not activating the trigger for 2020. Cursory searches for documents/news about Malawi dry spells in 2020 have produced no collaborating documentation on high impact dry spells in that year. While this is obviously quite ancedotal, it's quite easy to found references to dry spells and their potential impacts even in the year they are observed, such as 2005 or 2010. In fact, documentation from the time, such as this [April 2020 FEWS-NET report](https://reliefweb.int/sites/reliefweb.int/files/resources/MW_FSOU_April_2020_Final.pdf) references above average seasonal rainfall and subsequent crop production.
+
+I therefore would recommend that we DO include dry spells confirmed in March, but only monitoring until March 7th. Maintaining the `>=3` ADM2 trigger would keep the same return period and observed years where we would meet the action trigger, while also capturing some late onset dry spells without significant overlap into the dry season (only one instance in our observed data from 2020).
+
+
+
+## Output statistics
 
 Output statistics include: 
 - `thresh`: number of admin regions with a dry spell confirmed on a given date
