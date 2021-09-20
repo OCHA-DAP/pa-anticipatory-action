@@ -1,0 +1,16 @@
+body{
+  font-family: 'Source Sans Pro';
+}
+/* Headers */
+h1{
+    font-family: Arvo;
+    font-weight: bold;
+    color: #1bb580;
+}
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 14px;
+    border-left: 5px solid #eee;
+}
