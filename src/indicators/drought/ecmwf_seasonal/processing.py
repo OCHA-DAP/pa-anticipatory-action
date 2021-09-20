@@ -5,6 +5,7 @@ import geopandas as gpd
 from rasterstats import zonal_stats
 import logging
 from typing import List
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -56,24 +57,45 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
 
+def get_stats_filepath(
+    iso3: str,
+    config: Config,
+    date: datetime,
+    interpolate: bool,
+    adm_level: int,
+    version: int = None,
+) -> Path:
+
+    if version is None:
+        version = config.DEFAULT_VERSION
+
+    filename = f"{iso3.lower()}_seasonal-monthly-single-levels_v{version}"
+    if interpolate:
+        filename += "_interp"
+    filename += f"_{date.year}_{date.month}_adm{adm_level}_stats_test2.csv"
+
+    country_data_processed_dir = (
+        Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
+    )
+    ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
+
+    return ecmwf_processed_dir / filename
+
+
 def compute_stats_per_admin(
-    country,
+    iso3,
     adm_level=1,
     pcode_col="ADM1_PCODE",
     add_col: List[str] = None,
-    use_cache=True,
-    interpolate=True,
-    date_list=None,
+    use_cache: bool = True,
+    interpolate: bool = True,
+    date_list: List[str] = None,
 ):
     config = Config()
-    parameters = config.parameters(country)
-    country_iso3 = parameters["iso3_code"]
+    parameters = config.parameters(iso3)
 
     country_data_raw_dir = os.path.join(
-        config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, country_iso3
-    )
-    country_data_processed_dir = os.path.join(
-        config.DATA_DIR, config.PUBLIC_DIR, config.PROCESSED_DIR, country_iso3
+        config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, iso3
     )
     adm_boundaries_path = os.path.join(
         country_data_raw_dir,
@@ -82,7 +104,7 @@ def compute_stats_per_admin(
     )
 
     # read the forecasts
-    ds = get_ecmwf_forecast_by_leadtime(country_iso3)
+    ds = get_ecmwf_forecast_by_leadtime(iso3)
 
     if interpolate:
         # read observed data to get resolution to interpolate to
@@ -105,21 +127,14 @@ def compute_stats_per_admin(
         date_list = ds.time.values
     for date in date_list:
         date_dt = pd.to_datetime(date)
-        if interpolate:
-            output_filename = (
-                f"{parameters['iso3_code'].lower()}"
-                f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
-                f"_{date_dt.month}_adm{adm_level}_stats.csv"
-            )
-        else:
-            output_filename = (
-                f"{parameters['iso3_code'].lower()}"
-                f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
-                f"_{date_dt.month}_adm{adm_level}_stats.csv"
-            )
-        output_path = os.path.join(
-            country_data_processed_dir, "ecmwf", output_filename
+        output_path = get_stats_filepath(
+            iso3,
+            config,
+            date_dt,
+            interpolate,
+            adm_level,
         )
+
         # If caching is on and file already exists, don't download again
         if use_cache and Path(output_path).exists():
             logger.debug(
@@ -140,10 +155,7 @@ def compute_stats_per_admin(
                 gdf_adm[add_col + [pcode_col]], on=pcode_col, how="left"
             )
             df["date"] = date_dt
-            df.to_csv(output_path)
-
-
-# TODO: create function to retrieve the stats file
+            df.to_csv(output_path, index=False)
 
 
 def compute_zonal_stats(
