@@ -7,8 +7,8 @@ import xarray as xr
 import pandas as pd
 import pytest
 
-from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import Area, Station
+from indicators.flooding.glofas import glofas
+from indicators.flooding.glofas.area import Area, Station
 
 
 TMP_PATH = Path("/tmp/glofas_test")
@@ -40,18 +40,14 @@ def test_expand_dims():
 # Can use static tmp path here since nothing is saved
 @mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 class TestDownload:
-    def setup(self):
-        """
-        Initialize shared parameters
-        """
-        self.country_iso3 = "abc"
-        self.area = Area(north=1, south=-2, east=3, west=-4)
-        self.year = 2000
-        self.leadtimes = [10, 20]
-        self.expected_area = [1.05, -4.05, -2.05, 3.05]
-        self.expected_months = [str(x + 1).zfill(2) for x in range(12)]
-        self.expected_days = [str(x + 1).zfill(2) for x in range(31)]
-        self.expected_leadtime = ["240", "480"]
+    country_iso3 = "abc"
+    area = Area(north=1, south=-2, east=3, west=-4)
+    year = 2000
+    leadtimes = [10, 20]
+    expected_area = [1.05, -4.05, -2.05, 3.05]
+    expected_months = [str(x + 1).zfill(2) for x in range(12)]
+    expected_days = [str(x + 1).zfill(2) for x in range(31)]
+    expected_leadtime = ["240", "480"]
 
     def test_reanalysis_download(self, fake_mkdir, fake_retrieve):
         """
@@ -196,20 +192,15 @@ class TestDownload:
 
 @mock.patch("src.indicators.flooding.glofas.glofas.xr.open_mfdataset")
 class TestProcess:
-    @pytest.fixture(autouse=True)  # Required voodoo for tmpdir
-    def setup(self, tmp_path):
-        """
-        Initialize shared parameters
-        """
-        self.country_iso3 = "abc"
-        self.station_name = "fake_station"
-        self.stations = {self.station_name: Station(lon=5.05, lat=10.05)}
-        self.year = 2000
-        self.leadtimes = [10, 20]
-        self.numbers = [0, 1, 2, 3, 4, 5, 6]
-        # Need to mock within the class in order to pass tmp_dir
-        # (otherwise a decorator would be better)
-        self.mock_data_dir = mock.patch.object(glofas, "DATA_DIR", tmp_path)
+    country_iso3 = "abc"
+    station_name = "fake_station"
+    stations = {station_name: Station(lon=5.05, lat=10.05)}
+    year = 2000
+    leadtimes = [10, 20]
+    numbers = [0, 1, 2, 3, 4, 5, 6]
+    # Need to mock within the class in order to pass tmp_dir
+    # (otherwise a decorator would be better)
+    mock_data_dir = mock.patch.object(glofas, "DATA_DIR", TMP_PATH)
 
     @staticmethod
     def get_raw_data(
