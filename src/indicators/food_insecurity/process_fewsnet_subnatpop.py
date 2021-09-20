@@ -10,7 +10,11 @@ import pandas as pd
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
-from src.indicators.food_insecurity.utils import download_fewsnet, parse_args
+from src.indicators.food_insecurity.utils import (
+    download_fewsnet,
+    fewsnet_validperiod,
+    parse_args,
+)
 from src.utils_general.utils import config_logger, convert_to_numeric
 
 logger = logging.getLogger(__name__)
@@ -18,16 +22,18 @@ logger = logging.getLogger(__name__)
 
 def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
     """
-    Compile the shapefiles to a dataframe Args: path: path to directory
-    that contains the FewsNet shapefiles period: type of FewsNet
-    prediction: CS (current), ML1 (near-term projection) or ML2
-    (medium-term projection) dates: list of dates for which FewsNet data
-    should be included region: region that the fewsnet data covers, e.g.
-    "east-africa" regionabb: abbreviation of the region that the fewsnet
-    data covers, e.g. "EA" iso2_code: iso2 code of the country of
-    interest
+    Compile the shapefiles to a dataframe
+    Args: path: path to directory that contains the FewsNet shapefiles
+    period: type of FewsNet prediction: CS (current),
+    ML1 (near-term projection) or ML2 (medium-term projection)
+    dates: list of dates for which FewsNet data should be included
+    region: region that the fewsnet data covers, e.g. "east-africa"
+    regionabb: abbreviation of the region that the fewsnet data covers,
+    e.g. "EA"
+    iso2_code: iso2 code of the country of interest
 
-    Returns: df: DataFrame that contains all the shapefiles of Fewsnet
+    Returns:
+        df: DataFrame that contains all the shapefiles of Fewsnet
         for the given dates, period and regions
     """
     df = gpd.GeoDataFrame()
@@ -51,6 +57,7 @@ def shapefiles_to_df(path, period, dates, region, regionabb, iso2_code):
     return df
 
 
+# TODO: this is really slow, see if we can find a better method
 def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
     """
     Merge the geographic boundary information shapefile with the FewsNet
@@ -73,7 +80,7 @@ def merge_admin2(df, path_admin, period, adm0c, adm1c, adm2c):
             f" {list(admin2.columns)}"
         )
     admin2 = admin2[[adm0c, adm1c, adm2c, "geometry"]]
-    overlap = gpd.overlay(admin2, df, how="intersection")
+    overlap = gpd.overlay(admin2, df.to_crs("EPSG:4326"), how="intersection")
     overlap = overlap.drop_duplicates()
     overlap["area"] = overlap["geometry"].to_crs("EPSG:3395").area
     columns = [adm0c, adm1c, adm2c, period, "date", "geometry", "area"]
@@ -254,6 +261,11 @@ def merge_ipcperiod(inputdf_dict, adm0c, adm1c, adm2c):
             df = df.merge(
                 inputdf_dict[k], on=[adm0c, adm1c, adm2c, "date"], how="left"
             )
+    # round numbers to ints
+    # should already be rounded, but often float type
+    df = df.applymap(
+        lambda x: int(round(x, 0)) if isinstance(x, (int, float)) else x
+    )
 
     df["date"] = pd.to_datetime(df["date"])
     df["date"] = df["date"].dt.date
@@ -391,18 +403,20 @@ def load_popdata(
     return df_pop
 
 
-def create_histpopdict(df_data, country, histpop_path):
+def create_histpopdict(df_data, iso3, histpop_path):
     """
     Retrieve the historical national population for the years that are
-    present in df_data Args: df_data: DataFrame of interest country:
-    Country of interest histpop_path: path to csv with historical
-    national population
+    present in df_data
+    Args:
+    df_data: DataFrame of interest
+    iso3: iso3 code of the country of interest
+    histpop_path: path to csv with historical national population
 
     Returns: dict with national population for each year
     """
     df_histpop = pd.read_csv(histpop_path, header=2)
-    df_histpop.set_index("Country Name", inplace=True)
-    df_histpopc = df_histpop.loc[country]
+    df_histpop.set_index("Country Code", inplace=True)
+    df_histpopc = df_histpop.loc[iso3]
     # only select rows that contain a year-value (some have e.g. unnamed
     # or some other info that we don't need)
     df_histpopc.index = pd.to_datetime(df_histpopc.index, errors="coerce")
@@ -446,7 +460,7 @@ def get_adjusted(row, perc_dict):
 def merge_ipcpop(
     df_ipc,
     df_pop,
-    country,
+    iso3,
     pop_adm1c,
     pop_adm2c,
     shp_adm1c,
@@ -455,12 +469,14 @@ def merge_ipcpop(
 ):
     """
 
-    Args: df_ipc: DataFrame with IPC data df_pop: DataFrame with
-        subnational population data country: Name of country of interest
-        pop_adm1c: column name of the admin1 level name, in df_pop
-        pop_adm2c: column name of the admin1 level name, in df_pop
-        shp_adm1c:  column name of the admin1 level name, in df_ipc
-        shp_adm2c:  column name of the admin2 level name, in df_ipc
+    Args:
+    df_ipc: DataFrame with IPC data
+    df_pop: DataFrame with subnational population data
+    iso3: iso3 code of country of interest
+    pop_adm1c: column name of the admin1 level name, in df_pop
+    pop_adm2c: column name of the admin1 level name, in df_pop
+    shp_adm1c:  column name of the admin1 level name, in df_ipc
+    shp_adm2c:  column name of the admin2 level name, in df_ipc
 
     Returns: df_ipcp: DataFrame with IPC level and population per admin2
         region, where the population is adjusted to historical national
@@ -475,7 +491,7 @@ def merge_ipcpop(
 
     # dict to indicate relative increase in population over the years
     pop_dict = create_histpopdict(
-        df_ipcp, country=country, histpop_path=histpop_path
+        df_ipcp, iso3=iso3, histpop_path=histpop_path
     )
     # estimate percentage of population at given year in relation to the
     # national population given by the subnational population file
@@ -499,12 +515,17 @@ def merge_ipcpop(
 
     # add columns with population in each IPC level for CS, ML1 and ML2
     for period in ["CS", "ML1", "ML2"]:
+        df_ipcp[period] = df_ipcp[period].astype(np.int)
         for level in [1, 2, 3, 4, 5]:
             ipc_id = "{}_{}".format(period, level)
             df_ipcp[ipc_id] = np.where(
                 df_ipcp[period] == level,
                 df_ipcp["adjusted_population"],
-                (np.where(np.isnan(df_ipcp[period]), np.nan, 0)),
+                (
+                    np.where(
+                        np.isnan(df_ipcp[period].astype(np.int)), np.nan, 0
+                    )
+                ),
             )
         df_ipcp[f"pop_{period}"] = df_ipcp[
             [f"{period}_{i}" for i in range(1, 6)]
@@ -542,7 +563,7 @@ def aggr_admin1(df, adm1c):
     return df_adm
 
 
-def main(country, suffix, download, config=None):
+def main(iso3, suffix, download, config=None, fewsnet_dates=None):
     """This script takes the FEWSNET IPC shapefiles provided by on
     fews.net and overlays them with an admin2 shapefile, in order to
     provide an IPC value for each admin2 district. In the case where
@@ -557,13 +578,17 @@ def main(country, suffix, download, config=None):
     famine).
 
     Set all variables, run the function for the different forecasts, and
-    save as csv Args: country_iso3: string with iso3 code suffix: string
-    to attach to the output files name config_file: path to config file
+    save as csv
+    Args:
+    iso3: string with iso3 code
+    suffix: string to attach to the output files name
+    config_file: path to config file
+    fewsnet_dates: fewsnet publications to include
     """
 
     if config is None:
         config = Config()
-    parameters = config.parameters(country)
+    parameters = config.parameters(iso3)
 
     iso2_code = parameters["iso2_code"]
     region = parameters["foodinsecurity"]["region"]
@@ -579,22 +604,24 @@ def main(country, suffix, download, config=None):
     pop_bound_adm1_mapping = parameters["foodinsecurity"]["pop_adm1_mapping"]
     pop_bound_adm2_mapping = parameters["foodinsecurity"]["pop_adm2_mapping"]
 
-    fewsnet_dates = config.FEWSNET_DATES
-    if "fewsnet_dates_add" in parameters["foodinsecurity"].keys():
-        fewsnet_dates = (
-            fewsnet_dates + parameters["foodinsecurity"]["fewsnet_dates_add"]
-        )
-    if "fewsnet_dates_remove" in parameters["foodinsecurity"].keys():
-        fewsnet_dates = list(
-            set(fewsnet_dates)
-            - set(parameters["foodinsecurity"]["fewsnet_dates_remove"])
-        )
+    if fewsnet_dates is None:
+        fewsnet_dates = config.FEWSNET_DATES
+        if "fewsnet_dates_add" in parameters["foodinsecurity"].keys():
+            fewsnet_dates = (
+                fewsnet_dates
+                + parameters["foodinsecurity"]["fewsnet_dates_add"]
+            )
+        if "fewsnet_dates_remove" in parameters["foodinsecurity"].keys():
+            fewsnet_dates = list(
+                set(fewsnet_dates)
+                - set(parameters["foodinsecurity"]["fewsnet_dates_remove"])
+            )
 
     country_data_raw_dir = os.path.join(
-        config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower()
+        config.DATA_PUBLIC_RAW_DIR, iso3.lower()
     )
     country_data_processed_dir = os.path.join(
-        config.DATA_PUBLIC_PROCESSED_DIR, parameters["iso3_code"].lower()
+        config.DATA_PUBLIC_PROCESSED_DIR, iso3.lower()
     )
     glb_data_raw_dir = os.path.join(config.DATA_PUBLIC_RAW_DIR, "glb")
 
@@ -662,7 +689,7 @@ def main(country, suffix, download, config=None):
     df_ipcpop = merge_ipcpop(
         df_allipc,
         df_pop,
-        country.capitalize(),
+        iso3.upper(),
         pop_adm1c,
         pop_adm2c,
         shp_adm1c,
@@ -670,17 +697,25 @@ def main(country, suffix, download, config=None):
         histpop_path,
     )
 
+    df_ipcpop = df_ipcpop.apply(fewsnet_validperiod, axis=1)
     df_ipcpop.to_csv(
-        os.path.join(output_dir, f"{country}_fewsnet_admin2{suffix}.csv")
+        os.path.join(output_dir, f"{iso3}_fewsnet_admin2{suffix}.csv")
     )
 
     df_adm1 = aggr_admin1(df_ipcpop, shp_adm1c)
+    df_adm1 = df_adm1.apply(fewsnet_validperiod, axis=1)
+
     df_adm1.to_csv(
-        os.path.join(output_dir, f"{country}_fewsnet_admin1{suffix}.csv")
+        os.path.join(output_dir, f"{iso3}_fewsnet_admin1{suffix}.csv")
     )
 
 
 if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
-    main(args.country.lower(), args.suffix, args.download_data)
+    main(
+        args.iso3.lower(),
+        args.suffix,
+        args.download_data,
+        fewsnet_dates=args.dates,
+    )
