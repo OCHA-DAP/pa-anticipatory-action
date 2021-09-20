@@ -54,10 +54,10 @@ hdx_blue='#66B0EC'
 #### Set config values
 
 ```python
-country="mwi"
+country_iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
+parameters = config.parameters(country_iso3)
+
 country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"exploration",country_iso3)
 chirps_country_data_exploration_dir= os.path.join(country_data_exploration_dir,'chirps')
 cod_ab_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,country_iso3,"cod_ab")
