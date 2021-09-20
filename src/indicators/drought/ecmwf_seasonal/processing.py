@@ -4,6 +4,7 @@ from pathlib import Path
 import geopandas as gpd
 from rasterstats import zonal_stats
 import logging
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -58,6 +59,8 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
 def compute_stats_per_admin(
     country,
     adm_level=1,
+    pcode_col="ADM1_PCODE",
+    add_col: List[str] = None,
     use_cache=True,
     interpolate=True,
     date_list=None,
@@ -128,12 +131,14 @@ def compute_stats_per_admin(
             gdf_adm = gpd.read_file(adm_boundaries_path)
             df = compute_raster_statistics(
                 gdf_adm,
-                "ADM1_EN",
+                pcode_col,
                 ds_sel.rio.write_crs("EPSG:4326"),
                 lon_coord="longitude",
                 lat_coord="latitude",
             )
-
+            df = df.merge(
+                gdf_adm[add_col + [pcode_col]], on=pcode_col, how="left"
+            )
             df["date"] = date_dt
             df.to_csv(output_path)
 
