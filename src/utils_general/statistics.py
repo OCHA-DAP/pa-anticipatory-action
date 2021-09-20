@@ -1,12 +1,12 @@
+import logging
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d
-import xskillscore as xs
-import logging
 import xarray as xr
-
+import xskillscore as xs
+from scipy.interpolate import interp1d
 from scipy.stats import genextreme as gev
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 

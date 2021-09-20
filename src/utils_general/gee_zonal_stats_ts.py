@@ -6,11 +6,12 @@ files. To avoid potential memory limitations we need to run this year-
 by-year.
 """
 
-import ee
-import geemap
 import os
 import sys
 from pathlib import Path
+
+import ee
+import geemap
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)

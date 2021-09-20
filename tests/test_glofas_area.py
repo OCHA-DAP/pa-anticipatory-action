@@ -1,11 +1,10 @@
 from shapely.geometry import Polygon
 
 from src.indicators.flooding.glofas.area import (
-    Station,
-    AreaFromStations,
     AreaFromShape,
+    AreaFromStations,
+    Station,
 )
-
 
 FAKE_STATIONS = {
     "station_north": Station(lon=0, lat=1),
