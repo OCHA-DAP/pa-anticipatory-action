@@ -16,7 +16,7 @@ from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.drought.ecmwf_seasonal.processing import (
     compute_stats_per_admin,
 )
-from src.indicators.flooding.glofas.area import AreaFromShape
+from src.utils_general.area import AreaFromShape
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
@@ -35,15 +35,17 @@ ADM0_BOUND_PATH = os.path.join(
     COUNTRY_DATA_RAW_DIR, config.SHAPEFILE_DIR, PARAMETERS["path_admin0_shp"]
 )
 
+USE_INCORRECT_AREA_COORDS = False
+
 
 def main(download=True, process=True):
 
-    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
+    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
+        use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+    )
     df_country_boundaries = gpd.read_file(ADM0_BOUND_PATH)
     if download:
-        area = AreaFromShape(
-            df_country_boundaries.iloc[0]["geometry"].buffer(3)
-        )
+        area = AreaFromShape(df_country_boundaries.buffer(3))
         ecmwf_forecast.download(country_iso3=COUNTRY_ISO3, area=area)
 
     if process:

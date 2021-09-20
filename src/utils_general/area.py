@@ -1,11 +1,9 @@
 from collections import namedtuple
-from typing import Dict, List
+from typing import Dict, List, Union
 
+import geopandas as gpd
 import numpy as np
-from shapely.geometry import Polygon
 
-GLOFAS_ROUND_VAL = 0.1
-GLOFAS_OFFSET_VAL = 0.05
 Station = namedtuple("Station", "lon lat")
 
 
@@ -16,7 +14,11 @@ class Area:
         self.east = east
         self.west = west
 
-    def list_for_api(self, do_not_round: bool = False) -> List[float]:
+    def list_for_api(
+        self,
+        round_val: float = None,
+        offset_val: float = None,
+    ) -> List[float]:
         """
         List the coordinates in the order that they're needed for the
         API :param do_not_round: Don't round to the format x.y5, which
@@ -25,19 +27,42 @@ class Area:
         toggled :return: List of coordinates in the correct order for
         the API (north, west, south, east)
         """
-        if do_not_round:
+        if round_val is None and offset_val is None:
             return [self.north, self.west, self.south, self.east]
         # Round North and East up, South and West down (to maximize area)
-        north = self._round_coord_glofas(coord=self.north, direction="up")
-        east = self._round_coord_glofas(coord=self.east, direction="up")
-        south = self._round_coord_glofas(coord=self.south, direction="down")
-        west = self._round_coord_glofas(coord=self.west, direction="down")
+        north = self._round_coord(
+            coord=self.north,
+            direction="up",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
+        east = self._round_coord(
+            coord=self.east,
+            direction="up",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
+        south = self._round_coord(
+            coord=self.south,
+            direction="down",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
+        west = self._round_coord(
+            coord=self.west,
+            direction="down",
+            round_val=round_val,
+            offset_val=offset_val,
+        )
         return [north, west, south, east]
 
     @staticmethod
-    def _round_coord_glofas(coord: float, direction: str) -> float:
+    def _round_coord(
+        coord: float, direction: str, round_val, offset_val
+    ) -> float:
         """
-        Rounding for GloFAS in the CDS API, to the format x.y5
+        Rounding coordinates
+        Used for GloFAS in the CDS API, to the format x.y5
         :param coord: The coordinate to round
         :param direction: Round up or down
         :return: Coordinate rounded to x.y5
@@ -49,8 +74,8 @@ class Area:
             function = np.floor
             offset_factor = -1
         return (
-            function(coord / GLOFAS_ROUND_VAL) * GLOFAS_ROUND_VAL
-            + offset_factor * GLOFAS_OFFSET_VAL
+            function(coord / round_val) * round_val
+            + offset_factor * offset_val
         )
 
 
@@ -59,8 +84,9 @@ class AreaFromStations(Area):
         """
         Args: stations: dictionary of form {station_name: Station]
             buffer: degrees above / below maximum lat / lon from
-            stations to include in GloFAS query Returns: list with
-            format [N, W, S, E]
+            stations to include.
+             Used to query GloFAS from CDS
+             Returns: list with format [N, W, S, E]
         """
         lon_list = [station.lon for station in stations.values()]
         lat_list = [station.lat for station in stations.values()]
@@ -73,11 +99,11 @@ class AreaFromStations(Area):
 
 
 class AreaFromShape(Area):
-    def __init__(self, shape: Polygon):
-        # bounds is of form (minx, miny, maxx, maxy)
+    def __init__(self, shape: Union[gpd.GeoSeries, gpd.GeoDataFrame]):
+        # total_bounds is of form (minx, miny, maxx, maxy)
         super().__init__(
-            north=shape.bounds[3],
-            south=shape.bounds[1],
-            east=shape.bounds[2],
-            west=shape.bounds[0],
+            north=shape.total_bounds[3],
+            south=shape.total_bounds[1],
+            east=shape.total_bounds[2],
+            west=shape.total_bounds[0],
         )

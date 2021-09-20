@@ -312,13 +312,13 @@ df_for_quant["date_month"]=df_for_quant.date.dt.to_period("M")
 ```
 
 ```python
-df_for_quant[["date","leadtime","mean_cell"]].head()
+df_for_quant[["date","leadtime",aggr_meth]].head()
 ```
 
 ```python
 #plot the distribution of precipitation. Can clearly see that for leadtime=1 the values are more spread (but leadtime=1 is really the month that is currently occurring so less useful)
 g = sns.FacetGrid(df_for_quant, height=5, col="leadtime",col_wrap=3)
-g.map_dataframe(sns.histplot, "mean_cell",common_norm=False,kde=True,alpha=1,binwidth=10)
+g.map_dataframe(sns.histplot, aggr_meth,common_norm=False,kde=True,alpha=1,binwidth=10)
 
 for ax in g.axes.flatten():
     ax.tick_params(labelbottom=True)
@@ -342,7 +342,7 @@ df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("
 ```python
 #for some reason facetgrid doesn't want to show the values if there is only one occurence (i.e. in January..)
 g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
-g.map_dataframe(sns.histplot, "mean_cell",common_norm=False,alpha=1,binwidth=10)
+g.map_dataframe(sns.histplot, aggr_meth,common_norm=False,alpha=1,binwidth=10)
 
 g.add_legend(title="Dry spell occurred")  
 for ax in g.axes.flatten():
@@ -354,7 +354,7 @@ for ax in g.axes.flatten():
 ```python
 #plot distribution precipitation with and withoud dry spell
 fig,ax=plt.subplots(figsize=(10,10))
-g=sns.boxplot(data=df_ds_for_labels,x="leadtime",y="mean_cell",ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
+g=sns.boxplot(data=df_ds_for_labels,x="leadtime",y=aggr_meth,ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
 ax.set_ylabel("Monthly precipitation")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
@@ -371,7 +371,7 @@ df_ds_for_labels
 for m in df_ds_for_labels.month_name.unique():#plot distribution precipitation with and withoud dry spell
     df_ds_for_labels_m=df_ds_for_labels[(df_ds_for_labels.month_name==m)&(df_ds_for_labels.leadtime.isin([2,4]))]
     fig,ax=plt.subplots(figsize=(10,6))
-    g=sns.boxplot(data=df_ds_for_labels_m,x="leadtime",y="mean_cell",ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
+    g=sns.boxplot(data=df_ds_for_labels_m,x="leadtime",y=aggr_meth,ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
     ax.set_ylabel("Monthly precipitation")
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -384,12 +384,12 @@ for m in df_ds_for_labels.month_name.unique():#plot distribution precipitation w
 ```python
 #compute tp,tn,fp,fn per threshold
 y_target =  df_ds_for.dry_spell
-threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for_labels.mean_cell.max()%10,10)
+threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for_labels[aggr_meth].max()%10,10)
 df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
 #to prevent division by zero
 epsilon=0.00001
 for t in threshold_list:
-    y_predicted = np.where(df_ds_for.mean_cell<=t,1,0)
+    y_predicted = np.where(df_ds_for[aggr_meth]<=t,1,0)
 
     cm = confusion_matrix(y_target=y_target, 
                           y_predicted=y_predicted)
@@ -464,7 +464,7 @@ df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
 
 ```python
 pr_list=[]
-threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for[aggr_meth].max()%10,10)
 unique_lt=df_ds_for.leadtime.unique()
 
 for m in unique_lt:
@@ -473,7 +473,7 @@ for m in unique_lt:
     y_target =  df_ds_for_lt.dry_spell
     
     for t in threshold_list:
-        y_predicted = np.where(df_ds_for_lt.mean_cell<=t,1,0)
+        y_predicted = np.where(df_ds_for_lt[aggr_meth]<=t,1,0)
 
         cm = confusion_matrix(y_target=y_target, 
                               y_predicted=y_predicted)
@@ -497,7 +497,7 @@ df_pr_sep_lt.threshold=df_pr_sep_lt.threshold.astype(int)
 ```python
 #same but now also separated by month instead of only by leadtime
 pr_list=[]
-threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for[aggr_meth].max()%10,10)
 unique_lt=df_ds_for.leadtime.unique()
 unique_months=df_ds_for.month_name.unique()
 
@@ -508,7 +508,7 @@ for l in unique_lt:
         y_target =  df_ds_for_lt_m.dry_spell
 
         for t in threshold_list:
-            y_predicted = np.where(df_ds_for_lt_m.mean_cell<=t,1,0)
+            y_predicted = np.where(df_ds_for_lt_m[aggr_meth]<=t,1,0)
 
             cm = confusion_matrix(y_target=y_target, 
                                   y_predicted=y_predicted)
@@ -554,7 +554,7 @@ df_pr_sep_lt_m_sel.head()
 # i.e. the months don't have to match
 df_ds_for["year"]=df_ds_for.date_month.dt.year
 pr_list=[]
-threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for[aggr_meth].max()%10,10)
 unique_lt=df_ds_for.leadtime.unique()
 
 for m in unique_lt:
@@ -563,7 +563,7 @@ for m in unique_lt:
     
     
     for t in threshold_list:
-        df_ds_for_lt["below_th"]=np.where(df_ds_for_lt.mean_cell<=t,1,0)
+        df_ds_for_lt["below_th"]=np.where(df_ds_for_lt[aggr_meth]<=t,1,0)
         df_ds_for_lt_year=df_ds_for_lt.groupby("year").max()
         y_target =  df_ds_for_lt_year.dry_spell
         y_predicted = df_ds_for_lt_year.below_th
@@ -607,7 +607,7 @@ df_pr_year_sep_lt_sel
 ```python
 #same but now also separated by month instead of only by leadtime
 pr_list=[]
-threshold_list=np.arange(0,df_ds_for.mean_cell.max() - df_ds_for.mean_cell.max()%10,10)
+threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for[aggr_meth].max()%10,10)
 unique_lt=df_ds_for.leadtime.unique()
 unique_months=df_ds_for.month_name.unique()
 
@@ -618,7 +618,7 @@ for l in unique_lt:
         y_target =  df_ds_for_lt_m.dry_spell
 
         for t in threshold_list:
-            y_predicted = np.where(df_ds_for_lt_m.mean_cell<=t,1,0)
+            y_predicted = np.where(df_ds_for_lt_m[aggr_meth]<=t,1,0)
 
             cm = confusion_matrix(y_target=y_target, 
                                   y_predicted=y_predicted)
@@ -662,7 +662,7 @@ threshold_perc
 ```
 
 ```python
-df_ds_for["for_below_th"]=np.where(df_ds_for.mean_cell<=threshold_perc,1,0)
+df_ds_for["for_below_th"]=np.where(df_ds_for[aggr_meth]<=threshold_perc,1,0)
 ```
 
 ```python
@@ -800,7 +800,7 @@ g.fig.tight_layout()
 
 ```python
 g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="obs_below_th",palette={0:no_ds_color,1:ds_color})
-g.map_dataframe(sns.histplot, "perc_below",common_norm=False,kde=True,alpha=1,binwidth=10)#x="mean_cell",hue="dry_spell")
+g.map_dataframe(sns.histplot, "perc_below",common_norm=False,kde=True,alpha=1,binwidth=10)
 
 g.add_legend(title=f"<={threshold} mm occurred")  
 for ax in g.axes.flatten():

@@ -10,7 +10,7 @@ import geopandas as gpd
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import AreaFromShape, Station
+from src.utils_general.area import AreaFromShape, Station
 
 COUNTRY_ISO3 = "mwi"
 LEADTIMES = [x + 1 for x in range(10)]
