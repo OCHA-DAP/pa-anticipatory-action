@@ -22,7 +22,7 @@ editor_options:
 <br>
 
 # Documentation Template
-Analysis last updated `r Sys.Date()`
+Analysis last updated <SET DATE>
 
 <br>
 

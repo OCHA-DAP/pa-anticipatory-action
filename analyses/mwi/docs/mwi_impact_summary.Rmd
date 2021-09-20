@@ -22,7 +22,7 @@ editor_options:
 <br>
 
 # Exploring the potential impacts of dry spells in Malawi
-Analysis last updated `r Sys.Date()`
+Analysis last updated 2021-04-26
 
 <br>
 

@@ -22,7 +22,7 @@ link-citations: true
 <br>
 
 # Dry Spells in Malawi
-Analysis last updated `r Sys.Date()`
+Analysis last updated 2021-07-21
 
 ### Background
 <!-- Dry spell is defined as unique start date - adm2 combination -->

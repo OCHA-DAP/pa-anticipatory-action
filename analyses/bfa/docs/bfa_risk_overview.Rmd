@@ -22,7 +22,7 @@ editor_options:
 <br>
 
 # Baseline Risk Analysis for Burkina Faso
-Analysis last updated `r Sys.Date()`
+Analysis last updated 2021-08-19
 
 <br>
 

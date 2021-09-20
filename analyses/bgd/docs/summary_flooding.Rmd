@@ -22,7 +22,7 @@ editor_options:
 <br>
 
 # Estimating flooding dynamics and magnitude in Bangladesh
-Analysis last updated `r Sys.Date()`
+Analysis last updated 2021-03-25
 
 ## Introduction
 
