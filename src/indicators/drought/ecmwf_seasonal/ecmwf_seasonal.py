@@ -240,21 +240,24 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         area: Area,
         leadtimes: List[int] = None,
         version: int = DEFAULT_VERSION,
-        split_by_month: bool = True,
+        months: List[int] = None,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
             f"Downloading ECMWF seasonal forecast v{version} for years"
-            f" {self.year_min} - {self.year_max}"
+            f" {year_min} - {year_max}"
         )
         current_date = datetime.now(timezone.utc)
-        month_range = range(1, 13) if split_by_month else [None]
         if leadtimes is None:
             leadtimes = DEFAULT_LEADTIMES
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
-            if split_by_month:
+            if months is None:
                 if year < current_date.year:
-                    month_range = range(1, 13)
+                    months = range(1, 13)
                 elif year == current_date.year:
                     # forecast becomes available on the 13th of the month
                     # at 12 GMT
@@ -264,16 +267,14 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                         or (current_date.day == 13 and current_date.hour >= 12)
                         else current_date.month - 1
                     )
-                    month_range = range(1, max_month + 1)
+                    months = range(1, max_month + 1)
                 elif year > current_date.year:
                     logger.info(
                         f"Cannot download data for {year}, because it is in"
                         " the future"
                     )
-            else:
-                month_range = [None]
 
-            for month in month_range:
+            for month in months:
                 super()._download(
                     country_iso3=country_iso3,
                     area=area,
