@@ -24,6 +24,7 @@ from src.indicators.drought.config import Config
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.drought.ecmwf_seasonal.processing import (
     compute_stats_per_admin,
+    get_stats_filepath,
 )
 from src.utils_general.area import AreaFromShape
 
@@ -38,37 +39,14 @@ COUNTRY_DATA_RAW_DIR = (
     Path(CONFIG.DATA_DIR) / CONFIG.PUBLIC_DIR / CONFIG.RAW_DIR / COUNTRY_ISO3
 )
 
-COUNTRY_DATA_PROCESSED_DIR = (
-    Path(CONFIG.DATA_DIR)
-    / CONFIG.PUBLIC_DIR
-    / CONFIG.PROCESSED_DIR
-    / COUNTRY_ISO3
-)
 
-ECMWF_PROCESSED_DIR = COUNTRY_DATA_PROCESSED_DIR / "ecmwf"
-
-ADM0_BOUND_PATH = (
-    Path(COUNTRY_DATA_RAW_DIR)
-    / CONFIG.SHAPEFILE_DIR
-    / PARAMETERS["path_admin0_shp"]
-)
-ADM1_BOUND_PATH = (
-    Path(COUNTRY_DATA_RAW_DIR)
-    / CONFIG.SHAPEFILE_DIR
-    / PARAMETERS["path_admin1_shp"]
-)
-
-# max number of months of leadtime
-LEADTIME_RANGE = 6
-
-
-# TODO: now always downloading for all years, does that make sense?
 def retrieve_forecast(
     iso3: str,
     gdf_bound: gpd.GeoSeries,
     target_date: datetime,
     adm_level: int,
     pcode_col: str,
+    leadtimes: List[int],
     add_col: List[str] = None,
 ):
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
@@ -78,15 +56,13 @@ def retrieve_forecast(
     area = AreaFromShape(gdf_bound.buffer(3))
 
     year_start = target_date.year + (
-        (target_date.month - LEADTIME_RANGE) // 12
-    )
-    month_start = (target_date.month - 6) % 12
-    months = (
-        list(range(month_start, 13)) + list(range(1, target_date.month + 1))
-        if month_start > target_date.month
-        else list(range(month_start, target_date.month + 1))
+        (target_date.month - max(leadtimes)) // 12
     )
 
+    months = [(target_date.month - lt) % 12 for lt in leadtimes]
+
+    # this will download the months for year_start and target_date.year
+    # so some duplication, but that is okay
     ecmwf_forecast.download(
         country_iso3=iso3,
         area=area,
@@ -94,11 +70,12 @@ def retrieve_forecast(
         year_max=target_date.year,
         months=months,
     )
-    # #todo: would be nice to only do process if new data is downloaded
-    ecmwf_forecast.process(country_iso3=iso3)
+    # print(os.path.getmtime(ecmwf_seasonal.get_raw)
+    # # #todo: would be nice to only do process if new data is downloaded
+    # ecmwf_forecast.process(country_iso3=iso3)
     # do not use cache as new leadtimes can be added
     compute_stats_per_admin(
-        country=iso3,
+        iso3=iso3,
         interpolate=False,
         date_list=[target_date.strftime("%Y-%m-%d")],
         adm_level=adm_level,
@@ -113,6 +90,7 @@ def compute_trigger(
     target_date: datetime,
     min_prob,
     precip_cap,
+    interpolate_raster=False,
     leadtimes: List[int] = None,
     pcodes: List[str] = None,
     adm_level=1,
@@ -121,6 +99,8 @@ def compute_trigger(
     adm_name_col="ADM1_EN",
     date_col="date",
     leadtime_col="leadtime",
+    # todo: check more general debug flag
+    debug=False,
 ):
 
     adm_bound_path = (
@@ -139,14 +119,16 @@ def compute_trigger(
         add_col=[adm_name_col],
     )
 
-    # todo: could maybe use retrieve stats file function from processing.py?
-    stats_filename = (
-        ECMWF_PROCESSED_DIR / f"{iso3}_seasonal-monthly-single-levels_v5_"
-        f"{target_date.year}_{target_date.month}_adm1_stats_test.csv"
+    stats_filename = get_stats_filepath(
+        iso3,
+        CONFIG,
+        target_date,
+        interpolate=interpolate_raster,
+        adm_level=adm_level,
     )
     df_stats = pd.read_csv(stats_filename, parse_dates=[date_col])
-    # for earlier dates, the model included less members --> values
-    # for those members are nan --> remove those rows
+    # for earlier dates, the model included less members -->
+    # values for those members are nan --> remove those rows
     df_stats = df_stats[df_stats[aggr_meth].notna()]
 
     if pcodes is not None:
@@ -154,7 +136,6 @@ def compute_trigger(
     if leadtimes is not None:
         df_stats = df_stats[df_stats[leadtime_col].isin(leadtimes)]
 
-    # todo: get rid of unnamed col
     # compute the value for which x% of members forecasts
     # the precipitation to be below or equal to that value
     df_stats_quant = df_stats.groupby(
@@ -164,6 +145,21 @@ def compute_trigger(
     df_stats_quant[f"below_{precip_cap}"] = np.where(
         df_stats_quant[aggr_meth] <= precip_cap, 1, 0
     )
+    df_stats_quant["trigger_met"] = np.where(
+        df_stats_quant[f"below_{precip_cap}"] == 1, True, False
+    )
+    if not debug:
+        df_stats_quant = df_stats_quant[
+            [
+                "date_month",
+                pcode_col,
+                adm_name_col,
+                leadtime_col,
+                aggr_meth,
+                f"below_{precip_cap}",
+                "trigger_met",
+            ]
+        ]
     print(df_stats_quant)
     return df_stats_quant
 
@@ -204,7 +200,15 @@ def compute_trigger(
 
 
 def main():
-    compute_trigger(COUNTRY_ISO3, pd.to_datetime("2020-01-01"), 0.5, 210)
+    interpolate_raster = False
+    # todo: check if better method than pd.to_datetime
+    compute_trigger(
+        COUNTRY_ISO3,
+        pd.to_datetime("2020-01-01"),
+        0.5,
+        210,
+        interpolate_raster=interpolate_raster,
+    )
 
 
 if __name__ == "__main__":

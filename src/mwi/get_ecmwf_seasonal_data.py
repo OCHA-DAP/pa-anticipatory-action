@@ -48,7 +48,7 @@ def main(download=True, process=True):
         ecmwf_forecast.download(country_iso3=COUNTRY_ISO3, area=area)
 
     if process:
-        compute_stats_per_admin(country=COUNTRY_ISO3, interpolate=False)
+        compute_stats_per_admin(iso3=COUNTRY_ISO3, interpolate=False)
 
 
 if __name__ == "__main__":
