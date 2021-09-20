@@ -106,7 +106,7 @@ df_gipc["source"] = "GlobalIPC"
 
 df = pd.concat([df_fn, df_gipc])
 # print(df)
-df["iso3"] = {iso3}
+df["iso3"] = iso3
 df["date"] = pd.to_datetime(df["date"])
 df["year"] = df["date"].dt.year
 df["month"] = df["date"].dt.month
