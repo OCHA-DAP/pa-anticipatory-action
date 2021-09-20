@@ -1,24 +1,26 @@
 # Compute the trigger information needed for the dashboard. Ugly now for
 # first mock-up, should be improved later on
 
+import os
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+
 # IPC trigger design as of 08-10-2020: EITHER: At least 20% population
 # of one or more ADMIN1 regions projected at IPC4+ in 3 months OR: At
 # least 30% of ADMIN1 population projected at IPC3+ AND increase by 5
 # percentage points in ADMIN1 pop.  projected in IPC3+ in 3 months
 # compared to current state
 import pandas as pd
-import numpy as np
-import warnings
-from pathlib import Path
-import os
-import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
 from src.indicators.food_insecurity.ipc_definemetrics import (
-    define_trigger_percentage,
     define_trigger_increase,
+    define_trigger_percentage,
 )
 from src.indicators.food_insecurity.utils import compute_percentage_columns
 

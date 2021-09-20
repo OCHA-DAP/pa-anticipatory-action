@@ -1,11 +1,10 @@
-import xarray as xr
-import pandas as pd
-from src.utils_general.raster_manipulation import (
-    compute_raster_statistics,
-)
-from shapely.geometry import Polygon
-from pandas._testing import assert_frame_equal
 import geopandas as gpd
+import pandas as pd
+import xarray as xr
+from pandas._testing import assert_frame_equal
+from shapely.geometry import Polygon
+
+from src.utils_general.raster_manipulation import compute_raster_statistics
 
 
 def compute_stats_polygon(da):

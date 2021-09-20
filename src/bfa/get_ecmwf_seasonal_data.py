@@ -1,18 +1,19 @@
 """Download raster data from GLOFAS and extracts time series of water discharge
 in selected locations, matching the FFWC stations data."""
 import logging
-import geopandas as gpd
-
-# TODO: remove this after making top-level
-from pathlib import Path
 import os
 import sys
 
+# TODO: remove this after making top-level
+from pathlib import Path
+
+import geopandas as gpd
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
+from src.indicators.drought.config import Config
 from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.utils_general.area import AreaFromShape
-from src.indicators.drought.config import Config
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)

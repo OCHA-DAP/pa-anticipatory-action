@@ -1,18 +1,19 @@
 import logging
-import numpy as np
-import pandas as pd
-import geopandas as gpd
-from datetime import datetime
-from pathlib import Path
 import os
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
 from src.indicators.food_insecurity.utils import (
-    parse_args,
     compute_percentage_columns,
+    parse_args,
 )
 from src.utils_general.utils import config_logger, download_url
 

@@ -1,16 +1,16 @@
 import logging
+import os
+import sys
 
 # TODO: remove this after making top-level
 from pathlib import Path
-import os
-import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.drought.chirps_rainfallobservations import (
-    get_chirps_data_monthly,
     compute_seasonal_lowertercile_raster,
+    get_chirps_data_monthly,
 )
 from src.indicators.drought.config import Config
 

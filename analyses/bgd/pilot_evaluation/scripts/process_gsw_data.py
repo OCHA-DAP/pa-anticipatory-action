@@ -1,10 +1,11 @@
-import rasterio
 import os
-from rasterio.features import shapes
-from rasterio.enums import Resampling
-import numpy as np
+
 import geopandas as gpd
+import numpy as np
 import pandas as pd
+import rasterio
+from rasterio.enums import Resampling
+from rasterio.features import shapes
 
 # This is a stand-alone script to perform basic processing to generate
 # shapefiles to represent surface water extent for a given area of

@@ -1,12 +1,7 @@
-from shapely.geometry import Polygon
 from geopandas import GeoSeries
+from shapely.geometry import Polygon
 
-from src.utils_general.area import (
-    Station,
-    AreaFromStations,
-    AreaFromShape,
-)
-
+from src.utils_general.area import AreaFromShape, AreaFromStations, Station
 
 FAKE_STATIONS = {
     "station_north": Station(lon=0, lat=1),

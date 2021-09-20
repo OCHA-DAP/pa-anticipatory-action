@@ -1,10 +1,9 @@
+import argparse
 import logging
 import os
-import argparse
-from pathlib import Path
-import urllib.error
-
 import sys
+import urllib.error
+from pathlib import Path
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)

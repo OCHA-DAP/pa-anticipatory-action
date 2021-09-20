@@ -2,18 +2,17 @@
 Download raster data from GLOFAS and extracts time series of water
 discharge in selected locations
 """
-from pathlib import Path
 import logging
-import time
 import os
+import time
+from pathlib import Path
 from typing import Dict, List, Union
 
+import cdsapi
 import numpy as np
 import xarray as xr
-import cdsapi
 
 from src.utils_general.area import Area, Station
-
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 PUBLIC_DATA_DIR = "public"
