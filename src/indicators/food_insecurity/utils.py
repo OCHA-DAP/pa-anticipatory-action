@@ -5,6 +5,8 @@ import sys
 import urllib.error
 from pathlib import Path
 
+import numpy as np
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.utils_general.utils import download_ftp, download_url, unzip
@@ -14,9 +16,7 @@ logger = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    # parser.add_argument("-c", "--country", help="Country name")
-    parser.add_argument("country", help="Country name")
-    # parser.add_argument("country_iso3", help="Country ISO3")
+    parser.add_argument("iso3", help="iso3 code of country of interest")
     parser.add_argument("-a", "--admin_level", default=1)
     # Prefix for filenames
     parser.add_argument(
@@ -34,6 +34,14 @@ def parse_args():
             "Download the raw data. FewsNet and WorldPop are currently"
             " implemented"
         ),
+    )
+    parser.add_argument(
+        "-da",
+        "--dates",
+        default=None,
+        nargs="+",
+        type=str,
+        help="List of strings of dates to be included in YM format",
     )
     return parser.parse_args()
 
@@ -56,7 +64,7 @@ def download_fewsnet(date, iso2_code, region, regioncode, output_dir):
     """
     FEWSNET_BASE_URL_REGION = "https://fews.net/data_portal_download/download?data_file_path=http%3A//shapefiles.fews.net.s3.amazonaws.com/HFIC/"  # noqa: E501
     FEWSNET_BASE_URL_COUNTRY = "https://fdw.fews.net/api/ipcpackage/"
-    url_country = f"{FEWSNET_BASE_URL_COUNTRY}?country_code={iso2_code}&collection_date={date[:4]}-{date[-2:]}-01"  # noqa: E501
+    url_country = f"{FEWSNET_BASE_URL_COUNTRY}?country_code={iso2_code.upper()}&collection_date={date[:4]}-{date[-2:]}-01"  # noqa: E501
     zip_filename_country = os.path.join(output_dir, f"{iso2_code}{date}.zip")
     output_dir_country = os.path.join(output_dir, f"{iso2_code}{date}")
     if not os.path.exists(output_dir_country):
@@ -136,6 +144,78 @@ def download_worldpop(country_iso3, year, output_dir, config):
             )
 
 
+def fewsnet_validperiod(row):
+    """
+    Add the period for which FewsNet's projections are valid. Till 2016
+    FN published a report 4 times a year, where each projection period
+    had a validity of 3 months From 2017 this has changed to thrice a
+    year, where each projection period has a validity of 4 months Args:
+    row: row of dataframe containing the date the FN data was published
+    (i.e. CS period) as timestamp
+
+    Returns:
+
+    """
+    # make own mapping, to be able to use mod 12 to calculate months of
+    # projections
+    month_abbr = {
+        1: "Jan",
+        2: "Feb",
+        3: "Mar",
+        4: "Apr",
+        5: "May",
+        6: "Jun",
+        7: "Jul",
+        8: "Aug",
+        9: "Sep",
+        10: "Oct",
+        11: "Nov",
+        0: "Dec",
+    }
+    year = row["date"].year
+    month = row["date"].month
+    if year <= 2015:
+        if month == 10:
+            year_ml2 = year + 1
+        else:
+            year_ml2 = year
+        period_ML1 = (
+            f"{month_abbr[month]} - {month_abbr[(month + 2) % 12]} {year}"
+        )
+        period_ML2 = (
+            f"{month_abbr[(month + 3) % 12]} - {month_abbr[(month + 5) % 12]}"
+            f" {year_ml2}"
+        )
+    if year > 2015:
+        if month == 2:
+            year_ml1 = year
+            year_ml2 = year
+        elif month == 6:
+            year_ml1 = year
+            year_ml2 = year + 1
+        elif month == 10:
+            year_ml1 = year + 1
+            year_ml2 = year + 1
+        else:
+            logger.info(
+                "Period of ML1 and ML2 cannot be added for non-regular"
+                f" publishing date {year}-{month}. Add manually."
+            )
+            row["period_ML1"] = np.nan
+            row["period_ML2"] = np.nan
+            return row
+        period_ML1 = (
+            f"{month_abbr[month]} - {month_abbr[(month + 3) % 12]} {year_ml1}"
+        )
+        period_ML2 = (
+            f"{month_abbr[(month + 4) % 12]} - {month_abbr[(month + 7) % 12]}"
+            f" {year_ml2}"
+        )
+    row["period_ML1"] = period_ML1
+    row["period_ML2"] = period_ML2
+    return row
+
+
 def compute_percentage_columns(df, config):
     """
     calculate percentage of population per analysis period and level
@@ -171,4 +251,7 @@ def compute_percentage_columns(df, config):
         )
     df["perc_inc_ML2_3p"] = df["perc_ML2_3p"] - df["perc_CS_3p"]
     df["perc_inc_ML1_3p"] = df["perc_ML1_3p"] - df["perc_CS_3p"]
+    # round the percentage columns to 3 decimals
+    perc_cols = [col for col in df.columns if "perc" in col]
+    df[perc_cols] = df[perc_cols].round(3)
     return df
