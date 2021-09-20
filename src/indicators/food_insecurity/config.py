@@ -1,9 +1,10 @@
-import os
-from pathlib import Path
-from src.utils_general.utils import parse_yaml
-from datetime import datetime
 import ftplib
+import os
 import re
+from datetime import datetime
+from pathlib import Path
+
+from src.utils_general.utils import parse_yaml
 
 
 def retrieve_worldpop_dirname():
@@ -42,10 +43,10 @@ class Config:
 
         self._parameters = None
 
-    def parameters(self, country):
+    def parameters(self, iso3):
         if self._parameters is None:
             self._parameters = parse_yaml(
-                os.path.join(self.DIR_PATH, country.lower(), "config.yml")
+                os.path.join(self.DIR_PATH, iso3.lower(), "config.yml")
             )
         return self._parameters
 
@@ -86,11 +87,11 @@ class Config:
     # country, dates can be added and removed
     FEWSWORLDPOP_PROCESSED_DIR = os.path.join(FEWSNET_DIR, "worldpop")
     FEWSWORLDPOP_PROCESSED_FILENAME = (
-        "{country}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
+        "{iso3}_fewsnet_worldpop_admin{admin_level}{suffix}.csv"
     )
     FEWSADMPOP_PROCESSED_DIR = os.path.join(FEWSNET_DIR, "cod_ps")
     FEWSADMPOP_PROCESSED_FILENAME = (
-        "{country}_fewsnet_admin{admin_level}{suffix}.csv"
+        "{iso3}_fewsnet_admin{admin_level}{suffix}.csv"
     )
     FEWSNET_DATES = (
         ["200907", "200910"]
@@ -112,14 +113,12 @@ class Config:
     # 100m or if we also want not UNadj we are currently using 1km
     # because this is generally granular enough and speeds up the
     # calculations a lot
-    WORLDPOP_FILENAME = "{country_iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
+    WORLDPOP_FILENAME = "{iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
     # this dirname changes with the year, so dynamically retrieve it by
     # using a regex
     WORLDPOP_FTP_DIRNAME = retrieve_worldpop_dirname()
     WORLDPOP_BASEURL = f"ftp://ftp.worldpop.org.uk/{WORLDPOP_FTP_DIRNAME}/"
-    WORLDPOP_URL = (
-        WORLDPOP_BASEURL + "{year}/{country_iso3_upper}/{WORLDPOP_FILENAME}"
-    )
+    WORLDPOP_URL = WORLDPOP_BASEURL + "{year}/{iso3_upper}/{WORLDPOP_FILENAME}"
 
     # Subnational population
     POPSUBN_DIR = "cod_ps"
@@ -133,11 +132,11 @@ class Config:
     GLOBALIPC_RAW_DIR = "ipc_global"
     GLOBALIPC_PROCESSED_DIR = "ipc_global"
     GLOBALIPC_DIR = "ipc_global"
-    GLOBALIPC_URL = "http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={country_iso2}"  # noqa: E501
-    GLOBALIPC_FILENAME_RAW = "{country}_globalipc_raw.xlsx"
-    GLOBALIPC_FILENAME_NEWCOLNAMES = "{country}_globalipc_newcolumnnames.xlsx"
+    GLOBALIPC_URL = "http://mapipcissprd.us-east-1.elasticbeanstalk.com/api/public/population-tracking-tool/data/{min_year},{max_year}/?export=true&condition=A&country={iso2}"  # noqa: E501
+    GLOBALIPC_FILENAME_RAW = "{iso3}_globalipc_raw.xlsx"
+    GLOBALIPC_FILENAME_NEWCOLNAMES = "{iso3}_globalipc_newcolumnnames.xlsx"
     GLOBALIPC_FILENAME_PROCESSED = (
-        "{country}_globalipc_admin{admin_level}{suffix}.csv"
+        "{iso3}_globalipc_admin{admin_level}{suffix}.csv"
     )
     # Analysis name, Country Population, % of total county Pop, Area
     # Phase are not being used in our current analysis so not mapping

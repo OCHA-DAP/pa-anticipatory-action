@@ -1,35 +1,34 @@
 import logging
-import numpy as np
-import pandas as pd
-import geopandas as gpd
-from datetime import datetime
-from pathlib import Path
 import os
 import sys
+from datetime import datetime
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
 from src.indicators.food_insecurity.utils import (
-    parse_args,
     compute_percentage_columns,
+    parse_args,
 )
 from src.utils_general.utils import config_logger, download_url
 
 logger = logging.getLogger(__name__)
 
 
-def compare_adm_names(
-    df, country, config, parameters, admin_level, bound_path
-):
+def compare_adm_names(df, parameters, admin_level, bound_path):
     """
     check if names in df and boundaries file of country on admin_level
     match This is purely meant as a check and not required to produce a
-    full match Args: df (pd.DataFrame): dataframe containing the data
-    country (str): name of country of interest config (Config): Config
-    class, if None initialize empty one parameters (dict): dict with
-    parameters parsed from config admin_level (int): integer indicating
-    which admin level to aggregate to
+    full match
+    Args:
+    df (pd.DataFrame): dataframe containing the data
+    parameters (dict): dict with parameters parsed from config
+    admin_level (int): integer indicating which admin level to aggregate to
     """
 
     boundaries = gpd.read_file(bound_path)
@@ -61,9 +60,7 @@ def compare_adm_names(
         )
 
 
-def test_mismatch_adminlevels(
-    df_agg, df_precalc, admin_level, country, config
-):
+def test_mismatch_adminlevels(df_agg, df_precalc, admin_level, iso3, config):
     # TODO: prettify this function
     """There might be a mismatch between different levels of reporting
     on admin0 and admin1 level.
@@ -74,18 +71,21 @@ def test_mismatch_adminlevels(
     reported directly This function compares the two methods of
     reporting and raises a warning if there is more than 5% difference
     between them We only raise a warning to make the user aware, but
-    continue to use the aggregation from adm2 methodology Args: df_agg
-    (pd.DataFrame): dataframe containing the data on admin_level
-    aggregated from admin2 df_precalc (pd.DataFrame): dataframe
-    containing the data directly reported on admin_level admin_level
-    (int): integer indicating admin level of interest country (str):
-    name of country of interest config (Config): Config class
+    continue to use the aggregation from adm2 methodology
+    Args:
+    df_agg (pd.DataFrame): dataframe containing the data on admin_level
+    aggregated from admin2
+    df_precalc (pd.DataFrame): dataframe containing the data directly reported
+    on admin_level
+    admin_level(int): integer indicating admin level of interest
+    iso3 (str): iso3 code of country of interest
+    config (Config): Config class
     """
     if admin_level == 0:
         df_precalc = df_precalc[
             df_precalc[config.ADMIN0_COL]
             .str.lower()
-            .str.match(f"{country.lower()}:")
+            .str.match(f"{iso3.lower()}:")
         ]
     elif admin_level == 1:
         # assume admin1 sum is reported in the admin0 column and the
@@ -93,7 +93,7 @@ def test_mismatch_adminlevels(
         df_precalc = df_precalc[
             ~df_precalc[config.ADMIN0_COL]
             .str.lower()
-            .str.contains(country.lower())
+            .str.contains(iso3.lower())
         ]
         # rename to make df_agg columns equal to df_precalc for merging
         df_agg = df_agg.drop(config.ADMIN0_COL, axis=1)
@@ -145,12 +145,15 @@ def test_mismatch_adminlevels(
                 )
 
 
-def aggregate_adminlevel(df_ipc, admin_level, country, config):
+def aggregate_adminlevel(df_ipc, admin_level, iso3, config):
     """
-    Aggregate df_ipc to admin_level Args: df_ipc (pd.Dataframe):
-    dataframe containing the data and the admin_level column admin_level
-    (int): integer indicating which admin level to aggregate to country
-    (str): name of country of interest config (Config): Config class
+    Aggregate df_ipc to admin_level
+    Args:
+    df_ipc (pd.Dataframe): dataframe containing the data
+    and the admin_level column
+    admin_level (int): integer indicating which admin level to aggregate to
+    iso3 (str): iso3 code of country of interest
+    config (Config): Config class
 
     Returns: df_ipc_agg (pd.DataFrame): dataframe with data aggregated
         to admin_level
@@ -172,7 +175,7 @@ def aggregate_adminlevel(df_ipc, admin_level, country, config):
         df_ipc_agg = df_ipc_adm2.groupby(
             ["date"], as_index=False, dropna=False
         ).sum()
-        df_ipc_agg[config.ADMIN0_COL] = country
+        df_ipc_agg[config.ADMIN0_COL] = iso3
 
     elif admin_level == 1:
         # we assume that the admin1_col contains the name of the adm1
@@ -183,7 +186,7 @@ def aggregate_adminlevel(df_ipc, admin_level, country, config):
         df_ipc_agg = df_ipc_adm2.groupby(
             [config.ADMIN1_COL, "date"], as_index=False, dropna=False
         ).sum()
-        df_ipc_agg[config.ADMIN0_COL] = country
+        df_ipc_agg[config.ADMIN0_COL] = iso3
 
     elif admin_level == 2:
         # it can occur that an adm2 name occurs in two adm1s, hence
@@ -193,7 +196,7 @@ def aggregate_adminlevel(df_ipc, admin_level, country, config):
             dropna=False,
             as_index=False,
         ).sum()
-        df_ipc_agg[config.ADMIN0_COL] = country
+        df_ipc_agg[config.ADMIN0_COL] = iso3
     else:
         logger.error(f"Admin level {admin_level} has not been implemented")
 
@@ -290,13 +293,15 @@ def compute_ml_period(df_ipc_agg, df_ipc):
     return df_ipc_agg
 
 
-def download_globalipc(country, config, parameters, output_dir):
+def download_globalipc(iso3, config, parameters, output_dir):
     """
     Retrieve the Global IPC data from their Population Tracking Tool and
-    save to output_file Args: country (str): name of country of interest
-    config (Config): Config class parameters (dict): dict with
-    parameters parsed from config output_dir (str): path to directory
-    the file should be saved to
+    save to output_file
+    Args:
+    iso3 (str): iso3 code of country of interest
+    config (Config): Config class
+    parameters (dict): dict with parameters parsed from config
+    output_dir (str): path to directory the file should be saved to
     """
     # create directory if doesn't exist
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -309,10 +314,10 @@ def download_globalipc(country, config, parameters, output_dir):
     url = config.GLOBALIPC_URL.format(
         min_year=min_year,
         max_year=max_year,
-        country_iso2=parameters["iso2_code"],
+        iso2=parameters["iso2_code"],
     )
     output_file = os.path.join(
-        output_dir, config.GLOBALIPC_FILENAME_RAW.format(country=country)
+        output_dir, config.GLOBALIPC_FILENAME_RAW.format(iso3=iso3)
     )
     # have one file with all data, so also download if file already
     # exists to make sure it contains the newest data (contrary to
@@ -326,15 +331,16 @@ def download_globalipc(country, config, parameters, output_dir):
 
 
 def process_globalipc(
-    country, admin_level, config, parameters, ipc_dir, bound_path
+    iso3, admin_level, config, parameters, ipc_dir, bound_path
 ):
     """
-    Process the global ipc data and aggregate to admin_level Args:
-    country (str): name of country of interest admin_level (int):
-    integer indicating which admin level to aggregate to config
-    (Config): Config class parameters (dict): dict with parameters
-    parsed from config ipc_dir (str): absolute path to directory
-    containing the raw ipc data
+    Process the global ipc data and aggregate to admin_level
+    Args:
+    iso3 (str): iso3 code of country of interest
+    admin_level (int): integer indicating which admin level to aggregate to
+    config (Config): Config class
+    parameters (dict): dict with parameters parsed from config
+    ipc_dir (str): absolute path to directory containing the raw ipc data
 
     Returns: df_ipc_agg (pd.DataFrame): dataframe with the processed
         data and aggregated to admin_level
@@ -342,9 +348,7 @@ def process_globalipc(
 
     # ipc file columns are always on line 11
     df_ipc = pd.read_excel(
-        os.path.join(
-            ipc_dir, config.GLOBALIPC_FILENAME_RAW.format(country=country)
-        ),
+        os.path.join(ipc_dir, config.GLOBALIPC_FILENAME_RAW.format(iso3=iso3)),
         header=[11],
     )
     # ipc excel file comes with horrible column names, so change them to
@@ -362,7 +366,7 @@ def process_globalipc(
     df_ipc.to_excel(
         os.path.join(
             ipc_dir,
-            config.GLOBALIPC_FILENAME_NEWCOLNAMES.format(country=country),
+            config.GLOBALIPC_FILENAME_NEWCOLNAMES.format(iso3=iso3),
         )
     )
 
@@ -379,7 +383,7 @@ def process_globalipc(
         return None
     else:
         df_ipc = compute_population_admin(df_ipc, admin_level, config)
-        df_ipc_agg = aggregate_adminlevel(df_ipc, admin_level, country, config)
+        df_ipc_agg = aggregate_adminlevel(df_ipc, admin_level, iso3, config)
         # recompute the percentage columns. Already included in the ipc
         # data but saw that these don't always match the numbers
         # calculated based on the reported populations number, so
@@ -400,8 +404,6 @@ def process_globalipc(
         if admin_level != 0:
             compare_adm_names(
                 df_ipc_agg,
-                country,
-                config,
                 parameters,
                 admin_level,
                 bound_path,
@@ -412,7 +414,7 @@ def process_globalipc(
         # occurs purely to be aware of the data quality, but can still
         # continue to use the data based on aggregation from adm2
         test_mismatch_adminlevels(
-            df_ipc_agg, df_ipc, admin_level, country, config
+            df_ipc_agg, df_ipc, admin_level, iso3, config
         )
 
         # set columns to nan instead of 0 if the sum of ipc numbers is 0
@@ -437,6 +439,10 @@ def process_globalipc(
         df_ipc_agg = df_ipc_agg[
             period_cols + adm_cols + ipc_cols + perc_cols + pop_cols
         ]
+        # round the columns containing populations
+        df_ipc_agg[ipc_cols + pop_cols] = (
+            df_ipc_agg[ipc_cols + pop_cols].round().astype("Int64")
+        )
 
         # TODO: idea to also add total population per admin region, now
         #  only have population per admin that was included in the IPC
@@ -449,20 +455,21 @@ def process_globalipc(
 # TODO: not sure if this function is useful or inßtegrate it with
 # process_globalipc
 def retrieve_globalipc(
-    country, admin_level, suffix="", download=False, config=None
+    iso3, admin_level, suffix="", download=False, config=None
 ):
     """
-    Retrieve the globalipc data and save it to a csv file Args: country
-    (str): name of country of interest admin_level (int): integer
-    indicating which admin level to aggregate to suffix (str): string to
-    attach to the output file name download (bool): if True, download
-    Global IPC data config (Config): Config class, if None initialize
-    empty one
+    Retrieve the globalipc data and save it to a csv file
+    Args:
+    iso3 (str): iso3 code of country of interest
+    admin_level (int): integer indicating which admin level to aggregate to
+    suffix (str): string to attach to the output file name
+    download (bool): if True, download Global IPC data
+    config (Config): Config class, if None initialize empty one
     """
 
     if config is None:
         config = Config()
-    parameters = config.parameters(country)
+    parameters = config.parameters(iso3)
 
     country_data_raw_dir = os.path.join(
         config.DATA_PUBLIC_RAW_DIR, parameters["iso3_code"].lower()
@@ -485,16 +492,16 @@ def retrieve_globalipc(
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     if download:
-        download_globalipc(country, config, parameters, globalipc_dir)
+        download_globalipc(iso3, config, parameters, globalipc_dir)
 
     if os.path.exists(
         os.path.join(
             globalipc_dir,
-            config.GLOBALIPC_FILENAME_RAW.format(country=country),
+            config.GLOBALIPC_FILENAME_RAW.format(iso3=iso3),
         )
     ):
         df_ipc = process_globalipc(
-            country,
+            iso3,
             int(admin_level),
             config,
             parameters,
@@ -506,7 +513,7 @@ def retrieve_globalipc(
                 os.path.join(
                     output_dir,
                     config.GLOBALIPC_FILENAME_PROCESSED.format(
-                        country=country, admin_level=admin_level, suffix=suffix
+                        iso3=iso3, admin_level=admin_level, suffix=suffix
                     ),
                 ),
                 index=False,
@@ -514,7 +521,7 @@ def retrieve_globalipc(
     else:
         globalipc_path_raw = os.path.join(
             globalipc_dir,
-            config.GLOBALIPC_FILENAME_RAW.format(country=country),
+            config.GLOBALIPC_FILENAME_RAW.format(iso3=iso3),
         )
         logger.error(
             "File doesn't exist at path"
@@ -527,5 +534,5 @@ if __name__ == "__main__":
     args = parse_args()
     config_logger(level="info")
     retrieve_globalipc(
-        args.country.lower(), args.admin_level, args.suffix, args.download_data
+        args.iso3.lower(), args.admin_level, args.suffix, args.download_data
     )
