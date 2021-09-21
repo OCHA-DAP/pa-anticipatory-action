@@ -6,7 +6,7 @@ from pathlib import Path
 import logging
 import time
 import os
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 import numpy as np
 import xarray as xr
@@ -36,8 +36,7 @@ class Glofas:
         dataset_variable_name: str,
         system_version_minor: Dict[int, int],
         date_variable_prefix: str = "",
-        use_incorrect_area_coords: bool = False,
-        data_dir: Path = Path(os.environ["AA_DATA_DIR"])
+        use_incorrect_area_coords: bool = False
     ):
         """
         Create an instance of a GloFAS object, from which you can
@@ -66,7 +65,7 @@ class Glofas:
         self.system_version_minor = system_version_minor
         self.date_variable_prefix = date_variable_prefix
         self.use_incorrect_area_coords = use_incorrect_area_coords
-        self.data_dir = data_dir
+        self.data_dir = Path(os.environ["AA_DATA_DIR"])
 
     def _download(
         self,
