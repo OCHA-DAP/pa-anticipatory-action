@@ -39,8 +39,7 @@ reload(processing)
 
 mpl.rcParams['figure.dpi'] = 200
 pd.options.mode.chained_assignment = None
-font = {'family' : 'normal',
-        'weight' : 'normal',
+font = {'weight' : 'normal',
         'size'   : 16}
 
 mpl.rc('font', **font)
