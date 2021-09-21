@@ -160,3 +160,9 @@ class Config:
     # ECMWF
     ECMWF_DIR = "ecmwf"
     DEFAULT_VERSION = 5
+
+    # DRYSPELLS
+    DRY_SPELLS_DIR = "dry_spells"
+
+    # TRIGGER
+    TRIGGER_METRICS_DIR = "trigger_metrics"
