@@ -2,7 +2,6 @@ import sys
 import os
 from pathlib import Path
 import geopandas as gpd
-from rasterstats import zonal_stats
 import logging
 from typing import List
 from datetime import datetime
@@ -156,55 +155,6 @@ def compute_stats_per_admin(
             )
             df["date"] = date_dt
             df.to_csv(output_path, index=False)
-
-
-def compute_zonal_stats(
-    ds,
-    raster_transform,
-    adm_path,
-    adm_col,
-    percentile_list=np.arange(10, 91, 10),
-):
-    # compute statistics on level in adm_path for all dates in ds
-    df_list = []
-    for leadtime in ds.leadtime.values:
-        for number in ds.number.values:
-            df = gpd.read_file(adm_path)[[adm_col, "geometry"]]
-            ds_date = ds.sel(number=number, leadtime=leadtime)
-            df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
-                zonal_stats(
-                    vectors=df,
-                    raster=ds_date.values,
-                    affine=raster_transform,
-                    nodata=np.nan,
-                )
-            )[["mean", "max", "min"]]
-
-            df[
-                [f"percentile_{str(p)}" for p in percentile_list]
-            ] = pd.DataFrame(
-                zonal_stats(
-                    vectors=df,
-                    raster=ds_date.values,
-                    affine=raster_transform,
-                    nodata=np.nan,
-                    stats=" ".join(
-                        [f"percentile_{str(p)}" for p in percentile_list]
-                    ),
-                )
-            )[
-                [f"percentile_{str(p)}" for p in percentile_list]
-            ]
-
-            df["number"] = number
-            df["leadtime"] = leadtime
-
-            df_list.append(df)
-        df_hist = pd.concat(df_list)
-        # drop the geometry column, else csv becomes huge
-        df_hist = df_hist.drop("geometry", axis=1)
-
-    return df_hist
 
 
 def convert_tprate_precipitation(da):
