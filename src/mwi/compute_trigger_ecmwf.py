@@ -36,7 +36,6 @@ COUNTRY_DATA_RAW_DIR = (
     Path(CONFIG.DATA_DIR) / CONFIG.PUBLIC_DIR / CONFIG.RAW_DIR / COUNTRY_ISO3
 )
 
-
 COUNTRY_DATA_PROCESSED_DIR = (
     Path(CONFIG.DATA_DIR)
     / CONFIG.PUBLIC_DIR
@@ -45,7 +44,7 @@ COUNTRY_DATA_PROCESSED_DIR = (
 )
 
 
-def get_ouput_path(
+def get_output_path(
     iso3: str, version: int, target_year: str, target_month: str
 ):
     directory = (
@@ -68,6 +67,19 @@ def retrieve_forecast(
     leadtimes: List[int],
     add_col: List[str] = None,
 ):
+    """
+    Download and process the raw forecasts,
+    and aggregate to the given adm_level
+    :param iso3: country iso3 code
+    :param gdf_bound: containing the bounds of the area that
+    should be downloaded
+    :param target_date: date the forecasts should predict (year-month)
+    :param adm_level: admin level to aggregate to
+    :param pcode_col: name of column that contains pcode in gdf_bound
+    :param leadtimes: list of leadtimes to get data for
+    :param add_col: additional columns in gdf_bound that should be added to the
+    output of compute_stats_admin
+    """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
     # add buffer
     # not in correct crs for it to do properly
@@ -113,12 +125,38 @@ def compute_trigger(
     leadtimes: List[int] = None,
     pcodes: List[str] = None,
     adm_level: int = 1,
-    aggr_meth: str = "mean_ADM1_PCODE",
+    stats_col: str = "mean_ADM1_PCODE",
     pcode_col: str = "ADM1_PCODE",
     adm_name_col: str = "ADM1_EN",
     date_col: str = "date",
     leadtime_col: str = "leadtime",
 ):
+    """
+    Compute the trigger metric and a binary true/false if trigger is met
+    The logic assumes that the trigger is defined as being met if there is
+    >= min_prob probability of <= precip_cap monthly preciptiation (mm)
+    :param iso3: country iso3 code
+    :param target_date:  date the forecasts should predict (year-month)
+    :param min_prob: minimum probability of the forecast for the trigger
+    to be met. should be between 0 and 1
+    :param precip_cap: max precipitation of the forecast for the trigger
+    to be met. Defined as monthly precipitation in milimeters
+    :param download: if True, download and process new data
+    :param interpolate_raster: if True, interpolate the original raster
+    to a higher resolution
+    :param leadtimes: list of leadtimes to compute the trigger for
+    :param pcodes: list of pcodes to compute the trigger for
+    :param adm_level: admin level to aggregate to
+    :param stats_col: column in the stats file that contains
+    the statistic that should be used for the trigger
+    :param pcode_col: column in the shapefile that contains the
+    pcode
+    :param adm_name_col: column in the shapefile that contains
+    the admin name
+    :param date_col: column in the stats file that contains the date
+    :param leadtime_col: column in the stats file that contains the leadtime
+    :return:
+    """
 
     adm_bound_path = (
         Path(COUNTRY_DATA_RAW_DIR)
@@ -148,7 +186,7 @@ def compute_trigger(
     df_stats = pd.read_csv(stats_filename, parse_dates=[date_col])
     # for earlier dates, the model included less members -->
     # values for those members are nan --> remove those rows
-    df_stats = df_stats[df_stats[aggr_meth].notna()]
+    df_stats = df_stats[df_stats[stats_col].notna()]
 
     if pcodes is not None:
         df_stats = df_stats[df_stats[pcode_col].isin(pcodes)]
@@ -162,7 +200,7 @@ def compute_trigger(
     ).quantile(min_prob)
     df_stats_quant["date_month"] = df_stats_quant.date.dt.to_period("M")
     df_stats_quant[f"below_{precip_cap}"] = np.where(
-        df_stats_quant[aggr_meth] <= precip_cap, 1, 0
+        df_stats_quant[stats_col] <= precip_cap, 1, 0
     )
     df_stats_quant["trigger_met"] = np.where(
         df_stats_quant[f"below_{precip_cap}"] == 1, True, False
@@ -174,54 +212,19 @@ def compute_trigger(
             pcode_col,
             adm_name_col,
             leadtime_col,
-            aggr_meth,
+            stats_col,
             f"below_{precip_cap}",
             "trigger_met",
         ]
     ]
 
-    output_path = get_ouput_path(
+    output_path = get_output_path(
         iso3, VERSION, target_date.year, target_date.month
     )
     Path(output_path.parent).mkdir(parents=True, exist_ok=True)
     df_stats_quant.to_csv(output_path, index=False)
 
     return df_stats_quant
-
-
-#
-# def plot_ensemble(
-#     forec_year,
-#     forec_month,
-#     aggr_meth="mean_cell",
-# ):
-#     stats_filename = (
-#         ECMWF_PROCESSED_DIR
-#         / f"mwi_seasonal-monthly-single-levels_v5_"
-#           f"{forec_year}_{forec_month}_test.csv"
-#     )
-#     df_stats = pd.read_csv(stats_filename, parse_dates=[date_col])
-#     # for earlier dates, the model included less members --> values
-#     # for those members are nan --> remove those rows
-#     df_stats = df_stats[df_stats[aggr_meth].notna()]
-#     plt.plot()
-#
-#     # Slice time and get mean of ensemble members for simple plotting
-#     start = "2020-01-01"
-#
-#     rf_list_slice = da_for_clip.sel(
-#         time=start,
-#         latitude=da_for_clip.latitude.values[3],
-#         longitude=da_for_clip.longitude.values[2],
-#     )
-#
-#     rf_list_slice.dropna("leadtime").plot.line(
-#         label="Historical", c="grey", hue="number", add_legend=False
-#     )
-#     rf_list_slice.dropna("leadtime").mean(dim="number").plot.line(
-#         label="Historical", c="red", hue="number", add_legend=False
-#     )
-#     plt.show()
 
 
 def main():
