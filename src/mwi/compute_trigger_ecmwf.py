@@ -1,3 +1,9 @@
+"""
+Computes the trigger status of the predictive trigger on
+dry spells in Malawi, version1
+Downloads and processes ecmwf seasonal forecast from CDS
+and then computes the trigger status per admin
+"""
 import logging
 import os
 import sys
@@ -29,6 +35,7 @@ COUNTRY_ISO3 = "mwi"
 # version number of the trigger
 # this script is written for v1
 VERSION = 1
+USE_INCORRECT_AREA_COORDS = False
 CONFIG = Config()
 PARAMETERS = CONFIG.parameters(COUNTRY_ISO3)
 
@@ -80,7 +87,9 @@ def retrieve_forecast(
     :param add_col: additional columns in gdf_bound that should be added to the
     output of compute_stats_admin
     """
-    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
+    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
+        use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+    )
     # add buffer
     # not in correct crs for it to do properly
     # but not important in this case as we just want some extra area
