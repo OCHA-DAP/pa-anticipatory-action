@@ -7,6 +7,9 @@ from pathlib import Path
 import os
 import sys
 
+import indicators.flooding.glofas.glofas_forecast
+import indicators.flooding.glofas.glofas_reanalysis
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
@@ -39,9 +42,9 @@ logger = logging.getLogger(__name__)
 def main(download=True, process=False):
 
     # TODO: flags / config file to toggle these things
-    glofas_reanalysis = glofas.GlofasReanalysis()
-    glofas_forecast = glofas.GlofasForecast()
-    glofas_reforecast = glofas.GlofasReforecast()
+    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
+    glofas_forecast = indicators.flooding.glofas.glofas_forecast.GlofasForecast()
+    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
 
     if download:
         # Remove the GloFAS station as it was not used originally

@@ -7,6 +7,9 @@ import pandas as pd
 import xarray as xr
 from scipy.stats import norm
 
+import indicators.flooding.glofas.glofas_forecast
+import indicators.flooding.glofas.glofas_reanalysis
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(''))).parents[1]}/"
 sys.path.append(path_mod)
 
@@ -46,7 +49,7 @@ def get_glofas_df(
 
 
 def get_glofas_reanalysis(version: int = 3):
-    glofas_reanalysis = glofas.GlofasReanalysis()
+    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
     da_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
         country_iso3=ggd.COUNTRY_ISO3, version=version
     )[STATION]
@@ -54,7 +57,7 @@ def get_glofas_reanalysis(version: int = 3):
 
 
 def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
-    glofas_forecast = glofas.GlofasForecast()
+    glofas_forecast = indicators.flooding.glofas.glofas_forecast.GlofasForecast()
     da_glofas_forecast_dict = {
         leadtime: glofas_forecast.read_processed_dataset(
             country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,
@@ -68,7 +71,7 @@ def get_glofas_forecast(version: int = 3, leadtimes: list = ggd.LEADTIMES):
 def get_glofas_reforecast(
     version: int = 3, interp: bool = True, leadtimes: list = ggd.LEADTIMES
 ):
-    glofas_reforecast = glofas.GlofasReforecast()
+    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
     da_glofas_reforecast_dict = {
         leadtime: glofas_reforecast.read_processed_dataset(
             country_iso3=ggd.COUNTRY_ISO3, version=version, leadtime=leadtime,

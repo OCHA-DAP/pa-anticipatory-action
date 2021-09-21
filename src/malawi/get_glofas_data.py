@@ -7,6 +7,9 @@ from pathlib import Path
 import os
 import sys
 
+import indicators.flooding.glofas.glofas_forecast
+import indicators.flooding.glofas.glofas_reanalysis
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.config import Config
@@ -45,8 +48,8 @@ logger = logging.getLogger(__name__)
 
 def main(download=False, process=True):
     stations = STATIONS
-    glofas_reanalysis = glofas.GlofasReanalysis()
-    glofas_reforecast = glofas.GlofasReforecast()
+    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
+    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
 
     if download:
         df_admin_boundaries = gpd.read_file(SHAPEFILE)

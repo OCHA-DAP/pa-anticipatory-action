@@ -7,6 +7,9 @@ from pathlib import Path
 import os
 import sys
 
+import indicators.flooding.glofas.glofas_forecast
+import indicators.flooding.glofas.glofas_reanalysis
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.flooding.glofas import glofas
@@ -45,10 +48,10 @@ logger = logging.getLogger(__name__)
 
 def main(download=True, process=True):
 
-    glofas_reanalysis = glofas.GlofasReanalysis(
+    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis(
         use_incorrect_area_coords=USE_INCORRECT_COORDS
     )
-    glofas_reforecast = glofas.GlofasReforecast(
+    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast(
         use_incorrect_area_coords=USE_INCORRECT_COORDS
     )
 
