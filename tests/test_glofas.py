@@ -5,7 +5,6 @@ from typing import List
 import numpy as np
 import xarray as xr
 import pandas as pd
-import pytest
 
 from indicators.flooding.glofas import glofas
 from indicators.flooding.glofas.area import Area, Station
