@@ -1,9 +1,10 @@
-import pandas as pd
-import geopandas as gpd
-import os
-import matplotlib.pyplot as plt
-import utils_evaluation as utils
 import logging
+import os
+
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import pandas as pd
+import utils_evaluation as utils
 
 # This script takes the output interpolated data from the
 # Generate_interpolated.py script and produces a series of basic

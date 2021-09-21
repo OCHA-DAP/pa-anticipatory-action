@@ -1,7 +1,8 @@
+import logging
+import os
+
 import geopandas as gpd
 import pandas as pd
-import os
-import logging
 import utils_evaluation as utils
 
 # This script takes the flood extent shapefiles output from the GEE

@@ -19,7 +19,7 @@ shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_
 plot_path <- paste0(data_dir, "/public/processed/mwi/plots/dry_spells/dry_spell_plots")
 
 # import dry spells groundtruth dataset
-dry_spells_groundtruth_dataset_url <- "https://data.humdata.org/dataset/df68065d-704c-4556-b111-394df000cee4/resource/951c0454-23ab-4057-a7fb-7cfeed4f842d/download/full_list_dry_spells.csv"
+dry_spells_groundtruth_dataset_url <- "https://data.humdata.org/dataset/df68065d-704c-4556-b111-394df000cee4/resource/951c0454-23ab-4057-a7fb-7cfeed4f842d/download/full_list_dry_spells_2000_2021.csv"
 ds <- read.csv(dry_spells_groundtruth_dataset_url)
 
 # read in country shapefiles

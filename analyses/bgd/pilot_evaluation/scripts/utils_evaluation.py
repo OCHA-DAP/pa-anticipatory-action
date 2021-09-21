@@ -1,12 +1,13 @@
-import yaml
 import argparse
-import numpy as np
 import datetime
-from scipy.optimize import curve_fit
-import time
 import operator
+import time
+
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+import yaml
+from scipy.optimize import curve_fit
 
 
 def get_xy(df):

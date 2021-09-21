@@ -1,11 +1,9 @@
 from datetime import timedelta
 
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-
+import pandas as pd
 from utils import utils
-
 
 Water_threshold = 19.5 + 0.85
 ndays_threshold_ffwc = 3

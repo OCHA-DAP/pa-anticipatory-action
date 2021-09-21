@@ -1,16 +1,16 @@
 """Download raster data from ECMWF's seasonal forecast for selected areas and
 combines all dates into one dataframe."""
-from pathlib import Path
 import logging
+import os
 import time
 from datetime import datetime, timezone
-import os
+from pathlib import Path
 from typing import List
-import xarray as xr
+
 import cdsapi
+import xarray as xr
 
 from src.utils_general.area import Area
-
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"
 RAW_DATA_DIR = DATA_DIR / "raw"

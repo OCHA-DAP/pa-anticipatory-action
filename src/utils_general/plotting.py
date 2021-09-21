@@ -1,12 +1,13 @@
-import os
 import logging
-import matplotlib.pyplot as plt
+import math
+import os
+
+import cartopy.crs as ccrs
 import geopandas as gpd
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 from shapely.geometry import mapping
-import cartopy.crs as ccrs
-import matplotlib.colors as mcolors
-import math
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,8 @@ def plot_histogram(hist_array, xlabel=None):
 
 
 def plot_timeseries(df, x_col, y_col, subplot_col=None, colp_num=2, ylim=None):
-    import matplotlib.dates as dates
     import matplotlib
+    import matplotlib.dates as dates
 
     # initialize empty figure, to circumvent that figures from different
     # functions are overlapping

@@ -1,18 +1,19 @@
 import logging
-import pandas as pd
+import os
+import sys
 
 # TODO: remove this after making top-level
 from pathlib import Path
-import os
-import sys
+
+import pandas as pd
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.drought.chirpsgefs_rainfallforecast import (
-    get_rainy_season_dates,
-    download_chirpsgefs,
     compute_stats_rainyseason,
+    download_chirpsgefs,
+    get_rainy_season_dates,
 )
 from src.indicators.drought.config import Config
 

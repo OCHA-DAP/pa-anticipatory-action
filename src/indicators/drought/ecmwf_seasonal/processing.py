@@ -1,11 +1,11 @@
-import sys
-import os
-from pathlib import Path
-import geopandas as gpd
 import logging
-from typing import List
+import os
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import List
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -13,10 +13,10 @@ import xarray as xr
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
-from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.drought.config import Config
-from src.utils_general.statistics import calc_crps
+from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.utils_general.raster_manipulation import compute_raster_statistics
+from src.utils_general.statistics import calc_crps
 
 logger = logging.getLogger(__name__)
 

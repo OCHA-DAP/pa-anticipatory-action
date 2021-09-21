@@ -1,8 +1,11 @@
 ---
 title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
-pagetitle: 'Docs Template' # Change title to something appropriate for your work
+pagetitle: '<ISO3 Title> - Anticipatory Action' # Change title to something appropriate for your work
 output:
   html_document:
+    css: style.css # Reference these files in your doc, so path will change to something like ../../country_template/docs/style.css
+    includes:
+      in_header: header.html # Reference these files in your doc, so path will change to something like ../../country_template/docs/header.html
     df_print: paged
     toc: yes
     toc_float: yes
@@ -19,7 +22,7 @@ editor_options:
 <br>
 
 # Documentation Template
-Analysis last updated `r Sys.Date()`
+Analysis last updated <SET DATE>
 
 <br>
 
