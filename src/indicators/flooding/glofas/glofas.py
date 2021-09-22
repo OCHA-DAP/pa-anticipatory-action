@@ -6,7 +6,7 @@ from pathlib import Path
 import logging
 import time
 import os
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union
 
 import numpy as np
 import xarray as xr
