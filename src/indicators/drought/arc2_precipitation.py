@@ -1,65 +1,153 @@
 import os
 from pathlib import Path
 
+import geopandas as gpd
+import requests
+import rioxarray
+
+from src.utils_general.raster_manipulation import compute_raster_statistics
+
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
+ARC2_DIR = "arc2"
 
 
-def get_request_url(start_date, end_date, range_y, range_x):
-    """
-    Generate the url to get the ARC2 data from IRI.
-    """
-    # "https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Africa/.DAILY/
-    # .ARC2/.daily/.est_prcp/T/%281%20Jan%202000%29%2830%20Mar%202021%29RANGEEDGES/X
-    # /%2832E%29%2836E%29RANGEEDGES/Y/%2820S%29%285S%29RANGEEDGES/data.nc"
+class ARC2:
+    def __init__(
+        self, country_iso3: str, date_min: str, date_max: str, range_x, range_y
+    ):
+        self.country_iso3 = country_iso3
+        self.date_min = date_min
+        self.date_max = date_max
+        self.range_x = range_x
+        self.range_y = range_y
 
-    return
+    def _download(self):
 
+        """
+        Download data from IRI servers and save raw .nc file on
+        gdrive at the location returned from get_raw_filepath
+        """
 
-def get_raw_filepath(iso3: str):
-    # return public / iso3 / raw / arc2
-    return
+        # TODO: Configure url with input parameters
+        url = """
+        https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/
+        .Africa/.DAILY/.ARC2/.daily/.est_prcp/T/
+        %281%20Jan%202021%29%2830%20Mar%202021%29RANGEEDGES/
+        X/%2832E%29%2836E%29RANGEEDGES/
+        Y/%2820S%29%285S%29RANGEEDGES/
+        data.nc
+        """
 
+        raw_filepath = self._get_raw_filepath(
+            self.country_iso3, self.date_min, self.date_max
+        )
 
-def get_processed_filepath(iso3: str):
-    # return public / iso3 / processed / arc2
-    return
+        if os.path.exists(raw_filepath):
+            os.remove(raw_filepath)
 
+        cookies = {
+            "__dlauth_id": os.getenv("IRI_AUTH"),
+        }
 
-def download_data(url: str, raw_filepath: str):
-    """
-    Download data from IRI servers and save raw .nc file on
-    gdrive at the location returned from get_raw_filepath
-    File name should follow something like arc2_daily_precip_iso3_start_end.nc
-    """
-    # Download the data from IRI's site
-    # URL generated as in the get_request_url
+        # TODO: Add in logging to let user know which file is being downloaded
+        response = requests.get(url, cookies=cookies, verify=False)
 
-    # Data should be saved to raw_filepath
+        Path(raw_filepath.parent).mkdir(parents=True, exist_ok=True)
 
-    # FROM TINKA'S SCRIPT
-    # strange things happen when just overwriting the file,
-    # so delete it first if it already exists
-    # if os.path.exists(arc2_filepath):
-    #     os.remove(arc2_filepath)
+        with open(raw_filepath, "wb") as fd:
+            for chunk in response.iter_content(chunk_size=128):
+                fd.write(chunk)
+        return
 
-    # #have to authenticate by using a cookie
-    # cookies = {
-    #     '__dlauth_id': os.getenv("IRI_AUTH"),
-    # }
+    def _get_raw_filepath(
+        self, country_iso3: str, date_min: str, date_max: str
+    ) -> Path:
+        directory = (
+            DATA_DIR / PUBLIC_DATA_DIR / RAW_DATA_DIR / country_iso3 / ARC2_DIR
+        )
+        filename = f"arc2_daily_precip_{country_iso3}_{date_min}_{date_max}.nc"
+        return directory / Path(filename)
 
-    # # logger.info("Downloading arc2 NetCDF file. This might take some time")
-    # response = requests.get(arc2_mwi_url, cookies=cookies, verify=False)
+    def _get_processed_filepath(
+        self,
+        country_iso3: str,
+        date_min: str,
+        date_max: str,
+        agg_method: str = "mean_touching",
+    ) -> Path:
+        directory = (
+            DATA_DIR
+            / PUBLIC_DATA_DIR
+            / PROCESSED_DATA_DIR
+            / country_iso3
+            / ARC2_DIR
+        )
+        filename = (
+            f"arc2_{agg_method}_long_{country_iso3}_{date_min}_{date_max}.csv"
+        )
+        return directory / Path(filename)
 
-    # with open(arc2_filepath, "wb") as fd:
-    #     for chunk in response.iter_content(chunk_size=128):
-    #         fd.write(chunk)
-    return
+    def process_data(
+        self,
+        crs,
+        clip_bounds=None,
+        bound_col: str = None,
+        all_touched: bool = False,
+    ):
 
+        """
+        Get mean aggregation by admin boundary for the downloaded arc2 data.
+        Outputs a csv with daily aggregated statistics.
+        """
 
-def process_data(processed_filepath, raw_filepath, crs, clip_bounds):
-    """
-    Clip the data, set the CRS, compute 14-day rolling sum
-    """
+        if all_touched:
+            agg_method = "touching"
+        else:
+            agg_method = "centroid"
+
+        processed_filepath = self._get_processed_filepath(
+            self.country_iso3, self.date_min, self.date_max, agg_method
+        )
+
+        raw_filepath = self._get_raw_filepath(
+            self.country_iso3, self.date_min, self.date_max
+        )
+
+        da = (
+            rioxarray.open_rasterio(raw_filepath, masked=True)
+            .squeeze()
+            .rio.write_crs(f"EPSG:{crs}")
+        )
+        gdf = gpd.read_file(clip_bounds)
+
+        df_zonal_stats = compute_raster_statistics(
+            gdf=gdf,
+            bound_col=bound_col,
+            raster_array=da,
+            all_touched=all_touched,
+            stats_list=["mean"],
+        )
+
+        Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
+        df_zonal_stats.to_csv(processed_filepath, index=False)
+        return df_zonal_stats
+
+    def identify_dry_spells(
+        self, rolling_window: int = 14, rainfall_mm: int = 2
+    ):
+        """
+        Read the processed data and check if any dry spells occurred
+        in that time period. Processed data should cover >= 14 days of
+        precipitation. We're assuming that this data is from during
+        the rainy season.
+        """
+
+        # TODO:
+        # 1. Read in processed data
+        # 2. Check that it covers the min days needed to define a dry spell
+        # 3. Calculate the rolling sum
+        # 4. Identify dry spells based on rolling sum (rainfall_mm)
+        # 5. Notify if any admin areas are in a dry spell
