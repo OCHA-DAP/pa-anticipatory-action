@@ -1,9 +1,7 @@
-from pathlib import Path
-
 import pytest
 
 
-TMP_PATH = "/tmp/glofas_test"
+TMP_PATH = "/tmp/test_aa_data_dir"
 
 
 @pytest.fixture(autouse=True)
