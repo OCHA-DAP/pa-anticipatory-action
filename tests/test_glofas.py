@@ -48,6 +48,7 @@ class TestDownload:
     @pytest.fixture()
     def fake_retrieve(self, mocker):
         mocker.patch.object(Path, "mkdir")
+        mocker.patch.object(Client, "__init__", return_value=None)
         return mocker.patch.object(Client, "retrieve")
 
     def test_reanalysis_download(self, fake_retrieve):
