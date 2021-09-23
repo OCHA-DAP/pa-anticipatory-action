@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import geopandas as gpd
+import pandas as pd
 import requests
 import rioxarray
 
@@ -76,7 +77,7 @@ class ARC2:
         country_iso3: str,
         date_min: str,
         date_max: str,
-        agg_method: str = "mean_touching",
+        agg_method: str = "centroid",
     ) -> Path:
         directory = (
             DATA_DIR
@@ -89,6 +90,41 @@ class ARC2:
             f"arc2_{agg_method}_long_{country_iso3}_{date_min}_{date_max}.csv"
         )
         return directory / Path(filename)
+
+    def _get_monitoring_filepath(
+        self, country_iso3: str, date_max: str
+    ) -> Path:
+        directory = (
+            DATA_DIR
+            / PUBLIC_DATA_DIR
+            / PROCESSED_DATA_DIR
+            / country_iso3
+            / ARC2_DIR
+            / "monitoring"
+        )
+        filename = f"{date_max}_results.txt"
+        return directory / Path(filename)
+
+    def _write_to_monitoring_file(self, dry_spells=None):
+        monitoring_file = self._get_monitoring_filepath(
+            self.country_iso3, self.date_max
+        )
+        """
+        Write a simple output of the number
+        of dry spells observed in the last 14 days.
+        """
+        result = ""
+        with open(monitoring_file, "w") as f:
+            if dry_spells is not None:
+                result += "No dry spells identified in the last 14 days."
+                f.write(result)
+            else:
+                f.write(
+                    f"Dry spells identified in \
+                    {len(dry_spells)} admin regions:\n{dry_spells}"
+                )
+        f.close()
+        return
 
     def process_data(
         self,
@@ -136,7 +172,10 @@ class ARC2:
         return df_zonal_stats
 
     def identify_dry_spells(
-        self, rolling_window: int = 14, rainfall_mm: int = 2
+        self,
+        rolling_window: int = 14,
+        rainfall_mm: int = 2,
+        agg_method: str = "centroid",
     ):
         """
         Read the processed data and check if any dry spells occurred
@@ -145,9 +184,25 @@ class ARC2:
         the rainy season.
         """
 
+        processed_file = self._get_processed_filepath(
+            self.country_iso3, self.date_min, self.date_max, agg_method
+        )
+
+        print(processed_file)
+
         # TODO:
         # 1. Read in processed data
+        df = pd.read_csv(processed_file)
+
         # 2. Check that it covers the min days needed to define a dry spell
+
         # 3. Calculate the rolling sum
+        adm_col = df.columns[2]
+        precip_col = df.columns[1]
+        grouped = df.groupby(adm_col)[precip_col].rolling(rolling_window).sum()
+
         # 4. Identify dry spells based on rolling sum (rainfall_mm)
+        print(grouped)
+
         # 5. Notify if any admin areas are in a dry spell
+        return

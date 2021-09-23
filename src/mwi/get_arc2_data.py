@@ -27,7 +27,7 @@ date_max = config.TODAY.strftime("%Y%m%d")
 date_min = (config.TODAY - timedelta(14)).strftime("%Y%m%d")
 
 
-def main(download=True, process=True):
+def main(download=True, process=True, dry_spells=True):
 
     arc2 = arc2_precipitation.ARC2(
         country_iso3=COUNTRY_ISO3,
@@ -46,6 +46,9 @@ def main(download=True, process=True):
             clip_bounds=ADM_SHP,
             bound_col="ADM1_PCODE",
         )
+
+    if dry_spells:
+        arc2.identify_dry_spells()
 
 
 if __name__ == "__main__":
