@@ -14,6 +14,20 @@ RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
 ARC2_DIR = "arc2"
 
+# TODO: Should add in parameters that control whether
+# or not you want to save the intermediate / raw data
+
+# TODO: Parameters should also control whether or not a function,
+# like computing dry spells, uses pre downloaded data or whether
+# it should download the data in one go
+
+# TODO: Error handling for various things,
+# like if data is missing or certain files don't exist
+
+# TODO: Better logging
+
+# TODO: Write tests
+
 
 class ARC2:
     def __init__(
@@ -170,6 +184,13 @@ class ARC2:
         Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
         df_zonal_stats.to_csv(processed_filepath, index=False)
         return df_zonal_stats
+
+    def append_to_csv():
+        # TODO: For the case of working with data day-by-day
+        # Will want to be able to append to a file that has daily
+        # log of precip by admin 2, which can then be used to
+        # identify dry spells.
+        return
 
     def identify_dry_spells(
         self,
