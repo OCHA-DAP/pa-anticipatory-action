@@ -9,6 +9,7 @@ import numpy as np
 import rasterio
 import xarray as xr
 
+from src.indicators.drought.config import Config
 from src.utils_general.utils import download_ftp
 
 logger = logging.getLogger(__name__)
@@ -100,13 +101,11 @@ def download_chirps_monthly(
     return config.CHIRPS_MONTHLY_RAW_PATH
 
 
-def clip_chirps_monthly_bounds(
-    config, country_name: str, country_iso3: str, use_cache=True
-):
+def clip_chirps_monthly_bounds(config, country_iso3: str, use_cache=True):
     """Clip the global chirps dataset to the boundaries of country_name
     This will enable faster processing Clipping can take max half an
     hour."""
-    parameters = config.parameters(country_name)
+    parameters = config.parameters(country_iso3)
     adm0_bound_path = (
         Path(config.DATA_DIR)
         / config.PUBLIC_DIR
@@ -115,19 +114,9 @@ def clip_chirps_monthly_bounds(
         / config.SHAPEFILE_DIR
         / parameters["path_admin0_shp"]
     )
-    chirps_monthly_country_dir = (
-        Path(config.DATA_DIR)
-        / config.PUBLIC_DIR
-        / config.PROCESSED_DIR
-        / country_iso3
-        / config.CHIRPS_DIR
-        / config.CHIRPS_MONTHLY_DIR
-    )
-    chirps_monthly_country_filepath = (
-        chirps_monthly_country_dir
-        / config.CHIRPS_MONTHLY_COUNTRY_FILENAME.format(
-            country_iso3=country_iso3
-        )
+
+    chirps_monthly_country_filepath = get_filepath_chirps_monthly(
+        country_iso3, config
     )
     if use_cache and chirps_monthly_country_filepath.exists():
         logger.debug(
@@ -136,7 +125,9 @@ def clip_chirps_monthly_bounds(
         )
         return chirps_monthly_country_filepath
 
-    Path(chirps_monthly_country_dir).mkdir(parents=True, exist_ok=True)
+    Path(chirps_monthly_country_filepath.parent).mkdir(
+        parents=True, exist_ok=True
+    )
     logger.debug(
         f"Clipping global data to {config.CHIRPS_MONTHLY_RAW_PATH}..."
     )
@@ -156,13 +147,7 @@ def clip_chirps_monthly_bounds(
     return chirps_monthly_country_filepath
 
 
-def compute_seasonal_lowertercile_raster(
-    config,
-    country_iso3: str,
-    use_cache: bool = True,
-):
-    # number of months that is considered a season
-    seas_len = 3
+def get_filepath_chirps_monthly(country_iso3: str, config: Config):
     chirps_country_dir = (
         Path(config.DATA_DIR)
         / config.PUBLIC_DIR
@@ -171,20 +156,55 @@ def compute_seasonal_lowertercile_raster(
         / config.CHIRPS_DIR
     )
     chirps_monthly_country_dir = chirps_country_dir / config.CHIRPS_MONTHLY_DIR
-    chirps_seasonal_country_dir = (
-        chirps_country_dir / config.CHIRPS_SEASONAL_DIR
-    )
+
     chirps_monthly_country_filepath = (
         chirps_monthly_country_dir
         / config.CHIRPS_MONTHLY_COUNTRY_FILENAME.format(
             country_iso3=country_iso3
         )
     )
+
+    return chirps_monthly_country_filepath
+
+
+def get_filepath_seasonal_lowertercile_raster(
+    country_iso3: str, config: Config
+):
+    chirps_country_dir = (
+        Path(config.DATA_DIR)
+        / config.PUBLIC_DIR
+        / config.PROCESSED_DIR
+        / country_iso3
+        / config.CHIRPS_DIR
+    )
+
+    chirps_seasonal_country_dir = (
+        chirps_country_dir / config.CHIRPS_SEASONAL_DIR
+    )
+
     chirps_seasonal_lowertercile_country_filepath = (
         chirps_seasonal_country_dir
         / config.CHIRPS_SEASONAL_LOWERTERCILE_COUNTRY_FILENAME.format(
             country_iso3=country_iso3
         )
+    )
+
+    return chirps_seasonal_lowertercile_country_filepath
+
+
+def compute_seasonal_lowertercile_raster(
+    config,
+    country_iso3: str,
+    use_cache: bool = True,
+):
+    # number of months that is considered a season
+    seas_len = 3
+
+    chirps_monthly_country_filepath = get_filepath_chirps_monthly(
+        country_iso3, config
+    )
+    chirps_seasonal_lowertercile_country_filepath = (
+        get_filepath_seasonal_lowertercile_raster(country_iso3, config)
     )
 
     if use_cache and chirps_seasonal_lowertercile_country_filepath.exists():
@@ -194,7 +214,9 @@ def compute_seasonal_lowertercile_raster(
         )
         return chirps_seasonal_lowertercile_country_filepath
 
-    Path(chirps_seasonal_country_dir).mkdir(parents=True, exist_ok=True)
+    Path(chirps_seasonal_lowertercile_country_filepath.parent).mkdir(
+        parents=True, exist_ok=True
+    )
     logger.debug("Computing lower tercile values...")
     ds = xr.open_dataset(chirps_monthly_country_filepath)
     # compute the rolling sum over three month period. Rolling sum works
@@ -275,7 +297,6 @@ def get_chirps_data_daily(config, year, resolution="25", download=False):
 
 def get_chirps_data_monthly(
     config,
-    country_name: str,
     country_iso3: str,
     download: bool = True,
     process: bool = True,
@@ -286,7 +307,6 @@ def get_chirps_data_monthly(
     if process:
         clip_chirps_monthly_bounds(
             config=config,
-            country_name=country_name,
             country_iso3=country_iso3,
             use_cache=use_cache,
         )
