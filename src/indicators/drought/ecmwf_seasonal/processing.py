@@ -1,13 +1,14 @@
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import List
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
-from rasterstats import zonal_stats
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
@@ -55,22 +56,45 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
 
+def get_stats_filepath(
+    iso3: str,
+    config: Config,
+    date: datetime,
+    interpolate: bool,
+    adm_level: int,
+    version: int = None,
+) -> Path:
+
+    if version is None:
+        version = config.DEFAULT_VERSION
+
+    filename = f"{iso3.lower()}_seasonal-monthly-single-levels_v{version}"
+    if interpolate:
+        filename += "_interp"
+    filename += f"_{date.year}_{date.month}_adm{adm_level}_stats_test2.csv"
+
+    country_data_processed_dir = (
+        Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
+    )
+    ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
+
+    return ecmwf_processed_dir / filename
+
+
 def compute_stats_per_admin(
-    country,
+    iso3,
     adm_level=1,
-    use_cache=True,
-    interpolate=True,
-    date_list=None,
+    pcode_col="ADM1_PCODE",
+    add_col: List[str] = None,
+    use_cache: bool = True,
+    interpolate: bool = True,
+    date_list: List[str] = None,
 ):
     config = Config()
-    parameters = config.parameters(country)
-    country_iso3 = parameters["iso3_code"]
+    parameters = config.parameters(iso3)
 
     country_data_raw_dir = os.path.join(
-        config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, country_iso3
-    )
-    country_data_processed_dir = os.path.join(
-        config.DATA_DIR, config.PUBLIC_DIR, config.PROCESSED_DIR, country_iso3
+        config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, iso3
     )
     adm_boundaries_path = os.path.join(
         country_data_raw_dir,
@@ -79,7 +103,7 @@ def compute_stats_per_admin(
     )
 
     # read the forecasts
-    ds = get_ecmwf_forecast_by_leadtime(country_iso3)
+    ds = get_ecmwf_forecast_by_leadtime(iso3)
 
     if interpolate:
         # read observed data to get resolution to interpolate to
@@ -102,21 +126,14 @@ def compute_stats_per_admin(
         date_list = ds.time.values
     for date in date_list:
         date_dt = pd.to_datetime(date)
-        if interpolate:
-            output_filename = (
-                f"{parameters['iso3_code'].lower()}"
-                f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
-                f"_{date_dt.month}_adm{adm_level}_stats.csv"
-            )
-        else:
-            output_filename = (
-                f"{parameters['iso3_code'].lower()}"
-                f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
-                f"_{date_dt.month}_adm{adm_level}_stats.csv"
-            )
-        output_path = os.path.join(
-            country_data_processed_dir, "ecmwf", output_filename
+        output_path = get_stats_filepath(
+            iso3,
+            config,
+            date_dt,
+            interpolate,
+            adm_level,
         )
+
         # If caching is on and file already exists, don't download again
         if use_cache and Path(output_path).exists():
             logger.debug(
@@ -128,66 +145,16 @@ def compute_stats_per_admin(
             gdf_adm = gpd.read_file(adm_boundaries_path)
             df = compute_raster_statistics(
                 gdf_adm,
-                "ADM1_EN",
+                pcode_col,
                 ds_sel.rio.write_crs("EPSG:4326"),
                 lon_coord="longitude",
                 lat_coord="latitude",
             )
-
+            df = df.merge(
+                gdf_adm[add_col + [pcode_col]], on=pcode_col, how="left"
+            )
             df["date"] = date_dt
-            df.to_csv(output_path)
-
-
-# TODO: create function to retrieve the stats file
-
-
-def compute_zonal_stats(
-    ds,
-    raster_transform,
-    adm_path,
-    adm_col,
-    percentile_list=np.arange(10, 91, 10),
-):
-    # compute statistics on level in adm_path for all dates in ds
-    df_list = []
-    for leadtime in ds.leadtime.values:
-        for number in ds.number.values:
-            df = gpd.read_file(adm_path)[[adm_col, "geometry"]]
-            ds_date = ds.sel(number=number, leadtime=leadtime)
-            df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
-                zonal_stats(
-                    vectors=df,
-                    raster=ds_date.values,
-                    affine=raster_transform,
-                    nodata=np.nan,
-                )
-            )[["mean", "max", "min"]]
-
-            df[
-                [f"percentile_{str(p)}" for p in percentile_list]
-            ] = pd.DataFrame(
-                zonal_stats(
-                    vectors=df,
-                    raster=ds_date.values,
-                    affine=raster_transform,
-                    nodata=np.nan,
-                    stats=" ".join(
-                        [f"percentile_{str(p)}" for p in percentile_list]
-                    ),
-                )
-            )[
-                [f"percentile_{str(p)}" for p in percentile_list]
-            ]
-
-            df["number"] = number
-            df["leadtime"] = leadtime
-
-            df_list.append(df)
-        df_hist = pd.concat(df_list)
-        # drop the geometry column, else csv becomes huge
-        df_hist = df_hist.drop("geometry", axis=1)
-
-    return df_hist
+            df.to_csv(output_path, index=False)
 
 
 def convert_tprate_precipitation(da):

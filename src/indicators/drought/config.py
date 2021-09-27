@@ -156,3 +156,13 @@ class Config:
     )
     CHIRPSGEFS_RAW_FILENAME = "chirpsgefs_africa_{days_ahead}days_{date}.tif"
     CHIRPSGEFS_DATE_STR_FORMAT = "%Y%m%d"
+
+    # ECMWF
+    ECMWF_DIR = "ecmwf"
+    DEFAULT_VERSION = 5
+
+    # DRYSPELLS
+    DRY_SPELLS_DIR = "dry_spells"
+
+    # TRIGGER
+    TRIGGER_METRICS_DIR = "trigger_metrics"
