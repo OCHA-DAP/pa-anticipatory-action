@@ -51,6 +51,10 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
+use_incorrect_area_coords = True
+```
+
+```python
 country_iso3="mwi"
 config=Config()
 parameters = config.parameters(country_iso3)
@@ -61,7 +65,7 @@ country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"e
 chirps_country_data_exploration_dir= os.path.join(config.DATA_DIR,config.PUBLIC_DIR, "exploration", country_iso3,'chirps')
 
 chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps_mwi_monthly.nc")
-ecmwf_country_data_processed_dir = os.path.join(country_data_processed_dir,"ecmwf")
+
 monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells", f"v{parameters['version']}", "monthly_precipitation")
 dry_spells_processed_dir = os.path.join(country_data_processed_dir, "dry_spells", f"v{parameters['version']}")
 
@@ -71,6 +75,18 @@ plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 all_dry_spells_list_path=os.path.join(dry_spells_processed_dir,"full_list_dry_spells_2000_2021.csv")
 monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
+```
+
+```python
+ecmwf_country_data_processed_dir = Path(country_data_processed_dir) / "ecmwf" / "seasonal-monthly-single-levels"
+if use_incorrect_area_coords:
+    ecmwf_country_data_processed_dir = ecmwf_country_data_processed_dir / "incorrect-coords"
+
+#using the mean value of the admin
+if use_incorrect_area_coords:
+    aggr_meth="mean_cell"
+else:
+    aggr_meth = "mean_ADM1_EN"
 ```
 
 ```python
@@ -232,21 +248,27 @@ Note: the forecast data is an ensemble model. The statistics over the whole admi
 
 ```python
 #read the ecmwf forecast per adm1 per date and concat all dates
-# the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular, but results actually worsen with this
-all_files = glob.glob(os.path.join(ecmwf_country_data_processed_dir, "mwi_seasonal-monthly-single-levels_v5_2*.csv"))
+# the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
+# but results actually worsen with this
+file_pattern = "mwi_seasonal-monthly-single-levels_v5"
+if use_incorrect_area_coords:
+    file_pattern = file_pattern + "_incorrect-coords"
+file_pattern = file_pattern + "_2*.csv"
+file_pattern_path = os.path.join(ecmwf_country_data_processed_dir, file_pattern)
+all_files = glob.glob(file_pattern_path)
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
 ```
 
 ```python
-#this should be the number of years*number of months
+#this should be the number of years*number of months FORECASTED i.e. 
 print(len(all_files))
 ```
 
 ```python
-#number of years*months till may 2021
-21*12+5
+#number of years*months till latest forecast + 6
+21*12+5+6
 ```
 
 ```python

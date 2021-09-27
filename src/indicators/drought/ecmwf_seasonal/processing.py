@@ -40,7 +40,7 @@ def get_ecmwf_forecast(
     return ds_ecmwf_forecast
 
 
-def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
+def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
     """
     Reshape dataset to have the time variable as the month during the
     forecast was valid instead of the month the forecast was published
@@ -50,7 +50,7 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
     Returns: dataset with valid month per publication data-leadtime
     """
     ds_ecmwf_forecast = get_ecmwf_forecast(
-        country_iso3=country_iso3, version=version
+        country_iso3=country_iso3, version=version, **kwargs
     )
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
@@ -62,6 +62,7 @@ def get_stats_filepath(
     date: datetime,
     interpolate: bool,
     adm_level: int,
+    use_incorrect_area_coords: bool,
     version: int = None,
 ) -> Path:
 
@@ -69,16 +70,22 @@ def get_stats_filepath(
         version = config.DEFAULT_VERSION
 
     filename = f"{iso3.lower()}_seasonal-monthly-single-levels_v{version}"
+    if use_incorrect_area_coords:
+        filename += "_incorrect-coords"
     if interpolate:
         filename += "_interp"
-    filename += f"_{date.year}_{date.month}_adm{adm_level}_stats_test2.csv"
+    filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
 
     country_data_processed_dir = (
         Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
     )
     ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
 
-    return ecmwf_processed_dir / filename
+    stats_dir = ecmwf_processed_dir / "seasonal-monthly-single-levels"
+    if use_incorrect_area_coords:
+        stats_dir = stats_dir / "incorrect-coords"
+
+    return stats_dir / filename
 
 
 def compute_stats_per_admin(
@@ -89,6 +96,7 @@ def compute_stats_per_admin(
     use_cache: bool = True,
     interpolate: bool = True,
     date_list: List[str] = None,
+    use_incorrect_area_coords=False,
 ):
     config = Config()
     parameters = config.parameters(iso3)
@@ -103,7 +111,9 @@ def compute_stats_per_admin(
     )
 
     # read the forecasts
-    ds = get_ecmwf_forecast_by_leadtime(iso3)
+    ds = get_ecmwf_forecast_by_leadtime(
+        iso3, use_incorrect_area_coords=use_incorrect_area_coords
+    )
 
     if interpolate:
         # read observed data to get resolution to interpolate to
@@ -132,6 +142,7 @@ def compute_stats_per_admin(
             date_dt,
             interpolate,
             adm_level,
+            use_incorrect_area_coords,
         )
 
         # If caching is on and file already exists, don't download again

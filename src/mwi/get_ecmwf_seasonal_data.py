@@ -47,6 +47,7 @@ def main(download=True, process=True):
     if download:
         area = AreaFromShape(df_country_boundaries.buffer(3))
         ecmwf_forecast.download(country_iso3=COUNTRY_ISO3, area=area)
+        ecmwf_forecast.process(country_iso3=COUNTRY_ISO3)
 
     if process:
         compute_stats_per_admin(country=COUNTRY_ISO3, interpolate=False)

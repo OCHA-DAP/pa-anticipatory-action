@@ -118,7 +118,7 @@ class EcmwfSeasonal:
             RAW_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / self.cds_name
         )
         if self.use_incorrect_area_coords:
-            directory = directory / "incorrect_coords"
+            directory = directory / "incorrect-coords"
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
         if self.use_incorrect_area_coords:
             filename += "_incorrect-coords"
@@ -204,13 +204,19 @@ class EcmwfSeasonal:
         return filepath
 
     def _get_processed_filepath(self, country_iso3: str, version: int) -> Path:
+        directory = (
+            PROCESSED_DATA_DIR
+            / country_iso3
+            / ECMWF_SEASONAL_DIR
+            / self.cds_name
+        )
+        if self.use_incorrect_area_coords:
+            directory = directory / "incorrect-coords"
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
         if self.use_incorrect_area_coords:
             filename += "_incorrect-coords"
         filename += ".nc"
-        return (
-            PROCESSED_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / filename
-        )
+        return directory / filename
 
     def read_processed_dataset(
         self,
@@ -257,7 +263,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             logger.info(f"...{year}")
             if months is None:
                 if year < current_date.year:
-                    months = range(1, 13)
+                    months_year = range(1, 13)
                 elif year == current_date.year:
                     # forecast becomes available on the 13th of the month
                     # at 12 GMT
@@ -267,14 +273,14 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                         or (current_date.day == 13 and current_date.hour >= 12)
                         else current_date.month - 1
                     )
-                    months = range(1, max_month + 1)
+                    months_year = range(1, max_month + 1)
                 elif year > current_date.year:
                     logger.info(
                         f"Cannot download data for {year}, because it is in"
                         " the future"
                     )
 
-            for month in months:
+            for month in months_year:
                 super()._download(
                     country_iso3=country_iso3,
                     area=area,
