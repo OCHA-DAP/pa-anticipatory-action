@@ -1,0 +1,15 @@
+#largely copied from https://ljvmiranda921.github.io/notebook/2018/06/21/precommits-using-black-and-flake8/ and https://mitelman.engineering/blog/python-best-practice/automating-python-best-practices-for-a-new-project/
+repos:
+    - repo: https://github.com/psf/black
+      rev: 21.6b0
+      hooks:
+        - id: black
+    - repo: https://github.com/PyCQA/isort
+      rev: 5.6.4
+      hooks:
+        - id: isort
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v2.4.0
+      hooks:
+          - id: flake8
+            exclude: _build

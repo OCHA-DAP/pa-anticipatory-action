@@ -8,10 +8,12 @@ nmme/
 copernicus/
 chirps/
 analyses/bangladesh/data/*
+analyses/bangladesh/results/*/archive/*
+analyses/bangladesh/trigger_development/processed_data/*
 
 #Local experiments
 Experiments
-analyses/bangladesh/notebooks/scratch/*
+analyses/bangladesh/*/scratch/*
 
 # IDEs
 .idea/*
@@ -25,6 +27,8 @@ __MACOSX/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+#we are only committing .md files, if a .ipynb is needed on the repo you can add it with the -f flag
+.ipynb
 
 # R files
 .Rproj.user
@@ -32,6 +36,7 @@ __MACOSX/
 .Rhistory
 .RData
 .Ruserdata
+.Renviron
 
 # pycharm
 .idea
@@ -41,3 +46,5 @@ __pycache__/
 
 #nbautoexport
 .nbautoexport
+
+venv/
