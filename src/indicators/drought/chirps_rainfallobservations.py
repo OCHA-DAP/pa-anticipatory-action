@@ -52,7 +52,7 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
                 # the crs In R when working with bricks, this issue
                 # doesn't seem to appear
                 # ds=rioxarray.open_rasterio(chirps_filepath)
-                ds = xr.open_dataset(chirps_filepath)
+                ds = xr.load_dataset(chirps_filepath)
                 chirps_filepath_crs = os.path.join(
                     chirps_dir,
                     config.CHIRPS_NC_FILENAME_CRS.format(
@@ -132,7 +132,7 @@ def clip_chirps_monthly_bounds(config, country_iso3: str, use_cache=True):
         f"Clipping global data to {config.CHIRPS_MONTHLY_RAW_PATH}..."
     )
     # would like to rioxarray but seems slower/crashing with clip
-    ds = xr.open_dataset(config.CHIRPS_MONTHLY_RAW_PATH).rio.write_crs(
+    ds = xr.load_dataset(config.CHIRPS_MONTHLY_RAW_PATH).rio.write_crs(
         "EPSG:4326"
     )
     gdf_adm1 = gpd.read_file(adm0_bound_path)
@@ -218,7 +218,7 @@ def compute_seasonal_lowertercile_raster(
         parents=True, exist_ok=True
     )
     logger.debug("Computing lower tercile values...")
-    ds = xr.open_dataset(chirps_monthly_country_filepath)
+    ds = xr.load_dataset(chirps_monthly_country_filepath)
     # compute the rolling sum over three month period. Rolling sum works
     # backwards, i.e. value for month 3 is sum of month 1 till 3. So
     # month==1 is NDJ season
@@ -280,7 +280,7 @@ def get_chirps_data_daily(config, year, resolution="25", download=False):
         config.CHIRPS_NC_FILENAME_CRS.format(year=year, resolution=resolution),
     )
     # TODO: would prefer rioxarray but crashes when clipping
-    ds = xr.open_dataset(chirps_filepath_crs)
+    ds = xr.load_dataset(chirps_filepath_crs)
     # ds = rioxarray.open_rasterio(chirps_filepath_crs)
     ds = ds.rename(
         {
