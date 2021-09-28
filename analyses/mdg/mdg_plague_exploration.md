@@ -6,6 +6,14 @@ This notebook explores plague data in Madagascar.
 Note that this data is not publicly available. 
 <!-- #endregion -->
 
+The data already includes up to 26-09, i.e. week 38
+
+
+Missing data:
+- 2014-2016 data
+- aggregation by sex and age
+- resistance to antibiotics
+
 ```python
 %load_ext autoreload
 %autoreload 2
@@ -17,6 +25,16 @@ import geopandas as gpd
 import plotly.express as px
 from datetime import date
 import numpy as np
+import altair as alt
+```
+
+```python
+import matplotlib.colors as mcolors
+
+```
+
+```python
+import matplotlib.pyplot as plt
 ```
 
 ```python
@@ -27,6 +45,14 @@ import os
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[0]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
+```
+
+```python
+#define period of current interest
+sel_start_date = "2021-08-02"
+sel_end_date = "2021-09-20"
+sel_start_week = 31
+sel_end_week = 38
 ```
 
 ```python
@@ -115,7 +141,17 @@ df["date"]=pd.to_datetime(df["date"])
 ```
 
 ```python
-df_date=df.groupby("date",as_index=False).sum()
+#group by date
+df_date=df.groupby(["date","year","week"],as_index=False).sum()
+df_date.set_index("date",inplace=True)
+```
+
+```python
+#fill the weeks that are not included with 0, else they will be ignored when computing the historical average
+df_date=df_date.asfreq('W-Mon').fillna(0)
+#compute the year and week numbers from the dates
+df_date[["year","week"]]=df_date.index.isocalendar()[["year","week"]]
+df_date.reset_index(inplace=True)
 ```
 
 ```python
@@ -160,6 +196,7 @@ gdf_adm3_merge=gdf_adm3.merge(df_adm,on="ADM3_PCODE",how="outer")
 gdf_adm3_merge.plot(column="cases_number",
                legend=True,
                scheme="quantiles",
+                cmap="YlOrRd",
                missing_kwds={'color': 'lightgrey',"label":"no data"},
                figsize=(15,10),)
 ```
@@ -188,75 +225,6 @@ gdf_adm2_merge.plot(column="cases_number",
                figsize=(15,10),)
 ```
 
-### Cases 01-08-2021 to 20-09-2021
-
-
-Questions:
-- Bulletin shows aggregation by sex and age, we don't have that data?
-- We also don't have 2014-2016 data to compute historical average..
-
-```python
-df_sel=df[(df.date>="2021-08-01")&(df.date<="2021-09-20")]
-```
-
-They state that 37 cases were reported.. 
-
-```python
-df_sel.cases_number.sum()
-```
-
-```python
-df_sel
-```
-
-```python
-df_sel.drop(["year","week"],axis=1).groupby("cases_class").sum()
-```
-
-```python
-df_clin=df_sel.drop(["year","week"],axis=1).groupby("clinical_form",as_index=False).sum()
-df_clin["cases_perc"]=round(df_clin["cases_number"]/sum(df_clin["cases_number"])*100,2)
-df_clin
-```
-
-```python
-df_status=df_sel.groupby(['clinical_form', 'cases_class','status'])['cases_number'].sum().unstack()
-df_status.fillna(0,inplace=True)
-df_status["total"]=df_status.DECEDE+df_status.VIVANT
-df_status["perc_decede"]=round(df_status.DECEDE/df_status.total*100,2)
-df_status
-```
-
-In report no NP cases, PP cases align, PB had 2 less CONF cases (1 decede and 1 vivant)
-
-
-![afbeelding.png](attachment:adef0948-ff9c-42d6-ab9d-9272cdd9dae9.png)
-
-
-Todo: fix dates and colors (or use other tool than plotly)
-
-```python
-px.bar(df_sel.groupby(["date","cases_class"],as_index=False).sum(),x="date",y="cases_number",color="cases_class")
-```
-
-```python
-px.bar(df_sel[df_sel.clinical_form=="PP"].
-       groupby(["date","cases_class"],as_index=False).sum(),
-       x="date",
-       y="cases_number",
-       color="cases_class",
-      title="Cases of Pneumonic Plague by class")
-```
-
-```python
-px.bar(df_sel[df_sel.clinical_form=="PB"].
-       groupby(["date","cases_class"],as_index=False).sum(),
-       x="date",
-       y="cases_number",
-       color="cases_class",
-      title="Cases of Bubonic Plague by class")
-```
-
 ### Historical average
 
 
@@ -270,52 +238,480 @@ We only have data starting from 2017.. We will therefore for now use the data we
 
 Questions:
 - Is the std computed over the years or over all values included, so before the rolling sum? The bulletin: For each week, the threshold is calculated by adding 1.64 standard deviations to the historical average
+I now only computed the std over the years, so basically over 3 values, and not over 5*3=15 values
 
 
 1.64std represents a 90% confidence interval. I.e. 5/100 events are above the 1.64 threshold
 
 ```python
-#group by date
-df_date=df.groupby(["date","year","week"],as_index=False).sum()
-df_date.set_index("date",inplace=True)
-```
-
-```python
-#fill the weeks that are not included with 0, else they will be ignored when computing the historical average
-df_date=df_date.asfreq('W-Mon').fillna(0)
-#compute the year and week numbers from the dates
-df_date[["year","week"]]=df_date.index.isocalendar()[["year","week"]]
-```
-
-```python
-df_date
+hist_avg_years=[2018,2019,2020]
 ```
 
 ```python
 #compute the historical average
-df_hist_years=df_date[df_date.year.isin([2018,2019,2020])]
+df_hist_years=df_date[df_date.year.isin(hist_avg_years)]
 df_hist_years["rolling_sum"]=df_hist_years.cases_number.rolling(window=5,center=True).mean()
-df_hist_weeks=df_hist_years.groupby("week",as_index=False).agg(["mean","std"]).drop("year",axis=1) #agg(["mean","count"])
+```
+
+```python
+df_hist_weeks=df_hist_years.groupby("week")["rolling_sum"].agg(rs_mean="mean",rs_std="std").reset_index()
+```
+
+```python
+df_hist_weeks["164std"]=df_hist_weeks.rs_std*1.64
+df_hist_weeks["plus_164std"]=df_hist_weeks.rs_mean+df_hist_weeks["164std"]
+df_hist_weeks["min_164std"]=df_hist_weeks.rs_mean+df_hist_weeks["164std"]
 ```
 
 ```python
 df_hist_weeks.head()
 ```
 
-```python
-df_2021 = df[df.year==2021]
-df_2017 = df[df.year==2017]
-```
-
 How to add legend to this graph? 
 
+```python
+line_avg = alt.Chart(df_hist_years).mark_line(color="red").encode(
+    x='week:N',
+    y='mean(rolling_sum)'
+)
+line_std = alt.Chart(df_hist_weeks).mark_line(color="yellow").encode(
+    x='week:N',
+    y='plus_164std'
+)
+
+band_std = alt.Chart(df_hist_weeks).mark_area(
+    opacity=0.5, color='gray'
+).encode(
+    x='week:N',
+    y=alt.Y('rs_mean',title="number of cases"),
+    y2='plus_164std',
+)
+
+alt.layer(line_std, band_std, line_avg).properties(
+    width=500,
+    height=300,
+    title = "Historical average and 1.64std"
+)
+```
+
+### Define functions key figures
+
+```python
+def plot_hist_avg(df):
+    line = alt.Chart(df).mark_line(color="red").encode(
+        x='week:N',
+        y=alt.Y('rs_mean',title="number of cases"),
+
+    )
+    line_std = alt.Chart(df).mark_line(color="yellow").encode(
+        x='week:N',
+        y='plus_164std'
+    )
+
+    band_std = alt.Chart(df).mark_area(
+        opacity=0.5, color='gray'
+    ).encode(
+        x='week:N',
+        y='rs_mean',
+        y2='plus_164std',
+    )
+    
+    return alt.layer(line_std, band_std, line)
+```
+
+```python
+def plot_adm3(df,title=""):
+    fig,ax=plt.subplots(figsize=(15,10))
+    gdf_adm3_merge=gdf_adm3.merge(df,on="ADM3_PCODE",how="outer")
+    predef_bins=[1,2,5,10,15,20,100,1000]
+    scheme = None
+    norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
+    legend_kwds = None
+    colors = None
+    gdf_adm3_merge.plot(
+            column="cases_number",
+            legend=True,
+            k=colors,
+            cmap="YlOrRd",
+            norm=norm,
+            scheme=scheme,
+            legend_kwds=legend_kwds,
+            missing_kwds={
+                "color": "lightgrey",
+            },
+        ax=ax
+        )
+    ax.set_axis_off()
+    ax.set_title(title)
+```
+
+```python
+def key_graphs(df,title=""):
+    df_status=df.groupby(['clinical_form', 'cases_class','status'])['cases_number'].sum().unstack()
+    df_status.fillna(0,inplace=True)
+    df_status["total"]=df_status.sum(axis=1)
+    df_status["perc_decede"]=round(df_status.DECEDE/df_status.total*100,2)
+    display(df_status)
+    
+    df_clin=df.drop(["year","week"],axis=1).groupby("clinical_form").sum()
+    df_clin["cases_perc"]=round(df_clin["cases_number"]/sum(df_clin["cases_number"])*100,2)
+    display(df_clin)
+    
+    #geographical distribution
+    df_adm = df.groupby("ADM3_PCODE",as_index=False).sum()[["ADM3_PCODE","cases_number"]]
+    plot_adm3(df_adm,title=title)
+    
+#     df_dist=df.groupby(['district','cases_class'])['cases_number'].sum().unstack()
+#     df_dist.fillna(0,inplace=True)
+#     df_dist["total"]=df_dist.sum(axis=1)
+#     df_dist=df_dist.sort_values("total",ascending=False)
+#     display(df_dist.head(n=10))
+    
+    #temporal distribution
+    df_hist_weeks_sel=df_hist_weeks[df_hist_weeks.week.isin(df.week.unique())]
+    graph_hist = plot_hist_avg(df_hist_weeks_sel)
+    
+    #group by date
+    df_date=df.groupby(["date","year","week"],as_index=False).sum()
+    df_date.set_index("date",inplace=True)
+    #fill the weeks that are not included with 0, else they will be ignored when computing the historical average
+    df_date=df_date.asfreq('W-Mon').fillna(0)
+    #compute the year and week numbers from the dates
+    df_date[["year","week"]]=df_date.index.isocalendar()[["year","week"]]
+    bar = alt.Chart(df_date).mark_bar().encode(
+    x='week:N',
+    y='sum(cases_number)'
+    )
+    graph = (bar+graph_hist).properties(
+    width=500,
+    height=300,
+    title=title,
+    )
+    display(graph)
+```
+
+### Cases 2021
+With a focus on 01-08-2021 to 26-09-2021
+
+```python
+df_sel=df[(df.date>=sel_start_date)&(df.date<=sel_end_date)]
+```
+
+```python
+df_sel.head()
+```
+
+They state that 39 cases were reported.. 
+
+```python
+df_sel.cases_number.sum()
+```
+
+In report no NP cases
+
+```python
+#have to change order of nb for this to work on restart
+key_graphs(df_sel,title="Cases in Aug-Sep 2021")
+```
+
+```python
+df_dist=df_sel.groupby(['district','cases_class'])['cases_number'].sum().unstack()
+df_dist.fillna(0,inplace=True)
+df_dist["total"]=df_dist.sum(axis=1)
+df_dist
+```
+
+```python
+df_sel.drop(["year","week"],axis=1).groupby("cases_class").sum()
+```
+
+Basic graphs from report, not being used so visuals are not optimized
+
+```python
+df_class_date=df_sel.groupby(["date","year","week","cases_class"],as_index=False).sum()
+```
+
+```python
+alt.Chart(df_class_date).mark_bar().encode(
+    x='week:N',
+    y='sum(cases_number)',
+    color = "cases_class:N"
+)
+```
+
+```python
+df_class_date=df_sel.groupby(["date","year","week","cases_class"],as_index=False).sum()
+```
+
+```python
+alt.Chart(df_sel[df_sel.clinical_form=="PP"].
+       groupby(["date","week","year","cases_class"],as_index=False).sum()).mark_bar().encode(
+    x='week:N',
+    y='sum(cases_number)',
+    color = "cases_class:N"
+)
+```
+
+```python
+alt.Chart(df_sel[df_sel.clinical_form=="PB"].
+       groupby(["date","week","year","cases_class"],as_index=False).sum()).mark_bar().encode(
+    x='week:N',
+    y='sum(cases_number)',
+    color = "cases_class:N"
+)
+```
+
+#### Figures to be shared on 2021
+
+```python
+color_twentyone='#7f2100'
+```
+
+TODO: add legend
+
+```python
+bar_2021 = alt.Chart(df_date[df_date.year==2021]).mark_bar(color=color_twentyone).encode(
+    x='week:N',
+    y=alt.Y('cases_number',title="number of cases")
+)
+
+(bar_2021 + line_std + band_std + line_avg).properties(
+    width=600,
+    height=300,
+    title = "Number of cases in 2021 and historical average"
+) 
+```
+
+```python
+df_hist_weeks_sel = df_hist_weeks[df_hist_weeks.week.isin(range(sel_start_week,sel_end_week+1))]
+line_avg_sel = alt.Chart(df_hist_weeks_sel).mark_line(color="red").encode(
+    x='week:N',
+    y='rs_mean'
+)
+line_std_sel = alt.Chart(df_hist_weeks_sel).mark_line(color="yellow").encode(
+    x='week:N',
+    y='plus_164std'
+)
+
+band_std_sel = alt.Chart(df_hist_weeks_sel).mark_area(
+    opacity=0.5, color='gray'
+).encode(
+    x='week:N',
+    y=alt.Y('rs_mean',title="number of cases"),
+    y2='plus_164std',
+)
+
+bar_2021_sel = alt.Chart(df_sel).mark_bar(color=color_twentyone).encode(
+    x='week:N',
+    y=alt.Y('sum(cases_number)',title="number of cases")
+)
+
+(bar_2021_sel + line_std_sel + band_std_sel + line_avg_sel).properties(
+    width=600,
+    height=300
+) 
+```
+
+### Compare 2021 and 2017
+
+```python
+color_seventeen='#007ce0'
+```
+
+```python
+alt.Chart(df_date[df_date.year.isin([2017,2021])]).mark_line().encode(
+    x='week:N',
+    y='cases_number',
+    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone]))
+).properties(
+    width=600,
+    height=300
+)
+```
+
+```python
+chart = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
+    x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
+    y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
+    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone])),
+).properties(
+    width=30,
+    height=300
+).facet(
+    'week:N', spacing=0
+).configure_view(
+    strokeWidth=0
+)
+chart
+```
+
+#### Only pneunomic cases
+
+```python
+df_date_pp=df[df.clinical_form=="PP"].groupby(["date","year","week"],as_index=False).sum()
+```
+
+```python
+alt.Chart(df_date_pp[df_date_pp.year.isin([2017,2021])]).mark_line().encode(
+    x='week:N',
+    y=alt.Y('cases_number',title="number of cases"),
+    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone]))
+).properties(
+    width=600,
+    height=300,
+    title="Pneunomic cases in 2017 and 2021"
+)
+```
+
+Todo: fix title
+
+```python
+chart = alt.Chart(df_date_pp[(df_date_pp.year.isin([2017,2021]))&(df_date_pp.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
+    x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
+    y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
+    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone])),
+).properties(
+    width=30,
+    height=300,
+    title="Number of pneunomic cases in week 31 to 38"
+).facet(
+    'week:N', spacing=0
+).configure_view(
+    strokeWidth=0
+)
+chart
+```
+
+#### Compare years
+
+
+Functions are very ugly as of now, have to be improved if we use them. Just used for some exploration now
+
+```python
+key_graphs(df[df.year==2017],title="Cases in 2017")
+```
+
+```python
+key_graphs(df[df.year==2021],title="Cases in 2021")
+```
+
+```python
+# key_graphs(df[df.year==2018])
+```
+
+```python
+key_graphs(df[df.year==2019],title="Cases in 2019")
+```
+
+```python
+
+```
+
+```python
+key_graphs(df[(df.year==2017)&(df.clinical_form=="PP")],title="Cases in 2017")
+```
+
+```python
+key_graphs(df[(df.year==2019)&(df.clinical_form=="PP")],title="Cases in Aug-Sep 2021")
+```
+
+```python
+key_graphs(df[(df.year==2021)&(df.clinical_form=="PP")],title="Cases in Aug-Sep 2021")
+```
+
+```python
+# key_graphs(df[df.year==2020])
+```
+
+```python
+
+```
+
+### Conclusions
+- Not exceptional that there is one week with cases above std (with current data), see e.g. 2019
+
+
+### Questions:
+- How do we average current numbers? The historical average is based on a rolling centred sum, we cannot do that with current numbers. Would taking a right rolling sum of 3 weeks (instead of 5) suffice? Though then probably underestimating.. Think if we do averaging of current numbers, should follow some methodology as for the historical average (i.e. have to change historical average method)
+
+
+
+#### Next steps
+- Urban vs rural
+- Inspect situation in 2017
+
+```python
+
+```
+
+```python
+
+```
+
+```python
+
+```
+
+### Archive
+
+```python
+
+```
+
+```python
+
+# line_2017_2021_sel= alt.Chart(df[(df.year.isin([2017,2021]))&(df.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_line().encode(
+#     x='week:N',
+#     y='sum(cases_number)',
+#     color=alt.Color('year:N', scale=alt.Scale(range=['#f2645a','#007ce0']))
+# )
+
+# line_bar = line_2017_2021_sel #+ line_std
+# line_bar.properties(
+#     width=600,
+#     height=300
+# )
+```
+
+```python
+# #showing whole year as bar chart gets too messy
+# chart = alt.Chart(df[df.year.isin([2017,2021])]).mark_bar(width=5).encode(
+#     x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
+#     y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
+#     color=alt.Color('year:N', scale=alt.Scale(range=['#f2645a','#007ce0'])),
+# ).properties(
+#     width=30,
+#     height=300
+# ).facet(
+#     'week:N', spacing=0
+# ).configure_view(
+#     strokeWidth=0
+# )
+# chart
+```
+
+```python
+# df_yearweek=df[df.year.isin([2017,2021])].groupby(["year","week"],as_index=False).sum()
+# df_yearweek.year=df_yearweek.year.astype("str")
+# px.bar(df_yearweek, x="week", y="cases_number",
+#              color='year', 
+#        barmode='group',
+#              height=400)
+```
+
+```python
+# df_yearweek=df.groupby(["year","week"],as_index=False).sum()
+# df_yearweek.year=df_yearweek.year.astype("str")
+# px.bar(df_yearweek, x="week", y="cases_number",
+#              color='year', 
+#        barmode='group',
+#              height=400)
+```
 
 Altairs definition of "ci" is a 95% confidence interval
 
 ```python
-import altair as alt
-
-line = alt.Chart(df_hist_years).mark_line().encode(
+line = alt.Chart(df_hist_years).mark_line(color="red").encode(
     x='week',
     y='mean(rolling_sum)'
 )
@@ -325,12 +721,21 @@ band = alt.Chart(df_hist_years).mark_errorband(extent='ci').encode(
     y=alt.Y('rolling_sum', title='cases/week'),
 )
 
-# line_std = alt.Chart(df_hist_weeks).mark_line().encode(
-#     x='week',
-#     y='rolling_sum["std"]'
-# )
+line_std = alt.Chart(df_hist_weeks).mark_line(color="yellow").encode(
+    x='week',
+    y='plus_164std'
+)
 
-line_2021 = alt.Chart(df_2021).mark_line(color="red").encode(
+band_std = alt.Chart(df_hist_weeks).mark_area(
+    opacity=0.5, color='gray'
+).encode(
+    x='week',
+    y='rs_mean',
+    y2='plus_164std',
+#     y2='upper'
+)
+
+line_2021 = alt.Chart(df_2021).mark_line(color="brown").encode(
     x="week",
     y="sum(cases_number)",
 )
@@ -340,18 +745,5 @@ line_2017 = alt.Chart(df_2017).mark_line(color="green").encode(
     y="sum(cases_number)",
 )
 
-band + line + line_2021 + line_2017
-```
-
-```python
-
-```
-
-#### Next steps
-- Urban vs rural
-- Do we agree with the historical average method? 
-- Inspect situation in 2017
-
-```python
-
+line_std + band_std + line + line_2021 + line_2017
 ```
