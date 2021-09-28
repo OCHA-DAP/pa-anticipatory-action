@@ -26,15 +26,8 @@ import plotly.express as px
 from datetime import date
 import numpy as np
 import altair as alt
-```
-
-```python
-import matplotlib.colors as mcolors
-
-```
-
-```python
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 ```
 
 ```python
@@ -66,6 +59,12 @@ public_data_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR)
 country_data_raw_dir = os.path.join(public_data_dir,config.RAW_DIR,iso3)
 adm3_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin3_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
+```
+
+```python
+country_data_processed_dir = os.path.join(public_data_dir,config.PROCESSED_DIR,iso3)
+plot_dir = os.path.join(country_data_processed_dir,"plots","plague")
+Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
 ```python
@@ -185,20 +184,37 @@ It seems that all the pcodes that are not foundin the adm3 shapefile are actuall
 Many adm3 pcodes are not in the plague data but that can just indicate there were no cases ever reported in those adm3's
 
 ```python
+def plot_adm3(df,title=""):
+    fig,ax=plt.subplots(figsize=(15,10))
+    gdf_adm3_merge=gdf_adm3.merge(df,on="ADM3_PCODE",how="outer")
+    predef_bins=[1,2,5,10,15,20,100,1000]
+    scheme = None
+    norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
+    legend_kwds = None
+    colors = None
+    gdf_adm3_merge.plot(
+            column="cases_number",
+            legend=True,
+            k=colors,
+            cmap="YlOrRd",
+            norm=norm,
+            scheme=scheme,
+            legend_kwds=legend_kwds,
+            missing_kwds={
+                "color": "lightgrey",
+            },
+        ax=ax
+        )
+    ax.set_axis_off()
+    ax.set_title(title)
+```
+
+```python
 df_adm = df.groupby("ADM3_PCODE",as_index=False).sum()[["ADM3_PCODE","cases_number"]]
 ```
 
 ```python
-gdf_adm3_merge=gdf_adm3.merge(df_adm,on="ADM3_PCODE",how="outer")
-```
-
-```python
-gdf_adm3_merge.plot(column="cases_number",
-               legend=True,
-               scheme="quantiles",
-                cmap="YlOrRd",
-               missing_kwds={'color': 'lightgrey',"label":"no data"},
-               figsize=(15,10),)
+plot_adm3(df_adm)
 ```
 
 Check what the areas are where the adm2 pcode is reported in the plague data. 
@@ -267,24 +283,34 @@ df_hist_weeks["min_164std"]=df_hist_weeks.rs_mean+df_hist_weeks["164std"]
 df_hist_weeks.head()
 ```
 
-How to add legend to this graph? 
+```python
+base = alt.Chart(df_hist_weeks).transform_calculate(
+    line="'hist mean'",
+    shade1="'hist +1.64std'",
+)
+scale = alt.Scale(domain=["hist mean", "hist +1.64std"], range=['red', 'yellow'])
+```
 
 ```python
-line_avg = alt.Chart(df_hist_years).mark_line(color="red").encode(
+line_avg = base.mark_line(color="red").encode(
     x='week:N',
-    y='mean(rolling_sum)'
-)
-line_std = alt.Chart(df_hist_weeks).mark_line(color="yellow").encode(
-    x='week:N',
-    y='plus_164std'
+    y='rs_mean',
+    color=alt.Color('line:N', scale=scale, title='')
 )
 
-band_std = alt.Chart(df_hist_weeks).mark_area(
+line_std = base.mark_line(color="yellow").encode(
+    x='week:N',
+    y='plus_164std',
+    color=alt.Color('shade1:N', scale=scale, title='')
+)
+
+band_std= base.mark_area(
     opacity=0.5, color='gray'
 ).encode(
     x='week:N',
     y=alt.Y('rs_mean',title="number of cases"),
     y2='plus_164std',
+#     color=alt.Color('shade2:N', scale=scale, title=''),
 )
 
 alt.layer(line_std, band_std, line_avg).properties(
@@ -411,7 +437,7 @@ In report no NP cases
 
 ```python
 #have to change order of nb for this to work on restart
-key_graphs(df_sel,title="Cases in Aug-Sep 2021")
+key_graphs(df_sel,title="Cases in week 31-38 2021")
 ```
 
 ```python
@@ -470,16 +496,27 @@ color_twentyone='#7f2100'
 TODO: add legend
 
 ```python
-bar_2021 = alt.Chart(df_date[df_date.year==2021]).mark_bar(color=color_twentyone).encode(
+base_2021 = alt.Chart(df_date[df_date.year==2021]).transform_calculate(
+    cases="'cases 2021'",
+)
+scale_2021 = alt.Scale(domain=["hist mean", "hist +1.64std","cases 2021"], range=['red', 'yellow',color_twentyone])
+```
+
+```python
+bar_2021 = base_2021.mark_bar(color=color_twentyone).encode(
     x='week:N',
-    y=alt.Y('cases_number',title="number of cases")
+    y=alt.Y('cases_number',title="number of cases"),
+    color=alt.Color('cases:N', scale=scale_2021, title='')
 )
 
-(bar_2021 + line_std + band_std + line_avg).properties(
+chart_2021 = (bar_2021 + line_std + band_std + line_avg).properties(
     width=600,
     height=300,
     title = "Number of cases in 2021 and historical average"
 ) 
+chart_2021
+##not working :( need some packages installed which is complicated
+# chart_2021.save(os.path.join(plot_dir,f"{iso3}_cases_histavg_2021.png"))
 ```
 
 ```python
@@ -508,7 +545,8 @@ bar_2021_sel = alt.Chart(df_sel).mark_bar(color=color_twentyone).encode(
 
 (bar_2021_sel + line_std_sel + band_std_sel + line_avg_sel).properties(
     width=600,
-    height=300
+    height=300,
+    title="Cases from week 31 to 38"
 ) 
 ```
 
@@ -519,18 +557,22 @@ color_seventeen='#007ce0'
 ```
 
 ```python
-alt.Chart(df_date[df_date.year.isin([2017,2021])]).mark_line().encode(
+chart_2017_2021=alt.Chart(df_date[df_date.year.isin([2017,2021])]).mark_line().encode(
     x='week:N',
     y='cases_number',
     color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone]))
 ).properties(
     width=600,
-    height=300
+    height=300,
+    title="Cases in 2017 and 2021"
 )
+chart_2017_2021
+# #not working
+# chart_2017_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021.png"))
 ```
 
 ```python
-chart = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
+chart_1721_sel = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
     x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
     y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
     color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone])),
@@ -541,8 +583,11 @@ chart = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.week.isin(ra
     'week:N', spacing=0
 ).configure_view(
     strokeWidth=0
-)
-chart
+).properties(title="Cases in 2017 and 2021 in week 31-38")
+chart_1721_sel
+
+# #not working
+# chart_1721_sel.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021_3138.png"))
 ```
 
 #### Only pneunomic cases
@@ -552,7 +597,7 @@ df_date_pp=df[df.clinical_form=="PP"].groupby(["date","year","week"],as_index=Fa
 ```
 
 ```python
-alt.Chart(df_date_pp[df_date_pp.year.isin([2017,2021])]).mark_line().encode(
+chart_1721_pp = alt.Chart(df_date_pp[df_date_pp.year.isin([2017,2021])]).mark_line().encode(
     x='week:N',
     y=alt.Y('cases_number',title="number of cases"),
     color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone]))
@@ -561,12 +606,13 @@ alt.Chart(df_date_pp[df_date_pp.year.isin([2017,2021])]).mark_line().encode(
     height=300,
     title="Pneunomic cases in 2017 and 2021"
 )
+chart_1721_pp
+# #not working
+# chart_1721_pp.save(os.path.join(plot_dir,f"{iso3}_pp_cases_2017_2021.png"))
 ```
 
-Todo: fix title
-
 ```python
-chart = alt.Chart(df_date_pp[(df_date_pp.year.isin([2017,2021]))&(df_date_pp.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
+chart_1721_pp_sel = alt.Chart(df_date_pp[(df_date_pp.year.isin([2017,2021]))&(df_date_pp.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
     x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
     y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
     color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone])),
@@ -578,8 +624,11 @@ chart = alt.Chart(df_date_pp[(df_date_pp.year.isin([2017,2021]))&(df_date_pp.wee
     'week:N', spacing=0
 ).configure_view(
     strokeWidth=0
-)
-chart
+).properties(title="Pneunomic cases in 2017 and 2021 in week 31-38")
+chart_1721_pp_sel
+
+# #not working
+# chart_1721_pp_sel.save(os.path.join(plot_dir,f"{iso3}_pp_cases_2017_2021_3138.png"))
 ```
 
 #### Compare years
