@@ -45,3 +45,4 @@ pre-commit==2.13.0
 plotly==5.1.0
 dataframe-image==0.1.1
 python-dateutil==2.8.1
+altair==4.1.0
