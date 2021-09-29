@@ -657,15 +657,15 @@ key_graphs(df[df.year==2019],title="Cases in 2019")
 ```
 
 ```python
-key_graphs(df[(df.year==2017)&(df.clinical_form=="PP")],title="Cases in 2017")
+key_graphs(df[(df.year==2017)&(df.clinical_form=="PP")],title="Pneumonic cases in 2017")
 ```
 
 ```python
-key_graphs(df[(df.year==2019)&(df.clinical_form=="PP")],title="Cases in Aug-Sep 2021")
+key_graphs(df[(df.year==2019)&(df.clinical_form=="PP")],title="Pneumonic cases in 2019")
 ```
 
 ```python
-key_graphs(df[(df.year==2021)&(df.clinical_form=="PP")],title="Cases in Aug-Sep 2021")
+key_graphs(df[(df.year==2021)&(df.clinical_form=="PP")],title="Pneumonic cases in Aug-Sep 2021")
 ```
 
 ```python
