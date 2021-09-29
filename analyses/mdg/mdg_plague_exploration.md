@@ -337,7 +337,7 @@ def plot_hist_avg(df):
     band_std = alt.Chart(df).mark_area(
         opacity=0.5, color='gray'
     ).encode(
-        x='week:N',
+        x="week:N",
         y='rs_mean',
         y2='plus_164std',
     )
@@ -372,7 +372,7 @@ def plot_adm3(df,title=""):
 ```
 
 ```python
-def key_graphs(df,title=""):
+def key_graphs(df,title="", all_weeks=False):
     df_status=df.groupby(['clinical_form', 'cases_class','status'])['cases_number'].sum().unstack()
     df_status.fillna(0,inplace=True)
     df_status["total"]=df_status.sum(axis=1)
@@ -394,7 +394,11 @@ def key_graphs(df,title=""):
 #     display(df_dist.head(n=10))
     
     #temporal distribution
-    df_hist_weeks_sel=df_hist_weeks[df_hist_weeks.week.isin(df.week.unique())]
+    if all_weeks:
+        df_hist_weeks_sel = df_hist_weeks
+    else:
+        df_hist_weeks_sel=df_hist_weeks[df_hist_weeks.week.isin(df.week.unique())]
+    
     graph_hist = plot_hist_avg(df_hist_weeks_sel)
     
     #group by date
