@@ -68,7 +68,7 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
 ```python
-plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-24.csv"
+plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
 ```
@@ -166,7 +166,7 @@ df_date.reset_index(inplace=True)
 ```
 
 ```python
-px.line(df_date,x="date",y="cases_number")
+px.line(df_date,x="date",y="cases_number", title="Plague cases reported, 2017-2021")
 ```
 
 ### Geographical coverage
@@ -281,7 +281,13 @@ px.line(
     y="cases_number",
     title="Cases reported in urban areas, 2017 - 2021"
 )
+```
 
+There are extremely few cases identified in urban areas since 2017, in fact, none in 2020 and only 1 at the beginning of 2021. Even a histogram can't display this well, the table below suffices:
+
+```python
+df_date.groupby("year",as_index=False).sum() \
+    .drop("week",axis=1)
 ```
 
 ### Historical average
@@ -618,6 +624,21 @@ chart_2017_2021
 # chart_2017_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021.png"))
 ```
 
+Rather than looking at standard deviation, because we have so few years to work with, I think more informative to look at the other years outside 2017 to show if a spike as we've seen that then recedes has been observed in the past.
+
+```python
+chart_2018_2021=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]).mark_line().encode(
+    x='week:N',
+    y='cases_number',
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3",color_twentyone]))
+).properties(
+    width=600,
+    height=300,
+    title="Cases from 2018 to 2021"
+)
+chart_2018_2021
+```
+
 ```python
 chart_1721_sel = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
     x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
@@ -659,6 +680,19 @@ chart_1721_pp
 ```
 
 ```python
+chart_2018_2021_pp=alt.Chart(df_date_pp[df_date_pp.year.isin([2018,2019,2020,2021])]).mark_line().encode(
+    x='week:N',
+    y='cases_number',
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3",color_twentyone]))
+).properties(
+    width=600,
+    height=300,
+    title="Pneumonic cases from 2018 to 2021"
+)
+chart_2018_2021_pp
+```
+
+```python
 chart_1721_pp_sel = alt.Chart(df_date_pp[(df_date_pp.year.isin([2017,2021]))&(df_date_pp.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
     x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
     y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
@@ -685,6 +719,18 @@ Functions are very ugly as of now, have to be improved if we use them. Just used
 
 ```python
 key_graphs(df[df.year==2017],title="Cases in 2017")
+```
+
+```python
+key_graphs(df[df.year==2018],title="Cases in 2018")
+```
+
+```python
+key_graphs(df[df.year==2019],title="Cases in 2019")
+```
+
+```python
+key_graphs(df[df.year==2020],title="Cases in 2020")
 ```
 
 ```python
@@ -716,11 +762,11 @@ key_graphs(df[(df.year==2021)&(df.clinical_form=="PP")],title="Pneumonic cases i
 ```
 
 ```python
-# key_graphs(df[df.year==2020])
+key_graphs(df[(df.year==2021)&(df.week>=31)],title="Cases in Aug-Sep 2021")
 ```
 
 ```python
-
+df
 ```
 
 ### Conclusions
