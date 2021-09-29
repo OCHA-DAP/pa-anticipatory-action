@@ -95,6 +95,18 @@ There is an entry of week 53 in 2021, this cannot be correct so drop it (maybe s
 df=df[~((df.year==2021)&(df.week==53))]
 ```
 
+Read in urban classification for ADM3 areas.
+
+```python
+urban_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3 / "urban_classification"
+urban_filename = "mdg_adm3_urban_classification.csv"
+urban_path = urban_dir / urban_filename
+```
+
+```python
+adm3_urban = pd.read_csv(urban_path, index_col=0)
+```
+
 ### Understand the different columns
 We inspect the unique values and describe what they mean
 
@@ -239,6 +251,37 @@ gdf_adm2_merge.plot(column="cases_number",
                scheme="quantiles",
                missing_kwds={'color': 'lightgrey',"label":"no data"},
                figsize=(15,10),)
+```
+
+Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary.
+
+```python
+df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
+df_urb = df_urb[df_urb.urban_area.notnull()]
+
+#group by date
+df_date_urb=df_urb.loc[df_urb.urban_area].groupby(["date","year","week"],as_index=False).sum()
+df_date_urb.set_index("date",inplace=True)
+
+#add 0 to scale to September since data is missing
+df_date_urb = df_date_urb.append(pd.DataFrame([[0]],columns=["cases_number"], index=["2021-09-28"]))
+df_date_urb.index.names=["date"]
+
+#fill the weeks that are not included with 0, else they will be ignored when computing the historical average
+df_date_urb=df_date_urb.asfreq('W-Mon').fillna(0)
+#compute the year and week numbers from the dates
+df_date_urb[["year","week"]]=df_date_urb.index.isocalendar()[["year","week"]]
+df_date_urb.reset_index(inplace=True)
+```
+
+```python
+px.line(
+    df_date_urb,
+    x="date",
+    y="cases_number",
+    title="Cases reported in urban areas, 2017 - 2021"
+)
+
 ```
 
 ### Historical average
