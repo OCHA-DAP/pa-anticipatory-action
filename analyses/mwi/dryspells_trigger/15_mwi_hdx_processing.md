@@ -38,20 +38,24 @@ rainy_merged_df = pd.merge(rainy_df, adm_df[['ADM2_PCODE', 'ADM2_32EN', 'ADM1_EN
                      'season':'season_approx',
                      'ADM1_EN':'region'})
                      
-rainy_merged_df['onset_date'] = pd.to_datetime(rainy_merged_df.rainy_season_onset)    
-rainy_merged_df['cessation_date'] = pd.to_datetime(rainy_merged_df.dry_season_first_date) - pd.to_timedelta(1,unit='d')
-rainy_merged_df['onset_month'] = rainy_merged_df.onset_date.dt.month
-rainy_merged_df['cessation_month'] = rainy_merged_df.cessation_date.dt.month
-rainy_merged_df['rainy_season_duration'] = (rainy_merged_df.cessation_date - rainy_merged_df.onset_date).dt.days
-
 # filter rows for seasons fully calculated
 rainy_filtered_df = rainy_merged_df[~rainy_merged_df.season_approx.isin(['1999-2000', '2020-2021'])]
+    
+rainy_filtered_df['onset_date'] = pd.to_datetime(rainy_filtered_df.rainy_season_onset)    
+rainy_filtered_df['cessation_date'] = pd.to_datetime(rainy_filtered_df.dry_season_first_date) - pd.to_timedelta(1,unit='d')
+rainy_filtered_df['onset_month'] = rainy_filtered_df.onset_date.dt.month
+rainy_filtered_df['cessation_month'] = rainy_filtered_df.cessation_date.dt.month
+rainy_filtered_df['rainy_season_duration'] = (rainy_filtered_df.cessation_date - rainy_filtered_df.onset_date).dt.days
 
 # get precipitation for rainy season
 
 ij_df = pd.merge(rainy_filtered_df, daily_df, how='inner', on='ADM2_PCODE')
 ij_df = ij_df[(ij_df.date >= ij_df.onset_date) & (ij_df.date <= ij_df.cessation_date)].reset_index()
-prec_df = ij_df.groupby(['ADM2_PCODE', 'season_approx'])['mean_cell'].sum().reset_index().rename(columns={"mean_cell":"rainy_season_rainfall"})
+prec_df = ij_df.groupby(['ADM2_PCODE', 'season_approx'])['mean_cell'] \
+    .sum() \
+    .reset_index() \
+    .rename(columns={"mean_cell":"rainy_season_rainfall"}) \
+    .round(decimals = 2)
 
 # finalize rainy data
 rainy_season_df = pd.merge(rainy_filtered_df, prec_df, on = ['ADM2_PCODE', 'season_approx'])
