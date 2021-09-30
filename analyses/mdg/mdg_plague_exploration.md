@@ -41,11 +41,48 @@ from src.indicators.drought.config import Config
 ```
 
 ```python
+def preprocess_plague_data(path,list_cases_class=None):
+    df = pd.read_csv(path, delimiter = ";")
+    df.columns=df.columns.str.lower()
+    df.rename(columns={"mdg_com_code":"ADM3_PCODE"},inplace=True)
+    #to make pcodes correspond with shp file
+    df.ADM3_PCODE=df.ADM3_PCODE.str.replace("MDG","MG")
+    #In old data, there is an entry of week 53 in 2021, 
+    #this cannot be correct so drop it 
+    #not neatest method but good enough for now
+    df=df[~((df.year==2021)&(df.week==53))]
+    #create a datetime from the year and week as this is easier with plotting
+    df["date"]=df.apply(lambda x: date.fromisocalendar(x.year,x.week,1),axis=1)
+    df["date"]=pd.to_datetime(df["date"])
+    if list_cases_class is not None:
+        df=df[df.cases_class.isin(list_cases_class)]
+    return df
+```
+
+```python
+def plague_group_by_date(df):
+    #group by date
+    df_date=df.groupby(["date","year","week"],as_index=False).sum()
+    df_date.set_index("date",inplace=True)
+    #fill the weeks that are not included with 0, else they will be ignored when computing the historical average
+    df_date=df_date.asfreq('W-Mon').fillna(0)
+    #compute the year and week numbers from the dates
+    df_date[["year","week"]]=df_date.index.isocalendar()[["year","week"]]
+    df_date.reset_index(inplace=True)
+    return df_date
+```
+
+```python
 #define period of current interest
 sel_start_date = "2021-08-02"
 sel_end_date = "2021-09-20"
 sel_start_week = 31
 sel_end_week = 38
+```
+
+```python
+#was suggested to only look at the probable and confirmed cases, not the suspected 
+incl_cases_class=["PROB","CONF"]
 ```
 
 ```python
@@ -62,8 +99,8 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 ```
 
 ```python
-country_data_processed_dir = os.path.join(public_data_dir,config.PROCESSED_DIR,iso3)
-plot_dir = os.path.join(country_data_processed_dir,"plots","plague")
+country_data_private_processed_dir = os.path.join(config.DATA_DIR, config.PRIVATE_DIR,config.PROCESSED_DIR,iso3)
+plot_dir = os.path.join(country_data_private_processed_dir,"plots","plague")
 Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
@@ -74,25 +111,12 @@ plague_path = plague_dir / plague_data_filename
 ```
 
 ```python
-df=pd.read_csv(plague_path, delimiter = ";")
-```
-
-```python
-df.columns=df.columns.str.lower()
-df.rename(columns={"mdg_com_code":"ADM3_PCODE"},inplace=True)
-#to make pcodes correspond with shp file
-df.ADM3_PCODE=df.ADM3_PCODE.str.replace("MDG","MG")
+df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class)
 ```
 
 ```python
 df=df.sort_values(["year","week"])
 df
-```
-
-There is an entry of week 53 in 2021, this cannot be correct so drop it (maybe should understand where it comes from)
-
-```python
-df=df[~((df.year==2021)&(df.week==53))]
 ```
 
 Read in urban classification for ADM3 areas.
@@ -146,27 +170,48 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-#create a datetime from the year and week as this is easier with plotting
-df["date"]=df.apply(lambda x: date.fromisocalendar(x.year,x.week,1),axis=1)
-df["date"]=pd.to_datetime(df["date"])
-```
-
-```python
-#group by date
-df_date=df.groupby(["date","year","week"],as_index=False).sum()
-df_date.set_index("date",inplace=True)
-```
-
-```python
-#fill the weeks that are not included with 0, else they will be ignored when computing the historical average
-df_date=df_date.asfreq('W-Mon').fillna(0)
-#compute the year and week numbers from the dates
-df_date[["year","week"]]=df_date.index.isocalendar()[["year","week"]]
-df_date.reset_index(inplace=True)
+df_date=plague_group_by_date(df)
 ```
 
 ```python
 px.line(df_date,x="date",y="cases_number", title="Plague cases reported, 2017-2021")
+```
+
+### Compare new and old data set
+
+
+We had an initital dataset and later received an updated one. Compare these two datasets. 
+As can be seen in the graph, the cases in 2021 are slightly smoothed in the new dataset, which can be caused by newly available information. 
+Numbers for previous years also changed for some dates, and we are thus far unclear why this occurred. 
+
+```python
+df_old=preprocess_plague_data(plague_path_old,list_cases_class=incl_cases_class)
+
+```
+
+```python
+df_old_date=plague_group_by_date(df_old)
+```
+
+```python
+df_comb=df_date.merge(df_old_date,on="date",how="outer",suffixes=("_new","_old"))
+```
+
+```python
+px.line(df_comb,x="date",y=["cases_number_new","cases_number_old"], title="Plague cases reported, 2017-2021")
+```
+
+```python
+#small attempt to understand the differences between the two datasets
+bla=pd.concat([df,df_old]).drop_duplicates(keep=False)
+bla[bla.date>=df_old.date.min()].sort_values("date")
+```
+
+```python
+# merge_cols=['district', 'commune', 'ADM3_PCODE', 'year', 'week', 'clinical_form',
+#        'cases_class', 'status', 'date']
+# bla=df.merge(df_old, on=merge_cols, how= 'outer' ,indicator=True).loc[lambda x : x['_merge']=='left_only']
+# bla[bla.date>=df_old.date.min()]
 ```
 
 ### Geographical coverage
@@ -480,13 +525,9 @@ df_sel=df[(df.date>=sel_start_date)&(df.date<=sel_end_date)]
 df_sel.head()
 ```
 
-They state that 39 cases were reported.. 
-
 ```python
 df_sel.cases_number.sum()
 ```
-
-In report no NP cases
 
 ```python
 #have to change order of nb for this to work on restart
@@ -777,11 +818,6 @@ df
 - How do we average current numbers? The historical average is based on a rolling centred sum, we cannot do that with current numbers. Would taking a right rolling sum of 3 weeks (instead of 5) suffice? Though then probably underestimating.. Think if we do averaging of current numbers, should follow some methodology as for the historical average (i.e. have to change historical average method)
 
 
-
-#### Next steps
-- Urban vs rural
-- Inspect situation in 2017
-
 ```python
 
 ```
@@ -851,41 +887,3 @@ df
 ```
 
 Altairs definition of "ci" is a 95% confidence interval
-
-```python
-line = alt.Chart(df_hist_years).mark_line(color="red").encode(
-    x='week',
-    y='mean(rolling_sum)'
-)
-
-band = alt.Chart(df_hist_years).mark_errorband(extent='ci').encode(
-    x='week',
-    y=alt.Y('rolling_sum', title='cases/week'),
-)
-
-line_std = alt.Chart(df_hist_weeks).mark_line(color="yellow").encode(
-    x='week',
-    y='plus_164std'
-)
-
-band_std = alt.Chart(df_hist_weeks).mark_area(
-    opacity=0.5, color='gray'
-).encode(
-    x='week',
-    y='rs_mean',
-    y2='plus_164std',
-#     y2='upper'
-)
-
-line_2021 = alt.Chart(df_2021).mark_line(color="brown").encode(
-    x="week",
-    y="sum(cases_number)",
-)
-
-line_2017 = alt.Chart(df_2017).mark_line(color="green").encode(
-    x="week",
-    y="sum(cases_number)",
-)
-
-line_std + band_std + line + line_2021 + line_2017
-```
