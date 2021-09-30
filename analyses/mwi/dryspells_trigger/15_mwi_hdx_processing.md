@@ -5,7 +5,6 @@ Code to process MWI ARC2 rainy season and dry spell data frames for upload to HD
 ```python
 import pandas as pd
 import os
-import fuzzyjoin
 import numpy as np
 
 data_dir = os.environ["AA_DATA_DIR"]
