@@ -65,20 +65,20 @@ arc2_mwi_url="https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Af
 
 ```python
 # strange things happen when just overwriting the file, so delete it first if it already exists
-if os.path.exists(arc2_filepath):
-    os.remove(arc2_filepath)
+#if os.path.exists(arc2_filepath):
+#    os.remove(arc2_filepath)
 
 #have to authenticate by using a cookie
-cookies = {
-    '__dlauth_id': os.getenv("IRI_AUTH"),
-}
+#cookies = {
+#    '__dlauth_id': os.getenv("IRI_AUTH"),
+#}
 
 # logger.info("Downloading arc2 NetCDF file. This might take some time")
-response = requests.get(arc2_mwi_url, cookies=cookies, verify=False)
+#response = requests.get(arc2_mwi_url, cookies=cookies, verify=False)
 
-with open(arc2_filepath, "wb") as fd:
-    for chunk in response.iter_content(chunk_size=128):
-        fd.write(chunk)
+#with open(arc2_filepath, "wb") as fd:
+#    for chunk in response.iter_content(chunk_size=128):
+#        fd.write(chunk)
 ```
 
 ```python
