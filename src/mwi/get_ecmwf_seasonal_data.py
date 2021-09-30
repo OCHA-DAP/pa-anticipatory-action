@@ -50,7 +50,9 @@ def main(download=True, process=True):
         ecmwf_forecast.process(country_iso3=COUNTRY_ISO3)
 
     if process:
-        compute_stats_per_admin(country=COUNTRY_ISO3, interpolate=False)
+        compute_stats_per_admin(
+            iso3=COUNTRY_ISO3, add_col=["ADM1_EN"], interpolate=False
+        )
 
 
 if __name__ == "__main__":

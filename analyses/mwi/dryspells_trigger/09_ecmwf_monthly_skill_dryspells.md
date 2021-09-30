@@ -51,7 +51,8 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
-use_incorrect_area_coords = True
+use_incorrect_area_coords = False
+interpolate=False
 ```
 
 ```python
@@ -78,15 +79,11 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_mon
 ```
 
 ```python
-ecmwf_country_data_processed_dir = Path(country_data_processed_dir) / "ecmwf" / "seasonal-monthly-single-levels"
-if use_incorrect_area_coords:
-    ecmwf_country_data_processed_dir = ecmwf_country_data_processed_dir / "incorrect-coords"
-
 #using the mean value of the admin
 if use_incorrect_area_coords:
     aggr_meth="mean_cell"
 else:
-    aggr_meth = "mean_ADM1_EN"
+    aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -247,15 +244,19 @@ And select the data of interest
 Note: the forecast data is an ensemble model. The statistics over the whole admin region per ensemble member were first computed, after which we combine the ensemble models with different percentile thresholds. While we think this methodology makes sense, one could also argue to first group by the ensemble members and then aggregating to the admin. This was also tested and no large differences were found. 
 
 ```python
+start_year=2000
+end_year=2020
+#just locking the date to keep the analysis the same even though data is added
+#might wanna delete again later
+end_date="5-1-2021"
+```
+
+```python
 #read the ecmwf forecast per adm1 per date and concat all dates
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
-file_pattern = "mwi_seasonal-monthly-single-levels_v5"
-if use_incorrect_area_coords:
-    file_pattern = file_pattern + "_incorrect-coords"
-file_pattern = file_pattern + "_2*.csv"
-file_pattern_path = os.path.join(ecmwf_country_data_processed_dir, file_pattern)
-all_files = glob.glob(file_pattern_path)
+date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
+all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -273,7 +274,6 @@ print(len(all_files))
 
 ```python
 #for now using mean cell as this requires one variable less to be set (else need to set percentage of cells)
-aggr_meth="mean_cell"
 #for earlier dates, the model included less members --> values for those members are nan --> remove those rows
 df_for = df_for[df_for[aggr_meth].notna()]
 #start month of the rainy season
@@ -288,7 +288,7 @@ df_for["season_approx"]=np.where(df_for.date.dt.month>=start_rainy_seas,df_for.d
 sel_adm=["Southern"]
 sel_months=[1,2]
 sel_leadtime=[1,2,3,4,5,6]
-seas_years=range(2000,2020)
+seas_years=range(start_year,end_year)
 
 adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
@@ -726,6 +726,7 @@ df_pr_sel[df_pr_sel.leadtime.isin([2,4])]
 ```
 
 ### Determine skill based on set threshold, with varying probability
+**NOTE: from here on the code hasn't been kept up-to-date, so might not work anymore**
 From here on different methods of defining the threshold and probability are experimented with. However, we chose to go with the first method that was presented above.    
 
 Threshold is set based on the analysis of observed monthly precipitation and dry spells. 

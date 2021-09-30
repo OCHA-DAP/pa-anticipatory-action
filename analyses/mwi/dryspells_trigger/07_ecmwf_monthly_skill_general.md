@@ -54,7 +54,7 @@ hdx_blue='#66B0EC'
 #### Set config values
 
 ```python
-use_incorrect_area_coords=True
+use_incorrect_area_coords=False
 ```
 
 ```python

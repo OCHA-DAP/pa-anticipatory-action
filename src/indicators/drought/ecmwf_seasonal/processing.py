@@ -130,7 +130,8 @@ def compute_stats_per_admin(
         )
 
         ds = ds.interp(latitude=new_lat, longitude=new_lon, method="nearest")
-
+    if add_col is None:
+        add_col = []
     # loop over dates
     if date_list is None:
         date_list = ds.time.values
@@ -162,7 +163,7 @@ def compute_stats_per_admin(
                 lat_coord="latitude",
             )
             df = df.merge(
-                gdf_adm[add_col + [pcode_col]], on=pcode_col, how="left"
+                gdf_adm[[pcode_col] + add_col], on=pcode_col, how="left"
             )
             df["date"] = date_dt
             df.to_csv(output_path, index=False)

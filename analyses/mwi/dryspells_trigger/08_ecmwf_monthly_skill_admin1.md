@@ -53,14 +53,14 @@ import plotly.graph_objects as go
 #### Set config values
 
 ```python
-use_incorrect_area_coords = True
+use_incorrect_area_coords = False
+interpolate=False
 ```
 
 ```python
-country="mwi"
+country_iso3="mwi"
 config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
+parameters = config.parameters(country_iso3)
 
 country_data_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / country_iso3
 
@@ -68,15 +68,11 @@ monthly_precip_path=Path(country_data_processed_dir) / "chirps" / "chirps_monthl
 ```
 
 ```python
-ecmwf_country_data_processed_dir = country_data_processed_dir / "ecmwf" / "seasonal-monthly-single-levels"
-if use_incorrect_area_coords:
-    ecmwf_country_data_processed_dir = ecmwf_country_data_processed_dir / "incorrect-coords"
-
 #using the mean value of the admin
 if use_incorrect_area_coords:
     aggr_meth="mean_cell"
 else:
-    aggr_meth = "mean_ADM1_EN"
+    aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -144,7 +140,12 @@ sel_months=[1,2]
 sel_leadtime=[1,2,3,4,5,6]
 #for some plots we can only show one leadtime, set that here
 sel_lt_plt=4
-seas_years=range(1993,2020)#range(2000,2020)
+start_year=2000
+end_year=2020
+#just locking the date to keep the analysis the same even though data is added
+#might wanna delete again later
+end_date="5-1-2021"
+seas_years=range(start_year,end_year)
 
 adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
@@ -160,12 +161,8 @@ Note: The statistics over the whole admin region per ensemble member were first 
 #read the ecmwf forecast per adm1 per date and concat all dates
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
-file_pattern = "mwi_seasonal-monthly-single-levels_v5"
-if use_incorrect_area_coords:
-    file_pattern = file_pattern + "_incorrect-coords"
-file_pattern = file_pattern + "_2*.csv"
-file_pattern_path = os.path.join(ecmwf_country_data_processed_dir, file_pattern)
-all_files = glob.glob(file_pattern_path)
+date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
+all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -279,23 +276,25 @@ df_for_sel_plot
 ```
 
 ```python
-df_for_sel_plot=df_for_quant[(df_for_quant.leadtime==sel_lt_plt)&(df_for_quant.ADM1_EN.isin(sel_adm))]
+
+df_for_sel_plot=df_for[(df_for.leadtime==sel_lt_plt)&(df_for.ADM1_EN.isin(sel_adm))]
 df_obs_sel_plot=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))]
 
-df_for_perc25=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False)[stat_col_forec].quantile(0.25)
-df_for_perc75=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False)[stat_col_forec].quantile(0.75)
+df_for_perc50=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(0.5)
+df_for_perc25=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(0.25)
+df_for_perc75=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(0.75)
 fig = go.Figure()
 # Create and style traces
 fig.add_trace(go.Scatter(
-    x=df_for_sel_plot.date, 
-    y=df_for_sel_plot[stat_col_forec], 
+    x=df_for_perc50.date, 
+    y=df_for_perc50[aggr_meth], 
     name='Forecasted median',
     line=dict(color='firebrick', width=4)
 ))
 fig.add_trace(go.Scatter(
     name='Upper Bound',
     x=df_for_perc75.date,
-    y=df_for_perc75[stat_col_forec],
+    y=df_for_perc75[aggr_meth],
     mode='lines',
     marker=dict(color="#444"),
     line=dict(width=0),
@@ -304,7 +303,7 @@ fig.add_trace(go.Scatter(
 fig.add_trace(go.Scatter(
     name='Forecasted 25-75 percentile',
     x=df_for_perc25.date,
-    y=df_for_perc25[stat_col_forec],
+    y=df_for_perc25[aggr_meth],
     marker=dict(color="#444"),
     line=dict(width=0),
     mode='lines',
