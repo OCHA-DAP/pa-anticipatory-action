@@ -6,14 +6,8 @@
 ```python
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import geopandas as gpd
-from rasterstats import zonal_stats
-import xarray as xr
-import cftime
 import rioxarray
-from shapely.geometry import mapping
-import seaborn as sns
 ```
 
 ```python
@@ -24,10 +18,8 @@ import os
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
-from src.utils_general.utils import download_ftp
-from src.utils_general.plotting import plot_raster_boundaries_clip
-from src.indicators.drought.chirps_rainfallobservations import clip_chirps_monthly_bounds, compute_seasonal_lowertercile_raster, \
-get_filepath_seasonal_lowertercile_raster, get_filepath_chirps_monthly
+from src.indicators.drought.chirps_rainfallobservations import compute_seasonal_lowertercile_raster, \
+get_filepath_seasonal_lowertercile_raster
 ```
 
 #### Set config values
@@ -39,23 +31,7 @@ parameters = config.parameters(iso3)
 
 public_data_dir = os.path.join(config.DATA_DIR, config.PUBLIC_DIR)
 country_data_raw_dir = os.path.join(public_data_dir,config.RAW_DIR,iso3)
-country_data_processed_dir = os.path.join(public_data_dir,config.PROCESSED_DIR,iso3)
-
-chirps_glb_dir=os.path.join(public_data_dir,config.RAW_DIR,config.GLOBAL_ISO3,"chirps")
-chirps_mwi_dir=os.path.join(country_data_processed_dir,"chirps")
-chirps_glb_monthly_path=os.path.join(chirps_glb_dir,"chirps_global_monthly.nc")
-chirps_monthly_mwi_path=os.path.join(chirps_mwi_dir,"chirps_mwi_monthly.nc")
-```
-
-```python
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
-adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
-```
-
-```python
-#date to make plots for to test values. To be sure this is consistent across the different plots
-test_date=cftime.DatetimeGregorian(2020, 1, 1, 0, 0, 0, 0)
-test_date_dtime="2020-1-1"
 ```
 
 ```python
@@ -81,12 +57,8 @@ da_ondmam=da.where(da.time.dt.month.isin([12,5]), drop=True)
 da_ondmam.sel(time=slice('2000', '2021')).plot(    
     col="time",
     col_wrap=4,
-#     row="L",
-#     cmap=mpl.cm.YlOrRd, #mpl.cm.RdORYlBu_r,
-#     robust=True,
     levels=[-666,0],
     colors=['#cccccc','#f2645a'],
-#     cmap="YlOrRd",
     cbar_kwargs={
         "orientation": "horizontal",
         "shrink": 0.8,
@@ -148,12 +120,8 @@ da_ondmam_som=da_ondmam.rio.clip(gdf_som["geometry"])
 da_ondmam_som.sel(time=slice('2000', '2021')).plot(    
     col="time",
     col_wrap=4,
-#     row="L",
-#     cmap=mpl.cm.YlOrRd, #mpl.cm.RdORYlBu_r,
-#     robust=True,
     levels=[-666,0],
     colors=['#cccccc','#f2645a'],
-#     cmap="YlOrRd",
     cbar_kwargs={
         "orientation": "horizontal",
         "shrink": 0.8,
