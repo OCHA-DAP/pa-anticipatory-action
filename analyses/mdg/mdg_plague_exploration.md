@@ -108,6 +108,8 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
+plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-24.csv"
+plague_path_old = plague_dir / plague_data_filename_old
 ```
 
 ```python
@@ -183,11 +185,6 @@ px.line(df_date,x="date",y="cases_number", title="Plague cases reported, 2017-20
 We had an initital dataset and later received an updated one. Compare these two datasets. 
 As can be seen in the graph, the cases in 2021 are slightly smoothed in the new dataset, which can be caused by newly available information. 
 Numbers for previous years also changed for some dates, and we are thus far unclear why this occurred. 
-
-```python
-plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-24.csv"
-plague_path_old = plague_dir / plague_data_filename_old
-```
 
 ```python
 df_old=preprocess_plague_data(plague_path_old,list_cases_class=incl_cases_class)
