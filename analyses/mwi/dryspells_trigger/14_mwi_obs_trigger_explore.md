@@ -204,7 +204,7 @@ Merge the dry season onset and rainy season data frames for saving.
 
 ```python
 arc2_rs_df = pd.merge(rainy_onset_df, rainy_df[['pcode', 'season', 'dry_season_first_date']], on = ['pcode', 'season'], how = 'left')
-arc2_rs_df.to_csv(RAINY_SEASON, index=False)
+#arc2_rs_df.to_csv(RAINY_SEASON, index=False)
 ```
 
 Okay, now we can merge back in with old dataset to compare with our triggers.
