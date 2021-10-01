@@ -1,14 +1,13 @@
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-from rasterstats import zonal_stats
-import xarray as xr
 import logging
-
-
-from pathlib import Path
-import sys
 import os
+import sys
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import xarray as xr
+from rasterstats import zonal_stats
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
@@ -56,12 +55,14 @@ class Floodscan:
         end_date: str = "2020-12-31",
     ):
         """
-        Load data, call function to compute statistics per admin, and save the results to a csv
+        Load data, call function to compute statistics per admin,
+        and save the results to a csv
         Args:
             country_name: name of the country of interest
             adm_level: admin level to compute the statistics on
             custom_path: file path to the custom area shapefile
-            custom_id_col: the name of the id column for features in the custom area shapefile
+            custom_id_col: the name of the id column for features
+            in the custom area shapefile
             custom_name: the name of the custom area (for the output file)
             start_date: to filter by start date
             end_date: to filter by end date
@@ -72,7 +73,8 @@ class Floodscan:
 
         ds = self.read_raw_dataset().sel(time=slice(start_date, end_date))
 
-        # get the affine transformation of the dataset. looks complicated, but haven't found better way to do it
+        # get the affine transformation of the dataset.
+        # looks complicated, but haven't found better way to do it
         coords_transform = (
             ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
             .rio.write_crs("EPSG:4326")
@@ -84,7 +86,10 @@ class Floodscan:
 
             # this takes a few hours to compute
             df = self.compute_stats_per_area(
-                ds, coords_transform, boundaries_path, custom_id_col,
+                ds,
+                coords_transform,
+                boundaries_path,
+                custom_id_col,
             )
             self._write_to_processed_file(
                 country_iso3, adm_level, df, custom_name
@@ -125,9 +130,11 @@ class Floodscan:
             ds: the xarray dataset with values per raster cell
             raster_transform: the affine transformation of ds
             bound_path: the path to the boundaries shp file
-            id_col: the name of the column containing the boundary IDs
+            id_col: the name of the column containing the
+            boundary IDs
             data_var: the variable of interest in ds
-            percentile_list: list of thresholds to compute the value x% of the cells is below at
+            percentile_list: list of thresholds to compute
+            the value x% of the cells is below at
 
         Returns:
             df_hist: dataframe with the statistics per admin
@@ -149,7 +156,9 @@ class Floodscan:
                     nodata=np.nan,
                 )
             )[["mean", "max", "min"]]
-            # TODO: the percentiles seem to always return 0, even if setting the p to 0.00001. Don't understand why yet..
+            # TODO: the percentiles seem to always return 0,
+            #  even if setting the p to 0.00001.
+            #  Don't understand why yet..
             df[
                 [f"percentile_{str(p)}" for p in percentile_list]
             ] = pd.DataFrame(
@@ -177,10 +186,13 @@ class Floodscan:
         return df_hist
 
     def read_processed_dataset(
-        self, country_iso3: str, adm_level: int,
+        self,
+        country_iso3: str,
+        adm_level: int,
     ):
         filepath = self._get_processed_filepath(
-            country_iso3=country_iso3, adm_level=adm_level,
+            country_iso3=country_iso3,
+            adm_level=adm_level,
         )
         return pd.read_csv(filepath, index_col=False)
 
@@ -199,7 +211,8 @@ class Floodscan:
             )
         else:
             filepath = self._get_processed_filepath(
-                country_iso3=country_iso3, adm_level=adm_level,
+                country_iso3=country_iso3,
+                adm_level=adm_level,
             )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         filepath.unlink(missing_ok=True)
@@ -207,7 +220,9 @@ class Floodscan:
         df.to_csv(filepath)
         return filepath
 
-    def _get_raw_filepath(self,):
+    def _get_raw_filepath(
+        self,
+    ):
         directory = (
             DATA_DIR
             / PRIVATE_DATA_DIR

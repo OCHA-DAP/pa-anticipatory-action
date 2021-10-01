@@ -1,8 +1,8 @@
-# CERF Anticipatory Action Pilot in Burkina Faso
+# Burkina Faso Anticipatory Action
 
 [![Generic badge](https://img.shields.io/badge/STATUS-UNDER%20DEVELOPMENT-%23007CE0)](https://shields.io/)
 
-Ongoing work since April 2021. Will not be monitored before March 2022. 
+Ongoing work since April 2021. Trigger work completed but framework still under development. Will not be monitored before March 2022. 
 
 Last updated: Aug 2021
 
@@ -10,15 +10,12 @@ Last updated: Aug 2021
 The pilot on Anticipatory Action in Burkina Faso is on seasonal drought. 
 To determine the likelihood of such a drought, we make use of precipitation as meteorological indicator. 
 More specifically we look at the probability of below-average precipitation according to the seasonal forecast
-by the International Research Institute for Climate and Society (IRI).  
-The pilot covers four ADMIN1 regions, namely Boucle du Mouhoun, Nord, Centre-Nord, and Sahel.
+by the International Research Institute for Climate and Society (IRI).  The pilot covers four ADMIN1 regions, namely Boucle du Mouhoun, Nord, Centre-Nord, and Sahel.
  
 ## Overview of analysis
-We first explored data on humanitarian risk and vulnerabilities. 
-A summary of this can be found in `docs/bfa_risk_overview.html`. 
+We first explored data on humanitarian risk and vulnerabilities to help define the geographic scope and shock for the pilot. This exploration is summarized in [this document](https://ocha-dap.github.io/pa-anticipatory-action/analyses/bfa/notebooks/bfa_risk_overview.html), the code for which can be found in  `docs/bfa_risk_overview.Rmd` and `drought_trigger/01_data_summary.R`. 
 
-Thereafter we analyzed observed and forecasted precipitation patterns. 
-These can be found in `notebooks`. 
+Thereafter we analyzed observed and forecasted precipitation patterns. This code can be found in the `.md` files in the `drought_trigger/` directory. 
 
 ## Data description
 

@@ -1,12 +1,12 @@
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 import xarray as xr
 
 from src.indicators.flooding.glofas import glofas
-from src.indicators.flooding.glofas.area import Area
+from src.utils_general.area import Area
 
 
 def test_expand_dims():

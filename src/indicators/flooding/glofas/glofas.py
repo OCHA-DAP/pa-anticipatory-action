@@ -2,18 +2,17 @@
 Download raster data from GLOFAS and extracts time series of water
 discharge in selected locations
 """
-from pathlib import Path
 import logging
-import time
 import os
+import time
+from pathlib import Path
 from typing import Dict, List, Union
 
+import cdsapi
 import numpy as np
 import xarray as xr
-import cdsapi
 
-from src.indicators.flooding.glofas.area import Area, Station
-
+from src.utils_general.area import Area, Station
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"])
 PUBLIC_DATA_DIR = "public"
@@ -95,7 +94,11 @@ class Glofas:
         cdsapi.Client().retrieve(
             name=self.cds_name,
             request=self._get_query(
-                area=area, version=version, year=year, month=month, leadtime=leadtime,
+                area=area,
+                version=version,
+                year=year,
+                month=month,
+                leadtime=leadtime,
             ),
             target=filepath,
         )
@@ -158,7 +161,8 @@ class Glofas:
                 str(x + 1).zfill(2) for x in range(31)
             ],
             "area": area.list_for_api(
-                do_not_round=self.use_incorrect_area_coords
+                round_val=None if self.use_incorrect_area_coords else 0.1,
+                offset_val=None if self.use_incorrect_area_coords else 0.05,
             ),
             "system_version": (
                 f"version_{version}_{self.system_version_minor[version]}"
@@ -218,7 +222,9 @@ class Glofas:
         leadtime: [int, list] = None,
     ) -> Path:
         filepath = self._get_processed_filepath(
-            country_iso3=country_iso3, version=version, leadtime=leadtime,
+            country_iso3=country_iso3,
+            version=version,
+            leadtime=leadtime,
         )
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         # Netcdf seems to have problems overwriting; delete the file if
@@ -253,7 +259,9 @@ class Glofas:
         leadtime: [int, list] = None,
     ):
         filepath = self._get_processed_filepath(
-            country_iso3=country_iso3, version=version, leadtime=leadtime,
+            country_iso3=country_iso3,
+            version=version,
+            leadtime=leadtime,
         )
         return xr.load_dataset(filepath)
 
@@ -288,7 +296,10 @@ class GlofasReanalysis(Glofas):
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
             super()._download(
-                country_iso3=country_iso3, area=area, year=year, version=version,
+                country_iso3=country_iso3,
+                area=area,
+                year=year,
+                version=version,
             )
 
     def process(
@@ -301,7 +312,9 @@ class GlofasReanalysis(Glofas):
         logger.info(f"Processing GloFAS Reanalysis v{version}")
         filepath_list = [
             self._get_raw_filepath(
-                country_iso3=country_iso3, version=version, year=year,
+                country_iso3=country_iso3,
+                version=version,
+                year=year,
             )
             for year in range(self.year_min, self.year_max + 1)
         ]
@@ -318,7 +331,9 @@ class GlofasReanalysis(Glofas):
             )
         # Write out the new dataset to a file
         self._write_to_processed_file(
-            country_iso3=country_iso3, version=version, ds=ds_new,
+            country_iso3=country_iso3,
+            version=version,
+            ds=ds_new,
         )
 
 
@@ -409,7 +424,9 @@ class GlofasForecastBase(Glofas):
             if not split_by_leadtimes:
                 coord_names += ["step"]
             ds_new = _get_station_dataset(
-                stations=stations, ds=ds, coord_names=coord_names,
+                stations=stations,
+                ds=ds,
+                coord_names=coord_names,
             )
             # Write out the new dataset to a file
             self._write_to_processed_file(

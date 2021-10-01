@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -8,9 +8,9 @@ from scipy.stats import rankdata
 
 from src.indicators.flooding.glofas import glofas
 from src.utils_general.statistics import (
+    calc_crps,
     get_return_period_function_analytical,
     get_return_period_function_empirical,
-    calc_crps,
 )
 
 logger = logging.getLogger(__name__)
