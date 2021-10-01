@@ -108,6 +108,8 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
+plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-24.csv"
+plague_path_old = plague_dir / plague_data_filename_old
 ```
 
 ```python
@@ -241,10 +243,9 @@ It seems that all the pcodes that are not foundin the adm3 shapefile are actuall
 Many adm3 pcodes are not in the plague data but that can just indicate there were no cases ever reported in those adm3's
 
 ```python
-def plot_adm3(df,title=""):
+def plot_adm3(df,title="",predef_bins=[1,2,5,10,15,20,100,200]):
     fig,ax=plt.subplots(figsize=(15,10))
     gdf_adm3_merge=gdf_adm3.merge(df,on="ADM3_PCODE",how="outer")
-    predef_bins=[1,2,5,10,15,20,100,1000]
     scheme = None
     norm = mcolors.BoundaryNorm(boundaries=predef_bins, ncolors=256)
     legend_kwds = None
@@ -332,6 +333,11 @@ There are extremely few cases identified in urban areas since 2017, in fact, non
 
 ```python
 df_date.groupby("year",as_index=False).sum() \
+    .drop("week",axis=1)
+```
+
+```python
+df_date_urb.groupby("year",as_index=False).sum() \
     .drop("week",axis=1)
 ```
 
@@ -653,7 +659,7 @@ color_seventeen='#007ce0'
 ```python
 chart_2017_2021=alt.Chart(df_date[df_date.year.isin([2017,2021])]).mark_line().encode(
     x='week:N',
-    y='cases_number',
+    y=alt.Y('cases_number',title="number of cases"),
     color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone]))
 ).properties(
     width=600,
@@ -661,8 +667,9 @@ chart_2017_2021=alt.Chart(df_date[df_date.year.isin([2017,2021])]).mark_line().e
     title="Cases in 2017 and 2021"
 )
 chart_2017_2021
-# #not working
-# chart_2017_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021.png"))
+# # you need to have altair_saver installed to make this work
+# # also the scale_factor is not working with all installations
+# chart_2017_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021.png"),scale_factor=20)
 ```
 
 Rather than looking at standard deviation, because we have so few years to work with, I think more informative to look at the other years outside 2017 to show if a spike as we've seen that then recedes has been observed in the past.
@@ -678,6 +685,7 @@ chart_2018_2021=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]).mar
     title="Cases from 2018 to 2021"
 )
 chart_2018_2021
+# chart_2018_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2018_till_2021.png"),scale_factor=20)
 ```
 
 ```python
@@ -716,7 +724,6 @@ chart_1721_pp = alt.Chart(df_date_pp[df_date_pp.year.isin([2017,2021])]).mark_li
     title="Pneunomic cases in 2017 and 2021"
 )
 chart_1721_pp
-# #not working
 # chart_1721_pp.save(os.path.join(plot_dir,f"{iso3}_pp_cases_2017_2021.png"))
 ```
 
@@ -731,6 +738,7 @@ chart_2018_2021_pp=alt.Chart(df_date_pp[df_date_pp.year.isin([2018,2019,2020,202
     title="Pneumonic cases from 2018 to 2021"
 )
 chart_2018_2021_pp
+# chart_2018_2021_pp.save(os.path.join(plot_dir,f"{iso3}_pp_cases_2018_till_2021.png"))
 ```
 
 ```python
