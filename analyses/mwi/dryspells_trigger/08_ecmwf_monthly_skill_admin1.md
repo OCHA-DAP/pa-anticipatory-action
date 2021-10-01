@@ -53,14 +53,26 @@ import plotly.graph_objects as go
 #### Set config values
 
 ```python
-country="mwi"
-config=Config()
-parameters = config.parameters(country)
-country_iso3=parameters["iso3_code"]
+use_incorrect_area_coords = False
+interpolate=False
+```
 
-country_data_processed_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR,country_iso3)
-ecmwf_country_data_processed_dir = os.path.join(country_data_processed_dir,"ecmwf")
-monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
+```python
+country_iso3="mwi"
+config=Config()
+parameters = config.parameters(country_iso3)
+
+country_data_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / country_iso3
+
+monthly_precip_path=Path(country_data_processed_dir) / "chirps" / "chirps_monthly_total_precipitation_admin1.csv"
+```
+
+```python
+#using the mean value of the admin
+if use_incorrect_area_coords:
+    aggr_meth="mean_cell"
+else:
+    aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -128,7 +140,12 @@ sel_months=[1,2]
 sel_leadtime=[1,2,3,4,5,6]
 #for some plots we can only show one leadtime, set that here
 sel_lt_plt=4
-seas_years=range(1993,2020)#range(2000,2020)
+start_year=2000
+end_year=2020
+#just locking the date to keep the analysis the same even though data is added
+#might wanna delete again later
+end_date="5-1-2021"
+seas_years=range(start_year,end_year)
 
 adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
@@ -144,15 +161,14 @@ Note: The statistics over the whole admin region per ensemble member were first 
 #read the ecmwf forecast per adm1 per date and concat all dates
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
-all_files = glob.glob(os.path.join(ecmwf_country_data_processed_dir, "mwi_seasonal-monthly-single-levels_v5_2*.csv"))
+date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
+all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
 ```
 
 ```python
-#using the mean value of the admin
-aggr_meth="mean_cell"
 #set the value to the 50% percentile across all ensemble members. This is further explained in 08_ecmwf_monthly_skill_dryspells.md
 probability=0.5
 #for earlier dates, the model included less members --> values for those members are nan --> remove those rows
@@ -183,12 +199,19 @@ df_obs_month["date_month"]=df_obs_month.date.dt.to_period("M")
 #### Merge the two datasets
 
 ```python
+stat_col_forec = f"{aggr_meth}_forec"
+df_for_quant.rename(columns={aggr_meth:stat_col_forec},inplace=True)
+stat_col_obs = "mean_cell_obs"
+df_obs_month.rename(columns={"mean_cell":stat_col_obs},inplace=True)
+```
+
+```python
 #merge forecast and observed
 df_obsfor=df_for_quant.merge(df_obs_month,how="left",on=["date_month","ADM1_EN"],suffixes=("_forec","_obs"))
 ```
 
 ```python
-df_obsfor["diff_forecobs"]=df_obsfor["mean_cell_forec"]-df_obsfor["mean_cell_obs"]
+df_obsfor["diff_forecobs"]=df_obsfor[stat_col_forec]-df_obsfor[stat_col_obs]
 ```
 
 Create one df with only the admins, months, and leadtimes of interest for the trigger. This is further explained in `08_ecmwf_monthly_skill_dryspells.md`
@@ -237,35 +260,41 @@ df_obsfor_lt=df_obsfor_sel[(df_obsfor_sel.leadtime==lt_rp)&(df_obsfor_sel.date_f
 print(f"Occurrences observed <={thresh_obs} in {calendar.month_name[month_rp]}: "
       f"{len(df_obsfor_lt[df_obsfor_lt.mean_cell_obs<=thresh_obs])} (of {len(df_obsfor_lt)}={len(df_obsfor_lt[df_obsfor_lt.mean_cell_obs<=thresh_obs])/len(df_obsfor_lt)*100:.2f}%)")
 print(f"Occurrences forecasted <={thresh_obs} in {calendar.month_name[month_rp]} with leadtime {lt_rp}: "
-      f"{len(df_obsfor_lt[df_obsfor_lt.mean_cell_forec<=thresh_for])} (of {len(df_obsfor_lt)}={len(df_obsfor_lt[df_obsfor_lt.mean_cell_forec<=thresh_for])/len(df_obsfor_lt)*100:.2f}%)")
+      f"{len(df_obsfor_lt[df_obsfor_lt[stat_col_forec]<=thresh_for])} (of {len(df_obsfor_lt)}={len(df_obsfor_lt[df_obsfor_lt[stat_col_forec]<=thresh_for])/len(df_obsfor_lt)*100:.2f}%)")
 ```
 
 ```python
 df_obsfor[f"mean_cell_obs_{thresh_obs}"]=np.where(df_obsfor.mean_cell_obs<=thresh_obs,1,0)
-df_obsfor[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor.mean_cell_forec<=thresh_for,1,0)
+df_obsfor[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor[stat_col_forec]<=thresh_for,1,0)
 df_obsfor_sel[f"mean_cell_obs_{thresh_obs}"]=np.where(df_obsfor_sel.mean_cell_obs<=thresh_obs,1,0)
-df_obsfor_sel[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor_sel.mean_cell_forec<=thresh_for,1,0)
+df_obsfor_sel[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor_sel[stat_col_forec]<=thresh_for,1,0)
 cm_th=compute_confusionmatrix_leadtime(df_obsfor_sel,f"mean_cell_obs_{thresh_obs}",f"mean_cell_forec_{thresh_for}",f"Observed <={thresh_obs}",f"Forecasted <={thresh_for}",title=f"Confusion matrices of below threshold monthly precipitation during January and February in the Southern region of Malawi")
 ```
 
 ```python
-df_for_sel_plot=df_for_quant[(df_for_quant.leadtime==sel_lt_plt)&(df_for_quant.ADM1_EN.isin(sel_adm))]
+df_for_sel_plot
+```
+
+```python
+
+df_for_sel_plot=df_for[(df_for.leadtime==sel_lt_plt)&(df_for.ADM1_EN.isin(sel_adm))]
 df_obs_sel_plot=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))]
 
-df_for_perc25=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False)["mean_cell"].quantile(0.25)
-df_for_perc75=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False)["mean_cell"].quantile(0.75)
+df_for_perc50=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(0.5)
+df_for_perc25=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(0.25)
+df_for_perc75=df_for_sel_plot.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(0.75)
 fig = go.Figure()
 # Create and style traces
 fig.add_trace(go.Scatter(
-    x=df_for_sel_plot.date, 
-    y=df_for_sel_plot.mean_cell, 
+    x=df_for_perc50.date, 
+    y=df_for_perc50[aggr_meth], 
     name='Forecasted median',
     line=dict(color='firebrick', width=4)
 ))
 fig.add_trace(go.Scatter(
     name='Upper Bound',
     x=df_for_perc75.date,
-    y=df_for_perc75.mean_cell,
+    y=df_for_perc75[aggr_meth],
     mode='lines',
     marker=dict(color="#444"),
     line=dict(width=0),
@@ -274,7 +303,7 @@ fig.add_trace(go.Scatter(
 fig.add_trace(go.Scatter(
     name='Forecasted 25-75 percentile',
     x=df_for_perc25.date,
-    y=df_for_perc25.mean_cell,
+    y=df_for_perc25[aggr_meth],
     marker=dict(color="#444"),
     line=dict(width=0),
     mode='lines',
@@ -284,7 +313,7 @@ fig.add_trace(go.Scatter(
 ))
 fig.add_trace(go.Scatter(
     x=df_obs_sel_plot.date, 
-    y=df_obs_sel_plot.mean_cell, 
+    y=df_obs_sel_plot[stat_col_obs], 
     name = 'Observed',
     line=dict(color='royalblue', width=4)
 ))
@@ -304,7 +333,7 @@ From the above graph we can see that the forecasts generally follow the trend qu
 While above we inspected the values for one leadtime, we are also interested in the range of forecasted values across all leadtimes, which is shown below. In this case the grey area doesn't indicate the confidence interval across ensemble members, but instead the min and max forecasted 50% values across all leadtimes
 
 ```python
-df_for_ci_lt=calc_ci(df_for_quant.groupby(['ADM1_EN','date'])['mean_cell'])
+df_for_ci_lt=calc_ci(df_for_quant.groupby(['ADM1_EN','date'])[stat_col_forec])
 stats_lt_sel_plot=df_for_ci_lt[df_for_ci_lt.ADM1_EN.isin(sel_adm)]
 df_obs_sel_plot=df_obs_month[df_obs_month.ADM1_EN.isin(sel_adm)]
 fig = go.Figure()
@@ -332,7 +361,7 @@ fig.add_trace(go.Scatter(
 ))
 fig.add_trace(go.Scatter(
     x=df_obs_sel_plot.date, 
-    y=df_obs_sel_plot.mean_cell, 
+    y=df_obs_sel_plot[stat_col_obs], 
     name = 'Observed',
     line=dict(color='royalblue', width=4)
 ))
@@ -387,17 +416,22 @@ From the below graphs we can see that
 - The bias depends on the month, but is during most months of the rainy season lower than across the whole year. 
 
 ```python
-df_mpe_thresh=compute_mpe_cats(df_obsfor[df_obsfor["mean_cell_forec"]>=20],"mean_cell_obs","mean_cell_forec",leadtime_list,threshold_list)
+df_mpe_thresh=compute_mpe_cats(df_obsfor[df_obsfor[stat_col_forec]>=20],stat_col_obs,stat_col_forec,leadtime_list,threshold_list)
 plot_mpe(df_mpe_thresh,title="Bias for different thresholds")
 ```
 
 ```python
-df_mpe_adm=compute_mpe_cats(df_obsfor[df_obsfor["mean_cell_forec"]>=20],"mean_cell_obs","mean_cell_forec",leadtime_list,adm_list=list(df_obsfor.ADM1_EN.unique()))
+df_mpe_adm=compute_mpe_cats(df_obsfor[df_obsfor[stat_col_forec]>=20],stat_col_obs,stat_col_forec,leadtime_list,adm_list=list(df_obsfor.ADM1_EN.unique()))
 plot_mpe(df_mpe_adm,title="Bias for different admins")
 ```
 
 ```python
-df_mpe_month=compute_mpe_cats(df_obsfor[df_obsfor["mean_cell_forec"]>=20],"mean_cell_obs","mean_cell_forec",leadtime_list,month_list=[11,12,1,2,3])
+df_mpe_adm=compute_mpe_cats(df_obsfor[df_obsfor[stat_col_forec]>=20],stat_col_obs,stat_col_forec,leadtime_list,adm_list=list(df_obsfor.ADM1_EN.unique()))
+plot_mpe(df_mpe_adm,title="Bias for different admins")
+```
+
+```python
+df_mpe_month=compute_mpe_cats(df_obsfor[df_obsfor[stat_col_forec]>=20],stat_col_obs,stat_col_forec,leadtime_list,month_list=[11,12,1,2,3])
 plot_mpe(df_mpe_month,title="Bias for different months")
 ```
 
@@ -406,10 +440,6 @@ The main datapoints of interest are those in January and February in the Souther
 Note however that there are not many data points here, which means that the statistical significance is not high. 
 
 ```python
-df_mpe_sel=compute_mpe_cats(df_obsfor_sel,"mean_cell_obs","mean_cell_forec",leadtime_list,threshold_list)
+df_mpe_sel=compute_mpe_cats(df_obsfor_sel,stat_col_obs,stat_col_forec,leadtime_list,threshold_list)
 plot_mpe(df_mpe_sel,title="Bias for the data points evaluated in the trigger")
-```
-
-```python
-
 ```

@@ -54,6 +54,10 @@ hdx_blue='#66B0EC'
 #### Set config values
 
 ```python
+use_incorrect_area_coords=False
+```
+
+```python
 country_iso3="mwi"
 config=Config()
 parameters = config.parameters(country_iso3)
@@ -71,7 +75,7 @@ gdf_adm1=gpd.read_file(adm1_shp_path)
 ```
 
 ```python
-da_for=processing.get_ecmwf_forecast_by_leadtime("mwi")
+da_for=processing.get_ecmwf_forecast_by_leadtime("mwi",use_incorrect_area_coords=use_incorrect_area_coords)
 ```
 
 ```python
@@ -487,12 +491,12 @@ It is hard to say whether this increased bias is due to the period or the range 
 
 ```python
 #plot the observed vs forecast-observed to get a feeling for the discrepancy between the two
-df_forobs_perc_selm=df_forobs_perc[(df_forobs_perc.time.dt.month.isin([1,2]))&(df_forobs_perc.leadtime==2)]
-g=sns.jointplot(data=df_forobs_perc_selm,y="diff_forobs",x="precip_obs", kind="hex",height=10)
+df_forobs_med_selm=df_forobs_med[(df_forobs_med.time.dt.month.isin([1,2]))&(df_forobs_med.leadtime==2)]
+g=sns.jointplot(data=df_forobs_med_selm,y="diff_forobs",x="precip_obs", kind="hex",height=10)
 #compute the average value of the difference between the forecasted and observed values
 #do this in bins cause else very noisy mean
-bins = np.arange(0,df_forobs_perc_selm.precip_obs.max()+20,20)
-group = df_forobs_perc_selm.groupby(pd.cut(df_forobs_perc_selm.precip_obs, bins))
+bins = np.arange(0,df_forobs_med_selm.precip_obs.max()+20,20)
+group = df_forobs_med_selm.groupby(pd.cut(df_forobs_med_selm.precip_obs, bins))
 plot_centers = (bins [:-1] + bins [1:])/2
 plot_values = group.diff_forobs.median()
 g.ax_joint.plot(plot_centers,plot_values,color="#C25048",label="median")

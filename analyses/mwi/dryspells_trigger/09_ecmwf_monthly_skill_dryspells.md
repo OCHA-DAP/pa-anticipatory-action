@@ -51,6 +51,11 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
+use_incorrect_area_coords = False
+interpolate=False
+```
+
+```python
 country_iso3="mwi"
 config=Config()
 parameters = config.parameters(country_iso3)
@@ -61,7 +66,7 @@ country_data_exploration_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR,"e
 chirps_country_data_exploration_dir= os.path.join(config.DATA_DIR,config.PUBLIC_DIR, "exploration", country_iso3,'chirps')
 
 chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps_mwi_monthly.nc")
-ecmwf_country_data_processed_dir = os.path.join(country_data_processed_dir,"ecmwf")
+
 monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells", f"v{parameters['version']}", "monthly_precipitation")
 dry_spells_processed_dir = os.path.join(country_data_processed_dir, "dry_spells", f"v{parameters['version']}")
 
@@ -71,6 +76,14 @@ plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
 all_dry_spells_list_path=os.path.join(dry_spells_processed_dir,"full_list_dry_spells_2000_2021.csv")
 monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_monthly_total_precipitation_admin1.csv")
+```
+
+```python
+#using the mean value of the admin
+if use_incorrect_area_coords:
+    aggr_meth="mean_cell"
+else:
+    aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -231,27 +244,36 @@ And select the data of interest
 Note: the forecast data is an ensemble model. The statistics over the whole admin region per ensemble member were first computed, after which we combine the ensemble models with different percentile thresholds. While we think this methodology makes sense, one could also argue to first group by the ensemble members and then aggregating to the admin. This was also tested and no large differences were found. 
 
 ```python
+start_year=2000
+end_year=2020
+#just locking the date to keep the analysis the same even though data is added
+#might wanna delete again later
+end_date="5-1-2021"
+```
+
+```python
 #read the ecmwf forecast per adm1 per date and concat all dates
-# the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular, but results actually worsen with this
-all_files = glob.glob(os.path.join(ecmwf_country_data_processed_dir, "mwi_seasonal-monthly-single-levels_v5_2*.csv"))
+# the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
+# but results actually worsen with this
+date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
+all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
 ```
 
 ```python
-#this should be the number of years*number of months
+#this should be the number of years*number of months FORECASTED i.e. 
 print(len(all_files))
 ```
 
 ```python
-#number of years*months till may 2021
-21*12+5
+#number of years*months till latest forecast + 6
+21*12+5+6
 ```
 
 ```python
 #for now using mean cell as this requires one variable less to be set (else need to set percentage of cells)
-aggr_meth="mean_cell"
 #for earlier dates, the model included less members --> values for those members are nan --> remove those rows
 df_for = df_for[df_for[aggr_meth].notna()]
 #start month of the rainy season
@@ -266,7 +288,7 @@ df_for["season_approx"]=np.where(df_for.date.dt.month>=start_rainy_seas,df_for.d
 sel_adm=["Southern"]
 sel_months=[1,2]
 sel_leadtime=[1,2,3,4,5,6]
-seas_years=range(2000,2020)
+seas_years=range(start_year,end_year)
 
 adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
@@ -704,6 +726,7 @@ df_pr_sel[df_pr_sel.leadtime.isin([2,4])]
 ```
 
 ### Determine skill based on set threshold, with varying probability
+**NOTE: from here on the code hasn't been kept up-to-date, so might not work anymore**
 From here on different methods of defining the threshold and probability are experimented with. However, we chose to go with the first method that was presented above.    
 
 Threshold is set based on the analysis of observed monthly precipitation and dry spells. 
