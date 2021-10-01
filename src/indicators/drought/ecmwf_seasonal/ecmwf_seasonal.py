@@ -50,7 +50,9 @@ class EcmwfSeasonal:
         :param dataset_variable_name: The variable name
         with which to pass the above datasets in the CDS query
         :param use_incorrect_area_coords: Generally not meant to be used,
-        needed for backward compatibility with some historical data
+        needed for backward compatibility with some historical data.
+        If True, no rounding to the coordinates will be done which results in
+        incorrectly shifted data
         """
         self.year_min = year_min
         self.year_max = year_max

@@ -38,18 +38,23 @@ ADM0_BOUND_PATH = os.path.join(
 USE_INCORRECT_AREA_COORDS = False
 
 
-def main(download=True, process=True):
+def main(download=True, compute_stats=True):
 
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
         use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
     )
     df_country_boundaries = gpd.read_file(ADM0_BOUND_PATH)
     if download:
+        # retrieve the area, with a buffer from the boundary shape
         area = AreaFromShape(df_country_boundaries.buffer(3))
+        # download the ecmwf data for the area
         ecmwf_forecast.download(country_iso3=COUNTRY_ISO3, area=area)
+        # combine the downloaded ecmwf data into one file and
+        # do a bit of postprocessing to get it in a nicer format
         ecmwf_forecast.process(country_iso3=COUNTRY_ISO3)
 
-    if process:
+    if compute_stats:
+        # aggregate the raster data to statistics on the admin1 level
         compute_stats_per_admin(
             iso3=COUNTRY_ISO3, add_col=["ADM1_EN"], interpolate=False
         )

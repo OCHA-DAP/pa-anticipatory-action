@@ -26,7 +26,14 @@ def get_ecmwf_forecast(
 ) -> xr.Dataset:
     """
     Retrieve the processed dataset with the forecast for each
-    publication date and corresponding lead times Args: version: version
+    publication date and corresponding lead times
+    :param country_iso3: iso3 code of the country of interest
+    :param version: version of the ecmwf model to use
+    :param kwargs: other args that can be given to EcmwfSeasonalForecast()
+    :return: dataset with the ecmwf forecasts
+    """
+    """
+     Args: version: version
     of forecast model that was used (only changes once every couple of
     years)
     """
@@ -46,9 +53,12 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
     forecast was valid instead of the month the forecast was published
     Args: version: version of forecast model that was used (only changes
     once every couple of years)
-
-    Returns: dataset with valid month per publication data-leadtime
+    :param country_iso3: iso3 code of country of interest
+    :param version: version of the ecmwf model to use
+    :param kwargs: other args that can be given to get_ecmwf_forecast()
+    :return: dataset with data, grouped by leadtime
     """
+
     ds_ecmwf_forecast = get_ecmwf_forecast(
         country_iso3=country_iso3, version=version, **kwargs
     )
@@ -65,6 +75,21 @@ def get_stats_filepath(
     use_incorrect_area_coords: bool,
     version: int = None,
 ) -> Path:
+    """
+    Retrieve the path to the statsfile with the given parameters
+    :param iso3: iso3 code of the country of interest
+    :param config: Config() instance
+    :param date: the date of interest
+    :param interpolate: whether the data is interpolated to a higher resolution
+    :param adm_level: the admin level the data is aggregated to
+    :param use_incorrect_area_coords: Generally meant to be False,
+        needed for backward compatibility with some historical data.
+        If True, no rounding to the coordinates will be done which results in
+        incorrectly shifted data
+    :param version: ecmwf model version that is used,
+    if None the default version will be used
+    :return: path to the stats file
+    """
 
     if version is None:
         version = config.DEFAULT_VERSION
@@ -98,6 +123,22 @@ def compute_stats_per_admin(
     date_list: List[str] = None,
     use_incorrect_area_coords=False,
 ):
+    """
+    compute several statistics on admin level retrieved
+    from the raster data and save these to a file
+    :param iso3: iso3 code of the country of interest
+    :param adm_level: admin level to aggregate the data to
+    :param pcode_col: column in the shapefile that contains the pcode
+    :param add_col: other columns that should be added from the shapefile
+    :param use_cache: if True, don't update the file if it already exists
+    :param interpolate: if True, upsample data by 4 times
+    :param date_list: list of dates to compute stats for. If None, the stats
+    will be computed for all dates in ds
+    :param use_incorrect_area_coords: Generally meant to be False,
+        needed for backward compatibility with some historical data.
+        If True, no rounding to the coordinates will be done which results in
+        incorrectly shifted data
+    """
     config = Config()
     parameters = config.parameters(iso3)
 
