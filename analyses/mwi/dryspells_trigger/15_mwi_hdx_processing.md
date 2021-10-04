@@ -24,8 +24,8 @@ adm_df = pd.read_excel(adm_path)
 
 # Saving file paths
 
-RAINY_SEASON = os.path.join(data_dir, 'public', 'processed', 'mwi', 'arc2', 'mwi_arc2_rainy_seasons_2000_2020.csv')
-DRY_SPELLS = os.path.join(data_dir, 'public', 'processed', 'mwi', 'arc2', 'mwi_arc2_dry_spells_2000_2020.csv')
+RAINY_SEASON = os.path.join(data_dir, 'public', 'processed', 'mwi', 'arc2', 'mwi_arc2_rainy_seasons_2000_2021.csv')
+DRY_SPELLS = os.path.join(data_dir, 'public', 'processed', 'mwi', 'arc2', 'mwi_arc2_dry_spells_2000_2021.csv')
 ```
 
 ### Rainy season processing
@@ -39,7 +39,7 @@ rainy_merged_df = pd.merge(rainy_df, adm_df[['ADM2_PCODE', 'ADM2_32EN', 'ADM1_EN
                      'ADM1_EN':'region'})
                      
 # filter rows for seasons fully calculated
-rainy_filtered_df = rainy_merged_df[~rainy_merged_df.season_approx.isin(['1999-2000', '2020-2021'])]
+rainy_filtered_df = rainy_merged_df[~rainy_merged_df.season_approx.isin(['1999-2000'])]
     
 rainy_filtered_df['onset_date'] = pd.to_datetime(rainy_filtered_df.rainy_season_onset)    
 rainy_filtered_df['cessation_date'] = pd.to_datetime(rainy_filtered_df.dry_season_first_date) - pd.to_timedelta(1,unit='d')
@@ -50,10 +50,10 @@ rainy_filtered_df['rainy_season_duration'] = (rainy_filtered_df.cessation_date -
 # get precipitation for rainy season
 
 ij_df = pd.merge(rainy_filtered_df, daily_df, how='inner', on='ADM2_PCODE')
-ij_df = ij_df[(ij_df.date >= ij_df.onset_date) & (ij_df.date <= ij_df.cessation_date)].reset_index()
+ij_df = ij_df[(ij_df.date >= ij_df.onset_date) & (ij_df.date <= ij_df.cessation_date)].reset_index(drop=True)
 prec_df = ij_df.groupby(['ADM2_PCODE', 'season_approx'])['mean_cell'] \
     .sum() \
-    .reset_index() \
+    .reset_index(drop=True) \
     .rename(columns={"mean_cell":"rainy_season_rainfall"}) \
     .round(decimals = 2)
 
