@@ -99,3 +99,5 @@ So, there's clearly an issue where we have missing data in the ARC2 inputs that 
 - Linearly interpolate the values so that we essentially take the average of the surrounding two dates. You could also weight this across a wider range of dates to smooth the average.
 
 However, it would be best to understand why these values are missing! Almost all of them, as mentioned above, occur during the rainy season so could it be high levels of precipitation that could not be accurately captured so were dropped? Understanding the phenomena behind the missing values can help us hopefully choose a logical solution.
+
+It would also be important to understand from the team if these are merely historical artifacts of the ARC2 data or something we should actively be considering for our observational trigger monitoring.
