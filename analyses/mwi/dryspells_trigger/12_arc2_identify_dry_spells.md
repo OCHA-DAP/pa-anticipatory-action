@@ -13,9 +13,9 @@ If later on it is decided to use ARC2, a part of this notebook should be convert
 ```
 
 ```python
+from shapely.geometry import mapping # need to import shapely first to avoid errors on MacOS
 import pandas as pd
 import rioxarray
-from shapely.geometry import mapping
 import geopandas as gpd
 import xarray as xr
 import requests
@@ -48,10 +48,14 @@ dry_spells_processed_dir=os.path.join(country_data_processed_dir,"dry_spells", f
 dry_spells_exploration_dir=os.path.join(country_data_exploration_dir,"dry_spells", f"v{parameters['version']}")
 
 arc2_dir = os.path.join(country_data_exploration_dir,"arc2")
-arc2_filepath = os.path.join(arc2_dir, "arc2_20002020_approxmwi.nc")
+arc2_filepath = os.path.join(arc2_dir, "arc2_20002021_approxmwi.nc")
 
 adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
+```
+
+```python
+arc2_filepath
 ```
 
 ### Download the data
@@ -60,7 +64,7 @@ Takes some time --> can better do this in a Python script
 ```python
 #only include coordinates that approximately cover MWI --> else waaaay huger
 #TODO: make url flexible to include up to current date
-arc2_mwi_url="https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Africa/.DAILY/.ARC2/.daily/.est_prcp/T/%281%20Jan%202000%29%2830%20Mar%202021%29RANGEEDGES/X/%2832E%29%2836E%29RANGEEDGES/Y/%2820S%29%285S%29RANGEEDGES/data.nc"
+arc2_mwi_url="https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Africa/.DAILY/.ARC2/.daily/.est_prcp/T/%281%20Jan%200021%29%2831%20Aug%202021%29RANGEEDGES/X/%2832E%29%2836E%29RANGEEDGES/Y/%2820S%29%285S%29RANGEEDGES/data.nc"
 ```
 
 ```python
@@ -73,7 +77,7 @@ arc2_mwi_url="https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/.Af
 #    '__dlauth_id': os.getenv("IRI_AUTH"),
 #}
 
-# logger.info("Downloading arc2 NetCDF file. This might take some time")
+#logger.info("Downloading arc2 NetCDF file. This might take some time")
 #response = requests.get(arc2_mwi_url, cookies=cookies, verify=False)
 
 #with open(arc2_filepath, "wb") as fd:
@@ -88,10 +92,6 @@ ds=rioxarray.open_rasterio(arc2_filepath,masked=True).squeeze()
 ds=ds.to_dataset()
 #fix units attribute
 ds.attrs["units"]='mm/day'
-```
-
-```python
-ds
 ```
 
 ```python
@@ -114,7 +114,7 @@ ds_rolling=ds_clip.rolling(T=14,min_periods=14).sum().dropna(dim="T",how="all")
 
 ```python
 #TODO: ARC2 has lower resolution than CHIRPS (0.1 vs 0.05)--> look into whether to use all cells touching instead of only center. Or possibly interpolating to higher resolution
-def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thresh_list=[2,4,8,10,15,20]):
+def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thresh_list=[2,4,8,10,15,20],touched=False, thresh=False):
     #compute statistics on level in adm_path for all dates in ds
     df_list=[]
     for date in ds.T.values:
@@ -125,7 +125,7 @@ def alldates_statistics(ds,raster_transform,adm_path,dim_col="est_prcp",ds_thres
             zonal_stats(vectors=df, raster=ds_date[dim_col].values, affine=raster_transform, nodata=np.nan))["mean"]
         df["mean_cell_touched"] = pd.DataFrame(
             zonal_stats(vectors=df, raster=ds_date[dim_col].values, affine=raster_transform, nodata=np.nan,all_touched=True))["mean"]
-
+        
         for thres in ds_thresh_list:
             # compute the percentage of the admin area that has cells below the threshold
             # set all values with below average rainfall to 1 and others to 0
@@ -165,12 +165,12 @@ df.drop("geometry",axis=1).to_csv(os.path.join(country_data_exploration_dir,"arc
 ```python
 #load the above 
 #only show column names, since this is quick to load, and full dataframe isn't
-pd.read_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long.csv"),nrows=1)
+pd.read_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long_raw.csv"),nrows=1)
 ```
 
 ```python
 #load the data. Faster if only choosing a selection of columns
-df=pd.read_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long.csv"),usecols=["date","ADM2_PCODE","mean_cell","perc_se2"])# ,nrows=10000)
+df=pd.read_csv(os.path.join(arc2_dir,"mwi_arc2_precip_long_raw.csv"),usecols=["date","ADM2_PCODE","mean_cell","perc_se2"])# ,nrows=10000)
 df.date=pd.to_datetime(df.date)
 df.rename(columns={"ADM2_PCODE":"pcode"},inplace=True)
 ```
