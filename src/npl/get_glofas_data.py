@@ -47,11 +47,15 @@ logger = logging.getLogger(__name__)
 
 def main(download=True, process=True):
 
-    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis(
-        use_incorrect_area_coords=USE_INCORRECT_COORDS
+    glofas_reanalysis = (
+        indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis(
+            use_incorrect_area_coords=USE_INCORRECT_COORDS
+        )
     )
-    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast(
-        use_incorrect_area_coords=USE_INCORRECT_COORDS
+    glofas_reforecast = (
+        indicators.flooding.glofas.glofas_forecast.GlofasReforecast(
+            use_incorrect_area_coords=USE_INCORRECT_COORDS
+        )
     )
 
     if download:

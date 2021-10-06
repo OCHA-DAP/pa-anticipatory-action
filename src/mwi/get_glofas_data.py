@@ -43,8 +43,12 @@ logger = logging.getLogger(__name__)
 
 def main(download=False, process=True):
     stations = STATIONS
-    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
-    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
+    glofas_reanalysis = (
+        indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
+    )
+    glofas_reforecast = (
+        indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
+    )
 
     if download:
         df_admin_boundaries = gpd.read_file(SHAPEFILE)

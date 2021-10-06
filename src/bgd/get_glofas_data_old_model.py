@@ -42,9 +42,15 @@ logger = logging.getLogger(__name__)
 def main(download=True, process=False):
 
     # TODO: flags / config file to toggle these things
-    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
-    glofas_forecast = indicators.flooding.glofas.glofas_forecast.GlofasForecast()
-    glofas_reforecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
+    glofas_reanalysis = (
+        indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis()
+    )
+    glofas_forecast = (
+        indicators.flooding.glofas.glofas_forecast.GlofasForecast()
+    )
+    glofas_reforecast = (
+        indicators.flooding.glofas.glofas_forecast.GlofasReforecast()
+    )
 
     if download:
         # Remove the GloFAS station as it was not used originally

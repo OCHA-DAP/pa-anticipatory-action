@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 def get_glofas_reanalysis(
     country_iso3: str, version: int = glofas.DEFAULT_VERSION, **kwargs
 ) -> xr.Dataset:
-    glofas_reanalysis = indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis(**kwargs)
+    glofas_reanalysis = (
+        indicators.flooding.glofas.glofas_reanalysis.GlofasReanalysis(**kwargs)
+    )
     ds_glofas_reanalysis = glofas_reanalysis.read_processed_dataset(
         country_iso3=country_iso3, version=version
     )
@@ -38,9 +40,15 @@ def _get_glofas_forecast_base(
     **kwargs,
 ) -> xr.Dataset:
     if is_reforecast:
-        glofas_forecast = indicators.flooding.glofas.glofas_forecast.GlofasReforecast(**kwargs)
+        glofas_forecast = (
+            indicators.flooding.glofas.glofas_forecast.GlofasReforecast(
+                **kwargs
+            )
+        )
     else:
-        glofas_forecast = indicators.flooding.glofas.glofas_forecast.GlofasForecast(**kwargs)
+        glofas_forecast = (
+            indicators.flooding.glofas.glofas_forecast.GlofasForecast(**kwargs)
+        )
     if split_by_leadtimes:
         ds_glofas_forecast_dict = {
             leadtime: glofas_forecast.read_processed_dataset(

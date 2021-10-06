@@ -18,5 +18,3 @@ def all_tests_initialise(request, session_mocker):
     yield
     if request.node.testsfailed == 0:
         rmtree(TMP_PATH)
-
-
