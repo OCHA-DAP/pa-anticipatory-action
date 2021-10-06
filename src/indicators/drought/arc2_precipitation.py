@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Tuple, Union
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import requests
 import rioxarray
@@ -99,14 +100,15 @@ class ARC2:
             and then merged to master and deleted.
         """
 
-        url = f"""
-        https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/
-        .Africa/.DAILY/.ARC2/.daily/.est_prcp/T/
-        %28{self.date_min:%d %b %Y}%29%28{self.date_max:%d %b %Y}%29RANGEEDGES/
-        X/%28{self.range_x[0]}%29%28{self.range_x[1]}%29RANGEEDGES/
-        Y/%28{self.range_y[0]}%29%28{self.range_y[1]}%29RANGEEDGES/
-        data.nc
-        """
+        url = (
+            f"https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/"
+            f".Africa/.DAILY/.ARC2/.daily/.est_prcp/T/"
+            f"%28{date_min_dl:%-d%%20%b%%20%Y}%29"
+            f"%28{date_max_dl:%-d%%20%b%%20%Y}%29RANGEEDGES/"
+            f"X/%28{self.range_x[0]}%29%28{self.range_x[1]}%29RANGEEDGES/"
+            f"Y/%28{self.range_y[0]}%29%28{self.range_y[1]}%29RANGEEDGES/"
+            f"data.nc"
+        )
 
         raw_filepath = self._get_raw_filepath(master=master)
 
@@ -133,6 +135,7 @@ class ARC2:
         except requests.exceptions.RequestException as e:
             raise SystemExit(e)
 
+        # create folders if necessary and write file
         Path(raw_filepath.parent).mkdir(parents=True, exist_ok=True)
 
         with open(raw_filepath, "wb") as fd:
@@ -158,9 +161,21 @@ class ARC2:
                 f"into master file: {os.path.basename(master_filepath)}."
             )
 
-            master_merge = xr.open_mfdataset(master_filepath, raw_filepath)
-            os.remove(master_filepath)
+            with xr.open_dataarray(master_filepath) as ds:
+                master = ds.load()
+            with xr.open_dataarray(raw_filepath) as ds:
+                raw = ds.load()
+
+            master_merge = xr.concat([master, raw], dim="T")
+
             os.remove(raw_filepath)
+            os.remove(master_filepath)
+
+            if "_FillValue" in master_merge.encoding and np.isnan(
+                master_merge.encoding["_FillValue"]
+            ):
+                master_merge.encoding["_FillValue"] = -999
+
             master_merge.to_netcdf(master_filepath)
 
         return
@@ -186,6 +201,11 @@ class ARC2:
         with 'master.nc' at the end. Otherwise, end of
         filepath designated with `self.date_min` and
         `self.date_max`.
+
+        :param master: Whether or not the filepath is
+            for the master file.
+        :param temp: Whether or not the filepath is
+            for a temp file used for saving.
         """
         directory = self._get_directory(RAW_DATA_DIR)
 
@@ -239,21 +259,24 @@ class ARC2:
         f.close()
         return
 
-    def load_raw_data(self):
+    def load_raw_data(self, raw_filepath: Union[Path, None] = None):
         """
         Convenience function to load raw raster data, squeeze
         it and write its CRS. The function always accesses
         the master file.
+
+        :param raw_filepath: Path to raw file to load. If `None`,
+            loads master file.
         """
-        raw_filepath = self._get_raw_filepath(master=True)
+        if raw_filepath is None:
+            raw_filepath = self._get_raw_filepath(master=True)
 
         # load raw master data
         try:
-            da = (
-                rioxarray.open_rasterio(raw_filepath, masked=True)
-                .squeeze()
-                .rio.write_crs("EPSG:4326")
-            )
+            with rioxarray.open_rasterio(raw_filepath, masked=True) as ds:
+                da = ds.load()
+                da = da.squeeze().rio.write_crs("EPSG:4326")
+
         except Exception:
             logger.error(
                 "Raw raster file %s does not exist.",
@@ -286,12 +309,19 @@ class ARC2:
                 "T"
             ].to_datetimeindex() - pd.to_timedelta("12:00:00")
             full_dates = pd.date_range(self.date_min, self.date_max)
-            needed_dates = full_dates.symmetric_difference(loaded_dates)
-            date_ranges = self._group_date_ranges(needed_dates)
-            for dates in date_ranges:
-                self._download(
-                    date_min_dl=dates[0], date_max_dl=dates[1], master=False
-                )
+            needed_dates = full_dates.difference(loaded_dates)
+            if len(needed_dates) > 0:
+                date_ranges = self._group_date_ranges(needed_dates)
+                for dates in date_ranges:
+                    self._download(
+                        date_min_dl=dates[0],
+                        date_max_dl=dates[1],
+                        master=False,
+                    )
+
+                self._sort_raw_data()
+            else:
+                logger.info("No additional data needs downloading.")
 
     def _group_date_ranges(self, dates) -> list:
         """
@@ -312,7 +342,20 @@ class ARC2:
             group = list(map(pd.Timestamp, group))
             if len(group) == 1:
                 group.append(group[0])
-            date_ranges.append((group[0], group[1]))
+            date_ranges.append((group[0], group[-1]))
+
+        return date_ranges
+
+    def _sort_raw_data(self):
+        """
+        Sort master file by time coordinates to ensure
+        correct ordering.
+        """
+        master_filepath = self._get_raw_filepath(master=True)
+        with xr.open_dataarray(master_filepath) as ds:
+            master = ds.load()
+
+        master.sortby("T").to_netcdf(master_filepath)
 
     def process_data(
         self,
@@ -387,8 +430,6 @@ class ARC2:
         processed_file = self._get_processed_filepath(
             self.country_iso3, self.date_min, self.date_max, agg_method
         )
-
-        print(processed_file)
 
         # TODO:
         # 1. Read in processed data
