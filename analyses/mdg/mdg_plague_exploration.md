@@ -41,8 +41,8 @@ from src.indicators.drought.config import Config
 ```
 
 ```python
-def preprocess_plague_data(path,list_cases_class=None):
-    df = pd.read_csv(path, delimiter = ";")
+def preprocess_plague_data(path,list_cases_class=None, delimiter = ";"):
+    df = pd.read_csv(path, delimiter = delimiter)
     df.columns=df.columns.str.lower()
     df.rename(columns={"mdg_com_code":"ADM3_PCODE"},inplace=True)
     #to make pcodes correspond with shp file
@@ -60,10 +60,12 @@ def preprocess_plague_data(path,list_cases_class=None):
 ```
 
 ```python
-def plague_group_by_date(df):
+def plague_group_by_date(df, latest_date):
     #group by date
     df_date=df.groupby(["date","year","week"],as_index=False).sum()
     df_date.set_index("date",inplace=True)
+    df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(latest_date, format='%Y-%m-%d')]))
+    df_date.index.names=["date"]
     #fill the weeks that are not included with 0, else they will be ignored when computing the historical average
     df_date=df_date.asfreq('W-Mon').fillna(0)
     #compute the year and week numbers from the dates
@@ -75,7 +77,7 @@ def plague_group_by_date(df):
 ```python
 #define period of current interest
 sel_start_date = "2021-08-02"
-sel_end_date = "2021-09-20"
+sel_end_date = "2021-10-01"
 sel_start_week = 31
 sel_end_week = 38
 ```
@@ -105,15 +107,15 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
 ```python
-plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
+plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-10-01.csv"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
-plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-24.csv"
+plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
 plague_path_old = plague_dir / plague_data_filename_old
 ```
 
 ```python
-df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class)
+df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class,delimiter=",")
 ```
 
 ```python
@@ -172,7 +174,7 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-df_date=plague_group_by_date(df)
+df_date=plague_group_by_date(df, "2021-10-01")
 ```
 
 ```python
@@ -304,20 +306,11 @@ Where the ADM3 codes are available, will add the urban classification for analys
 ```python
 df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
 df_urb = df_urb[df_urb.urban_area.notnull()]
+df_urb = df_urb.loc[df_urb.urban_area]
 
 #group by date
-df_date_urb=df_urb.loc[df_urb.urban_area].groupby(["date","year","week"],as_index=False).sum()
-df_date_urb.set_index("date",inplace=True)
-
-#add 0 to scale to September since data is missing
-df_date_urb = df_date_urb.append(pd.DataFrame([[0]],columns=["cases_number"], index=["2021-09-28"]))
-df_date_urb.index.names=["date"]
-
-#fill the weeks that are not included with 0, else they will be ignored when computing the historical average
-df_date_urb=df_date_urb.asfreq('W-Mon').fillna(0)
-#compute the year and week numbers from the dates
-df_date_urb[["year","week"]]=df_date_urb.index.isocalendar()[["year","week"]]
-df_date_urb.reset_index(inplace=True)
+df_date_urb=plague_group_by_date(df_urb, "2021-10-01")
+df_date_urb
 ```
 
 ```python
@@ -669,7 +662,7 @@ chart_2017_2021=alt.Chart(df_date[df_date.year.isin([2017,2021])]).mark_line().e
 chart_2017_2021
 # # you need to have altair_saver installed to make this work
 # # also the scale_factor is not working with all installations
-# chart_2017_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021.png"),scale_factor=20)
+#chart_2017_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021.png"),scale_factor=20)
 ```
 
 Rather than looking at standard deviation, because we have so few years to work with, I think more informative to look at the other years outside 2017 to show if a spike as we've seen that then recedes has been observed in the past.
@@ -685,7 +678,7 @@ chart_2018_2021=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]).mar
     title="Cases from 2018 to 2021"
 )
 chart_2018_2021
-# chart_2018_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2018_till_2021.png"),scale_factor=20)
+#chart_2018_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2018_till_2021.png"),scale_factor=20)
 ```
 
 ```python
@@ -704,13 +697,15 @@ chart_1721_sel = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.wee
 chart_1721_sel
 
 # #not working
-# chart_1721_sel.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021_3138.png"))
+#chart_1721_sel.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021_3138.png"))
 ```
 
 #### Only pneunomic cases
 
 ```python
-df_date_pp=df[df.clinical_form=="PP"].groupby(["date","year","week"],as_index=False).sum()
+df_date_pp=df_date_urb=plague_group_by_date(df[df.clinical_form=="PP"], "2021-10-01")
+
+df_date_pp
 ```
 
 ```python
