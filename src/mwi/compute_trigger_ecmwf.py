@@ -7,15 +7,14 @@ and then computes the trigger status per admin
 import logging
 import os
 import sys
-from typing import List
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-
 from pathlib import Path
+from typing import List
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 # TODO: remove this after making top-level
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"

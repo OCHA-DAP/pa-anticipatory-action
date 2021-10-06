@@ -4,7 +4,8 @@ from typing import Dict
 import xarray as xr
 
 from utils_general.area import Area, Station
-from .glofas import Glofas, DEFAULT_VERSION, _get_station_dataset
+
+from .glofas import DEFAULT_VERSION, Glofas, _get_station_dataset
 
 logger = logging.getLogger(__name__)
 

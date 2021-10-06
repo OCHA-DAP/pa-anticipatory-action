@@ -1,10 +1,9 @@
 from os import environ, mkdir
-from os.path import join, exists
+from os.path import exists, join
 from shutil import rmtree
 from tempfile import gettempdir
 
 import pytest
-
 
 TMP_PATH = join(gettempdir(), "test_anticipatory_action")
 

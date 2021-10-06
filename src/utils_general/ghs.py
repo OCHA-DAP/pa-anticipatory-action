@@ -1,13 +1,15 @@
 import glob
+import logging
+import os
+from pathlib import Path
+from typing import List, Tuple, Union
+
+import numpy as np
 import rasterio
 from rasterio.merge import merge
-from utils_general import utils
-import logging
-from pathlib import Path
-import os
-from typing import List, Tuple, Union
-import numpy as np
 from rasterstats import zonal_stats
+
+from utils_general import utils
 
 logger = logging.getLogger(__name__)
 

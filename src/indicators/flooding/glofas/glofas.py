@@ -14,7 +14,6 @@ import xarray as xr
 
 from utils_general.area import Area, Station
 
-
 PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"

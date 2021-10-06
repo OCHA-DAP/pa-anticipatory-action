@@ -2,19 +2,19 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
-import pandas as pd
 from cdsapi import Client
 
+from indicators.flooding.glofas import glofas
 from indicators.flooding.glofas.glofas_forecast import (
     GlofasForecast,
     GlofasReforecast,
 )
 from indicators.flooding.glofas.glofas_reanalysis import GlofasReanalysis
-from indicators.flooding.glofas import glofas
-from utils_general.area import Area, Station
 from tests.conftest import TMP_PATH
+from utils_general.area import Area, Station
 
 
 def test_expand_dims():
