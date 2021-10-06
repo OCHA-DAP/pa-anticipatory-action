@@ -1,11 +1,11 @@
-import sys
-import os
-from pathlib import Path
-import geopandas as gpd
-from rasterstats import zonal_stats
-import rioxarray
 import logging
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import List
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -13,21 +13,31 @@ import xarray as xr
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
 
-from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
 from src.indicators.drought.config import Config
+from src.indicators.drought.ecmwf_seasonal import ecmwf_seasonal
+from src.utils_general.raster_manipulation import compute_raster_statistics
 from src.utils_general.statistics import calc_crps
 
 logger = logging.getLogger(__name__)
 
 
-def get_ecmwf_forecast(country_iso3, version: int = 5):
+def get_ecmwf_forecast(
+    country_iso3: str, version: int = 5, **kwargs
+) -> xr.Dataset:
     """
     Retrieve the processed dataset with the forecast for each
-    publication date and corresponding lead times Args: version: version
+    publication date and corresponding lead times
+    :param country_iso3: iso3 code of the country of interest
+    :param version: version of the ecmwf model to use
+    :param kwargs: other args that can be given to EcmwfSeasonalForecast()
+    :return: dataset with the ecmwf forecasts
+    """
+    """
+     Args: version: version
     of forecast model that was used (only changes once every couple of
     years)
     """
-    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast()
+    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(**kwargs)
     ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
         country_iso3=country_iso3,
         version=version,
@@ -37,34 +47,103 @@ def get_ecmwf_forecast(country_iso3, version: int = 5):
     return ds_ecmwf_forecast
 
 
-def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5):
+def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
     """
     Reshape dataset to have the time variable as the month during the
     forecast was valid instead of the month the forecast was published
     Args: version: version of forecast model that was used (only changes
     once every couple of years)
-
-    Returns: dataset with valid month per publication data-leadtime
+    :param country_iso3: iso3 code of country of interest
+    :param version: version of the ecmwf model to use
+    :param kwargs: other args that can be given to get_ecmwf_forecast()
+    :return: dataset with data, grouped by leadtime
     """
+
     ds_ecmwf_forecast = get_ecmwf_forecast(
-        country_iso3=country_iso3, version=version
+        country_iso3=country_iso3, version=version, **kwargs
     )
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
 
 
+def get_stats_filepath(
+    iso3: str,
+    config: Config,
+    date: datetime,
+    interpolate: bool,
+    adm_level: int,
+    use_incorrect_area_coords: bool,
+    version: int = None,
+) -> Path:
+    """
+    Retrieve the path to the statsfile with the given parameters
+    :param iso3: iso3 code of the country of interest
+    :param config: Config() instance
+    :param date: the date of interest
+    :param interpolate: whether the data is interpolated to a higher resolution
+    :param adm_level: the admin level the data is aggregated to
+    :param use_incorrect_area_coords: Generally meant to be False,
+        needed for backward compatibility with some historical data.
+        If True, no rounding to the coordinates will be done which results in
+        incorrectly shifted data
+    :param version: ecmwf model version that is used,
+    if None the default version will be used
+    :return: path to the stats file
+    """
+
+    if version is None:
+        version = config.DEFAULT_VERSION
+
+    filename = f"{iso3.lower()}_seasonal-monthly-single-levels_v{version}"
+    if use_incorrect_area_coords:
+        filename += "_incorrect-coords"
+    if interpolate:
+        filename += "_interp"
+    filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
+
+    country_data_processed_dir = (
+        Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
+    )
+    ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
+
+    stats_dir = ecmwf_processed_dir / "seasonal-monthly-single-levels"
+    if use_incorrect_area_coords:
+        stats_dir = stats_dir / "incorrect-coords"
+
+    return stats_dir / filename
+
+
 def compute_stats_per_admin(
-    country, adm_level=1, use_cache=True, interpolate=True
+    iso3,
+    adm_level=1,
+    pcode_col="ADM1_PCODE",
+    add_col: List[str] = None,
+    use_cache: bool = True,
+    interpolate: bool = True,
+    date_list: List[str] = None,
+    use_incorrect_area_coords=False,
 ):
+    """
+    compute several statistics on admin level retrieved
+    from the raster data and save these to a file
+    :param iso3: iso3 code of the country of interest
+    :param adm_level: admin level to aggregate the data to
+    :param pcode_col: column in the shapefile that contains the pcode
+    :param add_col: other columns that should be added from the shapefile
+    :param use_cache: if True, don't update the file if it already exists
+    :param interpolate: if True, upsample data by 4 times
+    :param date_list: list of dates to compute stats for. If None, the stats
+    will be computed for all dates in ds
+    :param use_incorrect_area_coords: Generally meant to be False,
+        needed for backward compatibility with some historical data.
+        If True, no rounding to the coordinates will be done which results in
+        incorrectly shifted data
+    """
     config = Config()
-    parameters = config.parameters(country)
-    country_iso3 = parameters["iso3_code"]
+    parameters = config.parameters(iso3)
 
     country_data_raw_dir = os.path.join(
-        config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, country_iso3
-    )
-    country_data_processed_dir = os.path.join(
-        config.DATA_DIR, config.PUBLIC_DIR, config.PROCESSED_DIR, country_iso3
+        config.DATA_DIR, config.PUBLIC_DIR, config.RAW_DIR, iso3
     )
     adm_boundaries_path = os.path.join(
         country_data_raw_dir,
@@ -73,37 +152,41 @@ def compute_stats_per_admin(
     )
 
     # read the forecasts
-    ds = get_ecmwf_forecast_by_leadtime(country_iso3)
+    ds = get_ecmwf_forecast_by_leadtime(
+        iso3, use_incorrect_area_coords=use_incorrect_area_coords
+    )
 
     if interpolate:
         # read observed data to get resolution to interpolate to
-        ds_chirps = read_chirps_data(config, country_iso3)
         # interpolate forecast data such that it has the same resolution
         # as the observed values using "nearest" as interpolation method
         # and not "linear" because the forecasts are designed to have
         # sharp edged and not be smoothed
-        ds = ds.interp(
-            latitude=ds_chirps["y"], longitude=ds_chirps["x"], method="nearest"
+        # now standard upsampling 4 times, can be made variable
+        new_lon = np.arange(
+            ds.longitude[0] - 0.125, ds.longitude[-1] + 0.25, 0.25
+        )
+        new_lat = np.arange(
+            ds.latitude[0] + 0.125, ds.latitude[-1] - 0.25, -0.25
         )
 
+        ds = ds.interp(latitude=new_lat, longitude=new_lon, method="nearest")
+    if add_col is None:
+        add_col = []
     # loop over dates
-    for date in ds.time.values:
+    if date_list is None:
+        date_list = ds.time.values
+    for date in date_list:
         date_dt = pd.to_datetime(date)
-        if interpolate:
-            output_filename = (
-                f"{parameters['iso3_code'].lower()}"
-                f"_seasonal-monthly-single-levels_v5_interp_{date_dt.year}"
-                f"_{date_dt.month}_adm{adm_level}_stats.csv"
-            )
-        else:
-            output_filename = (
-                f"{parameters['iso3_code'].lower()}"
-                f"_seasonal-monthly-single-levels_v5_{date_dt.year}"
-                f"_{date_dt.month}_adm{adm_level}_stats.csv"
-            )
-        output_path = os.path.join(
-            country_data_processed_dir, "ecmwf", output_filename
+        output_path = get_stats_filepath(
+            iso3,
+            config,
+            date_dt,
+            interpolate,
+            adm_level,
+            use_incorrect_area_coords,
         )
+
         # If caching is on and file already exists, don't download again
         if use_cache and Path(output_path).exists():
             logger.debug(
@@ -112,68 +195,19 @@ def compute_stats_per_admin(
             )
         else:
             ds_sel = ds.sel(time=date)
-            df = compute_zonal_stats(
-                ds_sel,
-                ds_sel.rio.transform(),
-                adm_boundaries_path,
-                parameters[f"shp_adm{adm_level}c"],
+            gdf_adm = gpd.read_file(adm_boundaries_path)
+            df = compute_raster_statistics(
+                gdf_adm,
+                pcode_col,
+                ds_sel.rio.write_crs("EPSG:4326"),
+                lon_coord="longitude",
+                lat_coord="latitude",
             )
-
+            df = df.merge(
+                gdf_adm[[pcode_col] + add_col], on=pcode_col, how="left"
+            )
             df["date"] = date_dt
-            df.to_csv(output_path)
-
-
-# TODO: create function to retrieve the stats file
-
-
-def compute_zonal_stats(
-    ds,
-    raster_transform,
-    adm_path,
-    adm_col,
-    percentile_list=np.arange(10, 91, 10),
-):
-    # compute statistics on level in adm_path for all dates in ds
-    df_list = []
-    for leadtime in ds.leadtime.values:
-        for number in ds.number.values:
-            df = gpd.read_file(adm_path)[[adm_col, "geometry"]]
-            ds_date = ds.sel(number=number, leadtime=leadtime)
-
-            df[["mean_cell", "max_cell", "min_cell"]] = pd.DataFrame(
-                zonal_stats(
-                    vectors=df,
-                    raster=ds_date.values,
-                    affine=raster_transform,
-                    nodata=np.nan,
-                )
-            )[["mean", "max", "min"]]
-
-            df[
-                [f"percentile_{str(p)}" for p in percentile_list]
-            ] = pd.DataFrame(
-                zonal_stats(
-                    vectors=df,
-                    raster=ds_date.values,
-                    affine=raster_transform,
-                    nodata=np.nan,
-                    stats=" ".join(
-                        [f"percentile_{str(p)}" for p in percentile_list]
-                    ),
-                )
-            )[
-                [f"percentile_{str(p)}" for p in percentile_list]
-            ]
-
-            df["number"] = number
-            df["leadtime"] = leadtime
-
-            df_list.append(df)
-        df_hist = pd.concat(df_list)
-        # drop the geometry column, else csv becomes huge
-        df_hist = df_hist.drop("geometry", axis=1)
-
-    return df_hist
+            df.to_csv(output_path, index=False)
 
 
 def convert_tprate_precipitation(da):
@@ -311,21 +345,3 @@ def get_crps_ecmwf(
         )
         df_crps.loc[leadtime, "crps"] = crps
     return df_crps
-
-
-def read_chirps_data(config, country_iso3):
-    chirps_country_data_exploration_dir = os.path.join(
-        config.DATA_DIR,
-        config.PUBLIC_DIR,
-        "exploration",
-        country_iso3,
-        "chirps",
-    )
-    chirps_monthly_country_path = os.path.join(
-        chirps_country_data_exploration_dir,
-        f"chirps_{country_iso3.lower()}_monthly.nc",
-    )
-    ds_chirps = rioxarray.open_rasterio(
-        chirps_monthly_country_path, masked=True
-    )
-    return ds_chirps

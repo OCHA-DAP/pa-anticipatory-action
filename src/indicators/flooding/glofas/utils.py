@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,6 @@ from indicators.flooding.glofas import glofas
 from utils_general.statistics import (
     get_return_period_function_analytical,
     get_return_period_function_empirical,
-    calc_crps,
 )
 
 logger = logging.getLogger(__name__)

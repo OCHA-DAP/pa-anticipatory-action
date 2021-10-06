@@ -1,36 +1,40 @@
 # Compute the trigger information needed for the dashboard. Ugly now for
 # first mock-up, should be improved later on
 
+import os
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+
 # IPC trigger design as of 08-10-2020: EITHER: At least 20% population
 # of one or more ADMIN1 regions projected at IPC4+ in 3 months OR: At
 # least 30% of ADMIN1 population projected at IPC3+ AND increase by 5
 # percentage points in ADMIN1 pop.  projected in IPC3+ in 3 months
 # compared to current state
 import pandas as pd
-import numpy as np
-import warnings
-from pathlib import Path
-import os
-import sys
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.food_insecurity.config import Config
 from src.indicators.food_insecurity.ipc_definemetrics import (
-    define_trigger_percentage,
     define_trigger_increase,
+    define_trigger_percentage,
 )
 from src.indicators.food_insecurity.utils import compute_percentage_columns
 
 warnings.filterwarnings("ignore")
 
 admin_level = 1
-country = "ethiopia"
+iso3 = "eth"
 fn_process = "admpop"  # worldpop
 # suffix of filenames
-suffix = ""
+suffix_fn = "202106"
+suffix_ipcg = ""
+suffix_output = "202106"
 config = Config()
-parameters = config.parameters(country)
+parameters = config.parameters(iso3)
 country_data_raw_dir = os.path.join(
     config.DATA_DIR, "public", "raw", parameters["iso3_code"]
 )
@@ -43,20 +47,20 @@ if fn_process == "worldpop":
         country_data_processed_dir, config.FEWSWORLDPOP_PROCESSED_DIR
     )
     fewsnet_filename = config.FEWSWORLDPOP_PROCESSED_FILENAME.format(
-        country=country, admin_level=admin_level, suffix=suffix
+        iso3=iso3, admin_level=admin_level, suffix=suffix_fn
     )
 elif fn_process == "admpop":
     fewsnet_dir = os.path.join(
         country_data_processed_dir, config.FEWSADMPOP_PROCESSED_DIR
     )
     fewsnet_filename = config.FEWSADMPOP_PROCESSED_FILENAME.format(
-        country=country, admin_level=admin_level, suffix=suffix
+        iso3=iso3, admin_level=admin_level, suffix=suffix_fn
     )
 globalipc_dir = os.path.join(
     country_data_processed_dir, config.GLOBALIPC_PROCESSED_DIR
 )
 globalipc_path = os.path.join(
-    globalipc_dir, f"{country}_globalipc_admin{admin_level}{suffix}.csv"
+    globalipc_dir, f"{iso3}_globalipc_admin{admin_level}{suffix_ipcg}.csv"
 )
 
 adm_bound_path = os.path.join(
@@ -65,12 +69,16 @@ adm_bound_path = os.path.join(
     parameters[f"path_admin{admin_level}_shp"],
 )
 
+output_dir = os.path.join(country_data_processed_dir, "trigger_metrics")
+output_path = os.path.join(
+    output_dir, f"{iso3}_foodinsec_trigger{suffix_output}.csv"
+)
+
 # TODO: remove index in process_fewsnet_admpop script
 df_fn = pd.read_csv(
     os.path.join(fewsnet_dir, fewsnet_filename), index_col=False
 )
 df_fn = df_fn.drop("Unnamed: 0", axis=1)
-print(df_fn)
 # TODO: rename these in process_fewsnet_admpop script
 df_fn = df_fn.rename(columns={"ADM1_EN": "ADMIN1", "ADM2_EN": "ADMIN2"})
 # TODO: add percentages in process_fewsnet_admpop script
@@ -100,7 +108,7 @@ df_gipc["source"] = "GlobalIPC"
 
 df = pd.concat([df_fn, df_gipc])
 # print(df)
-df["country"] = "eth"
+df["iso3"] = iso3
 df["date"] = pd.to_datetime(df["date"])
 df["year"] = df["date"].dt.year
 df["month"] = df["date"].dt.month
@@ -135,11 +143,8 @@ df["threshold_reached_ML2"] = np.where(
     True,
     False,
 )
-print(df.columns)
 df.to_csv(
-    os.path.join(
-        "dashboard", "data", "foodinsecurity", "ethiopia_foodinsec_trigger.csv"
-    ),
+    output_path,
     index=False,
 )
 

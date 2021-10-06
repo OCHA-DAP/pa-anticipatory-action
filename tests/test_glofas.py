@@ -10,7 +10,7 @@ from cdsapi import Client
 from indicators.flooding.glofas.glofas_forecast import GlofasForecast, GlofasReforecast
 from indicators.flooding.glofas.glofas_reanalysis import GlofasReanalysis
 from indicators.flooding.glofas import glofas
-from indicators.flooding.glofas.area import Area, Station
+from utils_general.area import Area, Station
 from tests.conftest import TMP_PATH
 
 
@@ -315,8 +315,6 @@ class TestProcess:
         output_filepath = glofas_reanalysis.process(
             country_iso3=self.country_iso3,
             stations=self.stations,
-            year_min=self.year,
-            year_max=self.year,
         )
         output_ds = xr.load_dataset(output_filepath)
         assert output_ds.equals(processed_data_reanalysis)

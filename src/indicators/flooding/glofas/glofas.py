@@ -2,17 +2,17 @@
 Download raster data from GLOFAS and extracts time series of water
 discharge in selected locations
 """
-from pathlib import Path
 import logging
-import time
 import os
+import time
+from pathlib import Path
 from typing import Dict, List, Union
 
+import cdsapi
 import numpy as np
 import xarray as xr
-import cdsapi
 
-from .area import Area, Station
+from utils_general.area import Area, Station
 
 
 PUBLIC_DATA_DIR = "public"
@@ -162,7 +162,8 @@ class Glofas:
                 str(x + 1).zfill(2) for x in range(31)
             ],
             "area": area.list_for_api(
-                do_not_round=self.use_incorrect_area_coords
+                round_val=None if self.use_incorrect_area_coords else 0.1,
+                offset_val=None if self.use_incorrect_area_coords else 0.05,
             ),
             "system_version": (
                 f"version_{version}_{self.system_version_minor[version]}"

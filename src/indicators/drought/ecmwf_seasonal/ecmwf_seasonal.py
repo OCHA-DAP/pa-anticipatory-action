@@ -1,16 +1,16 @@
 """Download raster data from ECMWF's seasonal forecast for selected areas and
 combines all dates into one dataframe."""
-from pathlib import Path
 import logging
-import time
-import datetime
 import os
+import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import List
-import xarray as xr
+
 import cdsapi
+import xarray as xr
 
-from src.indicators.flooding.glofas.area import Area
-
+from src.utils_general.area import Area
 
 DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"
 RAW_DATA_DIR = DATA_DIR / "raw"
@@ -34,23 +34,32 @@ class EcmwfSeasonal:
         cds_name: str,
         dataset: List[str],
         dataset_variable_name: str,
+        use_incorrect_area_coords: bool = False,
     ):
         """Create an instance of a EcmwfSeasonal object, from which you
         can download and process raw data, and read in the processed
         data.
 
         :param year_min: The earliest year that the dataset is
-        available. :param year_max: The most recent that the dataset is
-        available :param cds_name: The name of the dataset in CDS :param
-        dataset: The sub-datasets that you would like to download (as a
-        list of strings) :param dataset_variable_name: The variable name
+        available.
+        :param year_max: The most recent that the dataset is
+        available
+        :param cds_name: The name of the dataset in CDS
+        :param dataset: The sub-datasets that you would like to download (as a
+        list of strings)
+        :param dataset_variable_name: The variable name
         with which to pass the above datasets in the CDS query
+        :param use_incorrect_area_coords: Generally not meant to be used,
+        needed for backward compatibility with some historical data.
+        If True, no rounding to the coordinates will be done which results in
+        incorrectly shifted data
         """
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
         self.dataset = dataset
         self.dataset_variable_name = dataset_variable_name
+        self.use_incorrect_area_coords = use_incorrect_area_coords
 
     def _download(
         self,
@@ -110,7 +119,12 @@ class EcmwfSeasonal:
         directory = (
             RAW_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / self.cds_name
         )
-        filename = f"{country_iso3}_{self.cds_name}_v{version}_{year}"
+        if self.use_incorrect_area_coords:
+            directory = directory / "incorrect-coords"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if self.use_incorrect_area_coords:
+            filename += "_incorrect-coords"
+        filename += f"_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
         filename += ".grib"
@@ -135,7 +149,10 @@ class EcmwfSeasonal:
             if month is None
             else str(month).zfill(2),
             "leadtime_month": [str(x) for x in leadtimes],
-            "area": area.list_for_api(),
+            "area": area.list_for_api(
+                round_val=None if self.use_incorrect_area_coords else 1,
+                offset_val=None if self.use_incorrect_area_coords else 0,
+            ),
         }
         logger.debug(f"Query: {query}")
         return query
@@ -189,11 +206,19 @@ class EcmwfSeasonal:
         return filepath
 
     def _get_processed_filepath(self, country_iso3: str, version: int) -> Path:
-        filename = f"{country_iso3}_{self.cds_name}_v{version}"
-        filename += ".nc"
-        return (
-            PROCESSED_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / filename
+        directory = (
+            PROCESSED_DATA_DIR
+            / country_iso3
+            / ECMWF_SEASONAL_DIR
+            / self.cds_name
         )
+        if self.use_incorrect_area_coords:
+            directory = directory / "incorrect-coords"
+        filename = f"{country_iso3}_{self.cds_name}_v{version}"
+        if self.use_incorrect_area_coords:
+            filename += "_incorrect-coords"
+        filename += ".nc"
+        return directory / filename
 
     def read_processed_dataset(
         self,
@@ -207,13 +232,14 @@ class EcmwfSeasonal:
 
 
 class EcmwfSeasonalForecast(EcmwfSeasonal):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
-            year_min=2000,
+            year_min=1993,
             year_max=2021,
             cds_name="seasonal-monthly-single-levels",
             dataset=["monthly_mean"],
             dataset_variable_name="product_type",
+            **kwargs,
         )
 
     def download(
@@ -222,38 +248,41 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
         area: Area,
         leadtimes: List[int] = None,
         version: int = DEFAULT_VERSION,
-        split_by_month: bool = True,
+        months: List[int] = None,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         logger.info(
             f"Downloading ECMWF seasonal forecast v{version} for years"
-            f" {self.year_min} - {self.year_max}"
+            f" {year_min} - {year_max}"
         )
-        current_date = datetime.datetime.now()
-        month_range = range(1, 13) if split_by_month else [None]
+        current_date = datetime.now(timezone.utc)
         if leadtimes is None:
             leadtimes = DEFAULT_LEADTIMES
-        for year in range(self.year_min, self.year_max + 1):
+        for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
-            if split_by_month:
+            if months is None:
                 if year < current_date.year:
-                    month_range = range(1, 13)
+                    months_year = range(1, 13)
                 elif year == current_date.year:
                     # forecast becomes available on the 13th of the month
+                    # at 12 GMT
                     max_month = (
                         current_date.month
-                        if current_date.day >= 13
+                        if current_date.day > 13
+                        or (current_date.day == 13 and current_date.hour >= 12)
                         else current_date.month - 1
                     )
-                    month_range = range(1, max_month + 1)
+                    months_year = range(1, max_month + 1)
                 elif year > current_date.year:
                     logger.info(
                         f"Cannot download data for {year}, because it is in"
                         " the future"
                     )
-            else:
-                month_range = [None]
 
-            for month in month_range:
+            for month in months_year:
                 super()._download(
                     country_iso3=country_iso3,
                     area=area,

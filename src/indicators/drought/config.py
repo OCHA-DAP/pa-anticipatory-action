@@ -1,7 +1,7 @@
-from datetime import datetime
-from pathlib import Path
 import os
 import sys
+from datetime import datetime
+from pathlib import Path
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
@@ -71,9 +71,10 @@ class Config:
 
     # Name mappings
     # to rename the variables of different providers to
+    # set to x/y or longitude/latitude for rioxarray to recognize
     LOWERTERCILE = "prob_below"
-    LONGITUDE = "lon"
-    LATITUDE = "lat"
+    LONGITUDE = "longitude"
+    LATITUDE = "latitude"
 
     # IRI
     # currently downloading from 2017 till the latest available forecast
@@ -85,10 +86,11 @@ class Config:
     # downloads data from 2017 till the latest date available for the
     # current year
     IRI_NC_FILENAME_RAW = f"IRI_2017{TODAY_YEAR}.nc"
-    IRI_NC_FILENAME_CRS = f"IRI_2017{TODAY_YEAR}_crs.nc"
+    IRI_NC_FILENAME_CLEAN = f"IRI_2017{TODAY_YEAR}_clean.nc"
     IRI_LOWERTERCILE = "prob"
     IRI_LON = "X"
     IRI_LAT = "Y"
+    IRI_CRS = "EPSG:4326"
 
     # ICPAC
     ICPAC_GDRIVE_ZIPID = "13VQTVj5Lwm6jHYBMIf7oUZt5k1-alwjf"
@@ -154,3 +156,13 @@ class Config:
     )
     CHIRPSGEFS_RAW_FILENAME = "chirpsgefs_africa_{days_ahead}days_{date}.tif"
     CHIRPSGEFS_DATE_STR_FORMAT = "%Y%m%d"
+
+    # ECMWF
+    ECMWF_DIR = "ecmwf"
+    DEFAULT_VERSION = 5
+
+    # DRYSPELLS
+    DRY_SPELLS_DIR = "dry_spells"
+
+    # TRIGGER
+    TRIGGER_METRICS_DIR = "trigger_metrics"

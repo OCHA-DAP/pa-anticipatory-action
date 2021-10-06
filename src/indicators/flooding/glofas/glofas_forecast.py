@@ -1,7 +1,7 @@
 import logging
 from typing import List, Dict
 
-from .area import Area, Station
+from utils_general.area import Area, Station
 from .glofas import Glofas, DEFAULT_VERSION, _get_station_dataset
 
 logger = logging.getLogger(__name__)

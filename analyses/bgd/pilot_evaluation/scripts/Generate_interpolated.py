@@ -1,9 +1,10 @@
-import utils_evaluation as utils
-import pandas as pd
-from datetime import datetime
-import numpy as np
-import os
 import logging
+import os
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import utils_evaluation as utils
 
 # This script takes the output file from Generate_flood_frac.py and fits
 # a Gaussian function to the data, to interpolate between dates without
