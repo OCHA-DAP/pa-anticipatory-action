@@ -227,7 +227,12 @@ class ARC2:
         using arithmetic mean. All data stored within a single master file.
         """
         directory = self._get_directory(PROCESSED_DATA_DIR)
-        filename = f"arc2_{agg_method}_long_{self.country_iso3}_master.csv"
+        filename = (
+            f"arc2_{agg_method}_long_{self.country_iso3}_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"master.csv"
+        )
         return directory / Path(filename)
 
     def _get_monitoring_filepath(self) -> Path:
@@ -390,6 +395,12 @@ class ARC2:
                 "Clip file %s does not exist.", os.path.basename(polygon_path)
             )
 
+        if os.path.exists(processed_filepath):
+            exist_stats = pd.read_csv(processed_filepath, parse_dates=["T"])
+            da = da.where(da.T not in exist_stats["T"])
+        else:
+            Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
+
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,
             bound_col=bound_col,
@@ -398,7 +409,6 @@ class ARC2:
             stats_list=["mean"],
         )
 
-        Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
         df_zonal_stats.to_csv(processed_filepath, index=False)
         return df_zonal_stats
 

@@ -17,6 +17,17 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.arc2_precipitation import ARC2
 from src.utils_general.raster_manipulation import compute_raster_statistics
+
+
+poly_path = os.path.join(
+    os.getenv('AA_DATA_DIR'),
+    'public',
+    'raw',
+    'mwi',
+    'cod_ab',
+    'mwi_adm_nso_20181016_shp',
+    'mwi_admbnda_adm2_nso_20181016.shp'
+)
 ```
 
 ### Raw data downloading
@@ -28,7 +39,7 @@ arc2_test = ARC2(
     country_iso3 = "mwi",
     date_min = "2021-09-02",
     date_max = "2021-09-03",
-    range_x = ("32E", "33E"),
+    range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
 
@@ -45,7 +56,7 @@ arc2_test = ARC2(
     country_iso3 = "mwi",
     date_min = "2021-09-01",
     date_max = "2021-09-04",
-    range_x = ("32E", "33E"),
+    range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
 
@@ -62,7 +73,7 @@ arc2_test = ARC2(
     country_iso3 = "mwi",
     date_min = "2021-09-01",
     date_max = date.today(),
-    range_x = ("32E", "33E"),
+    range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
 
@@ -73,6 +84,14 @@ ds3.indexes['T']
 ```
 
 Since we can pass in either an ISO 8601 date string or a date object, we can just pass in the current date and get the latest data from the system. Now with this data, let's look at processing and calculating dry spells.
+
+```python
+df = arc2_test.process_data(poly_path, "ADM2_PCODE")
+```
+
+```python
+ds3.where(ds3.T.isin(df['T']), drop=True)
+```
 
 ```python
 
