@@ -194,7 +194,7 @@ df_old=preprocess_plague_data(plague_path_old,list_cases_class=incl_cases_class)
 ```
 
 ```python
-df_old_date=plague_group_by_date(df_old)
+df_old_date=plague_group_by_date(df_old, "2021-09-28")
 ```
 
 ```python
@@ -332,6 +332,24 @@ df_date.groupby("year",as_index=False).sum() \
 ```python
 df_date_urb.groupby("year",as_index=False).sum() \
     .drop("week",axis=1)
+```
+
+It's also important to understand the distribution of urban areas in Madagascar. Here is a map of urban areas identified through the methodology.
+
+```python
+urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
+urb_map_df['color'] = np.where(urb_map_df.urban_area, "#151515", "#FAFAFA")
+
+urb_plot = urb_map_df.plot(
+    color=urb_map_df["color"],
+    categorical=True,
+    legend=True,
+    edgecolor="face",
+    figsize=(15,10)
+)
+
+# need to adjust size for saving, currently screenshotting
+# urb_plot.figure.savefig(os.path.join(plot_dir,f"{iso3}_urban_areas.png"), bbox_inches="tight")
 ```
 
 ### Historical average
