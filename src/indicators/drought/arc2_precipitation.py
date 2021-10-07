@@ -367,6 +367,7 @@ class ARC2:
         polygon_path: Union[Path, str] = None,
         bound_col: str = None,
         all_touched: bool = False,
+        reprocess: bool = False,
     ):
         """
         Get mean aggregation by admin boundary for the downloaded arc2 data.
@@ -376,6 +377,9 @@ class ARC2:
             raster data.
         :param bound_col: Column in polygon file to aggregate raster to.
         :param all_touched: Boolean, to use centroids or all touching rasters.
+        :param reprocess: Boolean, if `True` reprocesses all raster data.
+            Otherwise, only processes dates that have not already been
+            processed.
         """
 
         if all_touched:
@@ -395,9 +399,20 @@ class ARC2:
                 "Clip file %s does not exist.", os.path.basename(polygon_path)
             )
 
-        if os.path.exists(processed_filepath):
+        # only process data for dates that have not already been processed
+        if os.path.exists(processed_filepath) and not reprocess:
             exist_stats = pd.read_csv(processed_filepath, parse_dates=["T"])
-            da = da.where(da.T not in exist_stats["T"])
+            lookup = da.indexes["T"]
+            lookup = ~lookup.isin(exist_stats["T"])
+            if np.sum(lookup) == 0:
+                logger.info(
+                    "No additional dates to process for %s.",
+                    processed_filepath,
+                )
+                return exist_stats
+
+            else:
+                da = da.loc[lookup, :, :]
         else:
             Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
 
@@ -437,9 +452,7 @@ class ARC2:
         :param agg_method: One of 'centroid' or 'touching'.
         """
 
-        processed_file = self._get_processed_filepath(
-            self.country_iso3, self.date_min, self.date_max, agg_method
-        )
+        processed_file = self._get_processed_filepath(agg_method)
 
         # TODO:
         # 1. Read in processed data

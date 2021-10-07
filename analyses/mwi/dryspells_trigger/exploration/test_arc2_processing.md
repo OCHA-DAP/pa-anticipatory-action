@@ -86,13 +86,7 @@ ds3.indexes['T']
 Since we can pass in either an ISO 8601 date string or a date object, we can just pass in the current date and get the latest data from the system. Now with this data, let's look at processing and calculating dry spells.
 
 ```python
-df = arc2_test.process_data(poly_path, "ADM2_PCODE")
-```
+processed_df = arc2_test.process_data(poly_path, "ADM2_PCODE")
 
-```python
-ds3.where(ds3.T.isin(df['T']), drop=True)
-```
-
-```python
-
+processed_df
 ```
