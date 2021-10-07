@@ -424,6 +424,13 @@ class ARC2:
             stats_list=["mean"],
         )
 
+        # join up existing data if necessary
+        if "exist_stats" in locals():
+            df_zonal_stats = df_zonal_stats.append(
+                exist_stats, ignore_index=True
+            )
+            df_zonal_stats.sort_values(by=["T"])
+
         df_zonal_stats.to_csv(processed_filepath, index=False)
         return df_zonal_stats
 
