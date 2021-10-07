@@ -431,6 +431,9 @@ class ARC2:
             )
             df_zonal_stats.sort_values(by=["T"])
 
+        # infill missing data with average
+        # TODO: put in code here once method agreed
+
         df_zonal_stats.to_csv(processed_filepath, index=False)
         return df_zonal_stats
 
