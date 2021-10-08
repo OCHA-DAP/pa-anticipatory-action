@@ -60,11 +60,12 @@ def preprocess_plague_data(path,list_cases_class=None, delimiter = ";"):
 ```
 
 ```python
-def plague_group_by_date(df, latest_date):
+def plague_group_by_date(df, sel_end_date=None):
     #group by date
     df_date=df.groupby(["date","year","week"],as_index=False).sum()
     df_date.set_index("date",inplace=True)
-    df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(latest_date, format='%Y-%m-%d')]))
+    if sel_end_date is not None:
+        df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(sel_end_date, format='%Y-%m-%d')]))
     df_date.index.names=["date"]
     #fill the weeks that are not included with 0, else they will be ignored when computing the historical average
     df_date=df_date.asfreq('W-Mon').fillna(0)
@@ -305,7 +306,9 @@ Where the ADM3 codes are available, will add the urban classification for analys
 
 ```python
 df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
+# first filter out rows where the join failed (i.e. those with only ADM2 pcodes rather than ADM3)
 df_urb = df_urb[df_urb.urban_area.notnull()]
+# then filter to only urban areas
 df_urb = df_urb.loc[df_urb.urban_area]
 
 #group by date
@@ -721,7 +724,7 @@ chart_1721_sel
 #### Only pneunomic cases
 
 ```python
-df_date_pp=df_date_urb=plague_group_by_date(df[df.clinical_form=="PP"], "2021-10-01")
+df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], "2021-10-01")
 
 df_date_pp
 ```
