@@ -30,6 +30,7 @@ Analysis last updated 06-10-2021.
 # source("") # Link to external script
 library(kableExtra)
 library(knitr)
+source('make_plots.R')
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = FALSE) # do not print output by default
 ```
@@ -50,6 +51,29 @@ Relevant datasets include:
 - Historical catalogue of both flood and drought events from 1965-2021.
 - Dataset includes 74 events.
 - Geolocated somewhat inconsistently to most often the Admin 1 or 2 level. 
+
+The figure below shows the national count of shock events per year, as recorded in EM-DAT. 
+
+```{r ts-basic, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=4, fig.align="center", fig.cap='National count of shock events per year'}
+
+# Put a figure in here, for example 
+
+plot_disaster_annual
+
+```
+
+The figure below shows the frquency of floods (left) and drought (right) by region since 1965. NOTE that this figure is incomplete as many past events in the EM-DAT database still need to be properly geolocated.
+
+```{r historical-freq, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=5, fig.show="hold", fig.cap = 'Historical frequency of shock events by Region', out.width="50%"}
+
+# Put a figure in here, for example 
+
+flood_map
+
+drought_map
+
+```
+
 
 3. [IDMC](https://data.humdata.org/dataset/idmc-idp-data-for-ethiopia)
 - Number of IDPs, relating to conflict and disaster.
@@ -72,14 +96,4 @@ Relevant datasets include:
 
 > Standardized Precipitation Index (SPI) is the most commonly used indicator worldwide for detecting and characterizing meteorological droughts. It measures precipitation anomalies at a given location based on a comparison of observed total precipitation amounts for an accumulation period of interest (e.g. 3, 6, 9 months), with the long-term historic rainfall record for that period. Rainfall deficits (i.e. meteorological droughts) are indicated as SPI decreases below -1.0, while excess rainfall are indicated as SPI increases above 1.0. As SPI values are in units of standard deviation from the long-term mean, the indicator can be used to compare precipitation anomalies for any geographic location and for any number of time scales. The World Meteorological Organization has recommended that the SPI be used by all National Meteorological and Hydrological Services around the world to characterize meteorological droughts
 
-
-
-
-
-
-```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
-
-# Put a figure in here, for example 
-
-```
 
