@@ -431,18 +431,14 @@ class ARC2:
             )
             df_zonal_stats.sort_values(by=["T"])
 
-        # infill missing data with average
-        # TODO: put in code here once method agreed
+        # infill missing data with interpolation
+        data_col = "mean_" + bound_col
+        df_zonal_stats[data_col] = df_zonal_stats.groupby(bound_col)[
+            data_col
+        ].transform(lambda x: x.interpolate())
 
         df_zonal_stats.to_csv(processed_filepath, index=False)
         return df_zonal_stats
-
-    def append_to_csv():
-        # TODO: For the case of working with data day-by-day
-        # Will want to be able to append to a file that has daily
-        # log of precip by admin 2, which can then be used to
-        # identify dry spells.
-        return
 
     def identify_dry_spells(
         self,
