@@ -54,7 +54,7 @@ Relevant datasets include:
 
 The figure below shows the national count of shock events per year, as recorded in EM-DAT. 
 
-```{r ts-basic, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=4, fig.align="center", fig.cap='National count of shock events per year'}
+```{r ts-basic, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=2, fig.align="center", fig.cap='National count of shock events per year'}
 
 # Put a figure in here, for example 
 
@@ -62,7 +62,7 @@ plot_disaster_annual
 
 ```
 
-The figure below shows the frquency of floods (left) and drought (right) by region since 1965. NOTE that this figure is incomplete as many past events in the EM-DAT database still need to be properly geolocated.
+The figure below shows the frquency of floods (left) and drought (right) by region since 1965. NOTE that the geolocation of events in these figures still needs to be fully validated.
 
 ```{r historical-freq, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=5, fig.show="hold", fig.cap = 'Historical frequency of shock events by Region', out.width="50%"}
 
@@ -74,6 +74,39 @@ drought_map
 
 ```
 
+The tables below show the full lists of both the flood and drought events from EM-DAT. 
+
+```{r event-table-flood, dpi=300, include=T, message= FALSE, warning=FALSE}
+
+emdat_flood %>%
+  select(c(Year, Location, Origin, `Total Affected`)) %>%
+  knitr::kable(caption = "List of flood events",
+               align = c('l')) %>%
+        collapse_rows(columns = 1, valign = "top") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T) %>%
+        scroll_box(width = "100%", height = "500px")
+
+```
+
+<br>
+<br>
+
+```{r event-table-drought, dpi=300, include=T, message= FALSE, warning=FALSE}
+
+emdat_drought %>%
+  select(c(Year, Location, Origin, `Total Affected`)) %>%
+  knitr::kable(caption = "List of drought events",
+               align = c('l')) %>%
+        collapse_rows(columns = 1, valign = "top") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T) %>%
+        scroll_box(width = "100%", height = "500px")
+
+```
+
+<br>
+<br>
 
 3. [IDMC](https://data.humdata.org/dataset/idmc-idp-data-for-ethiopia)
 - Number of IDPs, relating to conflict and disaster.

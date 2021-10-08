@@ -48,7 +48,7 @@ emdat_drought <- emdat %>% filter(`Disaster Type` == 'Drought')
 
 # FLOOD
 for (adm1 in shp_adm1$ADM1_EN) {
-  for (event_loc in emdat_flood$`Geo Locations`){
+  for (event_loc in emdat_flood$Location){
     match <- grepl(adm1, event_loc, fixed=TRUE)
     if (match == TRUE){
       num_event = df_count[df_count$adm1 == adm1,]['num_flood'][[1]]
@@ -59,10 +59,13 @@ for (adm1 in shp_adm1$ADM1_EN) {
 
 # DROUGHT
 for (adm1 in shp_adm1$ADM1_EN) {
-  for (event_loc in emdat_drought$`Geo Locations`){
+  for (event_loc in emdat_drought$Location){
     match <- grepl(adm1, event_loc, fixed=TRUE)
     if (match == TRUE){
-      num_event = df_count[df_count$adm1 == adm1,]['num_flood'][[1]]
+      print('****')
+      print(adm1)
+      print(event_loc)
+      num_event = df_count[df_count$adm1 == adm1,]['num_drought'][[1]]
       df_count[df_count$adm1 == adm1,]['num_drought'] = num_event + 1
     }
   }
