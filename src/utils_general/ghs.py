@@ -1,13 +1,15 @@
 import glob
+import logging
+import os
+from pathlib import Path
+from typing import List, Tuple, Union
+
+import numpy as np
 import rasterio
 from rasterio.merge import merge
-from utils_general import utils
-import logging
-from pathlib import Path
-import os
-from typing import List, Tuple, Union
-import numpy as np
 from rasterstats import zonal_stats
+
+from utils_general import utils
 
 logger = logging.getLogger(__name__)
 
@@ -122,12 +124,15 @@ def classify_urban_areas(
         consider polygon as urban.
     """
 
+    def raster_percent(x):
+        return 100 * np.ma.sum(x >= urban_min_class) / np.ma.count(x)
+
     def urban_area(x):
         return np.ma.mean(x >= urban_min_class) >= urban_percent
 
     return zonal_stats(
         polygons,
         ghs_smod,
-        add_stats={"urban_area": urban_area},
+        add_stats={"urban_percent": raster_percent, "urban_area": urban_area},
         affine=transform,
     )
