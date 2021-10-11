@@ -343,11 +343,11 @@ hist_avg_years=[2018,2019,2020]
 ```python
 #compute the historical average
 df_hist_years=df_date[df_date.year.isin(hist_avg_years)]
-df_hist_years["rolling_sum"]=df_hist_years.cases_number.rolling(window=5,center=True).mean()
+df_hist_years["rolling_mean"]=df_hist_years.cases_number.rolling(window=5,center=True).mean()
 ```
 
 ```python
-df_hist_weeks=df_hist_years.groupby("week")["rolling_sum"].agg(rs_mean="mean",rs_std="std",rs_max="max").reset_index()
+df_hist_weeks=df_hist_years.groupby("week")["rolling_mean"].agg(rs_mean="mean",rs_std="std",rs_max="max").reset_index()
 ```
 
 ```python
@@ -670,7 +670,8 @@ Questions:
 
 ```python
 # #experimenting with rolling sum, but don't think it is gonna help us much
-# df_date["rolling_sum"]=df_date.cases_number.rolling(window=3).mean()
+df_date["rolling_mean"]=df_date.cases_number.rolling(window=3).mean()
+df_date["rolling_sum"]=df_date.cases_number.rolling(window=3).sum()
 ```
 
 ```python
@@ -750,11 +751,33 @@ scat_plot
 ```
 
 ```python
-df_cap10_rolling=comp_abs_consec(df_date,cases_col="rolling_sum")
+df_cap10_rolling=comp_abs_consec(df_date,cases_col="rolling_mean")
 ```
 
 ```python
 scat_plot = alt.Chart(df_cap10_rolling).mark_rect().encode(
+    x="week:N",
+    y="year:N",
+    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
+)
+scat_plot
+```
+
+```python
+ alt.Chart(df_date).mark_line().encode(
+    x='week:N',
+    y='rolling_mean',
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
+)
+# cases_data + std_164
+```
+
+```python
+df_cap10_rolling_sum=comp_abs_consec(df_date,cap=30,cases_col="rolling_sum")
+```
+
+```python
+scat_plot = alt.Chart(df_cap10_rolling_sum).mark_rect().encode(
     x="week:N",
     y="year:N",
     color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
