@@ -40,7 +40,7 @@ box = [(22,10),
        (22,12)]
 
 # Download data
-#get_ghs_data("SMOD", box, iso3, raw_dir)
+get_ghs_data("SMOD", box, iso3, raw_dir)
 
 # Load data
 adm = gpd.read_file(adm_path, crs='4326').to_crs('ESRI:54009')
@@ -52,6 +52,7 @@ with rasterio.open(os.path.join(raw_dir, 'ghs', 'mdg_SMOD_2015_1km_mosaic.tif'))
 cls = classify_urban_areas(adm, smod, trans, URBAN_MIN_CLASS, URBAN_PERCENT)
 adm['urban_percent'] = [x['urban_percent'] for x in cls]
 adm['urban_area'] = [x['urban_area'] for x in cls]
+adm['urban_area_weighted'] = [x['urban_area_weighted'] for x in cls]
 ```
 
 Save out results. Generates an error if the file is already present, remove `move = 'x'` to allow overwriting.

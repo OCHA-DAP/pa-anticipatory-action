@@ -355,6 +355,22 @@ urb_plot = urb_map_df.plot(
 # urb_plot.figure.savefig(os.path.join(plot_dir,f"{iso3}_urban_areas.png"), bbox_inches="tight")
 ```
 
+```python
+urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
+urb_map_df['color'] = np.where(urb_map_df.urban_area_weighted, "#151515", "#FAFAFA")
+
+urb_plot = urb_map_df.plot(
+    color=urb_map_df["color"],
+    categorical=True,
+    legend=True,
+    edgecolor="face",
+    figsize=(15,10)
+)
+
+# need to adjust size for saving, currently screenshotting
+# urb_plot.figure.savefig(os.path.join(plot_dir,f"{iso3}_urban_areas_weighted.png"), bbox_inches="tight")
+```
+
 ### Historical average
 
 

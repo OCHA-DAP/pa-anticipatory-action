@@ -130,9 +130,16 @@ def classify_urban_areas(
     def urban_area(x):
         return np.ma.mean(x >= urban_min_class) >= urban_percent
 
+    def urban_area_weighted(x):
+        return np.ma.mean(x) >= 15
+
     return zonal_stats(
         polygons,
         ghs_smod,
-        add_stats={"urban_percent": raster_percent, "urban_area": urban_area},
+        add_stats={
+            "urban_percent": raster_percent,
+            "urban_area": urban_area,
+            "urban_area_weighted": urban_area_weighted,
+        },
         affine=transform,
     )
