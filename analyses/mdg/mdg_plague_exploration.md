@@ -727,8 +727,8 @@ df_hist_weeks["2std"]=df_hist_weeks.rs_std*2
 ```
 
 ```python
-def comp_abs_consec(df_date,cap=10):
-    df_date["thresh_reached"]=np.where(df_date.cases_number>=cap,1,0)
+def comp_abs_consec(df_date,cap=10,cases_col="cases_number"):
+    df_date["thresh_reached"]=np.where(df_date[cases_col]>=cap,1,0)
     df_date=df_date.sort_values("date")
     df_date['consecutive'] = df_date[f"thresh_reached"].groupby( \
     (df_date[f"thresh_reached"] != df_date[f"thresh_reached"].shift()).cumsum()).transform('size') * \
@@ -737,11 +737,7 @@ def comp_abs_consec(df_date,cap=10):
 ```
 
 ```python
-df_cap10=comp_abs_consec(df_date)
-```
-
-```python
-df_cap10[df_cap10.consecutive>=2]
+df_cap10=comp_abs_consec(df_date,cases_col="cases_number")
 ```
 
 ```python
@@ -751,6 +747,30 @@ scat_plot = alt.Chart(df_cap10).mark_rect().encode(
     color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
 )
 scat_plot
+```
+
+```python
+df_cap10_rolling=comp_abs_consec(df_date,cases_col="rolling_sum")
+```
+
+```python
+scat_plot = alt.Chart(df_cap10_rolling).mark_rect().encode(
+    x="week:N",
+    y="year:N",
+    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
+)
+scat_plot
+```
+
+When using the rolling sum, the cap would be reached one week later in 2017. So that is kind of the same result as requiring 2 consec weeks with more than 10 cases. 
+
+```python
+ alt.Chart(df_date).mark_line().encode(
+    x='week:N',
+    y='rolling_sum',
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
+)
+# cases_data + std_164
 ```
 
 ```python
