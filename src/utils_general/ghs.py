@@ -125,12 +125,31 @@ def classify_urban_areas(
     """
 
     def raster_percent(x):
+        """
+        Calculate percent of rasters in `x` with cells classified as
+        `urban_min_class` or above.
+        """
         return 100 * np.ma.sum(x >= urban_min_class) / np.ma.count(x)
 
     def urban_area(x):
+        """
+        Classifies `x` as urban if `>= 50%` of raster cells in `x`
+        are `urban_min_class` or above.
+        """
         return np.ma.mean(x >= urban_min_class) >= urban_percent
 
     def urban_area_weighted(x):
+        """
+        Classifies `x` as urban if the mean raster cell values
+        in `x` are 15 or greater. The threshold was chosen by
+        simple observation in Madagascar, noting that lower
+        thresholds seemed to classify more semi-rural areas as
+        urban, but higher thresholds failed to classify
+        certain urban areas where administrative boundaries
+        included large rural areas alongside dense urban
+        centres. See the GHSL urbanization definitions at
+        https://ghsl.jrc.ec.europa.eu/degurbaDefinitions.php.
+        """
         return np.ma.mean(x) >= 15
 
     return zonal_stats(
