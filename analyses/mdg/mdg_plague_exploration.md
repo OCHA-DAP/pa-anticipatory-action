@@ -302,9 +302,11 @@ gdf_adm2_merge.plot(column="cases_number",
                figsize=(15,10),)
 ```
 
-Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary.
+Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary. The urban classification is using `urban_area_weighted` which is urban areas defined as communes where the average raster cell value is `>= 15`. This helps capture areas where the majority of raster cells are not urban, but there are still significant urban agglomerations within the commune by using the inherent weighting in the GHS classification figures.
 
 ```python
+# use urban_area_weighted which is urban areas defined by the mean of raster cells within the
+# ad
 df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
 # first filter out rows where the join failed (i.e. those with only ADM2 pcodes rather than ADM3)
 df_urb = df_urb[df_urb.urban_area_weighted.notnull()]
