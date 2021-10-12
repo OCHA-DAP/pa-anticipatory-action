@@ -55,9 +55,9 @@ adm['urban_area'] = [x['urban_area'] for x in cls]
 adm['urban_area_weighted'] = [x['urban_area_weighted'] for x in cls]
 ```
 
-Save out results. Generates an error if the file is already present, remove `move = 'x'` to allow overwriting.
+Save out results.
 
 ```python
 output_path = os.path.join(processed_dir, 'urban_classification', f'mdg_{ADM_LEVEL}_urban_classification.csv')
-adm.drop('geometry', axis=1).to_csv(output_path)
+# adm.drop('geometry', axis=1).to_csv(output_path)
 ```
