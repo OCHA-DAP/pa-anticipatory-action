@@ -60,10 +60,12 @@ def preprocess_plague_data(path,list_cases_class=None, delimiter = ";"):
 ```
 
 ```python
-def plague_group_by_date(df, sel_end_date=None):
+def plague_group_by_date(df, sel_start_date=None, sel_end_date=None):
     #group by date
     df_date=df.groupby(["date","year","week"],as_index=False).sum()
     df_date.set_index("date",inplace=True)
+    if sel_start_date is not None:
+        df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(sel_start_date, format='%Y-%m-%d')]))
     if sel_end_date is not None:
         df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(sel_end_date, format='%Y-%m-%d')]))
     df_date.index.names=["date"]
@@ -175,7 +177,7 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-df_date=plague_group_by_date(df, "2021-10-01")
+df_date=plague_group_by_date(df, self_end_date="2021-10-01")
 ```
 
 ```python
@@ -268,8 +270,6 @@ gdf_adm2_merge.plot(column="cases_number",
 Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary. The urban classification is using `urban_area_weighted` which is urban areas defined as communes where the average raster cell value is `>= 15`. This helps capture areas where the majority of raster cells are not urban, but there are still significant urban agglomerations within the commune by using the inherent weighting in the GHS classification figures.
 
 ```python
-# use urban_area_weighted which is urban areas defined by the mean of raster cells within the
-# ad
 df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
 # first filter out rows where the join failed (i.e. those with only ADM2 pcodes rather than ADM3)
 df_urb = df_urb[df_urb.urban_area_weighted.notnull()]
@@ -277,17 +277,21 @@ df_urb = df_urb[df_urb.urban_area_weighted.notnull()]
 df_urb = df_urb.loc[df_urb.urban_area_weighted & (df_urb.clinical_form == "PP")]
 
 #group by date
-df_date_urb=plague_group_by_date(df_urb, "2021-10-01")
+df_date_urb=plague_group_by_date(df_urb, sel_start_date="2017-01-01", sel_end_date="2021-10-01")
 df_date_urb
 ```
 
 ```python
-px.line(
+urb = px.line(
     df_date_urb,
     x="date",
     y="cases_number",
     title="Pneumonic plague cases reported in urban areas, 2017 - 2021"
 )
+
+urb.add_hline(y=5,annotation_text="5 cases",annotation_position="top left")
+# requires kaleido package on mac, might be different on other machines
+# urb.write_image(os.path.join(plot_dir,f"{iso3}_urban_timeline.png"))
 ```
 
 There are extremely few cases identified in urban areas since 2017, in fact, none in 2020 and only 1 at the beginning of 2021. Even a histogram can't display this well, the table below suffices:
@@ -672,7 +676,7 @@ chart_2018_2021
 #### Only pneunomic cases
 
 ```python
-df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], "2021-10-01")
+df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], self_end_date="2021-10-01")
 ```
 
 ```python
@@ -789,7 +793,6 @@ def comp_abs_consec(df_date,cap=10,cases_col="cases_number"):
 df_cap10=comp_abs_consec(df_date,cases_col="cases_number")
 ```
 
-```python
 heatmap_abs10 = alt.Chart(df_cap10).mark_rect().encode(
     x="week:N",
     y="year:N",
@@ -799,7 +802,6 @@ heatmap_abs10 = alt.Chart(df_cap10).mark_rect().encode(
 )
 heatmap_abs10
 # heatmap_abs10.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_abs10.png"))
-```
 
 ```python
 df_cap10_rolling=comp_abs_consec(df_date,cases_col="rolling_mean")
@@ -812,6 +814,52 @@ scat_plot = alt.Chart(df_cap10_rolling).mark_rect().encode(
     color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
 )
 scat_plot
+```
+
+Let's do similar calculations on urban areas, first looking at just triggering when there is a single case, primarily as a reference, and then looking at triggering on absolute cases and rolling sums.
+
+```python
+df_urb_cap1=comp_abs_consec(df_date_urb,cap=1,cases_col="cases_number")
+
+heatmap_urb_abs1 = alt.Chart(df_urb_cap1).mark_rect().encode(
+    x="week:N",
+    y="year:N",
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 10 cases")),
+).properties(
+    title=">= 1 pneumonic plague cases in urban areas"
+)
+# heatmap_urb_abs1.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_urb_abs1.png"))
+heatmap_urb_abs1
+```
+
+```python
+df_urb_cap5=comp_abs_consec(df_date_urb,cap=5,cases_col="cases_number")
+
+heatmap_urb_abs5 = alt.Chart(df_urb_cap5).mark_rect().encode(
+    x="week:N",
+    y="year:N",
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 10 cases")),
+).properties(
+    title=">= 5 pneumonic plague cases in urban areas"
+)
+# heatmap_urb_abs5.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_urb_abs5.png"))
+heatmap_urb_abs5
+```
+
+```python
+df_date_urb["rolling_sum"]=df_date_urb.cases_number.rolling(window=3).sum()
+
+df_urb_cumsum10=comp_abs_consec(df_date_urb,cap=10,cases_col="rolling_sum")
+
+heatmap_urb_cumsum10 = alt.Chart(df_urb_cumsum10).mark_rect().encode(
+    x="week:N",
+    y="year:N",
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 10 cases")),
+).properties(
+    title=">= 10 pneumonic plague cases in urban areas in last 3 weeks"
+)
+# heatmap_urb_cumsum10.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_urb_cumsum10.png"))
+heatmap_urb_cumsum10
 ```
 
 ```python
@@ -914,7 +962,7 @@ df_old=preprocess_plague_data(plague_path_old,list_cases_class=incl_cases_class)
 ```
 
 ```python
-df_old_date=plague_group_by_date(df_old, "2021-09-28")
+df_old_date=plague_group_by_date(df_old, sel_end_date="2021-09-28")
 ```
 
 ```python
