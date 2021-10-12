@@ -177,7 +177,7 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-df_date=plague_group_by_date(df, self_end_date="2021-10-01")
+df_date=plague_group_by_date(df, sel_end_date="2021-10-01")
 ```
 
 ```python
@@ -676,7 +676,7 @@ chart_2018_2021
 #### Only pneunomic cases
 
 ```python
-df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], self_end_date="2021-10-01")
+df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], sel_end_date="2021-10-01")
 ```
 
 ```python
@@ -793,6 +793,7 @@ def comp_abs_consec(df_date,cap=10,cases_col="cases_number"):
 df_cap10=comp_abs_consec(df_date,cases_col="cases_number")
 ```
 
+```python
 heatmap_abs10 = alt.Chart(df_cap10).mark_rect().encode(
     x="week:N",
     y="year:N",
@@ -802,6 +803,7 @@ heatmap_abs10 = alt.Chart(df_cap10).mark_rect().encode(
 )
 heatmap_abs10
 # heatmap_abs10.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_abs10.png"))
+```
 
 ```python
 df_cap10_rolling=comp_abs_consec(df_date,cases_col="rolling_mean")
@@ -824,7 +826,7 @@ df_urb_cap1=comp_abs_consec(df_date_urb,cap=1,cases_col="cases_number")
 heatmap_urb_abs1 = alt.Chart(df_urb_cap1).mark_rect().encode(
     x="week:N",
     y="year:N",
-    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 10 cases")),
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 1 cases")),
 ).properties(
     title=">= 1 pneumonic plague cases in urban areas"
 )
@@ -838,7 +840,7 @@ df_urb_cap5=comp_abs_consec(df_date_urb,cap=5,cases_col="cases_number")
 heatmap_urb_abs5 = alt.Chart(df_urb_cap5).mark_rect().encode(
     x="week:N",
     y="year:N",
-    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 10 cases")),
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 5 cases")),
 ).properties(
     title=">= 5 pneumonic plague cases in urban areas"
 )
