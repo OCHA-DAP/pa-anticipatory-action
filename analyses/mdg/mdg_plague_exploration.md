@@ -362,10 +362,10 @@ df_hist_weeks.head()
 
 ```python
 base = alt.Chart(df_hist_weeks).transform_calculate(
-    line="'hist mean'",
-    shade1="'hist +1.64std'",
+    line="'historical average'",
+    shade1="'historical +1.64std'",
 )
-scale = alt.Scale(domain=["hist mean", "hist +1.64std"], range=['red', 'yellow'])
+scale = alt.Scale(domain=["historical average", "historical +1.64std"], range=['red', 'yellow'])
 ```
 
 ```python
@@ -390,11 +390,13 @@ band_std= base.mark_area(
 #     color=alt.Color('shade2:N', scale=scale, title=''),
 )
 
-alt.layer(line_std, band_std, line_avg).properties(
+chart_hist_std = alt.layer(line_std, band_std, line_avg).properties(
     width=500,
     height=300,
     title = "Historical average and 1.64std"
 )
+chart_hist_std
+# chart_hist_std.save(os.path.join(plot_dir,f"{iso3}_histavg_std.png"))
 ```
 
 ### Define functions key figures
@@ -679,11 +681,13 @@ def comp_std_consec(df_date,df_hist_avg,std=1.64):
     df_hist_avg[f"{std}std"]=df_hist_weeks.rs_std*std
     df_hist_avg[f"plus_{std}std"]=df_hist_weeks.rs_mean+df_hist_weeks[f"{std}std"]
     df_date=df_date.merge(df_hist_avg[["week",f"plus_{std}std"]],on="week",how="right")
-    df_date["thresh_reached"]=np.where(df_date.cases_number>=df_date[f"plus_{std}std"],1,0)
+    #do larger than instead of larger or equal than cause else when std=0 it would trigger
+    df_date["thresh_reached"]=np.where(df_date.cases_number>df_date[f"plus_{std}std"],1,0)
     df_date=df_date.sort_values("date")
     df_date['consecutive'] = df_date[f"thresh_reached"].groupby( \
     (df_date[f"thresh_reached"] != df_date[f"thresh_reached"].shift()).cumsum()).transform('size') * \
     df_date[f"thresh_reached"]
+    df_date["thresh_reached_str"]=df_date.thresh_reached.replace({0:"no",1:"yes"})
     return df_date
 ```
 
@@ -694,12 +698,15 @@ df_164=comp_std_consec(df_date,df_hist_weeks)
 We never seen any cases in week 28 and 29 in 2018-2020 so that is why the cap is always reached in those weeks.. 
 
 ```python
-scat_plot = alt.Chart(df_164).mark_rect().encode(
+heatmap_164 = alt.Chart(df_164).mark_rect().encode(
     x="week:N",
     y="year:N",
-    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title="larger than +1.64 std")),
+).properties(
+    title="> average + 1.64 std cases"
 )
-scat_plot
+heatmap_164
+# heatmap_164.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_std164.png"))
 ```
 
 ```python
@@ -720,7 +727,7 @@ scat_plot
 ```
 
 ```python
-df_2[df_2.consecutive>=4]
+df_4[df_4.consecutive>=4]
 ```
 
 ```python
@@ -734,6 +741,7 @@ def comp_abs_consec(df_date,cap=10,cases_col="cases_number"):
     df_date['consecutive'] = df_date[f"thresh_reached"].groupby( \
     (df_date[f"thresh_reached"] != df_date[f"thresh_reached"].shift()).cumsum()).transform('size') * \
     df_date[f"thresh_reached"]
+    df_date["thresh_reached_str"]=df_date.thresh_reached.replace({0:"no",1:"yes"})
     return df_date
 ```
 
@@ -742,12 +750,15 @@ df_cap10=comp_abs_consec(df_date,cases_col="cases_number")
 ```
 
 ```python
-scat_plot = alt.Chart(df_cap10).mark_rect().encode(
+heatmap_abs10 = alt.Chart(df_cap10).mark_rect().encode(
     x="week:N",
     y="year:N",
-    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 10 cases")),
+).properties(
+    title=">= 10 cases"
 )
-scat_plot
+heatmap_abs10
+# heatmap_abs10.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_abs10.png"))
 ```
 
 ```python
@@ -777,12 +788,15 @@ df_cap10_rolling_sum=comp_abs_consec(df_date,cap=30,cases_col="rolling_sum")
 ```
 
 ```python
-scat_plot = alt.Chart(df_cap10_rolling_sum).mark_rect().encode(
+heatmap_abs_cumsum30 = alt.Chart(df_cap10_rolling_sum).mark_rect().encode(
     x="week:N",
     y="year:N",
-    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 30 cases last 3 weeks")),
+).properties(
+    title=">= 30 cases in last 3 weeks"
 )
-scat_plot
+heatmap_abs_cumsum30
+# heatmap_abs_cumsum30.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_cumsum30.png")),
 ```
 
 When using the rolling sum, the cap would be reached one week later in 2017. So that is kind of the same result as requiring 2 consec weeks with more than 10 cases. 
