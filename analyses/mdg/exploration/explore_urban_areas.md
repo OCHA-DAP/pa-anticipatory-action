@@ -7,6 +7,7 @@ import rasterio
 import rasterio.mask
 import rasterio.plot
 import matplotlib.pyplot as plt
+import numpy as np
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -83,7 +84,3 @@ plot_urban(adm2, "Mahajanga")
 ```
 
 Overall, it seems that most of these areas should still be classified as urban areas. However, places like Mahajanga fall into a different trap where ADM2 boundaries cover wide swaths of area, with only a small portion classified as urban. Given that the classification for urban consists of raster scores 11-13 for non-urban, 21-23 for suburban - dense, and 30 for urban centre, maybe we could look at weighting the percent to account for areas where it drops from urban centre to rural abruptly with limited suburban/semi-urban spaces.
-
-```python
-
-```

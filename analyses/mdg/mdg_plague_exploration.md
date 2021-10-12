@@ -305,11 +305,11 @@ gdf_adm2_merge.plot(column="cases_number",
 Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary.
 
 ```python
-df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
+df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
 # first filter out rows where the join failed (i.e. those with only ADM2 pcodes rather than ADM3)
-df_urb = df_urb[df_urb.urban_area.notnull()]
-# then filter to only urban areas
-df_urb = df_urb.loc[df_urb.urban_area]
+df_urb = df_urb[df_urb.urban_area_weighted.notnull()]
+# then filter to only urban areas with pneumonic plague
+df_urb = df_urb.loc[df_urb.urban_area_weighted & (df_urb.clinical_form == "PP")]
 
 #group by date
 df_date_urb=plague_group_by_date(df_urb, "2021-10-01")
@@ -321,7 +321,7 @@ px.line(
     df_date_urb,
     x="date",
     y="cases_number",
-    title="Cases reported in urban areas, 2017 - 2021"
+    title="Pneumonic plague cases reported in urban areas, 2017 - 2021"
 )
 ```
 
@@ -357,16 +357,37 @@ urb_plot = urb_map_df.plot(
 
 ```python
 urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
-urb_map_df['color'] = np.where(urb_map_df.urban_area_weighted, "#151515", "#FAFAFA")
+urb_map_df['color'] = np.where(urb_map_df.urban_area_weighted, "#151515", "#ECECEC")
+
+fig, ax = plt.subplots(1, 1)
+fig.set_figheight(15)
 
 urb_plot = urb_map_df.plot(
+    ax = ax,
     color=urb_map_df["color"],
     categorical=True,
     legend=True,
     edgecolor="face",
-    figsize=(15,10)
+    figsize=(15,10),
 )
 
+urb_plot.text(47.8,-19,"Antananarivo")
+urb_plot.text(48.8,-17.9,"Toamisina")
+urb_plot.text(47.2,-20,"Antsirabe")
+urb_plot.text(48.3,-22.2,"Manakara")
+urb_plot.text(48.1,-22.9,"Farafangana")
+urb_plot.text(49.4,-13.2,"Vohemar")
+urb_plot.text(46.5,-15.8,"Mahajanga")
+urb_plot.text(43.9,-23.45,"Toliara")
+
+font_dict = {
+    'fontsize': 14,
+    'fontweight' : 'bold',
+    'horizontalalignment' : 'center'
+    }
+
+ax.set_title("Madagascar urban areas, defined through GHS",font_dict)
+ax.axis('off')
 # need to adjust size for saving, currently screenshotting
 # urb_plot.figure.savefig(os.path.join(plot_dir,f"{iso3}_urban_areas_weighted.png"), bbox_inches="tight")
 ```
