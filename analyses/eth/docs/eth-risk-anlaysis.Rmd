@@ -22,7 +22,7 @@ editor_options:
 <br>
 
 # Ethiopia Baseline Risk Analysis
-Analysis last updated 06-10-2021.
+Analysis last updated 12-10-2021.
 
 <br>
 
@@ -40,17 +40,7 @@ This document is an initial exploration into risk of humanitarian need in Ethiop
 
 ## Historical Analysis
 
-Relevant datasets include: 
-
-1. [Global Flood Database](http://global-flood-database.cloudtostreet.info/#interactive-map)
-- Gridded data of historical flood extents available via [Google Earth Engine](https://developers.google.com/earth-engine/datasets/catalog/GLOBAL_FLOOD_DB_MODIS_EVENTS_V1).
-- Includes flood events from 2000-2018. Ethiopia has 28 events recorded.
-- Events identified from the Dartmouth Flood Observatory, with flood extent mapped using MODIS satellite imagery.
-
-2. [EM-DAT](https://www.emdat.be/database)
-- Historical catalogue of both flood and drought events from 1965-2021.
-- Dataset includes 74 events.
-- Geolocated somewhat inconsistently to most often the Admin 1 or 2 level. 
+### Frequency of past drought and flood events
 
 The figure below shows the national count of shock events per year, as recorded in EM-DAT. 
 
@@ -62,7 +52,7 @@ plot_disaster_annual
 
 ```
 
-The figure below shows the frquency of floods (left) and drought (right) by region since 1965. NOTE that the geolocation of events in these figures still needs to be fully validated.
+The figure below shows the frquency of floods (left) and drought (right) by region since 1965. 
 
 ```{r historical-freq, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=5, fig.show="hold", fig.cap = 'Historical frequency of shock events by Region', out.width="50%"}
 
@@ -108,42 +98,91 @@ emdat_drought %>%
 <br>
 <br>
 
-3. [IDMC](https://data.humdata.org/dataset/idmc-idp-data-for-ethiopia)
+### Other potentially relevant datasets 
+
+1. [Global Flood Database](http://global-flood-database.cloudtostreet.info/#interactive-map)
+- Gridded data of historical flood extents available via [Google Earth Engine](https://developers.google.com/earth-engine/datasets/catalog/GLOBAL_FLOOD_DB_MODIS_EVENTS_V1).
+- Includes flood events from 2000-2018. Ethiopia has 28 events recorded.
+- Events identified from the Dartmouth Flood Observatory, with flood extent mapped using MODIS satellite imagery.
+
+
+2. [IDMC](https://data.humdata.org/dataset/idmc-idp-data-for-ethiopia)
 - Number of IDPs, relating to conflict and disaster.
 - Not subnational.
 - Data available between 2008-2020.
 
-4. [IOM DTM Site Assessment](https://data.humdata.org/dataset/ethiopia-baseline-assessment-data-iom-dtm)
-- Assessment July 2021.
-- At Admin 3 level.
-- For each site, includes reason for displacement and breakdown of population by age and gender.
 
-The figures below show the basic spatial distribution, volume, and demographics of Ethiopia's IDP population as identified by the IOM DTM Site Assessment conducted in July 2021. 
-
-```{r img1, echo = FALSE, include=T, fig.cap='IDP population breakdown by gender at Admin 2 level, symbols scaled by total IDP population', out.extra='style=padding:5px;"', fig.align='center'}
-images1 <- c('gender-map-pop.png')
-include_graphics(images1)
-```
-
-```{r img2, echo = FALSE, include=T, fig.cap='IDP population breakdown by age at Admin 2 level, symbols scaled by total IDP population', out.extra='style=padding:5px;"', fig.align='center'}
-images2 <- c('age-map-pop.png')
-include_graphics(images2)
-```
-
-```{r img3, echo = FALSE, include=T, fig.cap='Reason for displacement of IDPs at Admin 2 level', out.extra='style=padding:5px;"', fig.align='center'}
-images3 <- c('reason-map-pop.png')
-include_graphics(images3)
-```
-
-5. [FAOSTAT Food Security Indicators](https://data.humdata.org/dataset/faostat-food-security-indicators-for-ethiopia)
+3. [FAOSTAT Food Security Indicators](https://data.humdata.org/dataset/faostat-food-security-indicators-for-ethiopia)
 - National level indicators from 2000-2020
 - Such as: Prevalence of undernourishment (percent) (3-year average), Number of severely food insecure people (million) (3-year average), Percentage of population using safely managed sanitation services (Percent)
 
 ## Near-present situation
 
-1. [Standardized Precipitation Index](https://code.earthengine.google.com/5d3600853925e070e57c9f733072e274)
-- Researched in past MapAction work in Ethiopia: 
+### IDP population
+
+The figures below show the basic spatial distribution, volume, and demographics of Ethiopia's IDP population as identified by the [IOM DTM Site Assessment](https://data.humdata.org/dataset/ethiopia-baseline-assessment-data-iom-dtm) conducted in July 2021. 
+
+```{r img1, echo = FALSE, include=T, fig.cap='IDP population breakdown by gender at Admin 2 level, symbols scaled by total IDP population', out.extra='style=padding:5px;"', fig.align='center'}
+images1 <- c('img/gender-map-pop.png')
+include_graphics(images1)
+```
+
+```{r img2, echo = FALSE, include=T, fig.cap='IDP population breakdown by age at Admin 2 level, symbols scaled by total IDP population', out.extra='style=padding:5px;"', fig.align='center'}
+images2 <- c('img/age-map-pop.png')
+include_graphics(images2)
+```
+
+```{r img3, echo = FALSE, include=T, fig.cap='Reason for displacement of IDPs at Admin 2 level', out.extra='style=padding:5px;"', fig.align='center'}
+images3 <- c('img/reason-map-pop.png')
+include_graphics(images3)
+```
+
+### Standardized Precipitation Index
+
+As researched in past MapAction work in Ethiopia: 
 
 > Standardized Precipitation Index (SPI) is the most commonly used indicator worldwide for detecting and characterizing meteorological droughts. It measures precipitation anomalies at a given location based on a comparison of observed total precipitation amounts for an accumulation period of interest (e.g. 3, 6, 9 months), with the long-term historic rainfall record for that period. Rainfall deficits (i.e. meteorological droughts) are indicated as SPI decreases below -1.0, while excess rainfall are indicated as SPI increases above 1.0. As SPI values are in units of standard deviation from the long-term mean, the indicator can be used to compare precipitation anomalies for any geographic location and for any number of time scales. The World Meteorological Organization has recommended that the SPI be used by all National Meteorological and Hydrological Services around the world to characterize meteorological droughts
+
+The figure below shows the 3-month SPI for Ethiopia in September 2021, generated by IRI's [Global Drought Analysis Tool](https://iridl.ldeo.columbia.edu/maproom/Global/Drought/Global/CPC_GOB/Analysis.html).
+
+```{r spi, echo = FALSE, include=T, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/sept_spi.png')
+```
+
+## Forecasted situation
+
+The OND season will most likely be poor. A first set of projections for MAM 2022 (by the Climate Hazard Center) are pessimistic. Note that forecasts for MAM are still early and particularly subject to change as the season draws nearer. Still, we have an early signal that we may be facing two more poor rainy seasons.
+
+### October, November, December - 2021
+
+```{r ond_iri, echo = FALSE, include=T, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/ond_iri.png')
+```
+
+```{r ond_nmme, echo = FALSE, include=T, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/nmme_ond.png')
+```
+
+```{r icpac_ond, echo = FALSE, include=T, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/icpac_ond.png')
+```
+
+### January, February, March - 2022
+
+```{r jfm_iri, echo = FALSE, include=T, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/jfm_iri.png')
+```
+
+### February, March, April - 2022
+
+```{r fma_nmme, echo = FALSE, include=T, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/nmme_fma.png')
+```
 
 
