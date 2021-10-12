@@ -114,9 +114,26 @@ emdat_drought %>%
 - Data available between 2008-2020.
 
 4. [IOM DTM Site Assessment](https://data.humdata.org/dataset/ethiopia-baseline-assessment-data-iom-dtm)
-- Assessment late Dec 2020, early Jan 2021.
+- Assessment July 2021.
 - At Admin 3 level.
 - For each site, includes reason for displacement and breakdown of population by age and gender.
+
+The figures below show the basic spatial distribution, volume, and demographics of Ethiopia's IDP population as identified by the IOM DTM Site Assessment conducted in July 2021. 
+
+```{r img1, echo = FALSE, include=T, fig.cap='IDP population breakdown by gender at Admin 2 level, symbols scaled by total IDP population', out.extra='style=padding:5px;"', fig.align='center'}
+images1 <- c('gender-map-pop.png')
+include_graphics(images1)
+```
+
+```{r img2, echo = FALSE, include=T, fig.cap='IDP population breakdown by age at Admin 2 level, symbols scaled by total IDP population', out.extra='style=padding:5px;"', fig.align='center'}
+images2 <- c('age-map-pop.png')
+include_graphics(images2)
+```
+
+```{r img3, echo = FALSE, include=T, fig.cap='Reason for displacement of IDPs at Admin 2 level', out.extra='style=padding:5px;"', fig.align='center'}
+images3 <- c('reason-map-pop.png')
+include_graphics(images3)
+```
 
 5. [FAOSTAT Food Security Indicators](https://data.humdata.org/dataset/faostat-food-security-indicators-for-ethiopia)
 - National level indicators from 2000-2020

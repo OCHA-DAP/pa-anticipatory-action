@@ -88,5 +88,20 @@ drought_map <- tm_shape(shp_adm1) +
   tm_layout(frame = FALSE) +
   tm_text('ADM1_EN', size=0.75, col='black')
 
-drought_map
-flood_map
+
+# IDP data ----------------------------------------------------------------
+
+df_idp <- read_excel(paste0(exploration_country_dir, "hdx_dtm-ethiopia-site-assessment-round-26-dataset-june-july-2021.xlsx"))
+df_idp <- df_idp[-1,]
+
+df_idp_reason <- df_idp %>% 
+  arrange(`OCHA Zone P-Code`)%>%
+  group_by(`OCHA Zone P-Code`, `1.5.e.1: Reason for displacement`)%>%
+  mutate(Count = n())%>%
+  group_by(`OCHA Zone P-Code`)%>%
+  ungroup()%>%
+  select(c(`OCHA Zone P-Code`, `1.5.e.1: Reason for displacement`, Count))%>%
+  distinct()%>%
+  spread(key = `1.5.e.1: Reason for displacement`, value = Count, fill = 0)
+
+write.csv(df_idp_reason, paste0(exploration_country_dir, 'idp_site_assessment_processed_reason_pcode.csv'))
