@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
 import numpy as np
+import math
 
 import seaborn as sns
 from mlxtend.evaluate import confusion_matrix
@@ -248,7 +249,7 @@ start_year=2000
 end_year=2020
 #just locking the date to keep the analysis the same even though data is added
 #might wanna delete again later
-end_date="5-1-2021"
+end_date="2-1-2020"
 ```
 
 ```python
@@ -358,6 +359,23 @@ df_ds_for["month"]=df_ds_for.date_month.dt.month
 df_ds_for["month_name"]=df_ds_for.month.apply(lambda x: calendar.month_name[x])
 df_ds_for["month_abbr"]=df_ds_for.month.apply(lambda x: calendar.month_abbr[x])
 df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("dry_spell",ascending=True)
+```
+
+```python
+df_ds_lt=df_ds_for_labels[(df_ds_for_labels.leadtime==3)]
+bins=np.arange(math.floor(df_ds_lt[aggr_meth].min()/10)*10,math.ceil(df_ds_lt[aggr_meth].max()/10)*10+10,10)
+# bins=np.arange(150,330,10)
+for mn in ["January","February"]:
+    fig,ax=plt.subplots(figsize=(6,3))
+    df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month_name==mn)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
+    
+    g=sns.histplot(df_sel_hist,bins=bins,x=aggr_meth,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})#,legend=False)
+    g.set_title(f"Forecasted precipitation {mn}, \n leadtime=2.5months",fontsize=12)
+    ax.set_ylabel("number of months")
+    ax.set_xlabel("Monthly precipitation")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.get_legend().set_title("Dry spell occurred")
 ```
 
 ```python
@@ -556,7 +574,7 @@ df_pr_sep_lt_m["return_period"]=df_pr_sep_lt_m.apply(lambda x: f"1/{int(x.rp)} y
 ```
 
 ```python
-df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin([2,4]))][["month","threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["month","leadtime","threshold"])
+df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin([3]))][["month","threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["month","leadtime","threshold"])
 ```
 
 ```python
@@ -613,7 +631,7 @@ df_pr_year_sep_lt["return_period"]=df_pr_year_sep_lt.apply(lambda x: f"1/{int(x.
 ```
 
 ```python
-df_pr_year_sep_lt_sel=df_pr_year_sep_lt[(df_pr_year_sep_lt.threshold>=160)&(df_pr_year_sep_lt.threshold<=220)&(df_pr_year_sep_lt.leadtime.isin([2,4]))][["threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["leadtime","threshold"])
+df_pr_year_sep_lt_sel=df_pr_year_sep_lt[(df_pr_year_sep_lt.threshold>=160)&(df_pr_year_sep_lt.threshold<=220)&(df_pr_year_sep_lt.leadtime.isin([3]))][["threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["leadtime","threshold"])
 ```
 
 ```python
