@@ -6,9 +6,9 @@ Very simple script to classify ADM4 areas in Madagascar as urban based on GHS da
 from pathlib import Path
 import sys
 import os
+import numpy as np
 import geopandas as gpd
 import rasterio
-import numpy as np
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[0]}/"
 sys.path.append(path_mod)
@@ -24,7 +24,7 @@ raw_dir = os.path.join(os.environ["AA_DATA_DIR"], 'public', 'raw', iso3)
 processed_dir = os.path.join(os.environ["AA_DATA_DIR"], 'public', 'processed', iso3)
 
 # Adjustable settings
-ADM_LEVEL = "adm4"   # ADM level for aggregation
+ADM_LEVEL = "adm3"   # ADM level for aggregation
 URBAN_MIN_CLASS = 21 # passed to get_ghs_data()
 URBAN_PERCENT = 0.5  # passed to get_ghs_data()
 
@@ -40,24 +40,24 @@ box = [(22,10),
        (22,12)]
 
 # Download data
-
 get_ghs_data("SMOD", box, iso3, raw_dir)
 
 # Load data
-
 adm = gpd.read_file(adm_path, crs='4326').to_crs('ESRI:54009')
+
 with rasterio.open(os.path.join(raw_dir, 'ghs', 'mdg_SMOD_2015_1km_mosaic.tif')) as src:
     smod = src.read(1)
     trans = src.transform
 
 cls = classify_urban_areas(adm, smod, trans, URBAN_MIN_CLASS, URBAN_PERCENT)
+adm['urban_percent'] = [x['urban_percent'] for x in cls]
 adm['urban_area'] = [x['urban_area'] for x in cls]
+adm['urban_area_weighted'] = [x['urban_area_weighted'] for x in cls]
 ```
 
-Save out results. Generates an error if the file is already present, remove `move = 'x'` to allow overwriting.
+Save out results.
 
 ```python
 output_path = os.path.join(processed_dir, 'urban_classification', f'mdg_{ADM_LEVEL}_urban_classification.csv')
-if not os.path.exists(output_path):
-    adm.drop('geometry', axis=1).to_csv(output_path, mode = 'x')
+# adm.drop('geometry', axis=1).to_csv(output_path)
 ```
