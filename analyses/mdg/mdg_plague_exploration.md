@@ -23,6 +23,7 @@ Missing data:
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import date
 import numpy as np
 import altair as alt
@@ -926,6 +927,110 @@ chart_2018_2021_grey=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]
 chart_2018_2021_grey + std_164
 ```
 
+### Plot time series of cases and trigger activations
+
+```python
+urb = px.line(
+    df_date_urb,
+    x="date",
+    y="cases_number",
+    title="Absolute cases trigger, pneumonic plague in urban areas"
+)
+
+urb.add_trace(
+    go.Scatter(y=[5],x=[pd.to_datetime("2017-09-11")], marker={"size":10}, showlegend=False),
+)
+
+urb.add_annotation(
+    y=5,x=pd.to_datetime("2017-09-11"),text="Trigger, 6 cases",font={"size":12}
+)
+
+urb.add_hline(y=5,annotation_text="5 cases trigger",annotation_position="top left")
+
+# requires kaleido package on mac, might be different on other machines
+# urb.write_image(os.path.join(plot_dir,f"{iso3}_urban_timeline_abs_trigger.png"))
+```
+
+```python
+urb_cumsum = px.line(
+    df_date_urb,
+    x="date",
+    y="rolling_sum",
+    title="3 week sum trigger, pneumonic plague in urban areas"
+)
+
+urb_cumsum.add_trace(
+    go.Scatter(y=[10],x=[pd.to_datetime("2017-09-11")], marker={"size":10}, showlegend=False),
+)
+
+urb_cumsum.add_annotation(
+    y=10,x=pd.to_datetime("2017-09-11"),text="Trigger, 10 cases",font={"size":12}
+)
+
+urb_cumsum.add_hline(y=10,annotation_text="10 cases trigger",annotation_position="top left")
+
+# requires kaleido package on mac, might be different on other machines
+# urb_cumsum.write_image(os.path.join(plot_dir,f"{iso3}_urban_timeline_cumsum_trigger.png"))
+```
+
+```python
+abs_ov = px.line(
+    df_date,
+    x="date",
+    y="rolling_sum",
+    title="3 week sum trigger, pneumonic and bubonic plague"
+)
+
+abs_ov.add_trace(
+    go.Scatter(y=[43],x=[pd.to_datetime("2017-09-11")], marker={"size":10}, showlegend=False),
+)
+
+abs_ov.add_annotation(
+    y=43,x=pd.to_datetime("2017-09-11"),text="Trigger, 43 cases",font={"size":12}
+)
+
+abs_ov.add_annotation(
+    y=25,x=pd.to_datetime("2018-10-16"),text="Nearly trigger, 25 cases",font={"size":12}
+)
+
+abs_ov.add_hline(y=30,annotation_text="30 cases trigger",annotation_position="top left")
+
+# requires kaleido package on mac, might be different on other machines
+# abs_ov.write_image(os.path.join(plot_dir,f"{iso3}_overall_timeline_cumsum_trigger.png"))
+```
+
+```python
+std_ov = px.line(
+    df_164,
+    x="date",
+    y="cases_number",
+    title="Standard deviation trigger, pneumonic and bubonic plague",
+)
+
+std_ov.add_trace(
+    go.Scatter(y=[25],x=[pd.to_datetime("2017-09-11")], marker={"size":10},showlegend=False)
+)
+
+std_ov.add_annotation(
+    y=25,x=pd.to_datetime("2017-09-11"),text="Trigger, 3rd week above baseline",font={"size":12}
+)
+
+std_ov.add_trace(
+    go.Scatter(y=[2],x=[pd.to_datetime("2017-04-17")], marker={"size":10},showlegend=False),
+)
+
+
+std_ov.add_annotation(
+    y=2,x=pd.to_datetime("2017-04-17"),text="Trigger, 3rd week above baseline",font={"size":12}
+)
+
+std_ov.add_trace(
+    go.Scatter(y=df_164["plus_1.64std"],x=df_164["date"],marker={"color":"grey"},name="Rolling mean + std. dev.")
+)
+
+# std_ov.write_image(os.path.join(plot_dir,f"{iso3}_overall_timeline_std_trigger.png"))
+```
+
 ### Plot some key graphs for selected data
 
 ```python
@@ -933,7 +1038,7 @@ chart_2018_2021_grey + std_164
 ```
 
 ```python
-
+df_164[df_164.cases_number >= 100]
 ```
 
 ### Conclusions
