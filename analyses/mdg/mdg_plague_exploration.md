@@ -379,6 +379,7 @@ urb_plot.text(48.1,-22.9,"Farafangana")
 urb_plot.text(49.4,-13.2,"Vohemar")
 urb_plot.text(46.5,-15.8,"Mahajanga")
 urb_plot.text(43.9,-23.45,"Toliara")
+urb_plot.text(47.3,-21.55,"Fianarantsoa")
 
 font_dict = {
     'fontsize': 14,
