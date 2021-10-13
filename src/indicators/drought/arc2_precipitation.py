@@ -371,7 +371,10 @@ class ARC2:
     ):
         """
         Get mean aggregation by admin boundary for the downloaded arc2 data.
-        Outputs a csv with daily aggregated statistics.
+        Outputs a csv with daily aggregated statistics. If data already
+        processed between `self.date_min` and `self.date_max`, returns
+        pre-processed data, otherwise processes additional data and joins to
+        processed master file.
 
         :param polygon_path: Path to polygon file for clipping and downsampling
             raster data.
@@ -433,6 +436,13 @@ class ARC2:
 
         # infill missing data with interpolation
         data_col = "mean_" + bound_col
+        if "infilled" not in df_zonal_stats.columns:
+            df_zonal_stats["infilled"] = True
+
+        df_zonal_stats["infilled"] = np.where(
+            df_zonal_stats[data_col].isna(), False, df_zonal_stats["infilled"]
+        )
+
         df_zonal_stats[data_col] = df_zonal_stats.groupby(bound_col)[
             data_col
         ].transform(lambda x: x.interpolate())
