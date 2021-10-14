@@ -238,7 +238,7 @@ class TestProcess:
         return xr.Dataset({"dis24": (dims, dis24)}, coords=coords, attrs=attrs)
 
     @pytest.fixture()
-    def enxemble_raw(self):
+    def ensemble_raw(self):
         """
         For the forecast and reforecast, generate the raw data, which consists
         of the control and perturbed forecast, and combine the discharge
@@ -300,13 +300,13 @@ class TestProcess:
         return self.get_processed_data()
 
     @pytest.fixture()
-    def processed_data_forecast(self, mocker, enxemble_raw):
-        cf_raw, pf_raw, expected_dis24 = enxemble_raw
+    def processed_data_forecast(self, mocker, ensemble_raw):
+        cf_raw, pf_raw, expected_dis24 = ensemble_raw
         mocker.spy(xr, "open_mfdataset").side_effect = [cf_raw, pf_raw]
         return self.get_processed_data(
             number_coord=self.numbers,
             include_step=True,
-            dis24=enxemble_raw[2],
+            dis24=ensemble_raw[2],
         )
 
     def test_reanalysis_process(self, processed_data_reanalysis):
