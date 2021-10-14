@@ -6,6 +6,11 @@ import numpy as np
 import xarray as xr
 
 from src.indicators.flooding.glofas import glofas
+from src.indicators.flooding.glofas.forecast import (
+    GlofasForecast,
+    GlofasReforecast,
+)
+from src.indicators.flooding.glofas.reanalysis import GlofasReanalysis
 from src.utils_general.area import Area
 
 
@@ -42,7 +47,7 @@ class TestDownload(unittest.TestCase):
         self.expected_leadtime = ["240", "480"]
 
     def test_reanalysis_download(self, fake_mkdir, fake_retrieve):
-        glofas_reanalysis = glofas.GlofasReanalysis()
+        glofas_reanalysis = GlofasReanalysis()
         glofas_reanalysis.download(
             country_iso3=self.country_iso3,
             area=self.area,
@@ -71,7 +76,7 @@ class TestDownload(unittest.TestCase):
         fake_retrieve.assert_called_with(**expected_args)
 
     def test_forecast_download(self, fake_mkdir, fake_retrieve):
-        glofas_forecast = glofas.GlofasForecast()
+        glofas_forecast = GlofasForecast()
         glofas_forecast.download(
             country_iso3=self.country_iso3,
             area=self.area,
@@ -130,7 +135,7 @@ class TestDownload(unittest.TestCase):
         }
 
     def test_reforecast_download(self, fake_mkdir, fake_retrieve):
-        glofas_reforecast = glofas.GlofasReforecast()
+        glofas_reforecast = GlofasReforecast()
         glofas_reforecast.download(
             country_iso3=self.country_iso3,
             area=self.area,
@@ -143,7 +148,7 @@ class TestDownload(unittest.TestCase):
     def test_reforecast_download_split_by_leadtime(
         self, fake_mkdir, fake_retrieve
     ):
-        glofas_reforecast = glofas.GlofasReforecast()
+        glofas_reforecast = GlofasReforecast()
         glofas_reforecast.download(
             country_iso3=self.country_iso3,
             area=self.area,
