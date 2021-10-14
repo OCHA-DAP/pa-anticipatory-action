@@ -14,7 +14,7 @@ import xarray as xr
 
 from src.utils_general.area import Area, Station
 
-DATA_DIR = Path(os.environ["AA_DATA_DIR"])
+DATA_DIR = "AA_DATA_DIR"
 PUBLIC_DATA_DIR = "public"
 RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
@@ -65,6 +65,7 @@ class Glofas:
         self.system_version_minor = system_version_minor
         self.date_variable_prefix = date_variable_prefix
         self.use_incorrect_area_coords = use_incorrect_area_coords
+        self.data_dir = Path(os.environ["AA_DATA_DIR"])
 
     def _download(
         self,
@@ -120,7 +121,7 @@ class Glofas:
         if self.use_incorrect_area_coords:
             version_dir += "_incorrect_coords"
         directory = (
-            DATA_DIR
+            self.data_dir
             / PUBLIC_DATA_DIR
             / RAW_DATA_DIR
             / country_iso3
@@ -244,7 +245,7 @@ class Glofas:
             filename += f"_lt{str(leadtime).zfill(2)}d"
         filename += ".nc"
         return (
-            DATA_DIR
+            self.data_dir
             / PUBLIC_DATA_DIR
             / PROCESSED_DATA_DIR
             / country_iso3

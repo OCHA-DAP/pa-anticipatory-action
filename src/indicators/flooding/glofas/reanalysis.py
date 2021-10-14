@@ -50,7 +50,11 @@ class GlofasReanalysis(glofas.Glofas):
         country_iso3: str,
         stations: Dict[str, Station],
         version: int = glofas.DEFAULT_VERSION,
+        year_min: int = None,
+        year_max: int = None,
     ):
+        year_min = self.year_min if year_min is None else year_min
+        year_max = self.year_max if year_max is None else year_max
         # Get list of files to open
         logger.info(f"Processing GloFAS Reanalysis v{version}")
         filepath_list = [
@@ -59,7 +63,7 @@ class GlofasReanalysis(glofas.Glofas):
                 version=version,
                 year=year,
             )
-            for year in range(self.year_min, self.year_max + 1)
+            for year in range(year_min, year_max + 1)
         ]
         # Read in the dataset
         logger.info(f"Reading in {len(filepath_list)} files")
@@ -73,7 +77,7 @@ class GlofasReanalysis(glofas.Glofas):
                 stations=stations, ds=ds, coord_names=["time"]
             )
         # Write out the new dataset to a file
-        self._write_to_processed_file(
+        return self._write_to_processed_file(
             country_iso3=country_iso3,
             version=version,
             ds=ds_new,

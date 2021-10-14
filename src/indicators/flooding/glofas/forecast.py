@@ -99,7 +99,7 @@ class GlofasForecastBase(glofas.Glofas):
                 coord_names=coord_names,
             )
             # Write out the new dataset to a file
-            self._write_to_processed_file(
+            return self._write_to_processed_file(
                 country_iso3=country_iso3,
                 version=version,
                 ds=ds_new,
@@ -123,7 +123,7 @@ class GlofasForecast(GlofasForecastBase):
         super()._download(is_reforecast=False, *args, **kwargs)
 
     def process(self, *args, **kwargs):
-        super()._process(is_reforecast=False, *args, **kwargs)
+        return super()._process(is_reforecast=False, *args, **kwargs)
 
 
 class GlofasReforecast(GlofasForecastBase):
@@ -143,4 +143,4 @@ class GlofasReforecast(GlofasForecastBase):
         super()._download(is_reforecast=True, *args, **kwargs)
 
     def process(self, *args, **kwargs):
-        super()._process(is_reforecast=True, *args, **kwargs)
+        return super()._process(is_reforecast=True, *args, **kwargs)
