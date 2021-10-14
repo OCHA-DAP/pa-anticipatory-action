@@ -23,6 +23,7 @@ Missing data:
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import date
 import numpy as np
 import altair as alt
@@ -921,7 +922,7 @@ heatmap_urb_cumsum10
 ```
 
 ```python
-
+df_164[df_164.cases_number >= 100]
 ```
 
 ### Conclusions
