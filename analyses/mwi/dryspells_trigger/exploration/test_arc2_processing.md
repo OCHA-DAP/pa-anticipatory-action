@@ -90,3 +90,16 @@ processed_df = arc2_test.process_data(poly_path, "ADM2_PCODE")
 
 processed_df
 ```
+
+```python
+ds3.values[ds3.values == 0] = 10
+```
+
+```python
+ds2.values
+ds3.
+```
+
+```python
+
+```

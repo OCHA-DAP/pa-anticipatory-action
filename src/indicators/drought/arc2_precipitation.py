@@ -264,7 +264,10 @@ class ARC2:
         f.close()
         return
 
-    def load_raw_data(self, raw_filepath: Union[Path, None] = None):
+    def load_raw_data(
+        self,
+        raw_filepath: Union[Path, None] = None,
+    ):
         """
         Convenience function to load raw raster data, squeeze
         it and write its CRS. The function always accesses
@@ -290,7 +293,9 @@ class ARC2:
 
         return da
 
-    def download_data(self, master: bool = False):
+    def download_data(
+        self, master: bool = False, replace_missing: Union[bool, str] = False
+    ):
         """
         Download ARC2 data for all dates between `self.date_min`
         and `self.date_max`. If `master`, then all data
@@ -303,6 +308,11 @@ class ARC2:
         :param master: Boolean on whether to set download as
             master if `True`, or only download missing data
             and merge to master if `False`.
+        :param replace_missing: Only relevant if not `master`.
+            If `True`, looks for missing values through entire
+            dataset and ensures they are re-downloaded. If an
+            ISO 8601 string is passed, then missing values are
+            only looked for on or after that date.
         """
         if master:
             self._download(self.date_min, self.date_max, master)
@@ -310,6 +320,25 @@ class ARC2:
             # load master data and find all dates covered
             # compare to min/max and then download missing
             mr = self.load_raw_data()
+
+            # drop missing data if requested
+            if replace_missing:
+                if isinstance(replace_missing, str):
+                    replace_date = datetime.fromisoformat(replace_missing)
+                else:
+                    replace_date = datetime.combine(
+                        self.date_min, datetime.min.time()
+                    )
+
+                t_subset = mr.indexes["T"] < replace_date
+                val_subset = np.max(
+                    np.max(mr.values != -999, array=1), array=1
+                )
+
+                # keeps rows if date is less than specified or
+                # value is different than -999 (missing)
+                mr = mr.loc[t_subset | val_subset, :, :]
+
             loaded_dates = mr.indexes[
                 "T"
             ].to_datetimeindex() - pd.to_timedelta("12:00:00")
@@ -418,6 +447,9 @@ class ARC2:
                 da = da.loc[lookup, :, :]
         else:
             Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
+
+        # explicitly remove missing values
+        da.values[da.values == -999] = np.NaN
 
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,
