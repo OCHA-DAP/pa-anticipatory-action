@@ -879,15 +879,47 @@ Another idea would be to instead of looking at cases in one week, we look at the
 Lets have a  look at the density distribution of the 3-week cumsum years during all weeks and all years except 2017
 
 ```python
+df_cap30_rolling_sum=comp_abs_consec(df_date,cap=30,cases_col="rolling_sum")
+```
+
+```python
+df_cap30_sel_year = df_cap30_rolling_sum[df_cap30_rolling_sum.year!=2017]
+
 density_chart = alt.Chart(df_cap30_rolling_sum[df_cap30_rolling_sum.year!=2017]).transform_density(
     'rolling_sum',
     as_=['rolling_sum', 'density'],
 ).mark_area().encode(
-    x=alt.X("rolling_sum:Q",title="cumsum cases 3 weeks",scale=alt.Scale(domain=[0, 30])),
+    x=alt.X("rolling_sum:Q",title="cumsum cases 3 weeks",scale=alt.Scale(domain=[0, 60])),
+    y='density:Q',
+).properties(title="Density distribution for 2012-2016, 2018-2021 of the 3-week cumsum")
+line = alt.Chart(pd.DataFrame({'x': [df_cap30_rolling_sum.rolling_sum.mean()+2*df_cap30_rolling_sum.rolling_sum.std()]})).mark_rule(color="red").encode(x='x')
+density_chart # + line
+```
+
+```python
+df_cap30_sel_2012 = df_cap30_rolling_sum[df_cap30_rolling_sum.year<2017]
+
+density_chart_2012 = alt.Chart(df_cap30_sel_2012).transform_density(
+    'rolling_sum',
+    as_=['rolling_sum', 'density'],
+).mark_area().encode(
+    x=alt.X("rolling_sum:Q",title="cumsum cases 3 weeks",scale=alt.Scale(domain=[0, 60])),
+    y='density:Q',
+).properties(title="Density distribution for 2012-2016 of the 3-week cumsum")
+density_chart_2012
+```
+
+```python
+df_cap30_sel_2018 = df_cap30_rolling_sum[df_cap30_rolling_sum.year>2017]
+
+density_chart_2018 = alt.Chart(df_cap30_sel_2018).transform_density(
+    'rolling_sum',
+    as_=['rolling_sum', 'density'],
+).mark_area().encode(
+    x=alt.X("rolling_sum:Q",title="cumsum cases 3 weeks",scale=alt.Scale(domain=[0, 60])),
     y='density:Q',
 ).properties(title="Density distribution for 2018-2021 of the 3-week cumsum")
-line = alt.Chart(pd.DataFrame({'x': [df_cap30_sel_years.rolling_sum.mean()+2*df_cap30_sel_years.rolling_sum.std()]})).mark_rule(color="red").encode(x='x')
-density_chart # + line
+density_chart_2018
 ```
 
 We see that for most weeks we have a very small number of cum cases, the peak being around 2. The maximum sum we have seen was 25 cases
@@ -917,10 +949,6 @@ Based on this simple analysis, using a threshold of at least 30 or 40 cases duri
 
 
 When using this method, the trigger would be reached in week 37 in 2017
-
-```python
-df_cap30_rolling_sum=comp_abs_consec(df_date,cap=30,cases_col="rolling_sum")
-```
 
 ```python
 heatmap_abs_cumsum30 = alt.Chart(df_cap30_rolling_sum).mark_rect().encode(
