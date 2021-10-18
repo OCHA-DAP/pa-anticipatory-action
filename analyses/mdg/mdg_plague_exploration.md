@@ -775,17 +775,15 @@ chart_2018_2021_pp
 ```
 
 ### Defining a trigger
-The idea is to have part of the trigger based on the fact if all cases are above the 1.64std. This section explores this
+The idea is to have a trigger consisting of two parts: 
+1) Based on total number of cases
+2) Based on pneunomic cases in urban areas
+
+We explore different options for both parts. Optimally the trigger would be reached as early as possible in September 2017 while not having been reached at any other point
 
 
-Questions: 
-- should we do some rolling averaging before computing "thresh_reached"? 
-
-```python
-# #experimenting with rolling sum, but don't think it is gonna help us much
-df_date["rolling_mean"]=df_date.cases_number.rolling(window=3).mean()
-df_date["rolling_sum"]=df_date.cases_number.rolling(window=3).sum()
-```
+#### All cases
+One suggestion is to look at the historical mean and standard deviation. When the number of cases is larger than the mean+1.64std then we would trigger (i.e. 5/100 chance). What makes this problematic is that we only have 3 years of data to compute the std on which makes it fluctuate a lot. Another question is why we would want to trigger based on the std as this would mean a certain number of cases is "less bad" in one period of the year than in another.  
 
 ```python
 def comp_std_consec(df_date,df_hist_avg,std=1.64):
@@ -806,7 +804,7 @@ def comp_std_consec(df_date,df_hist_avg,std=1.64):
 df_164=comp_std_consec(df_date,df_hist_weeks)
 ```
 
-We never seen any cases in week 28 and 29 in 2018-2020 so that is why the cap is always reached in those weeks.. 
+Below the occurrences of cases>mean+1.64std are shown. We can see that this occurs quite commonly. We would therefore have to require 3 or 4 consecutive weeks where the condition is met
 
 ```python
 heatmap_164 = alt.Chart(df_164).mark_rect().encode(
@@ -825,25 +823,18 @@ df_164[df_164.consecutive>=4]
 ```
 
 ```python
-df_4=comp_std_consec(df_date,df_hist_weeks,std=4)
-```
-
-```python
-scat_plot = alt.Chart(df_4).mark_rect().encode(
-    x="week:N",
-    y="year:N",
-    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
+chart_2018_2021_grey=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]).mark_line().encode(
+    x='week:N',
+    y='cases_number',
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
 )
-scat_plot
 ```
 
 ```python
-df_4[df_4.consecutive>=4]
+chart_2018_2021_grey + std_164
 ```
 
-```python
-df_hist_weeks["2std"]=df_hist_weeks.rs_std*2
-```
+Instead of looking at the fluctuations compared to the std, we can also look at the absolute number of observed cases. 
 
 ```python
 def comp_abs_consec(df_date,cap=10,cases_col="cases_number"):
@@ -855,6 +846,10 @@ def comp_abs_consec(df_date,cap=10,cases_col="cases_number"):
     df_date["thresh_reached_str"]=df_date.thresh_reached.replace({0:"no",1:"yes"})
     return df_date
 ```
+
+When we require >= 10 cases, we can see this occurring in 2017 and at 3 other points of time. However in 2017 this lasts for a consecutive period of time, so requiring 2 or 3 weeks of 10 consecutive cases might be a suitable trigger. 
+
+With 2 weeks you might still risk having a false alarm while with 3 weeks you might be a bit late with the trigger
 
 ```python
 df_cap10=comp_abs_consec(df_date,cases_col="cases_number")
@@ -873,18 +868,73 @@ heatmap_abs10
 ```
 
 ```python
-df_cap10_rolling=comp_abs_consec(df_date,cases_col="rolling_mean")
+week_window=3
+df_date["rolling_mean"]=df_date.cases_number.rolling(window=week_window).mean()
+df_date["rolling_sum"]=df_date.cases_number.rolling(window=week_window).sum()
+```
+
+Another idea would be to instead of looking at cases in one week, we look at the rolling sum
+
+
+Lets have a  look at the density distribution of the 3-week cumsum years during all weeks and all years except 2017
+
+```python
+density_chart = alt.Chart(df_cap30_rolling_sum[df_cap30_rolling_sum.year!=2017]).transform_density(
+    'rolling_sum',
+    as_=['rolling_sum', 'density'],
+).mark_area().encode(
+    x=alt.X("rolling_sum:Q",title="cumsum cases 3 weeks",scale=alt.Scale(domain=[0, 30])),
+    y='density:Q',
+).properties(title="Density distribution for 2018-2021 of the 3-week cumsum")
+line = alt.Chart(pd.DataFrame({'x': [df_cap30_sel_years.rolling_sum.mean()+2*df_cap30_sel_years.rolling_sum.std()]})).mark_rule(color="red").encode(x='x')
+density_chart # + line
+```
+
+We see that for most weeks we have a very small number of cum cases, the peak being around 2. The maximum sum we have seen was 25 cases
+
+
+Next, lets see how the cumsum was in 2017 compared to the other years
+
+```python
+ alt.Chart(df_cap30_rolling_sum).mark_line().encode(
+    x='week:N',
+    y=alt.Y('rolling_sum',title="3-week rolling sum"),
+    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,"#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
+).properties(    
+     width=600,
+     height=300,
+     title="3-week rolling sum in 2018-2021")
 ```
 
 ```python
-scat_plot = alt.Chart(df_cap10_rolling).mark_rect().encode(
-    x="week:N",
-    y="year:N",
-    color=alt.Color('thresh_reached:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone])),
-)
-scat_plot
+df_cap30_rolling_sum[(df_cap30_rolling_sum.year==2017)&(df_cap30_rolling_sum.week>=32)]
 ```
 
+We can see that the cumsum in 2017 was significantly higher. In week 37 it was higher than we ever saw before, with 43 cases. 
+
+
+Based on this simple analysis, using a threshold of at least 30 or 40 cases during 3 weeks might serve as a good trigger. Where exactly the cap should be, is something that should be discussed with the wider team as it is a trade-off between detection and the risk of false alarms. 
+
+
+When using this method, the trigger would be reached in week 37 in 2017
+
+```python
+df_cap30_rolling_sum=comp_abs_consec(df_date,cap=30,cases_col="rolling_sum")
+```
+
+```python
+heatmap_abs_cumsum30 = alt.Chart(df_cap30_rolling_sum).mark_rect().encode(
+    x="week:N",
+    y="year:N",
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 30 cases last 3 weeks")),
+).properties(
+    title=">= 30 cases in last 3 weeks"
+)
+heatmap_abs_cumsum30
+# heatmap_abs_cumsum30.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_cumsum30.png")),
+```
+
+#### Urban areas and pneumonic cases
 Let's do similar calculations on urban areas, first looking at just triggering when there is a single case, primarily as a reference, and then looking at triggering on absolute cases and rolling sums.
 
 ```python
@@ -1189,176 +1239,6 @@ px.line(df_comb,x="date",y=["cases_number_new","cases_number_old"], title="Plagu
 
 ```python
 #small attempt to understand the differences between the two datasets
-bla=pd.concat([df,df_old]).drop_duplicates(keep=False)
-bla[bla.date>=df_old.date.min()].sort_values("date")
+df_comb_concat=pd.concat([df,df_old]).drop_duplicates(keep=False)
+df_comb_concat[df_comb_concat.date>=df_old.date.min()].sort_values("date")
 ```
-
-```python
-# merge_cols=['district', 'commune', 'ADM3_PCODE', 'year', 'week', 'clinical_form',
-#        'cases_class', 'status', 'date']
-# bla=df.merge(df_old, on=merge_cols, how= 'outer' ,indicator=True).loc[lambda x : x['_merge']=='left_only']
-# bla[bla.date>=df_old.date.min()]
-```
-
-### Archive
-
-```python
-
-```
-
-#### Experimenting with Exponential Mean Average
-https://www.investopedia.com/terms/m/macd.asp
-
-```python
-df_date["ema_26"]=df_date.cases_number.ewm(span=26, adjust=False).mean()
-df_date["ema_12"]=df_date.cases_number.ewm(span=12, adjust=False).mean()
-```
-
-```python
-df_date["macd"]=df_date["ema_12"]-df_date["ema_26"]
-```
-
-```python
-df_date["signal_line"]=df_date.macd.ewm(span=9,adjust=False).mean()
-```
-
-```python
-boo = alt.Chart(df_date[df_date.year.isin([2021])]).mark_line().encode(
-    x='week:N',
-    y='macd',
-    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3"]))
-)
-woop = alt.Chart(df_date[df_date.year.isin([2021])]).mark_line(color="orange").encode(
-    x='week:N',
-    y='signal_line',
-#     color=alt.Color('year:N', scale=alt.Scale(range=["orange"]))
-)
-woop + boo
-```
-
-Basic graphs from report, not being used so visuals are not optimized
-
-```python
-df_class_date=df_sel.groupby(["date","year","week","cases_class"],as_index=False).sum()
-```
-
-```python
-alt.Chart(df_class_date).mark_bar().encode(
-    x='week:N',
-    y='sum(cases_number)',
-    color = "cases_class:N"
-)
-```
-
-```python
-df_class_date=df_sel.groupby(["date","year","week","cases_class"],as_index=False).sum()
-```
-
-```python
-alt.Chart(df_sel[df_sel.clinical_form=="PP"].
-       groupby(["date","week","year","cases_class"],as_index=False).sum()).mark_bar().encode(
-    x='week:N',
-    y='sum(cases_number)',
-    color = "cases_class:N"
-)
-```
-
-```python
-alt.Chart(df_sel[df_sel.clinical_form=="PB"].
-       groupby(["date","week","year","cases_class"],as_index=False).sum()).mark_bar().encode(
-    x='week:N',
-    y='sum(cases_number)',
-    color = "cases_class:N"
-)
-```
-
-```python
-chart_1721_pp_sel = alt.Chart(df_date_pp[(df_date_pp.year.isin([2017,2021]))&(df_date_pp.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
-    x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
-    y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
-    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone])),
-).properties(
-    width=30,
-    height=300,
-    title="Number of pneunomic cases in week 31 to 38"
-).facet(
-    'week:N', spacing=0
-).configure_view(
-    strokeWidth=0
-).properties(title="Pneunomic cases in 2017 and 2021 in week 31-38")
-chart_1721_pp_sel
-
-# #not working
-# chart_1721_pp_sel.save(os.path.join(plot_dir,f"{iso3}_pp_cases_2017_2021_3138.png"))
-```
-
-```python
-chart_1721_sel = alt.Chart(df_date[(df_date.year.isin([2017,2021]))&(df_date.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_bar(width=5).encode(
-    x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
-    y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
-    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,color_twentyone])),
-).properties(
-    width=30,
-    height=300
-).facet(
-    'week:N', spacing=0
-).configure_view(
-    strokeWidth=0
-).properties(title="Cases in 2017 and 2021 in week 31-38")
-chart_1721_sel
-
-# #not working
-#chart_1721_sel.save(os.path.join(plot_dir,f"{iso3}_cases_2017_2021_3138.png"))
-```
-
-```python
-
-# line_2017_2021_sel= alt.Chart(df[(df.year.isin([2017,2021]))&(df.week.isin(range(sel_start_week,sel_end_week+1)))]).mark_line().encode(
-#     x='week:N',
-#     y='sum(cases_number)',
-#     color=alt.Color('year:N', scale=alt.Scale(range=['#f2645a','#007ce0']))
-# )
-
-# line_bar = line_2017_2021_sel #+ line_std
-# line_bar.properties(
-#     width=600,
-#     height=300
-# )
-```
-
-```python
-# #showing whole year as bar chart gets too messy
-# chart = alt.Chart(df[df.year.isin([2017,2021])]).mark_bar(width=5).encode(
-#     x=alt.X('year:N', scale=alt.Scale(domain=['', 2017, 2021]),title=None),
-#     y=alt.Y('cases_number',axis=alt.Axis(grid=False)),
-#     color=alt.Color('year:N', scale=alt.Scale(range=['#f2645a','#007ce0'])),
-# ).properties(
-#     width=30,
-#     height=300
-# ).facet(
-#     'week:N', spacing=0
-# ).configure_view(
-#     strokeWidth=0
-# )
-# chart
-```
-
-```python
-# df_yearweek=df[df.year.isin([2017,2021])].groupby(["year","week"],as_index=False).sum()
-# df_yearweek.year=df_yearweek.year.astype("str")
-# px.bar(df_yearweek, x="week", y="cases_number",
-#              color='year', 
-#        barmode='group',
-#              height=400)
-```
-
-```python
-# df_yearweek=df.groupby(["year","week"],as_index=False).sum()
-# df_yearweek.year=df_yearweek.year.astype("str")
-# px.bar(df_yearweek, x="week", y="cases_number",
-#              color='year', 
-#        barmode='group',
-#              height=400)
-```
-
-Altairs definition of "ci" is a 95% confidence interval
