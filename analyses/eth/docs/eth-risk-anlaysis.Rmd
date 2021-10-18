@@ -154,6 +154,13 @@ include_graphics('img/nmme_ond.png')
 include_graphics('img/icpac_ond.png')
 ```
 
+```{r csb_ond, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
+
+include_graphics('img/ond_anomaly.png')
+```
+
+[Source](https://data.chc.ucsb.edu/products/Season_Monitor/africa_east/oct_to_dec/pngs/with_forecast/Anomaly_Current.png)
+
 ### January, February, March - 2022
 
 ```{r jfm_iri, out.extra='style=padding:5px;"', fig.align='center', out.width='75%'}
