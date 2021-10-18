@@ -10,7 +10,7 @@ The data already includes up to 26-09, i.e. week 38
 
 
 Missing data:
-- 2014-2016 data
+- 2012-2016 geographically disaggregated data
 - aggregation by sex and age
 - resistance to antibiotics
 
@@ -23,7 +23,7 @@ Missing data:
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
-from datetime import date
+from datetime import date, timedelta
 import numpy as np
 import altair as alt
 import matplotlib.pyplot as plt
@@ -41,6 +41,20 @@ from src.indicators.drought.config import Config
 ```
 
 ```python
+def max_week(year):
+    """
+    Check the max week in a year to prevent
+    date errors in fromisocalendar() when a
+    week 53 doesn't exist.
+    
+    Based off this post: https://stackoverflow.com/questions/60945041/setting-more-than-52-weeks-in-python-from-a-date
+    """
+    has_week_53 = date.fromisocalendar(year, 52, 1) + timedelta(days=7) != date.fromisocalendar(year + 1, 1, 1)
+    if has_week_53:
+        return 53
+    else:
+        return 52
+
 def preprocess_plague_data(path,list_cases_class=None, delimiter = ";"):
     df = pd.read_csv(path, delimiter = delimiter)
     df.columns=df.columns.str.lower()
@@ -52,8 +66,19 @@ def preprocess_plague_data(path,list_cases_class=None, delimiter = ";"):
     #not neatest method but good enough for now
     df=df[~((df.year==2021)&(df.week==53))]
     #create a datetime from the year and week as this is easier with plotting
+    #first, make sure no invalid iso weeks (sometimes had week as 53 when max
+    #iso weeks in a year were 52)
+    df["max_week"] = [max_week(x) for x in df.year]
+    df["week"] = df[["week", "max_week"]].min(axis=1)
     df["date"]=df.apply(lambda x: date.fromisocalendar(x.year,x.week,1),axis=1)
     df["date"]=pd.to_datetime(df["date"])
+    
+    #simplify names if long so all datasets match
+    df.cases_class.replace(
+        to_replace = ["CONFIRME", "SUSPECTE", "PROBABLE"],
+        value = ["CONF", "SUSP", "PROB"],
+        inplace = True
+    )
     if list_cases_class is not None:
         df=df[df.cases_class.isin(list_cases_class)]
     return df
@@ -84,8 +109,9 @@ sel_end_week = 38
 ```
 
 ```python
-#was suggested to only look at the probable and confirmed cases, not the suspected 
-incl_cases_class=["PROB","CONF"]
+#was suggested to only look at the probable and confirmed cases, not the suspected
+#multiple ways of classifying between datasets so listing both spellings
+incl_cases_class=["PROB","CONF","PROBABLE","CONFIRME"]
 ```
 
 ```python
@@ -117,6 +143,13 @@ plague_path_old = plague_dir / plague_data_filename_old
 
 ```python
 df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class,delimiter=",")
+```
+
+```python
+# bring in 2012 to 2016 data for analysis
+plague_path_2012_2016 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-13.csv"
+df_2012_2016 = preprocess_plague_data(plague_path_2012_2016,list_cases_class=incl_cases_class,delimiter=";")
+df = df.append(df_2012_2016)
 ```
 
 ```python
@@ -179,7 +212,7 @@ df_date=plague_group_by_date(df, "2021-10-01")
 ```
 
 ```python
-px.line(df_date,x="date",y="cases_number", title="Plague cases reported, 2017-2021")
+px.line(df_date,x="date",y="cases_number", title="Plague cases reported, 2012-2021")
 ```
 
 ### Compare new and old data set
@@ -374,7 +407,7 @@ I now only computed the std over the years, so basically over 3 values, and not 
 1.64std represents a 90% confidence interval. I.e. 5/100 events are above the 1.64 threshold
 
 ```python
-hist_avg_years=[2018,2019,2020]
+hist_avg_years=[2012,2013,2014,2015,2016,2018,2019,2020]
 ```
 
 ```python
@@ -700,6 +733,20 @@ chart_2018_2021=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]).mar
 )
 chart_2018_2021
 #chart_2018_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2018_till_2021.png"),scale_factor=20)
+```
+
+```python
+chart_2012_2021=alt.Chart(df_date[df_date.year.isin([2012,2013,2014,2015, 2016, 2021])]).mark_line().encode(
+    x='week:N',
+    y='cases_number',
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3",color_twentyone]))
+).properties(
+    width=600,
+    height=300,
+    title="Cases from 2012 to 2016 and 2021"
+)
+chart_2012_2021
+#chart_2012_2021.save(os.path.join(plot_dir,f"{iso3}_cases_2012_till_2016_2021.png"),scale_factor=20)
 ```
 
 ```python
