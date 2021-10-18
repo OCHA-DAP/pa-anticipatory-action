@@ -113,8 +113,7 @@ sel_end_week = 38
 
 ```python
 #was suggested to only look at the probable and confirmed cases, not the suspected
-#multiple ways of classifying between datasets so listing both spellings
-incl_cases_class=["PROB","CONF","PROBABLE","CONFIRME"]
+incl_cases_class=["PROB","CONF"]
 ```
 
 ```python
@@ -149,10 +148,18 @@ df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class,delimite
 ```
 
 ```python
+# THIS DATA OUTDATED BY NEW DATA PROVIDED IN 2021-10-18 FILE
 # bring in 2012 to 2016 data for analysis
-plague_path_2012_2016 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-13.csv"
-df_2012_2016 = preprocess_plague_data(plague_path_2012_2016,list_cases_class=incl_cases_class,delimiter=";")
-df = df.append(df_2012_2016)
+#plague_path_2012_2016 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-13.csv"
+#df_2012_2016 = preprocess_plague_data(plague_path_2012_2016,list_cases_class=incl_cases_class,delimiter=";")
+
+# a separate 2012 to 2016 data for analysis
+# this is the disaggregated 2012-2016 data
+plague_path_2012_2016_v2 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-18.csv"
+df_2012_2016_v2 = preprocess_plague_data(plague_path_2012_2016_v2,list_cases_class=incl_cases_class,delimiter=";")
+
+
+df = df.append(df_2012_2016_v2)
 ```
 
 ```python
@@ -311,7 +318,7 @@ df_urb = df_urb[df_urb.urban_area_weighted.notnull()]
 df_urb = df_urb.loc[df_urb.urban_area_weighted & (df_urb.clinical_form == "PP")]
 
 #group by date
-df_date_urb=plague_group_by_date(df_urb, sel_start_date="2017-01-01", sel_end_date="2021-10-01")
+df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date="2021-10-01")
 df_date_urb
 ```
 
@@ -320,7 +327,7 @@ urb = px.line(
     df_date_urb,
     x="date",
     y="cases_number",
-    title="Pneumonic plague cases reported in urban areas, 2017 - 2021"
+    title="Pneumonic plague cases reported in urban areas, 2012 - 2021"
 )
 
 urb.add_hline(y=5,annotation_text="5 cases",annotation_position="top left")
@@ -1258,7 +1265,13 @@ df_old_date=plague_group_by_date(df_old, sel_end_date="2021-09-28")
 ```
 
 ```python
-df_comb=df_date.merge(df_old_date,on="date",how="outer",suffixes=("_new","_old"))
+dd = plague_group_by_date(df_2012_2016, sel_end_date="2016-12-31")
+dd2 = plague_group_by_date(df_2012_2016_v2, sel_end_date="2016-12-31")
+df_comb=dd.merge(dd2,on="date",how="outer",suffixes=("_new","_old"))
+```
+
+```python
+dd2
 ```
 
 ```python
