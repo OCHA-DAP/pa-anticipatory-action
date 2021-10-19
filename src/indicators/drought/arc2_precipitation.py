@@ -434,6 +434,9 @@ class DrySpells(ARC2):
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
 
+        # convert to standard date
+        da["T"] = [x.date() for x in da.indexes["T"].to_datetimeindex()]
+
         all_touched = self.agg_method == "touching"
 
         df_zonal_stats = compute_raster_statistics(
