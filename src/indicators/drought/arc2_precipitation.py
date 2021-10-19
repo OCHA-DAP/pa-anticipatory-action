@@ -29,7 +29,8 @@ ARC2_DIR = "arc2"
 
 # TODO: Once in pa-aa-toolbox, use the new COD and other
 # file functionality to change default processing for
-# downsampling
+# downsampling and allow linking the dry spell
+# identification with re-downloading
 
 # TODO: Add CHIRPS class and sort out dual inheritance
 
@@ -136,6 +137,10 @@ class ARC2:
         except requests.exceptions.RequestException as e:
             raise SystemExit(e)
 
+        if response.status_code == 404:
+            logger.error("No data available from %s.", url)
+            return
+
         # create folders if necessary and write file
         Path(raw_filepath.parent).mkdir(parents=True, exist_ok=True)
 
@@ -229,7 +234,7 @@ class ARC2:
         """
         Convenience function to load raw raster data, squeeze
         it and write its CRS. The function always accesses
-        the master file.
+        the master file if a filepath is not provided.
 
         :param raw_filepath: Path to raw file to load. If `None`,
             loads master file.
@@ -302,6 +307,7 @@ class ARC2:
             ].to_datetimeindex() - pd.to_timedelta("12:00:00")
             full_dates = pd.date_range(self.date_min, self.date_max)
             needed_dates = full_dates.difference(loaded_dates)
+
             if len(needed_dates) > 0:
                 date_ranges = self._group_date_ranges(needed_dates)
                 for dates in date_ranges:
@@ -358,6 +364,13 @@ class DrySpells(ARC2):
     params using Sphinx so no
     need for duplication
 
+    monitoring_start: Minimum date to load data from, either string
+        in ISO 8601 format, e.g. '2021-03-20' or `datetime.date` object.
+        Passed to `ARC2.date_min` as `monitoring_start - rolling_window`
+        days to ensure sufficient data for calculating rolling sum
+        available.
+    monitoring_end: Maximum date to load data from, either string
+        in ISO 8601 format, e.g. '2021-04-20' or `datetime.date` object.
     :param agg_method: One of 'centroid' or 'touching'.
     :param rolling_window: Number of days for rolling sum of precipitation.
     :param rainfall_mm: Maximum precipitation during window to
@@ -369,26 +382,42 @@ class DrySpells(ARC2):
     def __init__(
         self,
         country_iso3: str,
-        date_min: Union[str, date],
-        date_max: Union[str, date],
+        monitoring_start: Union[str, date],
+        monitoring_end: Union[str, date],
         range_x: Tuple[str, str],
         range_y: Tuple[str, str],
         agg_method: str = "centroid",
         rolling_window: int = 14,
         rainfall_mm: int = 2,
     ):
-        super().__init__(country_iso3, date_min, date_max, range_x, range_y)
+        if not isinstance(monitoring_start, date):
+            monitoring_start = date.fromisoformat(monitoring_start)
 
+        if not isinstance(monitoring_end, date):
+            monitoring_end = date.fromisoformat(monitoring_end)
+
+        self.monitoring_start = monitoring_start
+        self.monitoring_end = monitoring_end
         self.agg_method = agg_method
         self.rolling_window = rolling_window
         self.rainfall_mm = rainfall_mm
+
+        super().__init__(
+            country_iso3=country_iso3,
+            date_min=monitoring_start
+            - pd.to_timedelta(self.rolling_window - 1, unit="d"),
+            date_max=monitoring_end,
+            range_x=range_x,
+            range_y=range_y,
+        )
 
     def downsample_data(
         self,
         polygon_path: Union[Path, str] = None,
         bound_col: str = None,
         reprocess: bool = False,
-    ):
+        redownload: bool = False,
+    ) -> pd.DataFrame:
         """
         Get mean aggregation by admin boundary for the downloaded ARC2 data.
         Outputs a csv with daily aggregated statistics. If data already
@@ -402,7 +431,13 @@ class DrySpells(ARC2):
         :param reprocess: Boolean, if `True` reprocesses all raster data.
             Otherwise, only processes dates that have not already been
             downsampled.
+        :param redownload: Boolean, if `True`, calls `download_data()`
+            without replacing missing data or the master file,
+            only downloading for new dates not already downloaded.
         """
+        if redownload:
+            self.download_data(master=False, replace_missing=False)
+
         downsampled_filepath = self._get_downsampled_filepath()
 
         da = self.load_raw_data()
@@ -436,7 +471,6 @@ class DrySpells(ARC2):
 
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
-
         # convert to standard date
         da["T"] = [x.date() for x in da.indexes["T"].to_datetimeindex()]
 
@@ -452,10 +486,14 @@ class DrySpells(ARC2):
 
         # join up existing data if necessary
         if "exist_stats" in locals():
+            # explicitly convert to datetime64 series before joining
+            # and add infilled to ensure what's happening
+            df_zonal_stats["T"] = pd.to_datetime(df_zonal_stats["T"])
+            df_zonal_stats["infilled"] = False
             df_zonal_stats = df_zonal_stats.append(
                 exist_stats, ignore_index=True
             )
-            df_zonal_stats.sort_values(by=["T"])
+            df_zonal_stats.sort_values(by=["T"], inplace=True)
 
         # infill missing data with interpolation
         data_col = "mean_" + bound_col
@@ -511,7 +549,7 @@ class DrySpells(ARC2):
         rollsum_df.to_csv(rollsum_fp, index=False)
         return rollsum_df
 
-    def _calculate_rolling_sum(self, df):
+    def _calculate_rolling_sum(self, df: pd.DataFrame):
         """
         Calculates rolling sum on specific data frame.
         """
@@ -541,11 +579,16 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
-    def identify_dry_spells(self) -> pd.DataFrame:
+    def identify_dry_spells(self, reprocess: bool = False) -> pd.DataFrame:
         """
         Identifies dry spells based on latest rolling
         sum values.
+
+        :param reprocess: Boolean, if `True` reprocesses
+        downsampled data by calculating rolling sums.
         """
+        if reprocess:
+            self.calculate_rolling_sum()
 
         rollsum_fp = self._get_rolling_sum_filepath()
         df = pd.read_csv(rollsum_fp, parse_dates=["T"])

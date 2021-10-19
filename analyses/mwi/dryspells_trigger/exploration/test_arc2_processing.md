@@ -32,13 +32,13 @@ poly_path = os.path.join(
 
 ### Raw data downloading
 
-So, first, let's just get a class and download data for the 2 days specified.
+So, first, let's just get a class and download data for the 2 days specified. Since we are specifying the class `DrySpells` rather than just `ARC2`, it will automatically ensure sufficient data is downloaded to calculate the rolling sum (and potential dry spells) from the start to end of our monitoring period.
 
 ```python
 arc2_test = DrySpells(
     country_iso3 = "mwi",
-    date_min = "2021-09-02",
-    date_max = "2021-09-03",
+    monitoring_start = "2021-09-02",
+    monitoring_end = "2021-09-03",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
@@ -49,16 +49,15 @@ ds = arc2_test.load_raw_data()
 ds.indexes['T']
 ```
 
-We can see here that we have data corrresponding to the 2nd and 3rd of September. Now, let's say we expand our `date_min` and `date_max` to be a day earlier and later respectively.
+We can see here that we have data corrresponding to the 2nd and 3rd of September. Now, let's say we expand our `monitoring_start` and `monitoring_end` to be a day earlier and later respectively.
 
 ```python
 arc2_test = DrySpells(
     country_iso3 = "mwi",
-    date_min = "2021-09-01",
-    date_max = "2021-09-04",
+    monitoring_start = "2021-09-01",
+    monitoring_end = "2021-09-04",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S"),
-    agg_method = "centroid",
 )
 
 arc2_test.download_data()
@@ -69,33 +68,25 @@ ds2.indexes['T']
 
 In fact, now we can see that the data for the 2 extra days, on either side of the raw downloads was loaded into the master file. This master file is always accessible using the `load_raw_data()` method. Rather than managing a variety of downloads, this will always give access to the latest master (if the download has been done). So, of course, in the pipeline process we would want to call `date_max` based on the latest available day.
 
+We can also see that if we process the data that we can calculate rolling sums across monitoring and potentially capture dry spells.
+
+```python
+arc2_test.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_test.calculate_rolling_sum()
+arc2_test.identify_dry_spells()
+```
+
+Of course, we're in the middle of the dry season so in fact everywhere identifies a dry spell! Now, let's say we are again wanting to re-run the system. We can do data from the beginning of the year until today, since `monitoring_end` (and `monitoring_start`) accepts strings *or* dates. We can also use just 2 simple functions to redownload, reprocess, and identify all dry spells.
+
 ```python
 arc2_test = DrySpells(
     country_iso3 = "mwi",
-    date_min = "2021-01-01",
-    date_max = date.today(),
+    monitoring_start = "2021-01-01",
+    monitoring_end = date.today(),
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
 
-arc2_test.download_data()
-
-ds3 = arc2_test.load_raw_data()
-ds3.indexes['T']
-```
-
-Since we can pass in either an ISO 8601 date string or a date object, we can just pass in the current date and get the latest data from the system. Now with this data, let's look at processing and calculating dry spells.
-
-```python
-processed_df = arc2_test.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
-
-processed_df
-```
-
-```python
-arc2_test.calculate_rolling_sum()
-```
-
-```python
-arc2_test.identify_dry_spells()
+arc2_test.downsample_data(poly_path, "ADM2_PCODE", redownload=True)
+arc2_test.identify_dry_spells(reprocess=True)
 ```
