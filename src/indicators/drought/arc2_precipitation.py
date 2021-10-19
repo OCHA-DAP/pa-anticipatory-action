@@ -23,12 +23,15 @@ RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
 ARC2_DIR = "arc2"
 
-# TODO: Should add in parameters that control whether
-# or not you want to save the intermediate / raw data
+# TODO: Convert documentation to Sphinx
 
-# TODO: Parameters should also control whether or not a function,
-# like computing dry spells, uses pre downloaded data or whether
-# it should download the data in one go
+# TODO: Transfer to pa-aa-toolbox
+
+# TODO: Once in pa-aa-toolbox, use the new COD and other
+# file functionality to change default processing for
+# downsampling
+
+# TODO: Add CHIRPS class and sort out dual inheritance
 
 # TODO: Error handling for various things,
 # like if data is missing or certain files don't exist
@@ -538,7 +541,7 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
-    def identify_dry_spells(self):
+    def identify_dry_spells(self) -> pd.DataFrame:
         """
         Identifies dry spells based on latest rolling
         sum values.
