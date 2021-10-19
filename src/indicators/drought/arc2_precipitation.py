@@ -510,11 +510,8 @@ class DrySpells(ARC2):
         adm_col = df.columns[2]
 
         rollsum_col = "rolling_sum_" + str(self.rolling_window) + "_days"
-        df[rollsum_col] = (
-            df.groupby(adm_col)[precip_col]
-            .rolling(self.rolling_window)
-            .sum()
-            .reset_index(drop=True)
+        df[rollsum_col] = df.groupby(adm_col)[precip_col].transform(
+            lambda x: x.rolling(window=self.rolling_window).sum()
         )
         df.dropna(subset=[rollsum_col], inplace=True)
         df = df[[t_col, adm_col, rollsum_col]]
@@ -565,7 +562,7 @@ class DrySpells(ARC2):
             .assign(
                 adm_col=lambda x: x.adm_col.str[0],
                 ds_first_date=lambda x: x.ds_confirmation
-                - pd.to_timedelta(self.rolling_window, unit="d"),
+                - pd.to_timedelta(self.rolling_window - 1, unit="d"),
                 ds_duration=lambda x: (
                     x.ds_last_date - x.ds_first_date
                 ).dt.days
