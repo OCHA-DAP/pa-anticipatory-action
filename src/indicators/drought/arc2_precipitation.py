@@ -107,7 +107,6 @@ class ARC2:
             f"Y/%28{self.range_y[0]}%29%28{self.range_y[1]}%29RANGEEDGES/"
             f"data.nc"
         )
-        print(url)
 
         raw_filepath = self._get_raw_filepath(master=master)
 
