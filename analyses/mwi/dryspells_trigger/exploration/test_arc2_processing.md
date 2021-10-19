@@ -15,7 +15,7 @@ from datetime import date
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
 sys.path.append(path_mod)
-from src.indicators.drought.arc2_precipitation import ARC2
+from src.indicators.drought.arc2_precipitation import DrySpells
 from src.utils_general.raster_manipulation import compute_raster_statistics
 
 
@@ -35,7 +35,7 @@ poly_path = os.path.join(
 So, first, let's just get a class and download data for the 2 days specified.
 
 ```python
-arc2_test = ARC2(
+arc2_test = DrySpells(
     country_iso3 = "mwi",
     date_min = "2021-09-02",
     date_max = "2021-09-03",
@@ -52,12 +52,13 @@ ds.indexes['T']
 We can see here that we have data corrresponding to the 2nd and 3rd of September. Now, let's say we expand our `date_min` and `date_max` to be a day earlier and later respectively.
 
 ```python
-arc2_test = ARC2(
+arc2_test = DrySpells(
     country_iso3 = "mwi",
     date_min = "2021-09-01",
     date_max = "2021-09-04",
     range_x = ("32E", "36E"),
-    range_y = ("20S", "5S")
+    range_y = ("20S", "5S"),
+    agg_method = "centroid",
 )
 
 arc2_test.download_data()
@@ -69,9 +70,9 @@ ds2.indexes['T']
 In fact, now we can see that the data for the 2 extra days, on either side of the raw downloads was loaded into the master file. This master file is always accessible using the `load_raw_data()` method. Rather than managing a variety of downloads, this will always give access to the latest master (if the download has been done). So, of course, in the pipeline process we would want to call `date_max` based on the latest available day.
 
 ```python
-arc2_test = ARC2(
+arc2_test = DrySpells(
     country_iso3 = "mwi",
-    date_min = "2021-09-01",
+    date_min = "2021-01-01",
     date_max = date.today(),
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
@@ -86,18 +87,17 @@ ds3.indexes['T']
 Since we can pass in either an ISO 8601 date string or a date object, we can just pass in the current date and get the latest data from the system. Now with this data, let's look at processing and calculating dry spells.
 
 ```python
-processed_df = arc2_test.process_data(poly_path, "ADM2_PCODE")
+processed_df = arc2_test.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
 
 processed_df
 ```
 
 ```python
-ds3.values[ds3.values == 0] = 10
+arc2_test.calculate_rolling_sum()
 ```
 
 ```python
-ds2.values
-ds3.
+arc2_test.identify_dry_spells()
 ```
 
 ```python

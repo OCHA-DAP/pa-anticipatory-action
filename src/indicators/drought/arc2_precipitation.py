@@ -32,9 +32,7 @@ ARC2_DIR = "arc2"
 
 # TODO: Error handling for various things,
 # like if data is missing or certain files don't exist
-# I've been using logger (Seth) but will turn to raising
-# exceptions as I've been learning more about better error
-# handling
+# Need to do better exceptions (not bare or default)
 
 # TODO: Better logging
 
@@ -221,49 +219,6 @@ class ARC2:
         )
         return directory / Path(filename)
 
-    def _get_processed_filepath(self, agg_method: str = "centroid") -> Path:
-        """
-        Return filepath to processed ARC2 data aggregated to ADM2 level
-        using arithmetic mean. All data stored within a single master file.
-        """
-        directory = self._get_directory(PROCESSED_DATA_DIR)
-        filename = (
-            f"arc2_{agg_method}_long_{self.country_iso3}_"
-            f"{self.range_x[0]}_{self.range_x[1]}_"
-            f"{self.range_y[0]}_{self.range_y[1]}_"
-            f"master.csv"
-        )
-        return directory / Path(filename)
-
-    def _get_monitoring_filepath(self) -> Path:
-        """
-        Return filepath to ARC2 dry spell monitoring file.
-        """
-        directory = self._get_directory(PROCESSED_DATA_DIR) / "monitoring"
-        filename = f"{self.date_max}_results.txt"
-        return directory / Path(filename)
-
-    def _write_to_monitoring_file(self, dry_spells: Union[None, int] = None):
-        monitoring_file = self._get_monitoring_filepath(
-            self.country_iso3, self.date_max
-        )
-        """
-        Write a simple output of the number
-        of dry spells observed in the last 14 days.
-        """
-        result = ""
-        with open(monitoring_file, "w") as f:
-            if dry_spells is not None:
-                result += "No dry spells identified in the last 14 days."
-                f.write(result)
-            else:
-                f.write(
-                    f"Dry spells identified in \
-                    {len(dry_spells)} admin regions:\n{dry_spells}"
-                )
-        f.close()
-        return
-
     def load_raw_data(
         self,
         raw_filepath: Union[Path, None] = None,
@@ -391,35 +346,61 @@ class ARC2:
 
         master.sortby("T").to_netcdf(master_filepath)
 
-    def process_data(
+
+class DrySpells(ARC2):
+    """
+    Dry spells
+
+    TODO: fill and link to ARC2
+    params using Sphinx so no
+    need for duplication
+
+    :param agg_method: One of 'centroid' or 'touching'.
+    :param rolling_window: Number of days for rolling sum of precipitation.
+    :param rainfall_mm: Maximum precipitation during window to
+        classify as dry spell.
+    :param date_min: Minimum date to load data from, either string
+        in ISO 8601 format, e.g. '2021-03-20' or `datetime.date` object.
+    """
+
+    def __init__(
+        self,
+        country_iso3: str,
+        date_min: Union[str, date],
+        date_max: Union[str, date],
+        range_x: Tuple[str, str],
+        range_y: Tuple[str, str],
+        agg_method: str = "centroid",
+        rolling_window: int = 14,
+        rainfall_mm: int = 2,
+    ):
+        super().__init__(country_iso3, date_min, date_max, range_x, range_y)
+
+        self.agg_method = agg_method
+        self.rolling_window = rolling_window
+        self.rainfall_mm = rainfall_mm
+
+    def downsample_data(
         self,
         polygon_path: Union[Path, str] = None,
         bound_col: str = None,
-        all_touched: bool = False,
         reprocess: bool = False,
     ):
         """
-        Get mean aggregation by admin boundary for the downloaded arc2 data.
+        Get mean aggregation by admin boundary for the downloaded ARC2 data.
         Outputs a csv with daily aggregated statistics. If data already
-        processed between `self.date_min` and `self.date_max`, returns
-        pre-processed data, otherwise processes additional data and joins to
-        processed master file.
+        downsampled between `self.date_min` and `self.date_max`, returns
+        pre-downsampled data, otherwise downsamples additional data and joins
+        to downsampled master file.
 
         :param polygon_path: Path to polygon file for clipping and downsampling
             raster data.
         :param bound_col: Column in polygon file to aggregate raster to.
-        :param all_touched: Boolean, to use centroids or all touching rasters.
         :param reprocess: Boolean, if `True` reprocesses all raster data.
             Otherwise, only processes dates that have not already been
-            processed.
+            downsampled.
         """
-
-        if all_touched:
-            agg_method = "touching"
-        else:
-            agg_method = "centroid"
-
-        processed_filepath = self._get_processed_filepath(agg_method)
+        downsampled_filepath = self._get_downsampled_filepath()
 
         da = self.load_raw_data()
 
@@ -431,25 +412,29 @@ class ARC2:
                 "Clip file %s does not exist.", os.path.basename(polygon_path)
             )
 
-        # only process data for dates that have not already been processed
-        if os.path.exists(processed_filepath) and not reprocess:
-            exist_stats = pd.read_csv(processed_filepath, parse_dates=["T"])
+        # only process data for dates that have not already been downsampled
+        if os.path.exists(downsampled_filepath) and not reprocess:
+            exist_stats = pd.read_csv(downsampled_filepath, parse_dates=["T"])
             lookup = da.indexes["T"]
             lookup = ~lookup.isin(exist_stats["T"])
             if np.sum(lookup) == 0:
                 logger.info(
                     "No additional dates to process for %s.",
-                    processed_filepath,
+                    downsampled_filepath,
                 )
                 return exist_stats
 
             else:
                 da = da.loc[lookup, :, :]
         else:
-            Path(processed_filepath.parent).mkdir(parents=True, exist_ok=True)
+            Path(downsampled_filepath.parent).mkdir(
+                parents=True, exist_ok=True
+            )
 
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
+
+        all_touched = self.agg_method == "touching"
 
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,
@@ -469,52 +454,153 @@ class ARC2:
         # infill missing data with interpolation
         data_col = "mean_" + bound_col
         if "infilled" not in df_zonal_stats.columns:
-            df_zonal_stats["infilled"] = True
+            df_zonal_stats["infilled"] = False
 
         df_zonal_stats["infilled"] = np.where(
-            df_zonal_stats[data_col].isna(), False, df_zonal_stats["infilled"]
+            df_zonal_stats[data_col].isna(), True, df_zonal_stats["infilled"]
         )
 
         df_zonal_stats[data_col] = df_zonal_stats.groupby(bound_col)[
             data_col
         ].transform(lambda x: x.interpolate())
 
-        df_zonal_stats.to_csv(processed_filepath, index=False)
+        df_zonal_stats.to_csv(downsampled_filepath, index=False)
         return df_zonal_stats
 
-    def identify_dry_spells(
-        self,
-        rolling_window: int = 14,
-        rainfall_mm: int = 2,
-        agg_method: str = "centroid",
-    ):
+    def _get_downsampled_filepath(self) -> Path:
         """
-        Read the processed data and check if any dry spells occurred
-        in that time period. Processed data should cover >= 14 days of
-        precipitation. We're assuming that this data is from during
-        the rainy season.
-
-        :param rolling_window: Number of days for rolling sum of precipitation.
-        :param rainfall_mm: Maximum precipitation during window to
-            classify as dry spell.
-        :param agg_method: One of 'centroid' or 'touching'.
+        Return filepath to downsampled ARC2 data aggregated to ADM2 level
+        using arithmetic mean. All data stored within a single master file
+        for unique ISO3, aggregation method, and geographic range.
         """
+        directory = self._get_directory(PROCESSED_DATA_DIR)
+        filename = (
+            f"arc2_{self.agg_method}_long_{self.country_iso3}_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"master.csv"
+        )
+        return directory / filename
 
-        processed_file = self._get_processed_filepath(agg_method)
+    def calculate_rolling_sum(self):
+        """
+        Calculates rolling sum from the latest downsampled
+        data, based on the DrySpell objects window of
+        observations and aggregation method.
+        """
+        downsampled_fp = self._get_downsampled_filepath()
+        df = pd.read_csv(downsampled_fp, parse_dates=["T"])
 
-        # TODO:
-        # 1. Read in processed data
-        df = pd.read_csv(processed_file)
+        # TODO: only re-calculate rolling sum where necessary
+        rollsum_df = self._calculate_rolling_sum(df)
 
-        # 2. Check that it covers the min days needed to define a dry spell
+        rollsum_fp = self._get_rolling_sum_filepath()
+        rollsum_df.to_csv(rollsum_fp, index=False)
+        return rollsum_df
 
-        # 3. Calculate the rolling sum
-        adm_col = df.columns[2]
+    def _calculate_rolling_sum(self, df):
+        """
+        Calculates rolling sum on specific data frame.
+        """
+        t_col = df.columns[0]
         precip_col = df.columns[1]
-        grouped = df.groupby(adm_col)[precip_col].rolling(rolling_window).sum()
+        adm_col = df.columns[2]
 
-        # 4. Identify dry spells based on rolling sum (rainfall_mm)
-        print(grouped)
+        rollsum_col = "rolling_sum_" + str(self.rolling_window) + "_days"
+        df[rollsum_col] = (
+            df.groupby(adm_col)[precip_col]
+            .rolling(self.rolling_window)
+            .sum()
+            .reset_index(drop=True)
+        )
+        df.dropna(subset=[rollsum_col], inplace=True)
+        df = df[[t_col, adm_col, rollsum_col]]
+        return df
 
-        # 5. Notify if any admin areas are in a dry spell
+    def _get_rolling_sum_filepath(self) -> Path:
+        """
+        Return filepath to ARC2 rolling sum values.
+        """
+        directory = self._get_directory(PROCESSED_DATA_DIR)
+        filename = (
+            f"arc2_{self.agg_method}_long_{self.country_iso3}_"
+            f"rolling_sum_{self.rolling_window}_days_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"master.csv"
+        )
+        return directory / filename
+
+    def identify_dry_spells(self):
+        """
+        Identifies dry spells based on latest rolling
+        sum values.
+        """
+
+        rollsum_fp = self._get_rolling_sum_filepath()
+        df = pd.read_csv(rollsum_fp, parse_dates=["T"])
+
+        t_col = df.columns[0]
+        adm_col = df.columns[1]
+        rs_col = df.columns[2]
+
+        # Identify all dry spells and unique consecutive groups
+        df["ds"] = df[rs_col] <= self.rainfall_mm
+        df["dsg"] = (df.groupby(adm_col)["ds"].diff() != 0).cumsum()
+
+        # Generate data frame of dry spells
+        ds_df = (
+            df[df["ds"]]
+            .groupby("dsg")
+            .agg(
+                adm_col=(adm_col, "unique"),
+                ds_rainfall=(rs_col, "sum"),
+                ds_confirmation=(t_col, "min"),
+                ds_last_date=(t_col, "max"),
+            )
+            .reset_index(drop=True)
+            .assign(
+                adm_col=lambda x: x.adm_col.str[0],
+                ds_first_date=lambda x: x.ds_confirmation
+                - pd.to_timedelta(self.rolling_window, unit="d"),
+                ds_duration=lambda x: (
+                    x.ds_last_date - x.ds_first_date
+                ).dt.days
+                + 1,
+            )
+            .rename(columns={"adm_col": adm_col})
+        )
+
+        # Re-arrange dry spell data frame
+        cols = [
+            adm_col,
+            "ds_rainfall",
+            "ds_first_date",
+            "ds_confirmation",
+            "ds_last_date",
+            "ds_duration",
+        ]
+        ds_df = ds_df[cols]
+
+        return ds_df
+
+    def _write_to_monitoring_file(self, dry_spells: Union[None, int] = None):
+        monitoring_file = self._get_monitoring_filepath(
+            self.country_iso3, self.date_max
+        )
+        """
+        Write a simple output of the number
+        of dry spells observed in the last 14 days.
+        """
+        result = ""
+        with open(monitoring_file, "w") as f:
+            if dry_spells is not None:
+                result += "No dry spells identified in the last 14 days."
+                f.write(result)
+            else:
+                f.write(
+                    f"Dry spells identified in \
+                    {len(dry_spells)} admin regions:\n{dry_spells}"
+                )
+        f.close()
         return
