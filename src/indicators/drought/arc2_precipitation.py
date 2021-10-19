@@ -101,12 +101,13 @@ class ARC2:
         url = (
             f"https://iridl.ldeo.columbia.edu/SOURCES/.NOAA/.NCEP/.CPC/.FEWS/"
             f".Africa/.DAILY/.ARC2/.daily/.est_prcp/T/"
-            f"%28{date_min_dl:%-d%%20%b%%20%Y}%29"
-            f"%28{date_max_dl:%-d%%20%b%%20%Y}%29RANGEEDGES/"
+            f"%28{date_min_dl.day}%20{date_min_dl:%b%%20%Y}%29"
+            f"%28{date_max_dl.day}%20{date_max_dl:%b%%20%Y}%29RANGEEDGES/"
             f"X/%28{self.range_x[0]}%29%28{self.range_x[1]}%29RANGEEDGES/"
             f"Y/%28{self.range_y[0]}%29%28{self.range_y[1]}%29RANGEEDGES/"
             f"data.nc"
         )
+        print(url)
 
         raw_filepath = self._get_raw_filepath(master=master)
 
