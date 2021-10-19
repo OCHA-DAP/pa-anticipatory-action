@@ -485,14 +485,21 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
+    def load_downsampled_data(self) -> Path:
+        """
+        Load data downsampled data.
+        """
+        downsampled_fp = self._get_downsampled_filepath()
+        df = pd.read_csv(downsampled_fp, parse_dates=["T"])
+        return df
+
     def calculate_rolling_sum(self):
         """
         Calculates rolling sum from the latest downsampled
         data, based on the DrySpell objects window of
         observations and aggregation method.
         """
-        downsampled_fp = self._get_downsampled_filepath()
-        df = pd.read_csv(downsampled_fp, parse_dates=["T"])
+        df = self.load_downsampled_data()
 
         # TODO: only re-calculate rolling sum where necessary
         rollsum_df = self._calculate_rolling_sum(df)
@@ -554,7 +561,6 @@ class DrySpells(ARC2):
             .groupby("dsg")
             .agg(
                 adm_col=(adm_col, "unique"),
-                ds_rainfall=(rs_col, "sum"),
                 ds_confirmation=(t_col, "min"),
                 ds_last_date=(t_col, "max"),
             )
@@ -571,14 +577,41 @@ class DrySpells(ARC2):
             .rename(columns={"adm_col": adm_col})
         )
 
+        # Calculate rainfall within each dry spell
+        precip_df = self.load_downsampled_data()
+        precip_col = precip_df.columns[1]
+
+        total_df = pd.merge(
+            left=ds_df, right=precip_df, on=adm_col, how="outer"
+        )
+
+        # Filter dates to just those within the dry spell and sum
+        total_df = total_df[total_df[t_col] >= total_df["ds_first_date"]]
+        total_df = total_df[total_df[t_col] <= total_df["ds_last_date"]]
+        total_df = (
+            total_df.groupby([adm_col, "ds_confirmation"])[precip_col]
+            .agg("sum")
+            .reset_index()
+        )
+
+        # Add dry spell rainfall to main data frame
+        total_df.rename(columns={precip_col: "ds_rainfall"}, inplace=True)
+
+        ds_df = pd.merge(
+            left=ds_df,
+            right=total_df,
+            on=[adm_col, "ds_confirmation"],
+            how="left",
+        )
+
         # Re-arrange dry spell data frame
         cols = [
             adm_col,
-            "ds_rainfall",
             "ds_first_date",
             "ds_confirmation",
             "ds_last_date",
             "ds_duration",
+            "ds_rainfall",
         ]
         ds_df = ds_df[cols]
 

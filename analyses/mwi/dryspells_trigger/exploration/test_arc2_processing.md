@@ -99,7 +99,3 @@ arc2_test.calculate_rolling_sum()
 ```python
 arc2_test.identify_dry_spells()
 ```
-
-```python
-
-```
