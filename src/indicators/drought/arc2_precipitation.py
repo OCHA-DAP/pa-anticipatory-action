@@ -222,7 +222,7 @@ class ARC2:
     def load_raw_data(
         self,
         raw_filepath: Union[Path, None] = None,
-    ):
+    ) -> pd.DataFrame:
         """
         Convenience function to load raw raster data, squeeze
         it and write its CRS. The function always accesses
@@ -485,7 +485,7 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
-    def load_downsampled_data(self) -> Path:
+    def load_downsampled_data(self) -> pd.DataFrame:
         """
         Load data downsampled data.
         """
@@ -615,7 +615,32 @@ class DrySpells(ARC2):
         ]
         ds_df = ds_df[cols]
 
+        ds_fp = self._get_dry_spell_filepath()
+        ds_df.to_csv(ds_fp, index=False)
+
         return ds_df
+
+    def _get_dry_spell_filepath(self) -> Path:
+        """
+        Return filepath to ARC2 rolling sum values.
+        """
+        directory = self._get_directory(PROCESSED_DATA_DIR)
+        filename = (
+            f"arc2_{self.agg_method}_{self.country_iso3}_"
+            f"dry_spells_{self.rolling_window}_days_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"master.csv"
+        )
+        return directory / filename
+
+    def load_dry_spell_data(self) -> pd.DataFrame:
+        """
+        Load dry spells classified through method.
+        """
+        fp = self._get_dry_spell_filepath()
+        df = pd.read_csv(filepath_or_buffer=fp)
+        return df
 
     def _write_to_monitoring_file(self, dry_spells: Union[None, int] = None):
         monitoring_file = self._get_monitoring_filepath(
