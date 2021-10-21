@@ -10,7 +10,6 @@ The data already includes up to 26-09, i.e. week 38
 
 
 Missing data:
-- 2012-2016 geographically disaggregated data
 - aggregation by sex and age
 - resistance to antibiotics
 
@@ -148,11 +147,6 @@ df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class,delimite
 ```
 
 ```python
-# THIS DATA OUTDATED BY NEW DATA PROVIDED IN 2021-10-18 FILE
-# bring in 2012 to 2016 data for analysis
-#plague_path_2012_2016 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-13.csv"
-#df_2012_2016 = preprocess_plague_data(plague_path_2012_2016,list_cases_class=incl_cases_class,delimiter=";")
-
 # a separate 2012 to 2016 data for analysis
 # this is the disaggregated 2012-2016 data
 plague_path_2012_2016_v2 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-18.csv"
@@ -410,7 +404,7 @@ According to the bulletin the average is computed by using the data from 2014,20
 For each week the numbers of that week, the two weeks before, and the two weeks after are taken. I.e. it is a rolling sum with a window length of 5 and centred in the middle. 
 
 
-We only have data starting from 2017.. We will therefore for now use the data we have from 2018 till 2020 which is 3 years.
+We have data starting from 2012.. We will use the full data we have from 2012 till 2020 which is 8 years.
 2017 is excluded since this year saw a large outbreak, so it will influence the historical average in a non-representable way. 
 
 
@@ -929,7 +923,7 @@ density_chart_2018 = alt.Chart(df_cap30_sel_2018).transform_density(
 density_chart_2018
 ```
 
-We see that for most weeks we have a very small number of cum cases, the peak being around 2. The maximum sum we have seen was 25 cases
+We see that for most weeks 2018 - 2021 we have a very small number of cum cases, the peak being around 2. The maximum sum we have seen was 25 cases. However, the distribution is much wider from 2012 to 2016, and the peak is closer to 3.5 or 4.
 
 
 Next, lets see how the cumsum was in 2017 compared to the other years
@@ -938,11 +932,11 @@ Next, lets see how the cumsum was in 2017 compared to the other years
  alt.Chart(df_cap30_rolling_sum).mark_line().encode(
     x='week:N',
     y=alt.Y('rolling_sum',title="3-week rolling sum"),
-    color=alt.Color('year:N', scale=alt.Scale(range=[color_seventeen,"#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
+    color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3",color_seventeen,"#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
 ).properties(    
      width=600,
      height=300,
-     title="3-week rolling sum in 2018-2021")
+     title="3-week rolling sum in 2012-2021")
 ```
 
 ```python
@@ -952,7 +946,7 @@ df_cap30_rolling_sum[(df_cap30_rolling_sum.year==2017)&(df_cap30_rolling_sum.wee
 We can see that the cumsum in 2017 was significantly higher. In week 37 it was higher than we ever saw before, with 43 cases. 
 
 
-Based on this simple analysis, using a threshold of at least 30 or 40 cases during 3 weeks might serve as a good trigger. Where exactly the cap should be, is something that should be discussed with the wider team as it is a trade-off between detection and the risk of false alarms. 
+Based on this simple analysis, using a threshold of at least 30 or 40 cases during 3 weeks might serve as a good trigger, or even 35. Where exactly the cap should be, is something that should be discussed with the wider team as it is a trade-off between detection and the risk of false alarms. These triggers would have also been triggered 2012 - 2014, but would have only triggered in 2017 from 2015 onward. It may be that the nature of the disease has
 
 
 When using this method, the trigger would be reached in week 37 in 2017
@@ -1059,10 +1053,6 @@ heatmap_abs_cumsum50
 ```
 
 When using the rolling sum, the cap would be reached one week later in 2017. So that is kind of the same result as requiring 2 consec weeks with more than 10 cases. 
-
-```python
-
-```
 
 ```python
  alt.Chart(df_date).mark_line().encode(
@@ -1234,9 +1224,10 @@ df_164[df_164.cases_number >= 100]
 ```
 
 ### Conclusions
-- Not exceptional that there is one week with cases above std (with current data), see e.g. 2019
+- Not exceptional that there is one week with cases above std (with current data)
 - Need several consecutive weeks above std
-- Std also doesn't make much sense with 3 years of data --> could an absolute threshold also be a solution? 
+- It works relatively well if you require 3 consecutive weeks, but also activates in the "off season" twice in 2012 where cumulative cases over that period were extremely low.
+- Because of this, could an absolute threshold also be a solution? 
 
 
 ### Questions:
@@ -1256,12 +1247,13 @@ As can be seen in the graph, the cases in 2021 are slightly smoothed in the new 
 Numbers for previous years also changed for some dates, and we are thus far unclear why this occurred. 
 
 ```python
-df_old=preprocess_plague_data(plague_path_old,list_cases_class=incl_cases_class)
+#df_old=preprocess_plague_data(plague_path_old,list_cases_class=incl_cases_class)
+#df_old_date=plague_group_by_date(df_old, sel_end_date="2021-09-28")
 
-```
-
-```python
-df_old_date=plague_group_by_date(df_old, sel_end_date="2021-09-28")
+# THIS DATA OUTDATED BY NEW DATA PROVIDED IN 2021-10-18 FILE
+# bring in 2012 to 2016 data for analysis
+plague_path_2012_2016 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-13.csv"
+df_2012_2016 = preprocess_plague_data(plague_path_2012_2016,list_cases_class=incl_cases_class,delimiter=";")
 ```
 
 ```python
@@ -1275,11 +1267,11 @@ dd2
 ```
 
 ```python
-px.line(df_comb,x="date",y=["cases_number_new","cases_number_old"], title="Plague cases reported, 2017-2021")
+px.line(df_comb,x="date",y=["cases_number_new","cases_number_old"], title="Plague cases reported, 2012-2021")
 ```
 
 ```python
 #small attempt to understand the differences between the two datasets
-df_comb_concat=pd.concat([df,df_old]).drop_duplicates(keep=False)
-df_comb_concat[df_comb_concat.date>=df_old.date.min()].sort_values("date")
+#df_comb_concat=pd.concat([df,df_old]).drop_duplicates(keep=False)
+#df_comb_concat[df_comb_concat.date>=df_old.date.min()].sort_values("date")
 ```
