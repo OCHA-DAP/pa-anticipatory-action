@@ -838,6 +838,13 @@ chart_2018_2021_grey=alt.Chart(df_date[df_date.year.isin([2018,2019,2020,2021])]
 ```
 
 ```python
+std_164 = alt.Chart(df_hist_weeks).mark_line(color="yellow").encode(
+    x='week:N',
+    y='plus_164std',
+)
+```
+
+```python
 chart_2018_2021_grey + std_164
 ```
 
@@ -1074,11 +1081,6 @@ When using the rolling sum, the cap would be reached one week later in 2017. So 
 ```
 
 ```python
-std_164 = alt.Chart(df_hist_weeks).mark_line(color="yellow").encode(
-    x='week:N',
-    y='plus_164std'
-)
-
 cases_data = alt.Chart(df_date[df_date.year.isin([2017])]).mark_line().encode(
     x='week:N',
     y='cases_number',
