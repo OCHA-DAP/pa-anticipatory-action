@@ -362,12 +362,13 @@ df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("
 ```
 
 ```python
+#create histogram of the monthly precipitation. This is grouped by whether a dry spell occurred. 
 df_ds_lt=df_ds_for_labels[(df_ds_for_labels.leadtime==3)]
 bins=np.arange(math.floor(df_ds_lt[aggr_meth].min()/10)*10,math.ceil(df_ds_lt[aggr_meth].max()/10)*10+10,10)
 # bins=np.arange(150,330,10)
-for mn in ["January","February"]:
+for m in sel_months:
     fig,ax=plt.subplots(figsize=(6,3))
-    df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month_name==mn)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
+    df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month==m)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
     
     g=sns.histplot(df_sel_hist,bins=bins,x=aggr_meth,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})#,legend=False)
     g.set_title(f"Forecasted precipitation {mn}, \n leadtime=2.5months",fontsize=12)
@@ -379,15 +380,16 @@ for mn in ["January","February"]:
 ```
 
 ```python
-#for some reason facetgrid doesn't want to show the values if there is only one occurence (i.e. in January..)
-g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
-g.map_dataframe(sns.histplot, aggr_meth,common_norm=False,alpha=1,binwidth=10)
+# #same idea of histogram, but with nicer layout
+# #however for some reason facetgrid doesn't want to show the values if there is only one occurence (i.e. in January..)
+# g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
+# g.map_dataframe(sns.histplot, aggr_meth,common_norm=False,alpha=1,binwidth=10)
 
-g.add_legend(title="Dry spell occurred")  
-for ax in g.axes.flatten():
-    ax.tick_params(labelbottom=True)
-    ax.set_ylabel("Number of months")
-    ax.set_xlabel("Total monthly precipitation (mm)")
+# g.add_legend(title="Dry spell occurred")  
+# for ax in g.axes.flatten():
+#     ax.tick_params(labelbottom=True)
+#     ax.set_ylabel("Number of months")
+#     ax.set_xlabel("Total monthly precipitation (mm)")
 ```
 
 ```python
