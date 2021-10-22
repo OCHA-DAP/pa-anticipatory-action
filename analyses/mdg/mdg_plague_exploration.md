@@ -302,18 +302,17 @@ gdf_adm2_merge.plot(column="cases_number",
                figsize=(15,10),)
 ```
 
-Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary. The urban classification is using `urban_area_weighted` which is urban areas defined as communes where the average raster cell value is `>= 15`. This helps capture areas where the majority of raster cells are not urban, but there are still significant urban agglomerations within the commune by using the inherent weighting in the GHS classification figures.
+Where the ADM3 codes are available, will add the urban classification for analysis. For ease, adding to `df` and recalculating `df_date` for use with urban/rural breakdown if necessary. The urban classification is using `urban_area_weighted` which is urban areas defined as communes where the average raster cell value is above a threshold. We initially tried with `>= 15`, but the code below uses `>= 13` now which is a permissive threshold but the historical data still shows very few urban cases of pneumonic plague outside of 2017 even with that threshold. Using the threshold system rather than % of cells helps capture areas where the majority of raster cells are not urban, but there are still significant urban agglomerations within the commune by using the inherent weighting in the GHS classification figures.
 
 ```python
-df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
+df_urb = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area_weighted_13"]], on="ADM3_PCODE", how="left")
 # first filter out rows where the join failed (i.e. those with only ADM2 pcodes rather than ADM3)
-df_urb = df_urb[df_urb.urban_area_weighted.notnull()]
+df_urb = df_urb[df_urb.urban_area_weighted_13.notnull()]
 # then filter to only urban areas with pneumonic plague
-df_urb = df_urb.loc[df_urb.urban_area_weighted & (df_urb.clinical_form == "PP")]
+df_urb = df_urb.loc[df_urb.urban_area_weighted_13 & (df_urb.clinical_form == "PP")]
 
 #group by date
 df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date="2021-10-01")
-df_date_urb
 ```
 
 ```python
@@ -344,24 +343,62 @@ df_date_urb.groupby("year",as_index=False).sum() \
 It's also important to understand the distribution of urban areas in Madagascar. Here is a map of urban areas identified through the methodology.
 
 ```python
-urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
-urb_map_df['color'] = np.where(urb_map_df.urban_area, "#151515", "#FAFAFA")
-
-urb_plot = urb_map_df.plot(
-    color=urb_map_df["color"],
-    categorical=True,
-    legend=True,
-    edgecolor="face",
-    figsize=(15,10)
-)
-
+#urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area"]], on="ADM3_PCODE", how="left")
+#urb_map_df['color'] = np.where(urb_map_df.urban_area, "#151515", "#FAFAFA")
+#
+#urb_plot = urb_map_df.plot(
+#    color=urb_map_df["color"],
+#    categorical=True,
+#    legend=True,
+#    edgecolor="face",
+#    figsize=(15,10)
+#)
+#
 # need to adjust size for saving, currently screenshotting
 # urb_plot.figure.savefig(os.path.join(plot_dir,f"{iso3}_urban_areas.png"), bbox_inches="tight")
 ```
 
 ```python
-urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
-urb_map_df['color'] = np.where(urb_map_df.urban_area_weighted, "#151515", "#ECECEC")
+#urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area_weighted"]], on="ADM3_PCODE", how="left")
+#urb_map_df['color'] = np.where(urb_map_df.urban_area_weighted, "#151515", "#ECECEC")
+#
+#fig, ax = plt.subplots(1, 1)
+#fig.set_figheight(15)
+#
+#urb_plot = urb_map_df.plot(
+#    ax = ax,
+#    color=urb_map_df["color"],
+#    categorical=True,
+#    legend=True,
+#    edgecolor="face",
+#    figsize=(15,10),
+#)
+#
+#urb_plot.text(47.8,-19,"Antananarivo")
+#urb_plot.text(48.8,-17.9,"Toamisina")
+#urb_plot.text(47.2,-20,"Antsirabe")
+#urb_plot.text(48.3,-22.2,"Manakara")
+#urb_plot.text(48.1,-22.9,"Farafangana")
+#urb_plot.text(49.4,-13.2,"Vohemar")
+#urb_plot.text(46.5,-15.8,"Mahajanga")
+#urb_plot.text(43.9,-23.45,"Toliara")
+#urb_plot.text(47.3,-21.55,"Fianarantsoa")
+#
+#font_dict = {
+#    'fontsize': 14,
+#    'fontweight' : 'bold',
+#    'horizontalalignment' : 'center'
+#    }
+#
+#ax.set_title("Madagascar urban areas, defined through GHS",font_dict)
+#ax.axis('off')
+# need to adjust size for saving, currently screenshotting
+# urb_plot.figure.savefig(os.path.join(plot_dir,f"{iso3}_urban_areas_weighted.png"), bbox_inches="tight")
+```
+
+```python
+urb_map_df = gdf_adm3.merge(adm3_urban[["ADM3_PCODE", "urban_area_weighted_13"]], on="ADM3_PCODE", how="left")
+urb_map_df['color'] = np.where(urb_map_df.urban_area_weighted_13, "#151515", "#ECECEC")
 
 fig, ax = plt.subplots(1, 1)
 fig.set_figheight(15)
@@ -384,6 +421,12 @@ urb_plot.text(49.4,-13.2,"Vohemar")
 urb_plot.text(46.5,-15.8,"Mahajanga")
 urb_plot.text(43.9,-23.45,"Toliara")
 urb_plot.text(47.3,-21.55,"Fianarantsoa")
+urb_plot.text(43.6,-20.1,"Morondava")
+urb_plot.text(48.6,-12.1,"Antsiranana")
+urb_plot.text(47.8,-13.2,"Nosy Be")
+urb_plot.text(47.5,-20.6,"Ambositra")
+urb_plot.text(47.7,-19.5,"Ambatolampy")
+urb_plot.text(48.8,-17.2,"Mahambo")
 
 font_dict = {
     'fontsize': 14,
