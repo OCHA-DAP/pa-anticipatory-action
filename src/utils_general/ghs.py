@@ -138,7 +138,7 @@ def classify_urban_areas(
         """
         return np.ma.mean(x >= urban_min_class) >= urban_percent
 
-    def urban_area_weighted(x):
+    def urban_area_weighted(x, threshold: int = 15):
         """
         Classifies `x` as urban if the mean raster cell values
         in `x` are 15 or greater. The threshold was chosen by
@@ -150,7 +150,7 @@ def classify_urban_areas(
         centres. See the GHSL urbanization definitions at
         https://ghsl.jrc.ec.europa.eu/degurbaDefinitions.php.
         """
-        return np.ma.mean(x) >= 15
+        return np.ma.mean(x) >= threshold
 
     return zonal_stats(
         polygons,
@@ -158,7 +158,9 @@ def classify_urban_areas(
         add_stats={
             "urban_percent": raster_percent,
             "urban_area": urban_area,
-            "urban_area_weighted": urban_area_weighted,
+            "urban_area_weighted": lambda x: urban_area_weighted(x),
+            "urban_area_weighted_14": lambda x: urban_area_weighted(x, 14),
+            "urban_area_weighted_13": lambda x: urban_area_weighted(x, 13),
         },
         affine=transform,
     )
