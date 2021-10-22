@@ -91,6 +91,7 @@ def plague_group_by_date(df, sel_start_date=None, sel_end_date=None):
     df_date.set_index("date",inplace=True)
     if sel_start_date is not None:
         df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(sel_start_date, format='%Y-%m-%d')]))
+        df_date=df_date.sort_index()
     if sel_end_date is not None:
         df_date = df_date.append(pd.DataFrame([[0]],columns=["cases_number"], index=[pd.to_datetime(sel_end_date, format='%Y-%m-%d')]))
     df_date.index.names=["date"]
