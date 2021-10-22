@@ -53,6 +53,8 @@ cls = classify_urban_areas(adm, smod, trans, URBAN_MIN_CLASS, URBAN_PERCENT)
 adm['urban_percent'] = [x['urban_percent'] for x in cls]
 adm['urban_area'] = [x['urban_area'] for x in cls]
 adm['urban_area_weighted'] = [x['urban_area_weighted'] for x in cls]
+adm['urban_area_weighted_14'] = [x['urban_area_weighted_14'] for x in cls]
+adm['urban_area_weighted_13'] = [x['urban_area_weighted_13'] for x in cls]
 ```
 
 Save out results.
