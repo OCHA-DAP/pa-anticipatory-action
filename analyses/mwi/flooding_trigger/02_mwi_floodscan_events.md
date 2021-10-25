@@ -11,6 +11,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
+import rioxarray as rio
 from scipy import stats
 from functools import reduce
 import os
