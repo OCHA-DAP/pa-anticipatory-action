@@ -252,10 +252,6 @@ for code, station in stations_adm2.items():
 df_detection_stats = utils.get_more_detection_stats(df_detection_stats)
 ```
 
-```python
-df_detection_stats
-```
-
 Plot out the results.
 
 ```python
@@ -289,39 +285,36 @@ if SAVE_PLOT: plt.savefig(PLOT_DIR / f'reforecast_event_performance.png')
 Plot out the comparison of the GloFAS forecast time series at a given lead time against the timing of the historical events.
 
 ```python
-import datetime as dt
+# Set basic trigger parameters
+lt = 5
+forecast_prob = 70
+source = 'floodscan'
 ```
 
 ```python
-lt = 3
-forecast_prob = 50
-start_slice = '1998-01-01'
-end_slice = '2019-12-31'
-source = 'rco'
-
 da_glofas_reforecast = (ds_glofas_reforecast_summary[code]
                             .sel(leadtime=lt)
                             .sel(percentile=forecast_prob))
 
-da_glofas_reanalysis = ds_glofas_reanalysis[code].sel(time=slice(start_slice, end_slice))
+da_glofas_reanalysis = ds_glofas_reanalysis[code].reindex(time=ds_glofas_reforecast.time)
 
 mask = (events[station][source]>reforecast_start) & (events[station][source]<reforecast_end) 
 true_events = events[station][source][mask]
-print(true_events)
 
 col = cm.get_cmap('Blues', 5)
 
 fig, axs = plt.subplots()
 
 axs.plot(da_glofas_reanalysis.time, da_glofas_reanalysis.values, alpha=0.75, lw=0.75, ls='--', label='Reanalysis')
-axs.plot(da_glofas_reforecast.time, da_glofas_reforecast.values, alpha=0.75, lw=0.75, label=f'Reforecast\n{5}-day lt, {forecast_prob}% prob')
+axs.plot(da_glofas_reforecast.time, da_glofas_reforecast.values, alpha=0.75, lw=0.75, label=f'Reforecast\n{lt}-day lt, {forecast_prob}% prob')
 
 for irp, rp in enumerate(rp_list):
-    axs.axhline(df_return_period.loc[rp, code],  0, 1, color=col(irp+2), alpha=1, lw=0.75, label=f'1 in {str(rp)}-year return period')
+    axs.axhline(df_return_period.loc[rp, code],  0, 1, color=col(irp+2), alpha=0.6, lw=0.75, label=f'1 in {str(rp)}-year return period')
 
 for event in true_events:
-    print(event)
-    #ax.axvline(dt.datetime(event))
+    date = pd.to_datetime(event)
+    axs.axvline(date, alpha=0.2, c='red')
     
-axs.legend()
+axs.legend(loc='lower center', bbox_to_anchor=(0.5, -0.40),
+          ncol=2, fancybox=False)
 ```
