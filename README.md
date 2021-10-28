@@ -1,5 +1,5 @@
 # OCHA Anticipatory Action Framework
-**Note: the code presented in this repository is work in progress. If you have questions or run into any issues, please contact us at centrehumdata@un.org.**
+**Note: we are in the process of refactoring this repository to [aa-toolbox](https://github.com/OCHA-DAP/pa-aa-toolbox) for easier usability. If you have any questions, or would like to add to the toolbox, please contact us at centrehumdata@un.org.**
 
 An OCHA anticipatory action framework (AAF) comprises three pre-agreed pillars: 
 financing, activities, and a trigger. 
