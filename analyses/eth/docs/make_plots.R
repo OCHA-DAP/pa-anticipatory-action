@@ -31,21 +31,45 @@ plot_disaster_annual <- emdat %>%
     labs(x='Year', y='Number') +
     theme(legend.position="bottom")
 
+
+# -------------------------------------------------------------------------
+
+# Remove events before 2000 since there isn't standardized geolocation before this year
+# This takes us from 74 to 41 observations 
+# For every event that is geolocated to adm2, we need to match adm2s to adm1
+# This gets a bit convoluted... 
+# First removing some unnecessary characters from the strings, 
+# then separate so that each row has its own location
+# Then doing a fuzzy join at both adm1 and adm2 level
+# and keeping all the adm1 references 
+floods_adm1_emdat <- emdat %>% 
+  mutate(Year = as.numeric(Year)) %>%
+  filter(Year >= 2000) %>%
+  mutate(`Geo Locations` = str_replace(`Geo Locations`, '[.] ', ', ')) %>%
+  mutate(`Geo Locations` = str_replace(`Geo Locations`, ' [(]Adm2[)][.]', '')) %>%
+  mutate(`Geo Locations` = str_replace(`Geo Locations`, ' [(]Adm1[)][.]', '')) %>%
+  separate_rows(`Geo Locations`, sep=', ') %>%
+  filter(!is.na(`Geo Locations`)) %>%
+  fuzzyjoin::stringdist_left_join(shp_adm2,
+                              by = c(`Geo Locations` = "ADM2_EN"),
+                              max_dist = 1) %>%
+  fuzzyjoin::stringdist_full_join(shp_adm1,
+                                  by = c(`Geo Locations` = "ADM1_EN"),
+                                  max_dist = 1) %>%
+  select(c(Year, `Geo Locations`, `Disaster Type`, `Adm Level`, ADM2_EN, ADM1_EN.x, ADM1_EN.y, geometry.y)) %>%
+  mutate(ADM1_EN = ifelse(is.na(ADM1_EN.y), ADM1_EN.x, ADM1_EN.y))
+
+# How many events don't have a location match?
+sum(is.na(floods_adm1_emdat$ADM1_EN))
+
 # Get number of events by admin 1 
-# TODO: Fuzzy matching in case slight mismatch in spelling
-# Join with events geolocated to adm2 as well
-map_adm1 <- emdat %>%
-  filter(!is.na(Location)) %>%
-  fuzzyjoin::fuzzy_right_join(shp_adm1,
-                              by = c(Location = "ADM1_EN"),
-                              match_fun = ~ stringr::str_detect(tolower(.x), tolower(.y))) %>%
+map_adm1 <- floods_adm1_emdat %>%
   st_as_sf() %>%
   group_by(ADM1_EN) %>%
   summarize(
-    ADM1_PCODE = unique(ADM1_PCODE),
     num_flood = sum(`Disaster Type` == "Flood", na.rm = T),
     num_drought = sum(`Disaster Type` == "Drought", na.rm = T)
-  )
+  ) 
 
 flood_map <- tm_shape(map_adm1) + 
   tm_fill(col = "num_flood", palette = "Blues", title = 'Flood events') +
