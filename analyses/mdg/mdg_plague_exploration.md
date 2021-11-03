@@ -933,27 +933,27 @@ Another idea would be to instead of looking at cases in one week, we look at the
 Lets have a  look at the density distribution of the 3-week cumsum years during all weeks and all years except 2017
 
 ```python
-df_cap30_rolling_sum=comp_abs_consec(df_date,cap=30,cases_col="rolling_sum")
+df_cap50_rolling_sum=comp_abs_consec(df_date,cap=50,cases_col="rolling_sum")
 ```
 
 ```python
-df_cap30_sel_year = df_cap30_rolling_sum[df_cap30_rolling_sum.year!=2017]
+df_cap50_sel_year = df_cap50_rolling_sum[df_cap50_rolling_sum.year!=2017]
 
-density_chart = alt.Chart(df_cap30_rolling_sum[df_cap30_rolling_sum.year!=2017]).transform_density(
+density_chart = alt.Chart(df_cap50_rolling_sum[df_cap50_rolling_sum.year!=2017]).transform_density(
     'rolling_sum',
     as_=['rolling_sum', 'density'],
 ).mark_area().encode(
     x=alt.X("rolling_sum:Q",title="cumsum cases 3 weeks",scale=alt.Scale(domain=[0, 60])),
     y='density:Q',
 ).properties(title="Density distribution for 2012-2016, 2018-2021 of the 3-week cumsum")
-line = alt.Chart(pd.DataFrame({'x': [df_cap30_rolling_sum.rolling_sum.mean()+2*df_cap30_rolling_sum.rolling_sum.std()]})).mark_rule(color="red").encode(x='x')
+line = alt.Chart(pd.DataFrame({'x': [df_cap50_rolling_sum.rolling_sum.mean()+2*df_cap50_rolling_sum.rolling_sum.std()]})).mark_rule(color="red").encode(x='x')
 density_chart # + line
 ```
 
 ```python
-df_cap30_sel_2012 = df_cap30_rolling_sum[df_cap30_rolling_sum.year<2017]
+df_cap50_sel_2012 = df_cap50_rolling_sum[df_cap50_rolling_sum.year<2017]
 
-density_chart_2012 = alt.Chart(df_cap30_sel_2012).transform_density(
+density_chart_2012 = alt.Chart(df_cap50_sel_2012).transform_density(
     'rolling_sum',
     as_=['rolling_sum', 'density'],
 ).mark_area().encode(
@@ -964,9 +964,9 @@ density_chart_2012
 ```
 
 ```python
-df_cap30_sel_2018 = df_cap30_rolling_sum[df_cap30_rolling_sum.year>2017]
+df_cap50_sel_2018 = df_cap50_rolling_sum[df_cap50_rolling_sum.year>2017]
 
-density_chart_2018 = alt.Chart(df_cap30_sel_2018).transform_density(
+density_chart_2018 = alt.Chart(df_cap50_sel_2018).transform_density(
     'rolling_sum',
     as_=['rolling_sum', 'density'],
 ).mark_area().encode(
@@ -982,7 +982,7 @@ We see that for most weeks 2018 - 2021 we have a very small number of cum cases,
 Next, lets see how the cumsum was in 2017 compared to the other years
 
 ```python
- alt.Chart(df_cap30_rolling_sum).mark_line().encode(
+ alt.Chart(df_cap50_rolling_sum).mark_line().encode(
     x='week:N',
     y=alt.Y('rolling_sum',title="3-week rolling sum"),
     color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3",color_seventeen,"#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3"]))
@@ -993,7 +993,7 @@ Next, lets see how the cumsum was in 2017 compared to the other years
 ```
 
 ```python
-df_cap30_rolling_sum[(df_cap30_rolling_sum.year==2017)&(df_cap30_rolling_sum.week>=32)]
+df_cap50_rolling_sum[(df_cap50_rolling_sum.year==2017)&(df_cap50_rolling_sum.week>=32)]
 ```
 
 We can see that the cumsum in 2017 was significantly higher. In week 37 it was higher than we ever saw before, with 43 cases. 
@@ -1005,15 +1005,15 @@ Based on this simple analysis, using a threshold of at least 30 or 40 cases duri
 When using this method, the trigger would be reached in week 37 in 2017
 
 ```python
-heatmap_abs_cumsum30 = alt.Chart(df_cap30_rolling_sum).mark_rect().encode(
+heatmap_abs_cumsum50 = alt.Chart(df_cap50_rolling_sum).mark_rect().encode(
     x="week:N",
     y="year:N",
-    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 30 cases last 3 weeks")),
+    color=alt.Color('thresh_reached_str:N',scale=alt.Scale(range=["#D3D3D3",color_twentyone]),legend=alt.Legend(title=">= 50 cases last 3 weeks")),
 ).properties(
-    title=">= 30 cases in last 3 weeks"
+    title=">= 50 cases in last 3 weeks"
 )
-heatmap_abs_cumsum30
-# heatmap_abs_cumsum30.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_cumsum30.png")),
+heatmap_abs_cumsum50
+# heatmap_abs_cumsum50.save(os.path.join(plot_dir,f"{iso3}_heatmap_trigger_cumsum50.png")),
 ```
 
 #### Urban areas and pneumonic cases
@@ -1192,34 +1192,29 @@ abs_ov = px.line(
 )
 
 abs_ov.add_trace(
-    go.Scatter(y=[43,
-                 32,
-                 36,
-                 30,
-                 30,
-                 30,],
-               x=[pd.to_datetime("2017-09-11"),
-                 pd.to_datetime("2012-01-16"),
-                 pd.to_datetime("2012-10-22"),
-                 pd.to_datetime("2013-10-14"),
-                 pd.to_datetime("2014-10-06")],
+    go.Scatter(y=[53,
+                  51,
+                  53],
+               x=[pd.to_datetime("2012-11-12"),
+                  pd.to_datetime("2013-11-11"),
+                  pd.to_datetime("2017-09-18")],
                mode="markers",
                marker={"size":10},
                showlegend=False),
 )
 
 abs_ov.add_annotation(
-    y=43,x=pd.to_datetime("2017-09-11"),text="Trigger, 43 cases",font={"size":12}
+    y=43,x=pd.to_datetime("2017-09-18"),text="Trigger, 53 cases",font={"size":12}
 )
 
-abs_ov.add_annotation(
-    y=25,x=pd.to_datetime("2018-10-16"),text="Nearly trigger, 25 cases",font={"size":12}
-)
-
-abs_ov.add_hline(y=30,annotation_text="30 cases trigger",annotation_position="top left")
+abs_ov.add_hline(y=50,annotation_text="50 cases trigger",annotation_position="top left")
 
 # requires kaleido package on mac, might be different on other machines
-# abs_ov.write_image(os.path.join(plot_dir,f"{iso3}_overall_timeline_cumsum_trigger.png"))
+abs_ov.write_image(os.path.join(plot_dir,f"{iso3}_overall_timeline_cumsum_trigger.png"), width = 1200, height = 300)
+```
+
+```python
+df_date[df_date.rolling_sum >= 50]
 ```
 
 ```python
