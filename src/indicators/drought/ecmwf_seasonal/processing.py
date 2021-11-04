@@ -72,7 +72,7 @@ def get_stats_filepath(
     date: datetime,
     interpolate: bool,
     adm_level: int,
-    use_incorrect_area_coords: bool,
+    use_unrounded_area_coords: bool,
     version: int = None,
 ) -> Path:
     """
@@ -82,10 +82,10 @@ def get_stats_filepath(
     :param date: the date of interest
     :param interpolate: whether the data is interpolated to a higher resolution
     :param adm_level: the admin level the data is aggregated to
-    :param use_incorrect_area_coords: Generally meant to be False,
+    :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
-        incorrectly shifted data
+        a shift in data which is interpolated
     :param version: ecmwf model version that is used,
     if None the default version will be used
     :return: path to the stats file
@@ -95,8 +95,8 @@ def get_stats_filepath(
         version = config.DEFAULT_VERSION
 
     filename = f"{iso3.lower()}_seasonal-monthly-single-levels_v{version}"
-    if use_incorrect_area_coords:
-        filename += "_incorrect-coords"
+    if use_unrounded_area_coords:
+        filename += "_unrounded-coords"
     if interpolate:
         filename += "_interp"
     filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
@@ -107,8 +107,8 @@ def get_stats_filepath(
     ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
 
     stats_dir = ecmwf_processed_dir / "seasonal-monthly-single-levels"
-    if use_incorrect_area_coords:
-        stats_dir = stats_dir / "incorrect-coords"
+    if use_unrounded_area_coords:
+        stats_dir = stats_dir / "unrounded-coords"
 
     return stats_dir / filename
 
@@ -121,7 +121,7 @@ def compute_stats_per_admin(
     use_cache: bool = True,
     interpolate: bool = True,
     date_list: List[str] = None,
-    use_incorrect_area_coords=False,
+    use_unrounded_area_coords=False,
 ):
     """
     compute several statistics on admin level retrieved
@@ -134,10 +134,10 @@ def compute_stats_per_admin(
     :param interpolate: if True, upsample data by 4 times
     :param date_list: list of dates to compute stats for. If None, the stats
     will be computed for all dates in ds
-    :param use_incorrect_area_coords: Generally meant to be False,
+    :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
-        incorrectly shifted data
+        shifted and interpolated data
     """
     config = Config()
     parameters = config.parameters(iso3)
@@ -153,7 +153,7 @@ def compute_stats_per_admin(
 
     # read the forecasts
     ds = get_ecmwf_forecast_by_leadtime(
-        iso3, use_incorrect_area_coords=use_incorrect_area_coords
+        iso3, use_unrounded_area_coords=use_unrounded_area_coords
     )
 
     if interpolate:
@@ -184,7 +184,7 @@ def compute_stats_per_admin(
             date_dt,
             interpolate,
             adm_level,
-            use_incorrect_area_coords,
+            use_unrounded_area_coords,
         )
 
         # If caching is on and file already exists, don't download again

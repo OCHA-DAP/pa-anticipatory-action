@@ -54,7 +54,7 @@ hdx_blue='#66B0EC'
 #### Set config values
 
 ```python
-use_incorrect_area_coords=False
+use_unrounded_area_coords=False
 ```
 
 ```python
@@ -75,7 +75,7 @@ gdf_adm1=gpd.read_file(adm1_shp_path)
 ```
 
 ```python
-da_for=processing.get_ecmwf_forecast_by_leadtime("mwi",use_incorrect_area_coords=use_incorrect_area_coords)
+da_for=processing.get_ecmwf_forecast_by_leadtime("mwi",use_unrounded_area_coords=use_unrounded_area_coords)
 ```
 
 ```python

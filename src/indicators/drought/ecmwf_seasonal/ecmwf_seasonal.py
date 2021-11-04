@@ -34,7 +34,7 @@ class EcmwfSeasonal:
         cds_name: str,
         dataset: List[str],
         dataset_variable_name: str,
-        use_incorrect_area_coords: bool = False,
+        use_unrounded_area_coords: bool = False,
     ):
         """Create an instance of a EcmwfSeasonal object, from which you
         can download and process raw data, and read in the processed
@@ -49,17 +49,17 @@ class EcmwfSeasonal:
         list of strings)
         :param dataset_variable_name: The variable name
         with which to pass the above datasets in the CDS query
-        :param use_incorrect_area_coords: Generally not meant to be used,
+        :param use_unrounded_area_coords: Generally not meant to be used,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
-        incorrectly shifted data
+        unroundedly shifted data
         """
         self.year_min = year_min
         self.year_max = year_max
         self.cds_name = cds_name
         self.dataset = dataset
         self.dataset_variable_name = dataset_variable_name
-        self.use_incorrect_area_coords = use_incorrect_area_coords
+        self.use_unrounded_area_coords = use_unrounded_area_coords
 
     def _download(
         self,
@@ -119,11 +119,11 @@ class EcmwfSeasonal:
         directory = (
             RAW_DATA_DIR / country_iso3 / ECMWF_SEASONAL_DIR / self.cds_name
         )
-        if self.use_incorrect_area_coords:
-            directory = directory / "incorrect-coords"
+        if self.use_unrounded_area_coords:
+            directory = directory / "unrounded-coords"
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
-        if self.use_incorrect_area_coords:
-            filename += "_incorrect-coords"
+        if self.use_unrounded_area_coords:
+            filename += "_unrounded-coords"
         filename += f"_{year}"
         if month is not None:
             filename += f"-{str(month).zfill(2)}"
@@ -150,8 +150,8 @@ class EcmwfSeasonal:
             else str(month).zfill(2),
             "leadtime_month": [str(x) for x in leadtimes],
             "area": area.list_for_api(
-                round_val=None if self.use_incorrect_area_coords else 1,
-                offset_val=None if self.use_incorrect_area_coords else 0,
+                round_val=None if self.use_unrounded_area_coords else 1,
+                offset_val=None if self.use_unrounded_area_coords else 0,
             ),
         }
         logger.debug(f"Query: {query}")
@@ -212,11 +212,11 @@ class EcmwfSeasonal:
             / ECMWF_SEASONAL_DIR
             / self.cds_name
         )
-        if self.use_incorrect_area_coords:
-            directory = directory / "incorrect-coords"
+        if self.use_unrounded_area_coords:
+            directory = directory / "unrounded-coords"
         filename = f"{country_iso3}_{self.cds_name}_v{version}"
-        if self.use_incorrect_area_coords:
-            filename += "_incorrect-coords"
+        if self.use_unrounded_area_coords:
+            filename += "_unrounded-coords"
         filename += ".nc"
         return directory / filename
 

@@ -7,15 +7,14 @@ and then computes the trigger status per admin
 import logging
 import os
 import sys
-from typing import List
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-
 from pathlib import Path
+from typing import List
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 # TODO: remove this after making top-level
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
@@ -35,7 +34,14 @@ COUNTRY_ISO3 = "mwi"
 # version number of the trigger
 # this script is written for v1
 VERSION = 1
-USE_INCORRECT_AREA_COORDS = False
+# when True, the area coordinates for which to retrieve the forecast
+# are not rounded to integers
+# since the original forecast is produced for integer coordinates,
+# in this case the data is automatically interpolated by CDS
+# for now we are sticking to using unrounded coords as that was
+# the method used during the development of the trigger
+# however for the future, we recommend using the rounded coordinates
+USE_UNROUNDED_AREA_COORDS = True
 CONFIG = Config()
 PARAMETERS = CONFIG.parameters(COUNTRY_ISO3)
 
@@ -88,7 +94,7 @@ def retrieve_forecast(
     output of compute_stats_admin
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
-        use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+        use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
     )
     # add buffer
     # not in correct crs for it to do properly

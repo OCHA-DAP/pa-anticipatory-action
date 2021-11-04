@@ -51,7 +51,7 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
-use_incorrect_area_coords = False
+use_unrounded_area_coords = False
 interpolate=False
 ```
 
@@ -70,7 +70,7 @@ chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps
 monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells", f"v{parameters['version']}", "monthly_precipitation")
 dry_spells_processed_dir = os.path.join(country_data_processed_dir, "dry_spells", f"v{parameters['version']}")
 
-plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells", f"v{parameters['version']}")
+plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells")
 plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
@@ -80,8 +80,9 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_mon
 
 ```python
 #using the mean value of the admin
-if use_incorrect_area_coords:
+if use_unrounded_area_coords:
     aggr_meth="mean_cell"
+    plots_seasonal_dir = Path(plots_seasonal_dir) / "unrounded-coords"
 else:
     aggr_meth = "mean_ADM1_PCODE"
 ```
@@ -256,7 +257,7 @@ end_date="5-1-2021"
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -695,7 +696,7 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 ```
 
 ```python
-fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}")
+fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm")
 # fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt123456_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
@@ -705,7 +706,7 @@ lt_sub=[2,4]
 lt_sub_str=lt_str="".join([str(l) for l in lt_sub])
 #cm per month
 for m in sel_months:
-    fig_cm=compute_confusionmatrix_leadtime(df_ds_for[(df_ds_for.leadtime.isin(lt_sub))&(df_ds_for.date_month.dt.month==m)],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}",title=f"Month = {calendar.month_name[m]}",colp_num=2)
+    fig_cm=compute_confusionmatrix_leadtime(df_ds_for[(df_ds_for.leadtime.isin(lt_sub))&(df_ds_for.date_month.dt.month==m)],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm",title=f"Month = {calendar.month_name[m]}",colp_num=2)
 #     fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_sub_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{calendar.month_abbr[m].lower()}.png"))
 ```
 
