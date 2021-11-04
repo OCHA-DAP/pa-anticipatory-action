@@ -35,13 +35,13 @@ ADM0_BOUND_PATH = os.path.join(
     COUNTRY_DATA_RAW_DIR, config.SHAPEFILE_DIR, PARAMETERS["path_admin0_shp"]
 )
 
-USE_INCORRECT_AREA_COORDS = False
+USE_UNROUNDED_AREA_COORDS = False
 
 
 def main(download=True, compute_stats=True):
 
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
-        use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+        use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
     )
     df_country_boundaries = gpd.read_file(ADM0_BOUND_PATH)
     if download:
