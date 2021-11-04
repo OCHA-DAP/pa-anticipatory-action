@@ -1210,7 +1210,7 @@ abs_ov.add_annotation(
 abs_ov.add_hline(y=50,annotation_text="50 cases trigger",annotation_position="top left")
 
 # requires kaleido package on mac, might be different on other machines
-abs_ov.write_image(os.path.join(plot_dir,f"{iso3}_overall_timeline_cumsum_trigger.png"), width = 1200, height = 300)
+# abs_ov.write_image(os.path.join(plot_dir,f"{iso3}_overall_timeline_cumsum_trigger.png"), width = 1200, height = 300)
 ```
 
 ```python
