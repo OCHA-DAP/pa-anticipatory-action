@@ -39,8 +39,8 @@ DURATION = 3
 Read in the historical GloFAS data (reanalysis) and the various event datasets.
 
 ```python
-#event_sources = ['combined', 'rco', 'emdat', 'floodscan']
-event_sources = ['rco']
+event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+#event_sources = ['rco']
 
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=COUNTRY_ISO3)
@@ -52,8 +52,8 @@ events = {}
 for station in stations_adm2.values():
     sources = {}
     for source in event_sources:
-        #sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
-        sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv') # Using the combined dataset for Nsanje and Chikwawa
+        sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        #sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv') # Using the combined dataset for Nsanje and Chikwawa
     events[station] = sources
 ```
 
@@ -69,7 +69,7 @@ def filter_event_dates(df_event, start, end):
 
 for code, station in stations_adm2.items(): 
     
-    fig, axs = plt.subplots(len(event_sources), figsize=(10,5 * len(stations_adm2.values())), squeeze=False, sharex=True, sharey=True)
+    fig, axs = plt.subplots(len(event_sources), figsize=(10,10 * len(stations_adm2.values())), squeeze=False, sharex=True, sharey=True)
     fig.suptitle(f'Historical streamflow at {station}')
     
     for isource, source in enumerate(event_sources):
@@ -105,7 +105,7 @@ end_slice = '2019-12-31'
 
 rp_list = [1.5, 2, 5]
 
-df_detection_stats = pd.DataFrame(columns=['station', 'return_period', 'source', 'TP', 'FP', 'FN', 'precision', 'recall', 'f1'])
+df_detection_stats = pd.DataFrame(columns=['station', 'return_period', 'source', 'TP', 'FP', 'FN', 'precision', 'recall'])
 
 # TODO: Here we're limiting the time window to 1998-2019. 
 # Could better tailor this to be more specific to each source.
@@ -116,23 +116,37 @@ for code, station in stations_adm2.items():
     
     for rp in rp_list:
         rp_val = df_return_period.loc[rp, code]
-        df_glofas_event = utils.get_glofas_activations(ds_glofas_reanalysis[code].sel(time=slice(start_slice, end_slice)), rp_val, DURATION)
+        
+        da_glofas_sel = ds_glofas_reanalysis[code].sel(time=slice(start_slice, end_slice))
+        
+        glofas_events = utils.get_dates_list_from_data_array(
+            da=da_glofas_sel, 
+            threshold=rp_val,
+            min_duration=DURATION
+        )
         
         detection_stats = {}
         
         for source in event_sources: 
             
-            df_event = filter_event_dates(events[station][source], start_slice, end_slice) 
-            dict_performance = utils.get_clean_stats_dict(df_glofas_event, df_event, days_before_buffer, days_after_buffer)
-            dict_performance['return_period'] = rp
-            dict_performance['station'] = station
-            detection_stats[source] = dict_performance
+            df_event = filter_event_dates(events[station][source], start_slice, end_slice)             
+            true_events = np.array(df_event['start_date']).astype("datetime64[ns]")
+                                                                                                        
+            stats = utils.get_detection_stats(
+                true_event_dates=true_events,
+                forecasted_event_dates=glofas_events, 
+                days_before_buffer=days_before_buffer,
+                days_after_buffer=days_after_buffer
+            )
+
+            df_detection_stats = df_detection_stats.append({
+                **{'station': station,
+                  'return_period': rp,
+                  'source': source},
+                **stats
+            }, ignore_index=True)   
             
-        df_detection_stats = df_detection_stats.append(pd.DataFrame
-                              .from_dict(detection_stats)
-                              .transpose()
-                              .reset_index()
-                              .rename(columns={'index':'source'}))          
+df_detection_stats = utils.get_more_detection_stats(df_detection_stats)
 ```
 
 Plot out the results.

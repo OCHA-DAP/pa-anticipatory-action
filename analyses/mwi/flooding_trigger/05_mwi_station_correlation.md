@@ -32,7 +32,7 @@ PLOT_DIR = config.DATA_DIR / 'processed' / 'mwi' / 'plots' / 'flooding'
 PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
-SAVE_FIG = True
+SAVE_FIG = False
 LEADTIMES = [x + 1 for x in range(10)]
 stations_adm2 = {
     'G1724': 'Nsanje',

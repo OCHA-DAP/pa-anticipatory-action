@@ -1,4 +1,6 @@
-### Calculating GloFAS detection performance
+** This is an old version of calculating the GloFAS detection stats. Preserving here to allow for reproducing plots in the summary slide deck if needed.
+
+## Calculating GloFAS detection performance
 
 This notebook calculates and visualizes statistics on GloFAS forecast performance in detecting historical flood events. We compare performance across various trigger thresholds and forecast lead times. We also compare detection performance across various definitions/sources of historical flooding.
 
@@ -10,11 +12,11 @@ import pandas as pd
 import os
 from pathlib import Path
 import sys
-from matplotlib import cm
+from datetime import timedelta
 
 from matplotlib.ticker import MaxNLocator
 
-path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
 sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
@@ -28,7 +30,7 @@ PRIVATE_DIR = config.DATA_PRIVATE_DIR
 EXPLORE_DIR = PRIVATE_DIR / 'exploration' / 'mwi' / 'flooding'
 
 LEADTIMES = [x + 1 for x in range(10)]
-SAVE_PLOT = False
+SAVE_PLOT = True
 EVENT = 'RCO' # 'rco', 'floodscan', 'combined'
 COUNTRY_ISO3 = 'mwi'
 
@@ -38,6 +40,7 @@ stations_adm2 = {
 }
 
 DURATION = 3
+
 ```
 
 Read in the processed GloFAS data and get a summary of the reforecasted values. The summary includes percentile values to summarize the distribution of the ensemble forecast. We'll also get a dataframe of calculated return period thresholds and read in the dataset of historical events.
@@ -50,10 +53,10 @@ ds_glofas_reforecast = utils.get_glofas_reforecast(
     interp=True
 )
 ds_glofas_reforecast_summary = utils.get_glofas_forecast_summary(ds_glofas_reforecast)
-df_return_period = utils.get_return_periods(ds_glofas_reanalysis, method='empirical')
+df_return_period = utils.get_return_periods(ds_glofas_reanalysis, method='analytical')
 ```
 
-We'll check to see how the GloFAS forecast performs across various leadtimes in detecting streamflow exceedance events from the reanalysis (historical) GloFAS data. These events don't necessarily correspond to floods, but these results give us a sense of how the GloFAS forecast performs across various leadtimes at predicting the kinds of streamflow levels that we are interested in. 
+We'll check to see how the GloFAS forecast performs across various leadtimes in detecting streamflow exceedance events from the reanalysis (historical) GloFAS data. These events don't necessarily correspond to floods, but these results give us a sense of how the GloFAS forecast performs across various leadtimes at predicting the kinds of streamflow levels that we are interested in.
 
 ```python
 forecast_prob = 50
@@ -175,35 +178,125 @@ for code, station in stations_adm2.items():
 Now we'll see how the GloFAS forecast performs in detecting historical flood events as defined in our event dataset (eg. from the RCO, Floodscan, EM-DAT or combined). We'll first read in all of the historical event datasets.
 
 ```python
-event_sources = ['combined', 'rco', 'emdat', 'floodscan']
-#event_sources = ['rco']
+#event_sources = ['combined', 'rco', 'emdat', 'floodscan']
+event_sources = ['rco']
 events = {}
 for station in stations_adm2.values():
     sources = {}
     for source in event_sources:
-        start_dates = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')['start_date']
-        # Combined events for Chikwawa and Nsanje
-        #start_dates = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv')['start_date'] 
-        sources[source] = np.array(start_dates).astype("datetime64[ns]")
+        #sources[source] = pd.read_csv(EXPLORE_DIR / f'{station}_{source}_event_summary.csv')
+        sources[source] = pd.read_csv(EXPLORE_DIR / f'all_{source}_event_summary.csv')
     events[station] = sources
 ```
 
 Compute the standard performance metrics between each of the event sources and the GloFAS forecast data.
 
 ```python
-reforecast_start = ds_glofas_reforecast_summary[code]['time'][0].values
-reforecast_end = ds_glofas_reforecast_summary[code]['time'][-1].values
+def get_glofas_activations(da_glofas, thresh, ndays):
+    vals = da_glofas.values
+    groups = get_groups_above_threshold(vals, thresh, ndays)
+    df_glofas_act = pd.DataFrame(groups, columns=["start_index", "end_index"])
+    df_glofas_act["num_days"] = (
+        df_glofas_act["end_index"] - df_glofas_act["start_index"]
+    )
+    df_glofas_act["start_date"] = df_glofas_act["start_index"].apply(
+        lambda x: da_glofas.time[x].values
+    )
+    df_glofas_act["end_date"] = df_glofas_act["end_index"].apply(
+        lambda x: da_glofas.time[x].values
+    )
+    return df_glofas_act
+
+def get_groups_above_threshold(
+    observations: np.ndarray,
+    threshold: float,
+    min_duration: int = 1,
+    additional_condition: np.ndarray = None,
+):
+    condition = observations >= threshold
+    if additional_condition is not None:
+        condition = condition & additional_condition
+    groups = np.where(np.diff(condition, prepend=False, append=False))[
+        0
+    ].reshape(-1, 2)
+    return [group for group in groups if group[1] - group[0] >= min_duration]
+
+def get_clean_stats_dict(df_glofas, df_impact, buffer_before, buffer_after):
+    stats = {}
+    TP, FP, FN = get_detection_stats(
+        df_glofas, df_impact, buffer_before, buffer_after
+    )
+    precision, recall, f1 = get_more_stats(TP, FP, FN)
+
+    stats["TP"] = TP
+    stats["FP"] = FP
+    stats["FN"] = FN
+    stats["precision"] = precision
+    stats["recall"] = recall
+    stats["f1"] = f1
+
+    return stats
+
+def get_detection_stats(df_glofas, df_impact, buffer_before, buffer_after):
+    TP = 0
+    FP = 0
+    tot_events = len(df_impact.index)
+    df_impact_copy = df_impact.copy()
+
+    # Add buffer around the flood event dates to account for some uncertainty if desired
+    df_impact_copy["start_date_buffer"] = pd.to_datetime(
+        df_impact_copy["start_date"]
+    ) - timedelta(days=buffer_before)
+    df_impact_copy["end_date_buffer"] = pd.to_datetime(
+        df_impact_copy["end_date"]
+    ) + timedelta(days=buffer_after)
+
+    for index, row in df_glofas.iterrows():
+        TP_ = False
+        act_dates = np.array(pd.date_range(row["start_date"], row["end_date"]))
+
+        for index, row in df_impact_copy.iterrows():
+            event_dates = np.array(
+                pd.date_range(row["start_date_buffer"], row["end_date_buffer"])
+            )
+
+            if set(act_dates) & set(event_dates):
+                TP += 1
+                TP_ = True
+                df_impact_copy = df_impact_copy.drop([index,])
+        if not TP_:
+             FP += 1
+    FN = tot_events - TP
+    return TP, FP, FN
+
+def get_more_stats(TP, FP, FN):
+    try:
+        precision = TP / (TP + FP)
+    except Exception as e:
+        precision = None
+    recall = TP / (TP + FN)
+    try:
+        f1 = 2 / ((1 / recall) + (1 / precision))
+    except Exception as e:
+        f1 = None
+    return precision, recall, f1
 ```
 
 ```python
 days_before_buffer = 30
 days_after_buffer = 30
-forecast_prob = 70
+start_slice = '1998-01-01'
+end_slice = '2019-12-31'
+
+forecast_prob = 50
 
 rp_list = [1.5, 2, 5]
-lt_list = [5, 10, 15]
+lt_list = [5, 10, 15, 20]
 
-df_detection_stats = pd.DataFrame(columns=['station', 'lead_time', 'return_period', 'source', 'TP', 'FP', 'FN', 'precision', 'recall'])
+df_detection_stats = pd.DataFrame(columns=['station', 'lead_time', 'return_period', 'source', 'TP', 'FP', 'FN', 'precision', 'recall', 'f1'])
+
+def filter_event_dates(df_event, start, end):
+    return df_event[(df_event['start_date']<str(end)) & (df_event['start_date']>str(start))].reset_index()
 
 # TODO: Here we're limiting the time window to 1998-2019. 
 # Could better tailor this to be more specific to each source.
@@ -216,40 +309,30 @@ for code, station in stations_adm2.items():
     for rp in rp_list:
         rp_val = df_return_period.loc[rp, code]
         
+        detection_stats = {}
+        
         for lt in LEADTIMES: 
-            
-            da_glofas_sel = (ds_glofas_reforecast_summary[code]
-                            .sel(leadtime=lt)
-                            .sel(percentile=forecast_prob))
-            
-            glofas_events = utils.get_dates_list_from_data_array(
-                da=da_glofas_sel, 
-                threshold=rp_val,
-                min_duration=1
-            )
-
+            df_glofas_event = get_glofas_activations(ds_glofas_reforecast_summary[code]
+                                                           .sel(leadtime=lt)
+                                                           .sel(percentile=forecast_prob)
+                                                           .sel(time=slice(start_slice, end_slice)), 
+                                                           rp_val, DURATION)
 
             for source in event_sources: 
-                
-                mask = (events[station][source]>reforecast_start) & (events[station][source]<reforecast_end) 
-                true_events = events[station][source][mask]
-                
-                stats = utils.get_detection_stats(
-                    true_event_dates=true_events,
-                    forecasted_event_dates=glofas_events, 
-                    days_before_buffer=days_before_buffer,
-                    days_after_buffer=days_after_buffer
-                )
-                
-                df_detection_stats = df_detection_stats.append({
-                    **{'station': station,
-                      'lead_time': lt,
-                      'return_period': rp,
-                      'source': source},
-                    **stats
-                }, ignore_index=True)
-                
-df_detection_stats = utils.get_more_detection_stats(df_detection_stats)
+
+                df_event = filter_event_dates(events[station][source], start_slice, end_slice) 
+                dict_performance = get_clean_stats_dict(df_glofas_event, df_event, days_before_buffer, days_after_buffer)
+                dict_performance['return_period'] = rp
+                dict_performance['station'] = station
+                dict_performance['lead_time'] = lt
+                detection_stats[source] = dict_performance
+
+            df_detection_stats = df_detection_stats.append(pd.DataFrame
+                                  .from_dict(detection_stats)
+                                  .transpose()
+                                  .reset_index()
+                                  .rename(columns={'index':'source'}))  
+            
 ```
 
 Plot out the results.
@@ -280,41 +363,4 @@ for istation, station in enumerate(stations_adm2.values()):
         ax.set_title(f'{station}:\n1 in {rp} year threshold')
     
 if SAVE_PLOT: plt.savefig(PLOT_DIR / f'reforecast_event_performance.png')
-```
-
-Plot out the comparison of the GloFAS forecast time series at a given lead time against the timing of the historical events.
-
-```python
-# Set basic trigger parameters
-lt = 5
-forecast_prob = 70
-source = 'floodscan'
-```
-
-```python
-da_glofas_reforecast = (ds_glofas_reforecast_summary[code]
-                            .sel(leadtime=lt)
-                            .sel(percentile=forecast_prob))
-
-da_glofas_reanalysis = ds_glofas_reanalysis[code].reindex(time=ds_glofas_reforecast.time)
-
-mask = (events[station][source]>reforecast_start) & (events[station][source]<reforecast_end) 
-true_events = events[station][source][mask]
-
-col = cm.get_cmap('Blues', 5)
-
-fig, axs = plt.subplots()
-
-axs.plot(da_glofas_reanalysis.time, da_glofas_reanalysis.values, alpha=0.75, lw=0.75, ls='--', label='Reanalysis')
-axs.plot(da_glofas_reforecast.time, da_glofas_reforecast.values, alpha=0.75, lw=0.75, label=f'Reforecast\n{lt}-day lt, {forecast_prob}% prob')
-
-for irp, rp in enumerate(rp_list):
-    axs.axhline(df_return_period.loc[rp, code],  0, 1, color=col(irp+2), alpha=0.6, lw=0.75, label=f'1 in {str(rp)}-year return period')
-
-for event in true_events:
-    date = pd.to_datetime(event)
-    axs.axvline(date, alpha=0.2, c='red')
-    
-axs.legend(loc='lower center', bbox_to_anchor=(0.5, -0.40),
-          ncol=2, fancybox=False)
 ```
