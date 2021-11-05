@@ -184,7 +184,7 @@ def compute_stats_per_admin(
             date_dt,
             interpolate,
             adm_level,
-            use_unrounded_area_coords,
+            use_unrounded_area_coords=use_unrounded_area_coords,
         )
 
         # If caching is on and file already exists, don't download again

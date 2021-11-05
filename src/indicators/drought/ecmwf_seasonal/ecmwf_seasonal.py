@@ -82,7 +82,7 @@ class EcmwfSeasonal:
             logger.debug(
                 f"{filepath} already exists and cache is set to True, skipping"
             )
-            return filepath
+            return False
         Path(filepath.parent).mkdir(parents=True, exist_ok=True)
         logger.debug(f"Querying for {filepath}...")
         query_str = self._get_query(
@@ -107,7 +107,7 @@ class EcmwfSeasonal:
         logger.debug(f"...successfully downloaded {filepath}")
         # Wait 2 seconds between requests or else API hangs
         time.sleep(2)
-        return filepath
+        return True
 
     def _get_raw_filepath(
         self,
@@ -258,32 +258,55 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             f"Downloading ECMWF seasonal forecast v{version} for years"
             f" {year_min} - {year_max}"
         )
+        new_data_all = False
         current_date = datetime.now(timezone.utc)
         if leadtimes is None:
             leadtimes = DEFAULT_LEADTIMES
         for year in range(year_min, year_max + 1):
             logger.info(f"...{year}")
-            if months is None:
-                if year < current_date.year:
-                    months_year = range(1, 13)
-                elif year == current_date.year:
-                    # forecast becomes available on the 13th of the month
-                    # at 12 GMT
-                    max_month = (
-                        current_date.month
-                        if current_date.day > 13
-                        or (current_date.day == 13 and current_date.hour >= 12)
-                        else current_date.month - 1
-                    )
-                    months_year = range(1, max_month + 1)
-                elif year > current_date.year:
-                    logger.info(
-                        f"Cannot download data for {year}, because it is in"
-                        " the future"
-                    )
+            if year > current_date.year:
+                logger.info(
+                    f"Cannot download data for {year}, because it is in"
+                    f" the future. Skipping year {year}."
+                )
+                continue
+            else:
+                if months is None:
+                    if year < current_date.year:
+                        months_year = range(1, 13)
+                    elif year == current_date.year:
+                        # forecast becomes available on the 13th of the month
+                        # at 12 GMT
+                        max_month = (
+                            current_date.month
+                            if current_date.day > 13
+                            or (
+                                current_date.day == 13
+                                and current_date.hour >= 12
+                            )
+                            else current_date.month - 1
+                        )
+                        months_year = range(1, max_month + 1)
+
+                else:
+                    if year < current_date.year:
+                        months_year = months
+                    elif year == current_date.year:
+                        # forecast becomes available on the 13th of the month
+                        # at 12 GMT
+                        max_month = (
+                            current_date.month
+                            if current_date.day > 13
+                            or (
+                                current_date.day == 13
+                                and current_date.hour >= 12
+                            )
+                            else current_date.month - 1
+                        )
+                        months_year = [m for m in months if m <= max_month]
 
             for month in months_year:
-                super()._download(
+                new_data = super()._download(
                     country_iso3=country_iso3,
                     area=area,
                     year=year,
@@ -291,6 +314,9 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
                     version=version,
                     leadtimes=leadtimes,
                 )
+                if not new_data_all and new_data:
+                    new_data_all = True
+        return new_data_all
 
     def process(
         self,
