@@ -69,10 +69,7 @@ monthly_precip_path=Path(country_data_processed_dir) / "chirps" / "chirps_monthl
 
 ```python
 #using the mean value of the admin
-if use_unrounded_area_coords:
-    aggr_meth="mean_cell"
-else:
-    aggr_meth = "mean_ADM1_PCODE"
+aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -269,10 +266,6 @@ df_obsfor[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor[stat_col_forec]<=t
 df_obsfor_sel[f"mean_cell_obs_{thresh_obs}"]=np.where(df_obsfor_sel.mean_cell_obs<=thresh_obs,1,0)
 df_obsfor_sel[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor_sel[stat_col_forec]<=thresh_for,1,0)
 cm_th=compute_confusionmatrix_leadtime(df_obsfor_sel,f"mean_cell_obs_{thresh_obs}",f"mean_cell_forec_{thresh_for}",f"Observed <={thresh_obs}",f"Forecasted <={thresh_for}",title=f"Confusion matrices of below threshold monthly precipitation during January and February in the Southern region of Malawi")
-```
-
-```python
-df_for_sel_plot
 ```
 
 ```python

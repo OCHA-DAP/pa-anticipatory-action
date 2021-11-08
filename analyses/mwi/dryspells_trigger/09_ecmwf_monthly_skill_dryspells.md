@@ -81,10 +81,8 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_mon
 ```python
 #using the mean value of the admin
 if use_unrounded_area_coords:
-    aggr_meth="mean_cell"
     plots_seasonal_dir = Path(plots_seasonal_dir) / "unrounded-coords"
-else:
-    aggr_meth = "mean_ADM1_PCODE"
+aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python

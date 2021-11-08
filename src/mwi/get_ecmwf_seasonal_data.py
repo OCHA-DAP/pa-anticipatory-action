@@ -38,7 +38,7 @@ ADM0_BOUND_PATH = os.path.join(
 USE_UNROUNDED_AREA_COORDS = False
 
 
-def main(download=True, compute_stats=True):
+def main(download=True, compute_stats=True, use_cache=False):
 
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
         use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
@@ -56,7 +56,11 @@ def main(download=True, compute_stats=True):
     if compute_stats:
         # aggregate the raster data to statistics on the admin1 level
         compute_stats_per_admin(
-            iso3=COUNTRY_ISO3, add_col=["ADM1_EN"], interpolate=False
+            iso3=COUNTRY_ISO3,
+            add_col=["ADM1_EN"],
+            interpolate=False,
+            use_cache=use_cache,
+            use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
         )
 
 
