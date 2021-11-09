@@ -213,7 +213,7 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-df_date=plague_group_by_date(df, sel_end_date="2021-10-01")
+df_date=plague_group_by_date(df, sel_end_date="2021-11-08")
 ```
 
 ```python
@@ -313,7 +313,7 @@ df_urb = df_urb[df_urb.urban_area_weighted_13.notnull()]
 df_urb = df_urb.loc[df_urb.urban_area_weighted_13 & (df_urb.clinical_form == "PP")]
 
 #group by date
-df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date="2021-10-01")
+df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date="2021-11-08")
 ```
 
 ```python
@@ -790,7 +790,7 @@ chart_1721_sel
 #### Only pneunomic cases
 
 ```python
-df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], sel_end_date="2021-10-01")
+df_date_pp=plague_group_by_date(df[df.clinical_form=="PP"], sel_end_date="2021-11-08")
 ```
 
 ```python
