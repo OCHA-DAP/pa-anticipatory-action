@@ -9,13 +9,14 @@ import os
 import sys
 from datetime import date
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
+from matplotlib.colors import ListedColormap
 
 # TODO: remove this after making top-level
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
@@ -32,7 +33,6 @@ from src.utils_general.area import AreaFromShape
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
-COUNTRY_ISO3 = "mwi"
 # version number of the trigger
 # this script is written for v1
 VERSION = 1
@@ -45,13 +45,7 @@ VERSION = 1
 # however for the future, we recommend using the rounded coordinates
 USE_UNROUNDED_AREA_COORDS = True
 
-# Define parameters for plotting a map
-SLICE_LON = slice(32, 37)
-SLICE_LAT = slice(-9, -19)
-# bins are left-inclusive, i.e. if value is 150,
-# it will fall in the 150-210.1 bin, not the 100-150
-# therefore use 210.1 instead of 210 as boundary
-BINS = [0, 50, 100, 150, 210.1, 250, 300, 350]
+COUNTRY_ISO3 = "mwi"
 
 CONFIG = Config()
 PARAMETERS = CONFIG.parameters(COUNTRY_ISO3)
@@ -184,6 +178,7 @@ def create_map(
     slice_lon: slice = None,
     slice_lat: slice = None,
     bins: List[float] = None,
+    cmap: Union[str, ListedColormap] = "RdBu",
     figsize: tuple = (6, 10),
 ):
     """
@@ -258,7 +253,7 @@ def create_map(
             # could also make this an input var,
             # but want to limit the number of input vars
             extend="max",
-            cmap="RdBu",
+            cmap=cmap,
             cbar_kwargs={
                 "label": "forecasted precipitation (mm)",
                 "shrink": 0.6,
@@ -294,6 +289,7 @@ def create_map(
 
 def compute_trigger(
     iso3: str,
+    gdf_adm: gpd.GeoDataFrame,
     target_date: date,
     prob: float,
     precip_cap: int,
@@ -308,14 +304,15 @@ def compute_trigger(
     date_col: str = "date",
     leadtime_col: str = "leadtime",
     round_precip_int: bool = True,
-    slice_lon: tuple = None,
-    slice_lat: tuple = None,
 ):
     """
     Compute the trigger metric and a binary true/false if trigger is met
     The logic assumes that the trigger is defined as being met if there is
     `prob` probability of <= precip_cap monthly preciptiation (mm)
     :param iso3: country iso3 code
+    param gdf_adm:
+    A geodataframe containing the polygons for which the boundaries
+    should be plotted on the map. If None, only plot the raster data
     :param target_date:  date the forecasts should predict (year-month)
     :param prob: minimum probability of the forecast for the trigger
     to be met. should be between 0 and 1
@@ -337,13 +334,6 @@ def compute_trigger(
     :param leadtime_col: column in the stats file that contains the leadtime
     :return:
     """
-
-    adm_bound_path = (
-        Path(COUNTRY_DATA_RAW_DIR)
-        / CONFIG.SHAPEFILE_DIR
-        / PARAMETERS[f"path_admin{adm_level}_shp"]
-    )
-    gdf_adm = gpd.read_file(adm_bound_path)
 
     if download:
         retrieve_forecast(
@@ -409,30 +399,53 @@ def compute_trigger(
     df_stats_quant.to_csv(output_path, index=False)
     logger.info(f"The trigger output has been saved to {output_path}")
 
-    create_map(
-        iso3=iso3,
-        target_date=target_date,
-        leadtimes=leadtimes,
-        prob=prob,
-        gdf_adm=gdf_adm,
-        slice_lon=slice_lon,
-        slice_lat=slice_lat,
-        bins=BINS,
-    )
-
     return df_stats_quant
 
 
 def main():
+    target_date = date(year=2022, month=1, day=1)
+    prob = 0.5
+    adm_level = 1
+    adm_bound_path = (
+        Path(COUNTRY_DATA_RAW_DIR)
+        / CONFIG.SHAPEFILE_DIR
+        / PARAMETERS[f"path_admin{adm_level}_shp"]
+    )
+    gdf_adm = gpd.read_file(adm_bound_path)
     compute_trigger(
         COUNTRY_ISO3,
-        target_date=date(year=2022, month=1, day=1),
-        prob=0.5,
+        gdf_adm=gdf_adm,
+        target_date=target_date,
+        prob=prob,
         precip_cap=210,
-        download=False,
+        download=True,
         interpolate_raster=False,
-        slice_lon=SLICE_LON,
-        slice_lat=SLICE_LAT,
+    )
+
+    create_map(
+        iso3=COUNTRY_ISO3,
+        target_date=target_date,
+        leadtimes=[4],
+        prob=prob,
+        gdf_adm=gdf_adm,
+        slice_lon=slice(32, 37),
+        slice_lat=slice(-9, -19),
+        # bins are left-inclusive, i.e. if value is 150,
+        # it will fall in the 150-210.1 bin, not the 100-150
+        # therefore use 210.1 instead of 210 as boundary
+        bins=[0, 50, 100, 150, 210.1, 250, 300, 350],
+        cmap=ListedColormap(
+            [
+                "#c25048",
+                "#f2645a",
+                "#f7a29c",
+                "#fce0de",
+                "#cce5f9",
+                "#66b0ec",
+                "#007ce0",
+                "#0063b3",
+            ]
+        ),
     )
 
 
