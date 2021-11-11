@@ -266,8 +266,8 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
             logger.info(f"...{year}")
             if year > current_date.year:
                 logger.info(
-                    f"Cannot download data for {year}, because it is in"
-                    f" the future. Skipping year {year}."
+                    f"Cannot download data published in {year}, because it "
+                    f"is in the future. Skipping year {year}."
                 )
                 continue
             else:
