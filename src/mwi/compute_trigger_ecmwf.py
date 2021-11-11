@@ -46,10 +46,6 @@ VERSION = 1
 USE_UNROUNDED_AREA_COORDS = True
 
 # Define parameters for plotting a map
-# question: not sure if it is best to define them as global constants
-# or give them as input to compute_metrics()
-# reason I defined them here is because the number of args for
-# compute_metrics() is already massive
 SLICE_LON = slice(32, 37)
 SLICE_LAT = slice(-9, -19)
 # bins are left-inclusive, i.e. if value is 150,
@@ -269,17 +265,16 @@ def create_map(
                 "pad": 0.1,
             },
         )
-        # question: should we include "with {prob}% probability"
-        # in the title or is it too much?
+
         published_month = (
             target_date + relativedelta(months=-(lt - 1))
-        ).strftime("%Y-%m")
+        ).strftime("%b %Y")
         g.axes.set_title(
-            f"Forecasted monthly precipitation with {int(prob*100)}% "
-            "probability for {target_date.strftime('%Y-%m')},\n Published on "
-            f"{published_month}-13",
+            f"Forecasted monthly precipitation \n with {int(prob*100)}% "
+            f"probability for {target_date.strftime('%b %Y')}",
             size=10,
         )
+        plt.figtext(0, 0.05, f"Forecast published on 13 {published_month}")
         g.axes.set_xlabel("longitude")
         g.axes.set_ylabel("latitude")
         g.axes.spines["right"].set_visible(False)
@@ -313,6 +308,8 @@ def compute_trigger(
     date_col: str = "date",
     leadtime_col: str = "leadtime",
     round_precip_int: bool = True,
+    slice_lon: tuple = None,
+    slice_lat: tuple = None,
 ):
     """
     Compute the trigger metric and a binary true/false if trigger is met
@@ -412,16 +409,14 @@ def compute_trigger(
     df_stats_quant.to_csv(output_path, index=False)
     logger.info(f"The trigger output has been saved to {output_path}")
 
-    # question: should this function be called within
-    # compute_trigger() or from main()?
     create_map(
         iso3=iso3,
         target_date=target_date,
         leadtimes=leadtimes,
         prob=prob,
         gdf_adm=gdf_adm,
-        slice_lon=SLICE_LON,
-        slice_lat=SLICE_LAT,
+        slice_lon=slice_lon,
+        slice_lat=slice_lat,
         bins=BINS,
     )
 
@@ -434,8 +429,10 @@ def main():
         target_date=date(year=2022, month=1, day=1),
         prob=0.5,
         precip_cap=210,
-        download=True,
+        download=False,
         interpolate_raster=False,
+        slice_lon=SLICE_LON,
+        slice_lat=SLICE_LAT,
     )
 
 
