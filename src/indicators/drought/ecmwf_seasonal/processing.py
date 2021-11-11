@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import sys
@@ -9,6 +10,8 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
+from rasterio.enums import Resampling
+from shapely.geometry import box
 
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
 sys.path.append(path_mod)
@@ -70,9 +73,10 @@ def get_stats_filepath(
     iso3: str,
     config: Config,
     date: datetime,
-    interpolate: bool,
     adm_level: int,
     use_unrounded_area_coords: bool,
+    resolution: float = None,
+    weighted_average: bool = False,
     version: int = None,
 ) -> Path:
     """
@@ -80,7 +84,10 @@ def get_stats_filepath(
     :param iso3: iso3 code of the country of interest
     :param config: Config() instance
     :param date: the date of interest
-    :param interpolate: whether the data is interpolated to a higher resolution
+    :param resolution: resolution the data is changed to.
+    If None, data is in original resolution
+    :param weighted_average: if True compute the weighted average
+    of all cells touching the region
     :param adm_level: the admin level the data is aggregated to
     :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
@@ -97,8 +104,10 @@ def get_stats_filepath(
     filename = f"{iso3.lower()}_seasonal-monthly-single-levels_v{version}"
     if use_unrounded_area_coords:
         filename += "_unrounded-coords"
-    if interpolate:
-        filename += "_interp"
+    if resolution is not None:
+        filename += f"_res{resolution}"
+    if weighted_average:
+        filename += "_weighted-avg"
     filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
 
     country_data_processed_dir = (
@@ -119,7 +128,8 @@ def compute_stats_per_admin(
     pcode_col="ADM1_PCODE",
     add_col: List[str] = None,
     use_cache: bool = True,
-    interpolate: bool = True,
+    resolution: float = None,
+    weighted_average: bool = False,
     date_list: List[str] = None,
     use_unrounded_area_coords=False,
 ):
@@ -131,7 +141,9 @@ def compute_stats_per_admin(
     :param pcode_col: column in the shapefile that contains the pcode
     :param add_col: other columns that should be added from the shapefile
     :param use_cache: if True, don't update the file if it already exists
-    :param interpolate: if True, upsample data by 4 times
+    :param resolution: Change the resolution of the longitude and
+    latitude to this number
+    If None, don't change the resolution of the original data
     :param date_list: list of dates to compute stats for. If None, the stats
     will be computed for all dates in ds
     :param use_unrounded_area_coords: Generally meant to be False,
@@ -150,27 +162,20 @@ def compute_stats_per_admin(
         config.SHAPEFILE_DIR,
         parameters[f"path_admin{adm_level}_shp"],
     )
-
+    if weighted_average and resolution is not None:
+        logger.info(
+            "Currently it is not supported to change the "
+            "resolution and compute the weighted average"
+            "the resolution will be changed in this case"
+            "change your input arguments if you want the"
+            "weighted average"
+        )
     # read the forecasts
     ds = get_ecmwf_forecast_by_leadtime(
         iso3, use_unrounded_area_coords=use_unrounded_area_coords
     )
+    ds = ds.rio.write_crs("EPSG:4326", inplace=True)
 
-    if interpolate:
-        # read observed data to get resolution to interpolate to
-        # interpolate forecast data such that it has the same resolution
-        # as the observed values using "nearest" as interpolation method
-        # and not "linear" because the forecasts are designed to have
-        # sharp edged and not be smoothed
-        # now standard upsampling 4 times, can be made variable
-        new_lon = np.arange(
-            ds.longitude[0] - 0.125, ds.longitude[-1] + 0.25, 0.25
-        )
-        new_lat = np.arange(
-            ds.latitude[0] + 0.125, ds.latitude[-1] - 0.25, -0.25
-        )
-
-        ds = ds.interp(latitude=new_lat, longitude=new_lon, method="nearest")
     if add_col is None:
         add_col = []
     # loop over dates
@@ -179,12 +184,13 @@ def compute_stats_per_admin(
     for date in date_list:
         date_dt = pd.to_datetime(date)
         output_path = get_stats_filepath(
-            iso3,
-            config,
-            date_dt,
-            interpolate,
-            adm_level,
+            iso3=iso3,
+            config=config,
+            date=date_dt,
+            adm_level=adm_level,
             use_unrounded_area_coords=use_unrounded_area_coords,
+            resolution=resolution,
+            weighted_average=weighted_average,
         )
 
         # If caching is on and file already exists, don't download again
@@ -195,19 +201,90 @@ def compute_stats_per_admin(
             )
         else:
             ds_sel = ds.sel(time=date)
+
             gdf_adm = gpd.read_file(adm_boundaries_path)
-            df = compute_raster_statistics(
-                gdf_adm,
-                pcode_col,
-                ds_sel.rio.write_crs("EPSG:4326"),
-                lon_coord="longitude",
-                lat_coord="latitude",
-            )
-            df = df.merge(
-                gdf_adm[[pcode_col] + add_col], on=pcode_col, how="left"
-            )
-            df["date"] = date_dt
-            df.to_csv(output_path, index=False)
+            if not weighted_average:
+                df_lt_list = []
+                for lt in ds_sel.leadtime.values:
+                    ds_sel_lt = ds_sel.sel(leadtime=lt)
+                    # reproject only working on 2D&3D arrays
+                    # so only do after selecting the date and leadtime..
+                    if resolution is not None:
+                        ds_sel_lt = ds_sel_lt.rio.reproject(
+                            ds_sel_lt.rio.crs,
+                            resolution=resolution,
+                            resampling=Resampling.nearest,
+                            nodata=np.nan,
+                        )
+                        # we use longitude and latitude in other places
+                        # so stick to those namings
+                        ds_sel_lt = ds_sel_lt.rename(
+                            {"x": "longitude", "y": "latitude"}
+                        )
+                    df_lt = compute_raster_statistics(
+                        gdf_adm,
+                        pcode_col,
+                        ds_sel_lt,
+                        lon_coord="longitude",
+                        lat_coord="latitude",
+                    )
+                    df_lt_list.append(df_lt)
+                df = pd.concat(df_lt_list)
+                df = df.merge(
+                    gdf_adm[[pcode_col] + add_col], on=pcode_col, how="left"
+                )
+                df["date"] = date_dt
+                df.to_csv(output_path, index=False)
+            else:
+                df = pd.DataFrame()
+                # weighted average only working on 2D array
+                # so select leadtime and ensemble number first
+                for lt in ds_sel.leadtime.values:
+                    ds_sel_lt = ds_sel.sel(leadtime=lt)
+                    for num in ds_sel_lt.number.values:
+                        ds_sel_lt_num = ds_sel_lt.sel(number=num)
+                        t = ds_sel_lt_num.rio.transform()
+                        move_x = t[0]
+                        move_y = t[4]
+                        height = ds_sel_lt_num.rio.height
+                        width = ds_sel_lt_num.rio.width
+                        # compute weighted average per polygon
+                        # in gdf_adm
+                        for index, row in gdf_adm.iterrows():
+                            polygon = row.geometry
+                            weights = 0
+                            numerator = 0
+                            # for each lon+lat corrdinate combination
+                            for x, y in list(
+                                itertools.product(range(width), range(height))
+                            ):
+                                x_min, y_max = t * (x, y)
+                                x_max = x_min + move_x
+                                y_min = y_max + move_y
+                                # compute area that lot/lon combination entails
+                                raster_cell = box(x_min, y_min, x_max, y_max)
+                                # perc of area within the cell
+                                weight = raster_cell.intersection(polygon).area
+                                raster_value = ds_sel_lt_num.isel(
+                                    latitude=y, longitude=x
+                                ).values
+                                # multiply cell value with perc of
+                                # that cell within the area
+                                numerator += weight * raster_value
+                                weights += weight
+                            weighted_avg_lt_num_adm = numerator / weights
+                            df = df.append(
+                                {
+                                    "number": num,
+                                    "leadtime": lt,
+                                    pcode_col: row[pcode_col],
+                                    "mean_"
+                                    f"{pcode_col}": weighted_avg_lt_num_adm,
+                                },
+                                ignore_index=True,
+                            )  # [num,lt,row[pcode_col],weighted_avg]
+                df["date"] = date_dt
+                df.to_csv(output_path, index=False)
 
 
 def convert_tprate_precipitation(da):

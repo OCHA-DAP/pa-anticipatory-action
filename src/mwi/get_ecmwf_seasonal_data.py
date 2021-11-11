@@ -58,7 +58,8 @@ def main(download=True, compute_stats=True, use_cache=False):
         compute_stats_per_admin(
             iso3=COUNTRY_ISO3,
             add_col=["ADM1_EN"],
-            interpolate=False,
+            # resolution=0.1,
+            weighted_average=True,
             use_cache=use_cache,
             use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
         )

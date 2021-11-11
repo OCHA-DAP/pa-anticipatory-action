@@ -53,6 +53,7 @@ mpl.rc('font', **font)
 ```python
 use_unrounded_area_coords = False
 interpolate=False
+resolution=None #0.1
 ```
 
 ```python
@@ -255,7 +256,7 @@ end_date="5-1-2021"
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
