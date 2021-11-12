@@ -53,7 +53,7 @@ import plotly.graph_objects as go
 #### Set config values
 
 ```python
-use_incorrect_area_coords = False
+use_unrounded_area_coords = False
 interpolate=False
 ```
 
@@ -69,10 +69,7 @@ monthly_precip_path=Path(country_data_processed_dir) / "chirps" / "chirps_monthl
 
 ```python
 #using the mean value of the admin
-if use_incorrect_area_coords:
-    aggr_meth="mean_cell"
-else:
-    aggr_meth = "mean_ADM1_PCODE"
+aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -162,7 +159,7 @@ Note: The statistics over the whole admin region per ensemble member were first 
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -269,10 +266,6 @@ df_obsfor[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor[stat_col_forec]<=t
 df_obsfor_sel[f"mean_cell_obs_{thresh_obs}"]=np.where(df_obsfor_sel.mean_cell_obs<=thresh_obs,1,0)
 df_obsfor_sel[f"mean_cell_forec_{thresh_for}"]=np.where(df_obsfor_sel[stat_col_forec]<=thresh_for,1,0)
 cm_th=compute_confusionmatrix_leadtime(df_obsfor_sel,f"mean_cell_obs_{thresh_obs}",f"mean_cell_forec_{thresh_for}",f"Observed <={thresh_obs}",f"Forecasted <={thresh_for}",title=f"Confusion matrices of below threshold monthly precipitation during January and February in the Southern region of Malawi")
-```
-
-```python
-df_for_sel_plot
 ```
 
 ```python

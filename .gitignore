@@ -48,3 +48,6 @@ __pycache__/
 .nbautoexport
 
 venv/
+
+# Logs
+geckodriver*.log

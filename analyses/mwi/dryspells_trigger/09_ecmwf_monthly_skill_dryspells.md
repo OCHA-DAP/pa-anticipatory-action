@@ -52,8 +52,10 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
-use_incorrect_area_coords = False
+use_unrounded_area_coords = True #False
 interpolate=False
+resolution=None #0.05
+all_touched=False #True
 ```
 
 ```python
@@ -71,7 +73,7 @@ chirps_monthly_mwi_path=os.path.join(chirps_country_data_exploration_dir,"chirps
 monthly_precip_exploration_dir=os.path.join(country_data_exploration_dir,"dryspells", f"v{parameters['version']}", "monthly_precipitation")
 dry_spells_processed_dir = os.path.join(country_data_processed_dir, "dry_spells", f"v{parameters['version']}")
 
-plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells", f"v{parameters['version']}")
+plots_dir=os.path.join(country_data_processed_dir,"plots","dry_spells")
 plots_seasonal_dir=os.path.join(plots_dir,"seasonal")
 
 adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin2_shp"])
@@ -81,10 +83,9 @@ monthly_precip_path=os.path.join(country_data_processed_dir,"chirps","chirps_mon
 
 ```python
 #using the mean value of the admin
-if use_incorrect_area_coords:
-    aggr_meth="mean_cell"
-else:
-    aggr_meth = "mean_ADM1_PCODE"
+if use_unrounded_area_coords:
+    plots_seasonal_dir = Path(plots_seasonal_dir) / "unrounded-coords"
+aggr_meth = "mean_ADM1_PCODE"
 ```
 
 ```python
@@ -257,7 +258,7 @@ end_date="2-1-2020"
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,interpolate=interpolate,adm_level=1,use_incorrect_area_coords=use_incorrect_area_coords) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords,all_touched=all_touched) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -377,7 +378,7 @@ for m in sel_months:
     df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month==m)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
     
     g=sns.histplot(df_sel_hist,bins=bins,x=aggr_meth,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})#,legend=False)
-    g.set_title(f"Forecasted precipitation {mn}, \n leadtime=2.5months",fontsize=12)
+    g.set_title(f"Forecasted precipitation {calendar.month_name[m]}, \n leadtime=2.5months",fontsize=12)
     ax.set_ylabel("number of months")
     ax.set_xlabel("Monthly precipitation")
     ax.spines['right'].set_visible(False)
@@ -396,6 +397,41 @@ for m in sel_months:
 #     ax.tick_params(labelbottom=True)
 #     ax.set_ylabel("Number of months")
 #     ax.set_xlabel("Total monthly precipitation (mm)")
+```
+
+```python
+#create histogram of the monthly precipitation. This is grouped by whether a dry spell occurred. 
+#layout of this figure should be optimized
+df_ds_lt=df_ds_for_labels[(df_ds_for_labels.leadtime==3)]
+bins=np.arange(math.floor(df_ds_lt[aggr_meth].min()/10)*10,math.ceil(df_ds_lt[aggr_meth].max()/10)*10+10,10)
+# bins=np.arange(150,330,10)
+for m in sel_months:
+    fig,ax=plt.subplots(figsize=(6,3))
+    df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month==m)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
+    
+    g=sns.histplot(df_sel_hist,bins=bins,x=aggr_meth,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})#,legend=False)
+    g.set_title(f"Forecasted precipitation {calendar.month_name[m]}, \n leadtime=2.5months",fontsize=12)
+    ax.set_ylabel("number of months")
+    ax.set_xlabel("Monthly precipitation")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.get_legend().set_title("Dry spell occurred")
+```
+
+```python
+df_ds_lt[aggr_meth].mean()
+```
+
+```python
+df_ds_lt[aggr_meth].median()
+```
+
+```python
+df_for[aggr_meth].mean()
+```
+
+```python
+df_for[aggr_meth].median()
 ```
 
 ```python
@@ -684,6 +720,22 @@ df_ds_for["for_below_th"]=np.where(df_ds_for[aggr_meth]<=threshold_perc,1,0)
 ```
 
 ```python
+df_ds_for[(df_ds_for.dry_spell==1)&(df_ds_for.leadtime==3)][aggr_meth].mean()
+```
+
+```python
+df_ds_for[(df_ds_for.dry_spell==1)&(df_ds_for.leadtime==3)][["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th",aggr_meth]]
+```
+
+```python
+df_ds_for[(df_ds_for.for_below_th==1)&(df_ds_for.leadtime==3)][aggr_meth].mean()
+```
+
+```python
+df_ds_for[(df_ds_for.for_below_th==1)&(df_ds_for.leadtime==3)][["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th",aggr_meth]]
+```
+
+```python
 # df_ds_for[["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th"]].to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_list_dsobs_forblw_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
 ```
 
@@ -693,17 +745,17 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 ```
 
 ```python
-fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}")
+fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm")
 # fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt123456_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
 ```python
 #focus on leadtimes of interest
-lt_sub_str=lt_str="".join([str(l) for l in lt_sub])
+sel_leadtime_str=lt_str="".join([str(l) for l in sel_leadtime])
 #cm per month
 for m in sel_months:
     fig_cm=compute_confusionmatrix_leadtime(df_ds_for[(df_ds_for.leadtime.isin(sel_leadtime))&(df_ds_for.date_month.dt.month==m)],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}",title=f"Month = {calendar.month_name[m]}",colp_num=2)
-#     fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_sub_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{calendar.month_abbr[m].lower()}.png"))
+#     fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{sel_leadtime_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{calendar.month_abbr[m].lower()}.png"))
 ```
 
 ```python

@@ -9,6 +9,8 @@ from pathlib import Path
 
 import geopandas as gpd
 
+# import pandas as pd
+
 path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
@@ -35,13 +37,13 @@ ADM0_BOUND_PATH = os.path.join(
     COUNTRY_DATA_RAW_DIR, config.SHAPEFILE_DIR, PARAMETERS["path_admin0_shp"]
 )
 
-USE_INCORRECT_AREA_COORDS = False
+USE_UNROUNDED_AREA_COORDS = False
 
 
-def main(download=True, compute_stats=True):
+def main(download=False, compute_stats=True, use_cache=True):
 
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
-        use_incorrect_area_coords=USE_INCORRECT_AREA_COORDS
+        use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
     )
     df_country_boundaries = gpd.read_file(ADM0_BOUND_PATH)
     if download:
@@ -56,7 +58,15 @@ def main(download=True, compute_stats=True):
     if compute_stats:
         # aggregate the raster data to statistics on the admin1 level
         compute_stats_per_admin(
-            iso3=COUNTRY_ISO3, add_col=["ADM1_EN"], interpolate=False
+            iso3=COUNTRY_ISO3,
+            add_col=["ADM1_EN"],
+            # resolution=0.05,
+            all_touched=False,
+            use_cache=use_cache,
+            use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
+            # date_list=[d.strftime("%Y-%m-%d") for d in
+            #            pd.date_range(start='2000-01-01',
+            #                          end='2021-04-01', freq="MS")],
         )
 
 
