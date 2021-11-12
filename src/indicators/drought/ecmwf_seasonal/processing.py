@@ -77,6 +77,7 @@ def get_stats_filepath(
     use_unrounded_area_coords: bool,
     resolution: float = None,
     weighted_average: bool = False,
+    all_touched: bool = False,
     version: int = None,
 ) -> Path:
     """
@@ -108,6 +109,8 @@ def get_stats_filepath(
         filename += f"_res{resolution}"
     if weighted_average:
         filename += "_weighted-avg"
+    if all_touched:
+        filename += "_all-touched"
     filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
 
     country_data_processed_dir = (
@@ -132,6 +135,7 @@ def compute_stats_per_admin(
     weighted_average: bool = False,
     date_list: List[str] = None,
     use_unrounded_area_coords=False,
+    all_touched=False,
 ):
     """
     compute several statistics on admin level retrieved
@@ -191,6 +195,7 @@ def compute_stats_per_admin(
             use_unrounded_area_coords=use_unrounded_area_coords,
             resolution=resolution,
             weighted_average=weighted_average,
+            all_touched=all_touched,
         )
 
         # If caching is on and file already exists, don't download again
@@ -227,6 +232,7 @@ def compute_stats_per_admin(
                         ds_sel_lt,
                         lon_coord="longitude",
                         lat_coord="latitude",
+                        all_touched=all_touched,
                     )
                     df_lt_list.append(df_lt)
                 df = pd.concat(df_lt_list)
