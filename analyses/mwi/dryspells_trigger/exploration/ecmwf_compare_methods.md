@@ -16,6 +16,7 @@ from importlib import reload
 import matplotlib.colors
 import matplotlib.pyplot as plt
 import numpy as np
+from rasterio.enums import Resampling
 ```
 
 ```python
@@ -119,16 +120,13 @@ g.axes.spines['right'].set_visible(False)
 g.axes.spines['top'].set_visible(False)
 ```
 
-```python
-# da_south_unrounded=da_for_unrounded.rio.clip(gdf_south["geometry"], all_touched=False)
-```
-
 To compute the trigger, we only include cells that have their centre within the Southern region.    
 The plots below show which cells are included with the unrounded and rounded method.    
 As you can see these differ and thus produce different results   
 
 ```python
 da_sel_unrounded_south=da_unrounded_sel.rio.clip(gdf_south["geometry"], all_touched=False)
+da_sel_rounded_south=da_rounded_sel.rio.clip(gdf_south["geometry"], all_touched=False)
 da_rounded_sel_country=da_rounded_sel.rio.clip(gdf_adm["geometry"], all_touched=False)
 ```
 
@@ -145,34 +143,43 @@ gdf_adm.boundary.plot(ax=g.axes,color="grey");
 
 Compared to during the development, we are now more aware of the risk of only including two cells.   
 For future improvement, we should better understand if we should include a wider area.   
-Two options for future inclusion of cells are shown below
+Three options for future inclusion of cells are shown below
+
+
+Option 1: include a rectangle of cells around the region
 
 ```python
-#include cells around the region as well
 g=da_rounded_sel.sel(longitude=slice(34,36),latitude=slice(-14,-17)).plot.imshow(figsize=(6,10),cmap=matplotlib.colors.ListedColormap([hdx_blue]))
 gdf_adm.boundary.plot(ax=g.axes,color="grey");
 ```
 
-Option 2: Cut cells into smaller pieces and include all smaller pieces within the southern region
+Option 2: Include cells touching the region according to a weighted average   
+Due to computational constraints, we approximate the weighted average by cutting the raster cells into smaller pieces and include all smaller pieces within the southern region
 
 ```python
-def interp_ds(ds):
-    new_lon = np.arange(
-        ds.longitude[0] - 0.125, ds.longitude[-1] + 0.25, 0.25
-    )
-    new_lat = np.arange(
-        ds.latitude[0] + 0.125, ds.latitude[-1] - 0.25, -0.25
-    )
-
-    ds = ds.interp(latitude=new_lat, longitude=new_lon, method="nearest")
-    return ds
+da_rounded_sel_res = da_rounded_sel.rio.reproject(
+    da_rounded_sel.rio.crs,
+    #resolution it will be changed to, original is 1
+    resolution=0.05,
+    #use nearest so cell values stay the same, only cut
+    #into smaller pieces
+    resampling=Resampling.nearest,
+    nodata=np.nan,
+)
 ```
 
 ```python
-da_rounded_sel_inerp_south=interp_ds(da_rounded_sel).rio.clip(gdf_south["geometry"], all_touched=False)
-```
-
-```python
-g=da_rounded_sel_inerp_south.plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(10,15))
+g=da_rounded_sel_res.rio.clip(gdf_south["geometry"], all_touched=False).plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(10,15))
 gdf_adm.boundary.plot(ax=g.axes,color="grey");
+# g.axes.set_title("Included area")
+```
+
+Option 3: include all cells touching the region
+This is a combination of option 1 and 2. Advantage is that it is easier to compute than option 1.    
+Disadvantage that it might include cells with only very small parts of their cell within the region and these are given the same weight. At the same time the spatial precision of seasonal forecasts is quite low, so maybe that is not a problem.. 
+
+```python
+g=da_rounded_sel.rio.clip(gdf_south["geometry"], all_touched=True).plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(10,15))
+gdf_adm.boundary.plot(ax=g.axes,color="grey");
+g.axes.set_title("All cells touching the Southern region")
 ```

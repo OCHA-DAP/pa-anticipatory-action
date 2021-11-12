@@ -51,9 +51,10 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
-use_unrounded_area_coords = False
+use_unrounded_area_coords = True #False
 interpolate=False
-resolution=None #0.1
+resolution=None #0.05
+all_touched=False #True
 ```
 
 ```python
@@ -256,7 +257,7 @@ end_date="5-1-2021"
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords,all_touched=all_touched) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -370,6 +371,41 @@ for ax in g.axes.flatten():
     ax.tick_params(labelbottom=True)
     ax.set_ylabel("Number of months")
     ax.set_xlabel("Total monthly precipitation (mm)")
+```
+
+```python
+#create histogram of the monthly precipitation. This is grouped by whether a dry spell occurred. 
+#layout of this figure should be optimized
+df_ds_lt=df_ds_for_labels[(df_ds_for_labels.leadtime==3)]
+bins=np.arange(math.floor(df_ds_lt[aggr_meth].min()/10)*10,math.ceil(df_ds_lt[aggr_meth].max()/10)*10+10,10)
+# bins=np.arange(150,330,10)
+for m in sel_months:
+    fig,ax=plt.subplots(figsize=(6,3))
+    df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month==m)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
+    
+    g=sns.histplot(df_sel_hist,bins=bins,x=aggr_meth,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})#,legend=False)
+    g.set_title(f"Forecasted precipitation {calendar.month_name[m]}, \n leadtime=2.5months",fontsize=12)
+    ax.set_ylabel("number of months")
+    ax.set_xlabel("Monthly precipitation")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.get_legend().set_title("Dry spell occurred")
+```
+
+```python
+df_ds_lt[aggr_meth].mean()
+```
+
+```python
+df_ds_lt[aggr_meth].median()
+```
+
+```python
+df_for[aggr_meth].mean()
+```
+
+```python
+df_for[aggr_meth].median()
 ```
 
 ```python
@@ -684,6 +720,22 @@ threshold_perc
 
 ```python
 df_ds_for["for_below_th"]=np.where(df_ds_for[aggr_meth]<=threshold_perc,1,0)
+```
+
+```python
+df_ds_for[(df_ds_for.dry_spell==1)&(df_ds_for.leadtime==3)][aggr_meth].mean()
+```
+
+```python
+df_ds_for[(df_ds_for.dry_spell==1)&(df_ds_for.leadtime==3)][["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th",aggr_meth]]
+```
+
+```python
+df_ds_for[(df_ds_for.for_below_th==1)&(df_ds_for.leadtime==3)][aggr_meth].mean()
+```
+
+```python
+df_ds_for[(df_ds_for.for_below_th==1)&(df_ds_for.leadtime==3)][["ADM1_EN","date_month","pcode","leadtime","dry_spell","for_below_th",aggr_meth]]
 ```
 
 ```python
