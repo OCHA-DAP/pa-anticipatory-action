@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import pandas as pd
 import numpy as np
+import math
 
 import seaborn as sns
 from mlxtend.evaluate import confusion_matrix
@@ -249,7 +250,7 @@ start_year=2000
 end_year=2020
 #just locking the date to keep the analysis the same even though data is added
 #might wanna delete again later
-end_date="5-1-2021"
+end_date="2-1-2020"
 ```
 
 ```python
@@ -286,17 +287,18 @@ df_for["season_approx"]=np.where(df_for.date.dt.month>=start_rainy_seas,df_for.d
 ```
 
 ```python
+#define areas, months, years, and leadtimes of interest for the trigger
 sel_adm=["Southern"]
 sel_months=[1,2]
-sel_leadtime=[1,2,3,4,5,6]
 seas_years=range(start_year,end_year)
+sel_leadtime=[3]
 
 adm_str="".join([a.lower() for a in sel_adm])
 month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
 lt_str="".join([str(l) for l in sel_leadtime])
 
 #for this analysis we are only interested in the southern region during a few months that the dry spells have the biggest impact
-df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.leadtime.isin(sel_leadtime))&(df_for.season_approx.isin(seas_years))]
+df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))]
 ```
 
 ### Load observational data
@@ -322,6 +324,9 @@ print("number of months in observed data",len(df_obs_month_sel.date.unique()))
 ```
 
 ### set threshold based on x% probability
+Two thresholds need to be set: the % probability and the cap of forecasted precipitation. Here we explore the option of first setting the probability and based on that determining the threshold. 
+
+We set the probability to 50% as this means that at least half of the ensemble members converges to the given precipitation cap and cause this is easily explainable to others. We also experimented with other probability thresholds but largely saw the same results as when increasing the precipitation cap. 
 
 ```python
 probability=0.5
@@ -355,6 +360,7 @@ df_ds_for.loc[:,"dry_spell"]=df_ds_for.dry_spell.replace(np.nan,0).astype(int)
 ```
 
 ```python
+#extract month and names for plotting
 df_ds_for["month"]=df_ds_for.date_month.dt.month
 df_ds_for["month_name"]=df_ds_for.month.apply(lambda x: calendar.month_name[x])
 df_ds_for["month_abbr"]=df_ds_for.month.apply(lambda x: calendar.month_abbr[x])
@@ -362,15 +368,35 @@ df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("
 ```
 
 ```python
-#for some reason facetgrid doesn't want to show the values if there is only one occurence (i.e. in January..)
-g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
-g.map_dataframe(sns.histplot, aggr_meth,common_norm=False,alpha=1,binwidth=10)
+#create histogram of the monthly precipitation. This is grouped by whether a dry spell occurred. 
+#layout of this figure should be optimized
+df_ds_lt=df_ds_for_labels[(df_ds_for_labels.leadtime==3)]
+bins=np.arange(math.floor(df_ds_lt[aggr_meth].min()/10)*10,math.ceil(df_ds_lt[aggr_meth].max()/10)*10+10,10)
+# bins=np.arange(150,330,10)
+for m in sel_months:
+    fig,ax=plt.subplots(figsize=(6,3))
+    df_sel_hist=df_ds_for_labels[(df_ds_for_labels.month==m)&(df_ds_for_labels.leadtime==3)].sort_values("dry_spell",ascending=False)
+    
+    g=sns.histplot(df_sel_hist,bins=bins,x=aggr_meth,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})#,legend=False)
+    g.set_title(f"Forecasted precipitation {calendar.month_name[m]}, \n leadtime=2.5months",fontsize=12)
+    ax.set_ylabel("number of months")
+    ax.set_xlabel("Monthly precipitation")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.get_legend().set_title("Dry spell occurred")
+```
 
-g.add_legend(title="Dry spell occurred")  
-for ax in g.axes.flatten():
-    ax.tick_params(labelbottom=True)
-    ax.set_ylabel("Number of months")
-    ax.set_xlabel("Total monthly precipitation (mm)")
+```python
+# #same idea of histogram, but with nicer layout
+# #however for some reason facetgrid doesn't want to show the values if there is only one occurence (i.e. in January..)
+# g = sns.FacetGrid(df_ds_for_labels, height=5, col="leadtime",row="month_name",hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
+# g.map_dataframe(sns.histplot, aggr_meth,common_norm=False,alpha=1,binwidth=10)
+
+# g.add_legend(title="Dry spell occurred")  
+# for ax in g.axes.flatten():
+#     ax.tick_params(labelbottom=True)
+#     ax.set_ylabel("Number of months")
+#     ax.set_xlabel("Total monthly precipitation (mm)")
 ```
 
 ```python
@@ -421,11 +447,8 @@ ax.get_legend().set_title("Dry spell occurred")
 ```
 
 ```python
-df_ds_for_labels
-```
-
-```python
-for m in df_ds_for_labels.month_name.unique():#plot distribution precipitation with and withoud dry spell
+#boxplot of distribution precipitation with and withoud dry spell
+for m in df_ds_for_labels.month_name.unique():
     df_ds_for_labels_m=df_ds_for_labels[(df_ds_for_labels.month_name==m)&(df_ds_for_labels.leadtime.isin([2,4]))]
     fig,ax=plt.subplots(figsize=(10,6))
     g=sns.boxplot(data=df_ds_for_labels_m,x="leadtime",y=aggr_meth,ax=ax,hue="dry_spell",palette={"no":no_ds_color,"yes":ds_color})
@@ -460,6 +483,8 @@ df_pr_th=df_pr_th.reset_index()
 ```
 
 ```python
+#plot the months with and no dry spell and forecasted precip below and above threshold
+#used to understand where a trade-off between these two metrics is
 fig,ax=plt.subplots()
 
 df_pr_th.plot(x="threshold",y="month_ds" ,figsize=(16, 8), color=ds_color,style='.-',legend=False,ax=ax,label="dry spell occurred and monthly precipitation below threshold")
@@ -483,6 +508,7 @@ fig.tight_layout(rect=(0,0,1,0.9))
 ```
 
 ```python
+#same as above but with misses and false alarms
 fig,ax=plt.subplots()
 
 df_pr_th.plot(x="threshold",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=False,ax=ax,style='.-',label="dry spell occurred and monthly precipitation above threshold (misses)")
@@ -520,6 +546,7 @@ df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
 ```
 
 ```python
+#get performance metrics (precision, recall etc) per leadtime and precipitation threshold
 pr_list=[]
 threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for[aggr_meth].max()%10,10)
 unique_lt=df_ds_for.leadtime.unique()
@@ -549,6 +576,10 @@ for m in unique_lt:
 ```python
 df_pr_sep_lt=pd.concat(pr_list).sort_values(["leadtime","threshold"])
 df_pr_sep_lt.threshold=df_pr_sep_lt.threshold.astype(int)
+```
+
+```python
+df_pr_sep_lt.head()
 ```
 
 ```python
@@ -592,7 +623,7 @@ df_pr_sep_lt_m["return_period"]=df_pr_sep_lt_m.apply(lambda x: f"1/{int(x.rp)} y
 ```
 
 ```python
-df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin([2,4]))][["month","threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["month","leadtime","threshold"])
+df_pr_sep_lt_m_sel=df_pr_sep_lt_m[(df_pr_sep_lt_m.threshold>=160)&(df_pr_sep_lt_m.threshold<=220)&(df_pr_sep_lt_m.leadtime.isin(sel_leadtime))][["month","threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["month","leadtime","threshold"])
 ```
 
 ```python
@@ -600,6 +631,7 @@ df_pr_sep_lt_m_sel.head()
 ```
 
 ```python
+## if the threshold never occurred, a 1/1000 years is returned by the previous cells but this is incorrect so replace
 # df_pr_sep_lt_m_sel=df_pr_sep_lt_m_sel.replace("1/10000 years (0/20)","-")
 # df_pr_sep_lt_m_sel.to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_detect_falsealarm_thresholds_perc_{int(probability*100)}_{adm_str}_{month_str}.csv"),index=False)
 ```
@@ -649,56 +681,18 @@ df_pr_year_sep_lt["return_period"]=df_pr_year_sep_lt.apply(lambda x: f"1/{int(x.
 ```
 
 ```python
-df_pr_year_sep_lt_sel=df_pr_year_sep_lt[(df_pr_year_sep_lt.threshold>=160)&(df_pr_year_sep_lt.threshold<=220)&(df_pr_year_sep_lt.leadtime.isin([2,4]))][["threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["leadtime","threshold"])
+#show performance metrics + return period for leadtime and range of precip of interest
+df_pr_year_sep_lt_sel=df_pr_year_sep_lt[(df_pr_year_sep_lt.threshold>=160)&(df_pr_year_sep_lt.threshold<=220)&(df_pr_year_sep_lt.leadtime.isin(sel_leadtime))][["threshold","leadtime","detection_rate","false_alarm_rate","return_period"]].sort_values(["leadtime","threshold"])
 ```
 
 ```python
-df_pr_year_sep_lt_sel
+df_pr_year_sep_lt_sel.head()
 ```
 
 ```python
+## In our communications we often use the computed leadtime minus 1, so save that here using those leadtimes
 # df_pr_year_sep_lt_sel.leadtime=df_pr_year_sep_lt_sel.leadtime-1
 # df_pr_year_sep_lt_sel.to_csv(os.path.join(monthly_precip_exploration_dir,f"mwi_detect_falsealarm_thresholds_perc_{int(probability*100)}_{adm_str}_peryear.csv"),index=False)
-```
-
-```python
-#same but now also separated by month instead of only by leadtime
-pr_list=[]
-threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for[aggr_meth].max()%10,10)
-unique_lt=df_ds_for.leadtime.unique()
-unique_months=df_ds_for.month_name.unique()
-
-for l in unique_lt:
-    for m in unique_months:
-        df_pr_perlt_m=pd.DataFrame(threshold_list,columns=["threshold"]).set_index(['threshold'])
-        df_ds_for_lt_m=df_ds_for[(df_ds_for.leadtime==l)&(df_ds_for.month_name==m)]
-        y_target =  df_ds_for_lt_m.dry_spell
-
-        for t in threshold_list:
-            y_predicted = np.where(df_ds_for_lt_m[aggr_meth]<=t,1,0)
-
-            cm = confusion_matrix(y_target=y_target, 
-                                  y_predicted=y_predicted)
-            tn,fp,fn,tp=cm.flatten()
-            df_pr_perlt_m.loc[t,["precision","recall","num_trig","detection_rate"]]=tp/(tp+fp+0.00001)*100,tp/(tp+fn)*100,tp+fp,tp/(tp+fn)*100
-            df_pr_perlt_m.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
-            df_pr_perlt_m.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
-            df_pr_perlt_m.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
-            df_pr_perlt_m.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
-            df_pr_perlt_m.loc[t,"num_dates"]=len(y_predicted)
-            df_pr_perlt_m.loc[t,"perc_trig"]=df_pr_perlt_m.loc[t,"num_trig"]/df_pr_perlt_m.loc[t,"num_dates"]
-            df_pr_perlt_m.loc[t,"rp"]=round(1/(df_pr_perlt_m.loc[t,"perc_trig"]+0.0001))
-            df_pr_perlt_m.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
-            df_pr_perlt_m.loc[t,"leadtime"]=int(l)
-            df_pr_perlt_m.loc[t,"month"]=m
-        df_pr_perlt_m=df_pr_perlt_m.reset_index()
-        pr_list.append(df_pr_perlt_m)
-df_pr_sep_lt_m=pd.concat(pr_list).sort_values(["leadtime","threshold"])
-df_pr_sep_lt_m.threshold=df_pr_sep_lt_m.threshold.astype(int)
-df_pr_sep_lt_m.leadtime=df_pr_sep_lt_m.leadtime.astype(int)
-df_pr_sep_lt_m["detection_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_ds)}% ({int(x.tp)}/{int(x.tp+x.fn)})",axis=1)
-df_pr_sep_lt_m["false_alarm_rate"]=df_pr_sep_lt_m.apply(lambda x: f"{math.ceil(x.month_false_alarm_rate)}% ({int(x.fp)}/{int(x.tp+x.fp)})",axis=1)
-df_pr_sep_lt_m["return_period"]=df_pr_sep_lt_m.apply(lambda x: f"1/{int(x.rp)} years ({int(x.num_trig)}/{int(x.num_dates)})",axis=1)
 ```
 
 #### Set threshold and compute performance
@@ -709,6 +703,9 @@ However, this intersection point is computed across all leadtimes. After closer 
 
 ```python
 #threshold based on intersection point of the two lines
+#this intersection point was based on previous selection of leadtimes and months
+#now that we use different leadtimes and months this "optimal" intersection point changed
+#so set it by hand based on what we determined in earlier analyses
 # threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
 #for easily testing different thresholds
 threshold_perc=210 #180
@@ -743,6 +740,7 @@ df_ds_for[(df_ds_for.for_below_th==1)&(df_ds_for.leadtime==3)][["ADM1_EN","date_
 ```
 
 ```python
+#compute misses and false alarms per leadtime
 df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 ```
 
@@ -753,17 +751,16 @@ fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",yla
 
 ```python
 #focus on leadtimes of interest
-lt_sub=[2,4]
-lt_sub_str=lt_str="".join([str(l) for l in lt_sub])
+sel_leadtime_str=lt_str="".join([str(l) for l in sel_leadtime])
 #cm per month
 for m in sel_months:
-    fig_cm=compute_confusionmatrix_leadtime(df_ds_for[(df_ds_for.leadtime.isin(lt_sub))&(df_ds_for.date_month.dt.month==m)],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm",title=f"Month = {calendar.month_name[m]}",colp_num=2)
-#     fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{lt_sub_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{calendar.month_abbr[m].lower()}.png"))
+    fig_cm=compute_confusionmatrix_leadtime(df_ds_for[(df_ds_for.leadtime.isin(sel_leadtime))&(df_ds_for.date_month.dt.month==m)],"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f">={int(probability*100)}% ensemble members <={threshold_perc}",title=f"Month = {calendar.month_name[m]}",colp_num=2)
+#     fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt{sel_leadtime_str}_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{calendar.month_abbr[m].lower()}.png"))
 ```
 
 ```python
 df_ds_for["pcode"]="MW3"
-for l in [2,4]:#df_ds_for.leadtime.unique():
+for l in sel_leadtime:#df_ds_for.leadtime.unique():
     df_ds_for_lt=df_ds_for[df_ds_for.leadtime==l]
     df_hm_daterange_lt=refactor_data_hm(df_ds_for_lt,"dry_spell","for_below_th")
 
@@ -772,9 +769,9 @@ for l in [2,4]:#df_ds_for.leadtime.unique():
 ```
 
 ```python
-#for the trigger now focussing on janfeb for leadtime 2,4, so print those numbers
-df_pr_sel=compute_miss_false_leadtime(df_ds_for[df_ds_for.date.dt.month.isin([1,2])],"dry_spell","for_below_th")
-df_pr_sel[df_pr_sel.leadtime.isin([2,4])]
+#show the numbers for months and leadtimes of interest
+df_pr_sel=compute_miss_false_leadtime(df_ds_for[df_ds_for.date.dt.month.isin(sel_months)],"dry_spell","for_below_th")
+df_pr_sel[df_pr_sel.leadtime.isin(sel_leadtime)]
 ```
 
 ### Determine skill based on set threshold, with varying probability
