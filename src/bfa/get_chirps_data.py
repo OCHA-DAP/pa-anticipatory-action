@@ -22,7 +22,6 @@ COUNTRY_ISO3 = "bfa"
 
 get_chirps_data_monthly(
     config=Config(),
-    country_name=COUNTRY_NAME,
     country_iso3=COUNTRY_ISO3,
 )
 
