@@ -36,14 +36,6 @@ logger = logging.getLogger(__name__)
 # version number of the trigger
 # this script is written for v1
 VERSION = 1
-# when True, the area coordinates for which to retrieve the forecast
-# are not rounded to integers
-# since the original forecast is produced for integer coordinates,
-# in this case the data is automatically interpolated by CDS
-# for now we are sticking to using unrounded coords as that was
-# the method used during the development of the trigger
-# however for the future, we recommend using the rounded coordinates
-USE_UNROUNDED_AREA_COORDS = True
 
 COUNTRY_ISO3 = "mwi"
 
@@ -62,8 +54,14 @@ COUNTRY_DATA_PROCESSED_DIR = (
 )
 
 
-def get_output_path_metrics(
-    iso3: str, version: int, target_year: str, target_month: str
+def _get_output_path_metrics(
+    iso3: str,
+    version: int,
+    target_year: str,
+    target_month: str,
+    use_unrounded_area_coords: bool,
+    all_touched: bool,
+    resolution: str,
 ):
     directory = (
         COUNTRY_DATA_PROCESSED_DIR
@@ -73,8 +71,12 @@ def get_output_path_metrics(
         / "predictive_trigger"
     )
     filename = f"{iso3}_predictive_trigger_{target_year}{target_month}"
-    if USE_UNROUNDED_AREA_COORDS:
+    if use_unrounded_area_coords:
         filename += "_unrounded-coords"
+    if all_touched:
+        filename += "_all-touched"
+    if resolution is not None:
+        filename += f"_res{resolution}"
     filename += ".csv"
     return directory / filename
 
@@ -85,6 +87,7 @@ def _get_output_path_map(
     target_year: str,
     target_month: str,
     leadtime: str,
+    use_unrounded_area_coords: bool,
 ):
     directory = (
         COUNTRY_DATA_PROCESSED_DIR
@@ -98,7 +101,7 @@ def _get_output_path_map(
         f"{iso3}_predictive_trigger_map_"
         f"{target_year}{target_month}_lt{leadtime}"
     )
-    if USE_UNROUNDED_AREA_COORDS:
+    if use_unrounded_area_coords:
         filename += "_unrounded-coords"
     filename += ".png"
     output_path = directory / filename
@@ -106,13 +109,16 @@ def _get_output_path_map(
     return output_path
 
 
-def retrieve_forecast(
+def _retrieve_forecast(
     iso3: str,
     gdf_bound: gpd.GeoSeries,
     target_date: date,
     adm_level: int,
     pcode_col: str,
     leadtimes: List[int],
+    use_unrounded_area_coords: bool,
+    resolution: str = None,
+    all_touched: bool = False,
     add_col: List[str] = None,
 ):
     """
@@ -125,11 +131,15 @@ def retrieve_forecast(
     :param adm_level: admin level to aggregate to
     :param pcode_col: name of column that contains pcode in gdf_bound
     :param leadtimes: list of leadtimes to get data for
+    :param use_unrounded_area_coords: if False, download the forecast
+    at integer coordinates
+    If True, no rounding to the coordinates will be done which results in
+    a shift in data which is interpolated
     :param add_col: additional columns in gdf_bound that should be added to the
     output of compute_stats_admin
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
-        use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
+        use_unrounded_area_coords=use_unrounded_area_coords
     )
     # add buffer
     # not in correct crs for it to do properly
@@ -155,23 +165,25 @@ def retrieve_forecast(
         # this takes a few minutes, so only recompute
         # if new data has been downloaded
         ecmwf_forecast.process(country_iso3=iso3)
-        compute_stats_per_admin(
-            iso3=iso3,
-            interpolate=False,
-            date_list=[target_date.strftime("%Y-%m-%d")],
-            adm_level=adm_level,
-            pcode_col=pcode_col,
-            add_col=add_col,
-            use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
-            # do not use cache as new leadtimes can be added
-            use_cache=False,
-        )
+    compute_stats_per_admin(
+        iso3=iso3,
+        resolution=resolution,
+        all_touched=all_touched,
+        date_list=[target_date.strftime("%Y-%m-%d")],
+        adm_level=adm_level,
+        pcode_col=pcode_col,
+        add_col=add_col,
+        use_unrounded_area_coords=use_unrounded_area_coords,
+        # do not use cache as new leadtimes can be added
+        use_cache=False,
+    )
 
 
 def create_map(
     iso3: str,
     target_date: date,
     prob: float,
+    use_unrounded_area_coords: bool,
     round_precip_int: bool = True,
     leadtimes: List[int] = None,
     gdf_adm: gpd.GeoDataFrame = None,
@@ -193,6 +205,10 @@ def create_map(
     prob: float
         minimum probability of the forecast for the trigger
         to be met. should be between 0 and 1
+    use_unrounded_area_coords: bool
+        if False, download the forecast at integer coordinates
+        If True, no rounding to the coordinates will be done which results in
+        a shift in data which is interpolated
     round_precip_int : bool
         If True, round the values in the dataarray to the closest
         integer before plotting
@@ -217,7 +233,7 @@ def create_map(
         Size of the figure
     """
     da_for = get_ecmwf_forecast_by_leadtime(
-        iso3, use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
+        iso3, use_unrounded_area_coords=use_unrounded_area_coords
     )
     da_for_date = da_for.sel(time=target_date.strftime("%Y-%m-%d"))
     if round_precip_int:
@@ -283,6 +299,7 @@ def create_map(
             target_year=target_date.year,
             target_month=target_date.month,
             leadtime=lt,
+            use_unrounded_area_coords=use_unrounded_area_coords,
         )
         plt.savefig(plt_path, facecolor="white", bbox_inches="tight")
 
@@ -294,7 +311,8 @@ def compute_trigger(
     prob: float,
     precip_cap: int,
     download: bool,
-    interpolate_raster: bool,
+    use_unrounded_area_coords: bool,
+    resolution: str = None,
     leadtimes: List[int] = None,
     pcodes: List[str] = None,
     adm_level: int = 1,
@@ -304,6 +322,7 @@ def compute_trigger(
     date_col: str = "date",
     leadtime_col: str = "leadtime",
     round_precip_int: bool = True,
+    all_touched: bool = False,
 ):
     """
     Compute the trigger metric and a binary true/false if trigger is met
@@ -319,6 +338,10 @@ def compute_trigger(
     :param precip_cap: max precipitation of the forecast for the trigger
     to be met. Defined as monthly precipitation in milimeters
     :param download: if True, download and process new data
+    :param use_unrounded_area_coords: if False, download the forecast at
+    integer coordinates
+    If True, no rounding to the coordinates will be done which results in
+    a shift in data which is interpolated
     :param interpolate_raster: if True, interpolate the original raster
     to a higher resolution
     :param leadtimes: list of leadtimes to compute the trigger for
@@ -332,27 +355,31 @@ def compute_trigger(
     the admin name
     :param date_col: column in the stats file that contains the date
     :param leadtime_col: column in the stats file that contains the leadtime
-    :return:
+    :return: Dataframe with the forecasted values for the given target date
     """
 
     if download:
-        retrieve_forecast(
+        _retrieve_forecast(
             iso3,
             gdf_bound=gdf_adm,
             target_date=target_date,
             adm_level=adm_level,
             pcode_col=pcode_col,
             leadtimes=range(0, 7) if leadtimes is None else leadtimes,
+            use_unrounded_area_coords=use_unrounded_area_coords,
             add_col=[adm_name_col],
+            resolution=resolution,
+            all_touched=all_touched,
         )
 
     stats_filename = get_stats_filepath(
         iso3,
         CONFIG,
         target_date,
-        interpolate=interpolate_raster,
+        resolution=resolution,
         adm_level=adm_level,
-        use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
+        use_unrounded_area_coords=use_unrounded_area_coords,
+        all_touched=all_touched,
     )
     df_stats = pd.read_csv(stats_filename, parse_dates=[date_col])
     # for earlier dates, the model included less members -->
@@ -392,8 +419,14 @@ def compute_trigger(
         ]
     ]
 
-    output_path = get_output_path_metrics(
-        iso3, VERSION, target_date.year, target_date.month
+    output_path = _get_output_path_metrics(
+        iso3=iso3,
+        version=VERSION,
+        target_year=target_date.year,
+        target_month=target_date.month,
+        use_unrounded_area_coords=use_unrounded_area_coords,
+        all_touched=all_touched,
+        resolution=resolution,
     )
     Path(output_path.parent).mkdir(parents=True, exist_ok=True)
     df_stats_quant.to_csv(output_path, index=False)
@@ -403,8 +436,8 @@ def compute_trigger(
 
 
 def main():
-    target_date = date(year=2022, month=1, day=1)
     prob = 0.5
+    precip_cap = 210
     adm_level = 1
     adm_bound_path = (
         Path(COUNTRY_DATA_RAW_DIR)
@@ -412,41 +445,80 @@ def main():
         / PARAMETERS[f"path_admin{adm_level}_shp"]
     )
     gdf_adm = gpd.read_file(adm_bound_path)
-    compute_trigger(
-        COUNTRY_ISO3,
-        gdf_adm=gdf_adm,
-        target_date=target_date,
-        prob=prob,
-        precip_cap=210,
-        download=True,
-        interpolate_raster=False,
-    )
+    target_dates = [
+        date(year=2022, month=1, day=1),
+        date(year=2022, month=2, day=1),
+    ]
+    # run all different combinations of methods and dates that we
+    # want to know
+    for target_date in target_dates:
+        # when use_unrounded_area_coords=True,
+        # the area coordinates for which to retrieve the forecast
+        # are not rounded to integers
+        # since the original forecast is produced for integer coordinates,
+        # in this case the data is automatically interpolated by CDS
+        for use_unrounded_area_coords in [True, False]:
+            compute_trigger(
+                COUNTRY_ISO3,
+                gdf_adm=gdf_adm,
+                target_date=target_date,
+                prob=prob,
+                precip_cap=precip_cap,
+                download=True,
+                use_unrounded_area_coords=use_unrounded_area_coords,
+                resolution=None,
+                all_touched=False,
+            )
 
-    create_map(
-        iso3=COUNTRY_ISO3,
-        target_date=target_date,
-        leadtimes=[4],
-        prob=prob,
-        gdf_adm=gdf_adm,
-        slice_lon=slice(32, 37),
-        slice_lat=slice(-9, -19),
-        # bins are left-inclusive, i.e. if value is 150,
-        # it will fall in the 150-210.1 bin, not the 100-150
-        # therefore use 210.1 instead of 210 as boundary
-        bins=[0, 50, 100, 150, 210.1, 250, 300, 350],
-        cmap=ListedColormap(
-            [
-                "#c25048",
-                "#f2645a",
-                "#f7a29c",
-                "#fce0de",
-                "#cce5f9",
-                "#66b0ec",
-                "#007ce0",
-                "#0063b3",
-            ]
-        ),
-    )
+            create_map(
+                iso3=COUNTRY_ISO3,
+                target_date=target_date,
+                leadtimes=[3, 4],
+                prob=prob,
+                use_unrounded_area_coords=use_unrounded_area_coords,
+                gdf_adm=gdf_adm,
+                slice_lon=slice(32, 37),
+                slice_lat=slice(-9, -19),
+                # bins are left-inclusive, i.e. if value is 150,
+                # it will fall in the 150-210.1 bin, not the 100-150
+                # therefore use 210.1 instead of 210 as boundary
+                bins=[0, 50, 100, 150, 210.1, 250, 300, 350],
+                cmap=ListedColormap(
+                    [
+                        "#c25048",
+                        "#f2645a",
+                        "#f7a29c",
+                        "#fce0de",
+                        "#cce5f9",
+                        "#66b0ec",
+                        "#007ce0",
+                        "#0063b3",
+                    ]
+                ),
+            )
+        compute_trigger(
+            COUNTRY_ISO3,
+            gdf_adm=gdf_adm,
+            target_date=target_date,
+            prob=prob,
+            precip_cap=precip_cap,
+            download=True,
+            use_unrounded_area_coords=False,
+            resolution=0.05,
+            all_touched=False,
+        )
+
+        compute_trigger(
+            COUNTRY_ISO3,
+            gdf_adm=gdf_adm,
+            target_date=target_date,
+            prob=prob,
+            precip_cap=precip_cap,
+            download=True,
+            use_unrounded_area_coords=False,
+            resolution=None,
+            all_touched=True,
+        )
 
 
 if __name__ == "__main__":
