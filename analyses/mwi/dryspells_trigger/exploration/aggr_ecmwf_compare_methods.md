@@ -23,6 +23,8 @@ import seaborn as sns
 import math
 import geopandas as gpd
 import altair as alt
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
 sys.path.append(path_mod)
@@ -218,7 +220,64 @@ df_comb_med=df_comb.merge(df_med[["leadtime","month_name","method","median_for"]
 ### Plotting
 
 
-Only 20 datapoints per boxplot, so boxplot might not be the best method?
+#### Diverging bar chart
+
+```python
+df_comb_pivot=df_comb.pivot(index=["ADM1_EN","date","month_name","leadtime"],columns="method",values="mean_ADM1_PCODE").reset_index()
+df_ds["date"]=df_ds.date_month.dt.to_timestamp()
+df_comb_pivot=df_ds[["date","ADM1_EN","dry_spell"]].merge(df_comb_pivot,how="right",on=["ADM1_EN","date"])
+df_comb_pivot.loc[:,"dry_spell"]=df_comb_pivot.dry_spell.replace(np.nan,0).astype(int)
+```
+
+```python
+#inspired by https://www.geeksforgeeks.org/diverging-bar-chart-using-python/
+meth_comb=[[m,"unrounded_center"] for m in ["rounded_center","rounded_weightavg","rounded_alltouched"]]
+# meth_comb.append(["rounded_alltouched","rounded_weightavg"])
+sel_lt=3
+colp_num=3
+num_plots=len(meth_comb)
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(30,10))
+df_comb_plot=df_comb_pivot.copy()
+df_comb_plot_sel=df_comb_plot[df_comb_plot.leadtime==sel_lt]
+
+for i, meth in enumerate(meth_comb):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    val_col=f"{meth[0]}-{meth[1]}"
+    df_comb_plot_sel[val_col]=df_comb_plot_sel[meth[0]]-df_comb_plot_sel[meth[1]]
+    df_comb_plot_sel.sort_values(val_col,inplace=True,ascending=False)
+    df_comb_plot_sel["colors"]=np.where(df_comb_plot_sel["dry_spell"]==1,ds_color,no_ds_color)
+    df_comb_plot_sel=df_comb_plot_sel.reset_index(drop=True)
+    # Plotting the horizontal lines
+    plt.hlines(y=df_comb_plot_sel.index
+            , xmin=0, xmax=df_comb_plot_sel[val_col],
+               color=df_comb_plot_sel.colors,
+               linewidth=5)
+
+    # Decorations
+    # Setting the labels of x-axis and y-axis
+    plt.gca().set(ylabel='Month', xlabel=f'Difference (mm),{val_col.replace("-"," minus ")}')
+
+    # Setting Date to y-axis
+    plt.yticks(df_comb_plot_sel.index, df_comb_plot_sel.date.dt.strftime("%Y-%m"), fontsize=12)
+    ax.xaxis.label.set_size(16)
+
+    plt.title(f'{val_col.replace("-"," minus ")}', fontdict={
+              'size': 20})
+    plt.grid(linestyle='--', alpha=0.5)
+    ds_patch = mpatches.Patch(color=ds_color, label="dry spell")
+    nods_patch = mpatches.Patch(color=no_ds_color, label="no dry spell")
+    
+    ax.set_xlim(-20,55)
+
+    plt.legend(handles=[ds_patch, nods_patch])
+fig.suptitle("Difference in forecasted precipitation at leadtime=3 for different aggregation methods",fontsize=30)
+fig.tight_layout(rect=[0, 0.03, 1, 0.98])
+```
+
+#### Boxplot
+Only 20 datapoints per boxplot, so boxplot might not be the best method
 
 ```python
 plot=alt.Chart().mark_boxplot(size=50).encode(
@@ -227,8 +286,13 @@ plot=alt.Chart().mark_boxplot(size=50).encode(
 #     facet=alt.Facet(column="month_name:N",sort=df_comb.month_name.unique())
 ).properties(width=400,height=400)
 plot.facet(column=alt.Column("month_name:N",sort=df_comb.month_name.unique(),title="Month"),row=alt.Row("leadtime:N",sort=[2,3,4]),data=df_comb[df_comb.leadtime.isin([2,3,4])],
-           title="Distribution of forecasted precipitation for different methods, facetted by leadtime and month \n Each boxplot only contains 20 datapoints")
+           title=["Distribution of forecasted precipitation for different methods, facetted by leadtime and month", "Each boxplot only contains 20 datapoints"])
 ```
+
+#### Histogram
+Stacked based on occurrence of dry spell    
+Due to so little observations it is not really a distrubtion which makes it hard to compare
+
 
 For some unexplainable reason the text is not readable at all. Almost seems several layers are printed on top of each other
 
