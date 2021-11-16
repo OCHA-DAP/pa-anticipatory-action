@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def download_iri(
-    iri_auth: str, output_path: str, config: Config(), chunk_size: int = 128
+    iri_auth: str, output_path: str, url: str, chunk_size: int = 128
 ):
     """
     Download the IRI seasonal tercile forecast as NetCDF file from the
@@ -41,7 +42,7 @@ def download_iri(
     # now leaving it as it is since it is a trustable site and we
     # couldn't figure how to improve it
     logger.info("Downloading IRI NetCDF file. This might take some time")
-    response = requests.get(config.IRI_URL, cookies=cookies, verify=False)
+    response = requests.get(url, cookies=cookies, verify=False)
     with open(output_path, "wb") as fd:
         for chunk in response.iter_content(chunk_size=chunk_size):
             fd.write(chunk)
@@ -101,7 +102,9 @@ def get_iri_data(
     download: bool = False,
 ):
     """
-    Load IRI's NetCDF as a xarray dataset
+    Load IRI's NetCDF as a xarray dataset.
+    The data is separated by tercile, i.e. a probability
+    per tercile is included
     :param config: config for the drought indicator
     :param download: if True, download data
     :return: dataset containing the information in the netcdf file
@@ -110,8 +113,8 @@ def get_iri_data(
     """
     iri_dir = Path(config.GLOBAL_DIR) / config.IRI_DIR
     Path(iri_dir).mkdir(parents=True, exist_ok=True)
-    iri_filepath_raw = iri_dir / config.IRI_NC_FILENAME_RAW
-    iri_filepath_clean = (
+    iri_filepath_raw_tercile = iri_dir / config.IRI_NC_FILENAME_RAW
+    iri_filepath_clean_tercile = (
         Path(config.GLOBAL_DIR) / config.IRI_DIR / config.IRI_NC_FILENAME_CLEAN
     )
     if download:
@@ -122,9 +125,55 @@ def get_iri_data(
                 "No authentication file found. Needs the environment variable"
                 " 'IRI_AUTH'"
             )
-        download_iri(iri_auth, iri_filepath_raw, config)
-        clean_iri_data(iri_filepath_raw, iri_filepath_clean, config)
+        download_iri(iri_auth, iri_filepath_raw_tercile, url=config.IRI_URL)
+        clean_iri_data(
+            iri_filepath_raw_tercile, iri_filepath_clean_tercile, config
+        )
 
-    iri_ds = xr.load_dataset(iri_filepath_clean)
+    iri_ds = xr.load_dataset(iri_filepath_clean_tercile)
+
+    return iri_ds
+
+
+def get_iri_data_dominant(
+    config: Config(),
+    download: bool = False,
+):
+    """
+    Load IRI's NetCDF where the dominant tercile is indicated
+    Negative values indicate below average as dominant
+    Positive values above average
+    :param config: config for the drought indicator
+    :param download: if True, download data
+    :return: dataset containing the information in the netcdf file
+    transform (numpy array): affine
+        transformation of the dataset based on its CRS
+    """
+    iri_dir = Path(config.GLOBAL_DIR) / config.IRI_DIR
+    Path(iri_dir).mkdir(parents=True, exist_ok=True)
+    today_year = datetime.now().year
+    iri_filepath_raw_dominant = iri_dir / f"iri_2017{today_year}_dominant.nc"
+    iri_filepath_clean_dominant = (
+        iri_dir / f"iri_2017{today_year}_dominant_clean.nc"
+    )
+
+    url_dominant = (
+        "https://iridl.ldeo.columbia.edu/SOURCES/.IRI/.FD/"
+        ".NMME_Seasonal_Forecast/.Precipitation_ELR/.dominant/data.nc"
+    )
+    if download:
+        # need a key, assumed to be saved as an env variable with name IRI_AUTH
+        iri_auth = os.getenv("IRI_AUTH")
+        if not iri_auth:
+            logger.error(
+                "No authentication file found. Needs the environment variable"
+                " 'IRI_AUTH'"
+            )
+        download_iri(iri_auth, iri_filepath_raw_dominant, url=url_dominant)
+        clean_iri_data(
+            iri_filepath_raw_dominant, iri_filepath_clean_dominant, config
+        )
+
+    iri_ds = xr.load_dataset(iri_filepath_clean_dominant)
 
     return iri_ds
