@@ -18,19 +18,17 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+import calendar
 import seaborn as sns
 import math
 import geopandas as gpd
+import altair as alt
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.indicators.drought.ecmwf_seasonal import processing
 reload(processing)
-```
-
-```python
-import altair as alt
 ```
 
 #### Set config values
