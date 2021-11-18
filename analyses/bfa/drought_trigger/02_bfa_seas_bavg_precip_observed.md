@@ -315,7 +315,7 @@ def get_return_periods(
 
 Not using the analytical method since, this uses a GEV (Generalized Extreme Value) distribution to fit the curve. Due to the cap of the distribution being 100, the integral of the probability distribution becomes larger than 1 (i.e. assigning probabilities to larger values than 100). Moreover, the GEV method is expecting a more spread distribution to fit well. 
 
-The empirical fitting is looking good though, so we are using this. 
+The empirical fitting is looking good though, so we are using this.
 
 ```{code-cell} ipython3
 years = np.arange(1.5, 20.5, 0.5)
@@ -426,6 +426,14 @@ df_countrydgy=df_countryd[["date","totalAmountApproved"]].groupby("date").sum()
 ```
 
 ```{code-cell} ipython3
+pd.set_option('display.max_colwidth', None)
+```
+
+```{code-cell} ipython3
+df_countryd.tail(n=1).projectTitle
+```
+
+```{code-cell} ipython3
 ax = df_countrydgy.plot(figsize=(16, 8), color='#86bf91',legend=False,kind="bar")
 
 vals = ax.get_yticks()
@@ -444,4 +452,8 @@ ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Funds allocated by CERF for drought in {country.upper()} from 2006 till 2019");
+```
+
+```{code-cell} ipython3
+
 ```

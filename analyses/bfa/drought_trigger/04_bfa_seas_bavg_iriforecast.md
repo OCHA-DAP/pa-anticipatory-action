@@ -49,6 +49,7 @@ from IPython.display import Markdown as md
 from myst_nb import glue
 import cftime
 import re
+import matplotlib
 
 from pathlib import Path
 import sys
@@ -60,6 +61,10 @@ from src.indicators.drought.config import Config
 
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
 from src.utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar
+```
+
+```{code-cell} ipython3
+hdx_blue="#007ce0"
 ```
 
 ## Inspect forecasts
@@ -115,13 +120,20 @@ iri_ds
 :tags: [remove_cell]
 
 gdf_adm1=gpd.read_file(adm1_bound_path)
-iri_clip=iri_ds.rio.clip(gdf_adm1.geometry.apply(mapping), iri_ds.rio.crs, all_touched=True)
+iri_clip=iri_ds.rio.write_crs("EPSG:4326").rio.clip(gdf_adm1.geometry.apply(mapping), iri_ds.rio.crs, all_touched=True)
 ```
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
 gdf_reg=gdf_adm1[gdf_adm1.ADM1_FR.isin(adm_sel)]
+```
+
+```{code-cell} ipython3
+fig,ax=plt.subplots()
+df_bound.boundary.plot(linewidth=1, ax=ax, color="grey")
+gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
+ax.axis("off");
 ```
 
 Below the raw forecast data of below-average rainfall with {glue:text}`leadtime_mar` month leadtime, published in March is shown. The red areas are the 4 admin1's we are focussing on
@@ -138,8 +150,8 @@ This is similair to [the figure on the IRI Maproom](https://iridl.ldeo.columbia.
 dom_ds=xr.open_dataset(os.path.join(glb_data_exploration_dir,"iri","iri_seasfor_tercile_dominant.nc"), decode_times=False, drop_variables='C')
 dom_ds=dom_ds.rename({"X": "lon", "Y": "lat"})
 #often IRI latitude is flipped so check for that and invert if needed
-dom_ds = invert_latlon(dom_ds)
-dom_ds = change_longitude_range(dom_ds)
+dom_ds = invert_latlon(dom_ds,lon_coord="lon",lat_coord="lat")
+dom_ds = change_longitude_range(dom_ds,lon_coord="lon")
 dom_ds = fix_calendar(dom_ds, timevar='F')
 dom_ds = xr.decode_cf(dom_ds)
 dom_clip=dom_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.clip(gdf_adm1.geometry.apply(mapping), dom_ds.rio.crs, all_touched=True)
@@ -167,9 +179,9 @@ for ax in g.axes.flat:
     gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
     ax.axis("off")
     
-g.fig.suptitle("Forecasts published in March with 3 months leadtime \n The subtitles indicate the publishing month")
+g.fig.suptitle("Forecasts published in March with 3 months leadtime \n The subtitles indicate the publishing month");
 # g.fig.tight_layout()
-plt.savefig(os.path.join(country_data_exploration_dir,"plots","iri","bfa_irifor_mar_l3.png"))
+# plt.savefig(os.path.join(country_data_exploration_dir,"plots","iri","bfa_irifor_mar_l3.png"))
 ```
 
 The same figure, but for the forecasts published in July with a {glue:text}`leadtime_jul` month leadtime are shown below
@@ -180,8 +192,8 @@ The same figure, but for the forecasts published in July with a {glue:text}`lead
 dom_ds=xr.open_dataset(os.path.join(glb_data_exploration_dir,"iri","iri_seasfor_tercile_dominant.nc"), decode_times=False, drop_variables='C')
 dom_ds=dom_ds.rename({"X": "lon", "Y": "lat"})
 #often IRI latitude is flipped so check for that and invert if needed
-dom_ds = invert_latlon(dom_ds)
-dom_ds = change_longitude_range(dom_ds)
+dom_ds = invert_latlon(dom_ds,lon_coord="lon",lat_coord="lat")
+dom_ds = change_longitude_range(dom_ds,lon_coord="lon")
 dom_ds = fix_calendar(dom_ds, timevar='F')
 dom_ds = xr.decode_cf(dom_ds)
 dom_clip=dom_ds.rio.set_spatial_dims(x_dim="lon",y_dim="lat").rio.write_crs("EPSG:4326").rio.clip(gdf_adm1.geometry.apply(mapping), dom_ds.rio.crs, all_touched=True)
@@ -258,7 +270,7 @@ def interpolate_ds(ds,transform,upscale_factor,lon_coord="longitude",lat_coord="
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-iri_clip_interp=interpolate_ds(iri_clip,iri_clip.rio.transform(),8)
+iri_clip_interp=interpolate_ds(iri_clip,iri_clip.rio.transform(),20)
 ```
 
 ```{code-cell} ipython3
@@ -298,23 +310,11 @@ for ax in g.axes.flat:
 we select the region of interest, shown below
 
 ```{code-cell} ipython3
-:tags: [hide_input]
-
-#testing if correct area
-iri_interp_reg=iri_clip_interp.rio.clip(gdf_reg.geometry.apply(mapping), iri_clip_interp.rio.crs, all_touched=False)
-g=iri_interp_reg.sel(L=1,C=0,F="2018-03").prob.plot(
-    cmap=mpl.cm.YlOrRd, 
-    cbar_kwargs={
-        "orientation": "horizontal",
-        "shrink": 0.8,
-        "aspect": 40,
-        "pad": 0.1,
-    },
-    figsize=(10,10)
-)
-df_bound = gpd.read_file(adm1_bound_path)
-df_bound.boundary.plot(linewidth=1, ax=g.axes, color="red")
-ax.axis("off");
+g=iri_interp_reg.sel(C=0,F="2020-01-16",L=1).squeeze().prob.plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
+df_bound.boundary.plot(ax=g.axes,color="grey");
+g.axes.set_title(f"Included area with approx weighted average")
+gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+g.axes.axis("off");
 ```
 
 ```{code-cell} ipython3
@@ -368,6 +368,10 @@ And compute the statistics over this region, see a subset below
 stats_region[(stats_region.C==0)&(stats_region.L==leadtime_mar)&(stats_region.F.dt.month==3)]
 ```
 
+```{code-cell} ipython3
+stats_region[(stats_region.C==0)&(stats_region.L==leadtime_jul)&(stats_region.F.dt.month==7)]
+```
+
 ## Analyze statistics probability below average
 
 +++
@@ -413,6 +417,24 @@ glue("year_trig_mar", year_trig_mar)
 glue("year_trig_jul", year_trig_jul)
 glue("threshold_mar", threshold_mar)
 glue("threshold_jul", threshold_jul)
+```
+
+CREATE PLOT PER CELL
+
+```{code-cell} ipython3
+iri_interp_reg.sel(C=0)
+```
+
+```{code-cell} ipython3
+import hvplot.xarray
+```
+
+```{code-cell} ipython3
+iri_interp_reg.sel(C=0).hvplot.violin('prob', by='L', color='L', cmap='Category20')
+```
+
+```{code-cell} ipython3
+iri_interp_reg.sel(C=0).hvplot.kde('prob', by='L', alpha=0.5)
 ```
 
 ```{code-cell} ipython3
