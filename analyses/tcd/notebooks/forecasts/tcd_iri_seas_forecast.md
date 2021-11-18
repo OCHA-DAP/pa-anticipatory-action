@@ -18,7 +18,7 @@ This notebook explores the option of using IRI's seasonal forecast as part of dr
 From the country team the proposed trigger is:
 - Trigger #1 in March covering June-July-August or July-August-September. Threshold desired: 60%.
 - Trigger #2 in May covering June-July-August or July-August-September. Threshold desired: 60%. 
-- Targeted Admin1s: .... 
+- Targeted Admin1s: Barh el Gazel, Batha, Kanem, Lac (une partie), Ouaddaï (une partie), Sila (une partie), Wadi Fira
 - 20% of those admin1s meeting the threshold
 
 This notebook explores if and when these triggers would be reached.
@@ -61,7 +61,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
 from src.indicators.drought.iri_rainfallforecast import get_iri_data,get_iri_data_dominant
-from src.utils_general.raster_manipulation import invert_latlon,change_longitude_range,fix_calendar
+from src.utils_general.raster_manipulation import compute_raster_statistics
 ```
 
 ```{code-cell} ipython3
@@ -83,10 +83,7 @@ month_season_mapping={1:"NDJ",2:"DJF",3:"JFM",4:"FMA",5:"MAM",6:"AMJ",7:"MJJ",8:
 #TODO: some admins only part should be included, check with team
 adm_sel=['Barh-El-Gazel','Batha','Kanem','Lac','Ouaddaï','Sila','Wadi Fira']
 adm_sel_str=re.sub(r"[ -]", "", "".join(adm_sel)).lower()
-threshold=60
 ```
-
-Now focusing on JJA, might want to explore JAS as well
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
@@ -134,32 +131,32 @@ da_iri_dom_clip=da_iri_dom.rio.clip(gdf_adm1["geometry"], all_touched=True)
 ```
 
 ```{code-cell} ipython3
+#not very neat function but does the job for now
 #iri website bins
 # plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
 def plt_raster_iri(da_iri_dom_clip,
                    pub_mon,
                    lt,
-                   plt_levels=[-100,-70,-60,-50,-45,-40,40,45,50,60,70,100],
-                   plt_colors=['#783200','#ab461e','#d18132','#e8b832','#fafa02','#ffffff','#d1f8cc','#acf8a0','#73bb6e','#3a82b3','#0e3bf4']
+                   plt_levels,
+                   plt_colors,
                   ):
     for_seas=month_season_mapping[(pub_mon+lt+1)%12+1]
     g=da_iri_dom_clip.where(da_iri_dom_clip.F.dt.month.isin([pub_mon]), drop=True).sel(L=lt).plot(
     col="F",
     col_wrap=5,
-    levels=levels,
-    colors=colors,
+    levels=plt_levels,
+    colors=plt_colors,
     cbar_kwargs={
         "orientation": "horizontal",
         "shrink": 0.8,
         "aspect": 40,
         "pad": 0.1,
-        'ticks': levels,
+        'ticks': plt_levels,
     },
     figsize=(25,7)
     )
-    df_bound = gpd.read_file(adm1_bound_path)
     for ax in g.axes.flat:
-        df_bound.boundary.plot(linewidth=1, ax=ax, color="grey")
+        gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
         gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
         ax.axis("off")
 
@@ -167,28 +164,31 @@ def plt_raster_iri(da_iri_dom_clip,
 ```
 
 ```{code-cell} ipython3
-plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=3)
+#iri website bins
+# plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
+plt_levels=[-100,-70,-60,-50,-45,-40,40,45,50,60,70,100]
+plt_colors=['#783200','#ab461e','#d18132','#e8b832','#fafa02','#ffffff','#d1f8cc','#acf8a0','#73bb6e','#3a82b3','#0e3bf4']
 ```
 
 ```{code-cell} ipython3
-plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=4)
+plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=3,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
 ```{code-cell} ipython3
-plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=1)
+plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=4,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
 ```{code-cell} ipython3
-plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=2)
+plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=1,plt_levels=plt_levels,plt_colors=plt_colors)
+```
+
+```{code-cell} ipython3
+plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=2,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
 Below we plot a few examples of "tricky" forecasts. For the left two: say the threshold would be at 40%, would the trigger be reached for the red region? For the right two plots we see a combination of below and above average across the region. What should we do with that? 
 
 These figures are to guide the discussion on which forecasts we would have wanted to trigger and for which we wouldn't
-
-+++
-
-TODO: check if this can be done neater, at least not select with cftime maybe?
 
 ```{code-cell} ipython3
 :tags: [hide_input]
@@ -281,27 +281,42 @@ da_iri=ds_iri.prob
 da_iri_allt=da_iri.rio.clip(gdf_reg.geometry.apply(mapping), da_iri.rio.crs, all_touched=True)
 ```
 
+Here we experiment with the threshold. 40 is randomly chosen, with the reasoning that this might be the lowest threshold that could stillb e reasonable. The `perc_area` of 20 was proposed by FAO
+
 ```{code-cell} ipython3
-from src.utils_general.raster_manipulation import compute_raster_statistics
 #% probability of bavg
-threshold=40
+threshold=40 #60
+#min percentage of the area that needs to reach the threshold
+perc_area=20
+```
+
+```{code-cell} ipython3
+da_iri_allt_bavg.sel(F=)
+```
+
+```{code-cell} ipython3
+#compute stats
 #dissolve the region to one polygon
 gdf_reg_dissolved=gdf_reg.dissolve(by="admin0Name")
 gdf_reg_dissolved=gdf_reg_dissolved[["admin0Pcod","geometry"]]
 
+da_iri_allt_bavg=da_iri_allt.sel(C=0)
 df_stats_reg=compute_raster_statistics(
         gdf=gdf_reg_dissolved,
         bound_col="admin0Pcod",
-        raster_array=da_iri_allt,
+        raster_array=da_iri_allt_bavg,
         lon_coord="longitude",
         lat_coord="latitude",
         stats_list=["min","mean","max","std","count"],
-        percentile_list=[90],
+        #computes value where 20% of the area is above that value
+        percentile_list=[80],
     )
-da_iri_allt_thresh=da_iri_allt.where(da_iri_allt>=40)
+da_iri_allt_thresh=da_iri_allt.where(da_iri_allt>=threshold)
 df_stats_reg_thresh=compute_raster_statistics(gdf=gdf_reg_dissolved,bound_col="admin0Pcod",raster_array=da_iri_allt_thresh,lon_coord="longitude",lat_coord="latitude",stats_list=["count"])
 
 df_stats_reg["perc_thresh"] = df_stats_reg_thresh[f"count_admin0Pcod"]/df_stats_reg[f"count_admin0Pcod"]*100
+df_stats_reg["F"]=pd.to_datetime(df_stats_reg["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
+df_stats_reg["month"]=df_stats_reg.F.dt.month
 # df_stats_reg.time=pd.to_datetime(df_stats_reg.time.apply(lambda x: x.strftime("%Y-%m-%d")))
 # df_stats_reg["end_time"]=pd.to_datetime(df_stats_reg["time"].apply(lambda x: x.strftime('%Y-%m-%d')))
 # df_stats_reg["end_month"]=df_stats_reg.end_time.dt.to_period("M")
@@ -315,60 +330,31 @@ df_stats_reg["perc_thresh"] = df_stats_reg_thresh[f"count_admin0Pcod"]/df_stats_
 # df_stats_reg["year"]=df_stats_reg.end_month.dt.year
 ```
 
+NaN values indicate that the whole region is covered by a dry mask at that point. See [here](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/) for more information
+
 ```{code-cell} ipython3
 df_stats_reg
 ```
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
-
-def compute_zonal_stats_xarray(raster,shapefile,lon_coord="longitude",lat_coord="latitude",var_name="prob"):
-    raster_clip=raster.rio.set_spatial_dims(x_dim=lon_coord,y_dim=lat_coord).rio.clip(shapefile.geometry.apply(mapping),raster.rio.crs,all_touched=False)
-    grid_mean = raster_clip.mean(dim=[lon_coord,lat_coord])#.rename({var_name: "mean_cell"})
-    grid_min = raster_clip.min(dim=[lon_coord,lat_coord]).rename({var_name: "min_cell"})
-    grid_max = raster_clip.max(dim=[lon_coord,lat_coord]).rename({var_name: "max_cell"})
-    grid_std = raster_clip.std(dim=[lon_coord,lat_coord]).rename({var_name: "std_cell"})
-    grid_quant90 = raster_clip.quantile(0.9,dim=[lon_coord,lat_coord]).rename({var_name: "10quant_cell"})
-    grid_percth40 = raster_clip.where(raster_clip.prob >=40).count(dim=[lon_coord,lat_coord])/raster_clip.count(dim=[lon_coord,lat_coord])*100
-    grid_percth40=grid_percth40.rename({var_name: "40percth_cell"})
-    raster_diff_bel_abv=raster_clip.sel(C=0)-raster_clip.sel(C=2)
-    grid_dom = raster_clip.sel(C=0).where((raster_clip.sel(C=0) >=40) & (raster_diff_bel_abv>=5)).count(dim=[lon_coord,lat_coord])/raster_clip.count(dim=[lon_coord,lat_coord])*100
-    grid_dom = grid_dom.rename({var_name: "40th_bavg_cell"})
-    zonal_stats_xr = xr.merge([grid_mean, grid_min, grid_max, grid_std,grid_quant90,grid_percth40,grid_dom]).drop("spatial_ref")
-    zonal_stats_df=zonal_stats_xr.to_dataframe()
-    zonal_stats_df=zonal_stats_df.reset_index()
-    return zonal_stats_df
+df_stats_reg_bavg=df_stats_reg[(~df_stats_reg.perc_thresh.isnull())]
 ```
 
-```{code-cell} ipython3
-:tags: [remove_cell]
+Something goes wrong! 
 
-stats_region=compute_zonal_stats_xarray(da_iri_allt.to_dataset(name="prob"),gdf_reg)
-stats_region["F"]=pd.to_datetime(stats_region["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
-stats_region["month"]=stats_region.F.dt.month
+```{code-cell} ipython3
+df_stats_reg_bavg[df_stats_reg_bavg["perc_thresh"]>=perc_area]
 ```
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
-# stats_region.to_csv(stats_reg_path,index=False)
-```
+The total percentage of forecasts that predicted >=20% of the area >=40% of below average
 
 ```{code-cell} ipython3
-len(stats_region[stats_region["40th_bavg_cell"]>=20])/len(stats_region)*100
-```
-
-```{code-cell} ipython3
-:tags: [remove_cell]
-
-stats_region_bavg=stats_region[(stats_region.C==0)]
+len(df_stats_reg_bavg[df_stats_reg_bavg["perc_thresh"]>=perc_area])/len(df_stats_reg_bavg)*100
 ```
 
 And compute the statistics over this region, see a subset below
 
-```{code-cell} ipython3
-stats_region[(stats_region.C==0)&(stats_region.L==leadtime_mar)&(stats_region.F.dt.month==3)]
-```
++++
 
 ## Analyze statistics probability below average
 
@@ -380,10 +366,20 @@ It should be noted that since we only have data from Mar 2017, these distributio
 From the distribution, it can be seen that a probability of 50% has never been reached since Mar 2017.
 
 ```{code-cell} ipython3
-:tags: [remove_cell]
+#first entry refers to the publication month, second to the leadtime
+trig_mom=[(3,3),(3,4),(5,1),(5,2)]
+```
 
-stats_mar=stats_region_bavg.loc[(stats_region_bavg.F.dt.month==3)&(stats_region_bavg.L==leadtime_mar)]
-stats_jul=stats_region_bavg.loc[(stats_region_bavg.F.dt.month==7)&(stats_region_bavg.L==leadtime_may)]
+```{code-cell} ipython3
+df_stats_reg_bavg[df_stats_reg_bavg[['month', 'L']].apply(tuple, axis=1).isin(trig_mom)]
+```
+
+```{code-cell} ipython3
+(df_stats_reg_bavg.F.dt.month.isin(trig_mom[0]["F"]))&(df_stats_reg_bavg.L.isin(trig_mom[0]["L"]))
+```
+
+```{code-cell} ipython3
+df_stats_trig=df_stats_reg_bavg[(df_stats_reg_bavg.F.dt.month.isin(trig_mom[0]["F"]))&(df_stats_reg_bavg.L.isin(trig_mom[0]["L"]))]
 ```
 
 ```{code-cell} ipython3
@@ -395,13 +391,13 @@ def comb_list_string(str_list):
     else:
         return ""
 
-max_prob_mar=stats_mar.max_cell.max()
-num_trig_mar=len(stats_mar.loc[stats_mar['max_cell']>=threshold_mar])
-year_trig_mar=comb_list_string([str(y) for y in stats_mar.loc[stats_mar['max_cell']>=threshold_mar].F.dt.year.unique()])
+max_prob_mar=stats_mar.max_admin0Pcod.max()
+num_trig_mar=len(stats_mar.loc[stats_mar['max_admin0Pcod']>=threshold_mar])
+year_trig_mar=comb_list_string([str(y) for y in stats_mar.loc[stats_mar['max_admin0Pcod']>=threshold_mar].F.dt.year.unique()])
 
-num_trig_jul=len(stats_jul.loc[stats_jul['max_cell']>=threshold_jul])
-year_trig_jul=comb_list_string([str(y) for y in stats_jul.loc[stats_jul['max_cell']>=threshold_jul].F.dt.year.unique()])
-max_prob_jul=stats_jul.max_cell.max()
+num_trig_jul=len(stats_jul.loc[stats_jul['max_admin0Pcod']>=threshold_jul])
+year_trig_jul=comb_list_string([str(y) for y in stats_jul.loc[stats_jul['max_admin0Pcod']>=threshold_jul].F.dt.year.unique()])
+max_prob_jul=stats_jul.max_admin0Pcod.max()
 ```
 
 ```{code-cell} ipython3
@@ -418,11 +414,28 @@ glue("threshold_jul", threshold_jul)
 ```
 
 ```{code-cell} ipython3
+df_stats_reg_bavg
+```
+
+```{code-cell} ipython3
+import altair as alt
+```
+
+```{code-cell} ipython3
+histo=alt.Chart(df_stats_reg_bavg).mark_bar().encode(
+    alt.X("perc_thresh:Q", bin=alt.Bin(step=5)),
+    y='count()',
+)
+line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode(x='x')
+histo+line
+```
+
+```{code-cell} ipython3
 :tags: [hide_input]
 
 #plot distribution for forecasts with C=0 (=below average) for all months with leadtime = 3
 fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_region_bavg[stats_region_bavg.L==3],x="month",y="max_cell",ax=ax,color="#007CE0")
+g=sns.boxplot(data=df_stats_reg_bavg,x="month",y="max_admin0Pcod",ax=ax,color="#007CE0")
 ax.set_ylabel("Probability")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
@@ -435,7 +448,20 @@ ax.set_xlabel("Publication month");
 
 #plot distribution for forecasts with C=0 (=below average) for all months with leadtime = 3
 fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_region_bavg[stats_region_bavg.L==1],x="month",y="max_cell",ax=ax,color="#007CE0")
+g=sns.boxplot(data=df_stats_reg_bavg[df_stats_reg_bavg.L==3],x="month",y="max_admin0Pcod",ax=ax,color="#007CE0")
+ax.set_ylabel("Probability")
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.set_title("Leadtime = 3 months")
+ax.set_xlabel("Publication month");
+```
+
+```{code-cell} ipython3
+:tags: [hide_input]
+
+#plot distribution for forecasts with C=0 (=below average) for all months with leadtime = 3
+fig,ax=plt.subplots(figsize=(10,5))
+g=sns.boxplot(data=df_stats_reg_bavg[df_stats_reg_bavg.L==1],x="month",y="max_admin0Pcod",ax=ax,color="#007CE0")
 ax.set_ylabel("Probability")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
@@ -456,8 +482,8 @@ For July the threshold of {glue:text}`threshold_jul` would have been reached {gl
 stats_country=compute_zonal_stats_xarray(da_iri_allt,gdf_adm1)
 stats_country["F"]=pd.to_datetime(stats_country["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
 stats_country["month"]=stats_country.F.dt.month
-glue("max_prob_mar_country",stats_country.loc[(stats_country.C==0)&(stats_country.L==leadtime_mar)&(stats_country.F.dt.month==3),'max_cell'].max())
-glue("max_prob_jul_country",stats_country.loc[(stats_country.C==0)&(stats_country.L==leadtime_jul)&(stats_country.F.dt.month==7),'max_cell'].max())
+glue("max_prob_mar_country",stats_country.loc[(stats_country.C==0)&(stats_country.L==leadtime_mar)&(stats_country.F.dt.month==3),'max_admin0Pcod'].max())
+glue("max_prob_jul_country",stats_country.loc[(stats_country.C==0)&(stats_country.L==leadtime_jul)&(stats_country.F.dt.month==7),'max_admin0Pcod'].max())
 ```
 
 To check if these below 50% and below 40% probabilities depend on the part of the country, we also compute the maximum values in the whole country across all years. 
@@ -471,7 +497,7 @@ The maximum value for the March forecast in the whole country was {glue:text}`ma
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-perc_for_40th=stats_country.loc[(stats_country.C==0)&(stats_country.L==leadtime_jul),'max_cell'].ge(40).value_counts(True)[True]*100
+perc_for_40th=stats_country.loc[(stats_country.C==0)&(stats_country.L==leadtime_jul),'max_admin0Pcod'].ge(40).value_counts(True)[True]*100
 glue("perc_for_maxcell_40th",perc_for_40th)
 ```
 
@@ -482,7 +508,7 @@ Across all months, {glue:text}`perc_for_maxcell_40th:.2f`% of the forecasts with
 
 #plot distribution for forecasts with C=0 (=below average), for all months
 fig,ax=plt.subplots(figsize=(10,5))
-g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="max_cell",ax=ax,color="#007CE0")
+g=sns.boxplot(data=stats_country[(stats_country.C==0)&(stats_country.L==1)],x="month",y="max_admin0Pcod",ax=ax,color="#007CE0")
 ax.set_ylabel("Probability")
 ax.spines['right'].set_visible(False)
 ax.spines['top'].set_visible(False)
@@ -496,7 +522,7 @@ Note: all these computations only cover the region of interest
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-max_prob_mar=stats_mar['max_cell'].max()
+max_prob_mar=stats_mar['max_admin0Pcod'].max()
 num_trig_mar_mean=len(stats_mar.loc[stats_mar['mean_cell']>=threshold_mar])
 year_trig_mar_mean=comb_list_string([str(y) for y in stats_mar.loc[stats_mar['mean_cell']>=threshold_mar].F.dt.year.unique()])
 num_trig_mar_perc10=len(stats_mar.loc[stats_mar['10quant_cell']>=threshold_mar])
@@ -531,7 +557,7 @@ The plot below shows the occurences across all months and all leadtimes where at
 :tags: [hide_input]
 
 #plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-g=sns.displot(stats_region_bavg.loc[stats_region_bavg["40percth_cell"]>=1,"40percth_cell"],color="#007CE0",binwidth=3)
+g=sns.displot(df_stats_reg_bavg.loc[df_stats_reg_bavg["40percth_cell"]>=1,"40percth_cell"],color="#007CE0",binwidth=3)
 ```
 
 <!-- While we can include the spatial severity in the trigger threshold, we should also take into account that the spatial uncertainty of seasonal forecasts is large. 
@@ -567,24 +593,24 @@ stats_jul
 
 ```{code-cell} ipython3
 #across all months with leadtime_mar
-stats_region_bavg_ltmar=stats_region_bavg.loc[(stats_region_bavg.L==leadtime_mar)]
-stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"]>=10]
+df_stats_reg_bavg_ltmar=df_stats_reg_bavg.loc[(df_stats_reg_bavg.L==leadtime_mar)]
+df_stats_reg_bavg_ltmar[df_stats_reg_bavg_ltmar["40th_bavg_cell"]>=10]
 ```
 
 ```{code-cell} ipython3
 #percentage of forecasts that met requirement
-len(stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"]>=10])/len(stats_region_bavg_ltmar.F.unique())*100
+len(df_stats_reg_bavg_ltmar[df_stats_reg_bavg_ltmar["40th_bavg_cell"]>=10])/len(df_stats_reg_bavg_ltmar.F.unique())*100
 ```
 
 ```{code-cell} ipython3
 #across all months with leadtime_jul
-stats_region_bavg_ltjul=stats_region_bavg.loc[(stats_region_bavg.L==leadtime_jul)]
-stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"]>=10]
+df_stats_reg_bavg_ltjul=df_stats_reg_bavg.loc[(df_stats_reg_bavg.L==leadtime_jul)]
+df_stats_reg_bavg_ltjul[df_stats_reg_bavg_ltjul["40th_bavg_cell"]>=10]
 ```
 
 ```{code-cell} ipython3
 #percentage of forecasts that met requirement
-len(stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"]>=10])/len(stats_region_bavg_ltjul.F.unique())*100
+len(df_stats_reg_bavg_ltjul[df_stats_reg_bavg_ltjul["40th_bavg_cell"]>=10])/len(df_stats_reg_bavg_ltjul.F.unique())*100
 ```
 
 ### Examine ONLY dominant region
@@ -597,32 +623,32 @@ diff_threshold=5
 ```
 
 ```{code-cell} ipython3
-stats_region_aavg=stats_region[stats_region.C==2]
-stats_region_aavg_ltmar=stats_region_aavg[stats_region_aavg.L==leadtime_mar]
+df_stats_reg_aavg=df_stats_reg[df_stats_reg.C==2]
+df_stats_reg_aavg_ltmar=df_stats_reg_aavg[df_stats_reg_aavg.L==leadtime_mar]
 ```
 
 ```{code-cell} ipython3
-stats_region_merged=stats_region_bavg.merge(stats_region_aavg,on=["F","L"],suffixes=("_bavg","_aavg"))
+df_stats_reg_merged=df_stats_reg_bavg.merge(df_stats_reg_aavg,on=["F","L"],suffixes=("_bavg","_aavg"))
 ```
 
 ```{code-cell} ipython3
-stats_region_merged["diff_bel_abv"]=stats_region_merged["10quant_cell_bavg"]-stats_region_merged["10quant_cell_aavg"]
+df_stats_reg_merged["diff_bel_abv"]=df_stats_reg_merged["10quant_cell_bavg"]-df_stats_reg_merged["10quant_cell_aavg"]
 ```
 
 ```{code-cell} ipython3
-stats_region_merged_ltmar=stats_region_merged[stats_region_merged.L==leadtime_mar]
+df_stats_reg_merged_ltmar=df_stats_reg_merged[df_stats_reg_merged.L==leadtime_mar]
 ```
 
 ```{code-cell} ipython3
-stats_region_merged_ltmar[stats_region_merged_ltmar["diff_bel_abv"]>=diff_threshold]
+df_stats_reg_merged_ltmar[df_stats_reg_merged_ltmar["diff_bel_abv"]>=diff_threshold]
 ```
 
 ```{code-cell} ipython3
-stats_region_merged_ltjul=stats_region_merged[stats_region_merged.L==leadtime_jul]
+df_stats_reg_merged_ltjul=df_stats_reg_merged[df_stats_reg_merged.L==leadtime_jul]
 ```
 
 ```{code-cell} ipython3
-stats_region_merged_ltjul[stats_region_merged_ltjul["diff_bel_abv"]>=diff_threshold]
+df_stats_reg_merged_ltjul[df_stats_reg_merged_ltjul["diff_bel_abv"]>=diff_threshold]
 ```
 
 ### Examine ONLY dominant pixel
@@ -672,7 +698,7 @@ stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_mar)]
 ```
 
 ```{code-cell} ipython3
-stats_region[(stats_region.F.isin(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)].F.unique()))&(stats_region.L==leadtime_jul)]
+df_stats_reg[(df_stats_reg.F.isin(stats_dom[(stats_dom["10quant_cell"]>=5)&(stats_dom.L==leadtime_jul)].F.unique()))&(df_stats_reg.L==leadtime_jul)]
 ```
 
 ## OLD: Examine dominant tercile region
@@ -704,9 +730,9 @@ from dateutil.relativedelta import relativedelta
 ```{code-cell} ipython3
 def get_forecastmonth(pub_month,leadtime):
     return pub_month+relativedelta(months=+int(leadtime))
-stats_region["for_start"]=stats_region.apply(lambda x: get_forecastmonth(x.F,leadtime), axis=1)
-stats_region["for_start_month"]=stats_region.for_start.dt.to_period("M")
-stats_region["for_end_month"]=stats_region.apply(lambda x: get_forecastmonth(x.for_start,2), axis=1).dt.to_period("M")
+df_stats_reg["for_start"]=df_stats_reg.apply(lambda x: get_forecastmonth(x.F,leadtime), axis=1)
+df_stats_reg["for_start_month"]=df_stats_reg.for_start.dt.to_period("M")
+df_stats_reg["for_end_month"]=df_stats_reg.apply(lambda x: get_forecastmonth(x.for_start,2), axis=1).dt.to_period("M")
 ```
 
 ```{code-cell} ipython3
@@ -716,16 +742,16 @@ aggr_meth="10quant_cell"
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-stats_region["publication_month"]=stats_region["F"].dt.to_period("M")
-stats_region_aggrmeth=stats_region.pivot(index=['publication_month',"for_start_month","for_end_month",'L'], columns='C', values=aggr_meth).reset_index().rename(columns={0:"bel_avg",1:"normal",2:"abv_avg"})
+df_stats_reg["publication_month"]=df_stats_reg["F"].dt.to_period("M")
+df_stats_reg_aggrmeth=df_stats_reg.pivot(index=['publication_month',"for_start_month","for_end_month",'L'], columns='C', values=aggr_meth).reset_index().rename(columns={0:"bel_avg",1:"normal",2:"abv_avg"})
 #remove index name
-stats_region_aggrmeth = stats_region_aggrmeth.rename_axis(None, axis=1)  
+df_stats_reg_aggrmeth = df_stats_reg_aggrmeth.rename_axis(None, axis=1)  
 ```
 
 ```{code-cell} ipython3
 :tags: [remove_cell]
 
-stats_region_aggrmeth_lt=stats_region_aggrmeth[stats_region_aggrmeth.L==leadtime]
+df_stats_reg_aggrmeth_lt=df_stats_reg_aggrmeth[df_stats_reg_aggrmeth.L==leadtime]
 ```
 
 <!-- Below all publication months are shown, where the numbers indicate the 10% boundary for each tercile. Those that have a probability of at least 40 are marked in red. We can see that for only 3 months this occurred for the below average tercile. For the above average tercile this is a more common phenomenon. 
@@ -751,13 +777,13 @@ Questions
 Note: the NaNs in the table indicate a dry mask during those months
 
 ```{code-cell} ipython3
-# stats_region_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).to_csv(os.path.join(iri_exploration_dir,f"bfa_tercile_prob_l{leadtime}_{aggr_meth}.csv"))
+# df_stats_reg_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).to_csv(os.path.join(iri_exploration_dir,f"bfa_tercile_prob_l{leadtime}_{aggr_meth}.csv"))
 ```
 
 ```{code-cell} ipython3
 :tags: [output_scroll]
 
-stats_region_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).style.apply(lambda x: ["color: red" if v >=40 else "" for v in x], axis = 1).set_precision(2)
+df_stats_reg_aggrmeth_lt.drop("L",axis=1).set_index(["publication_month","for_start_month","for_end_month"]).style.apply(lambda x: ["color: red" if v >=40 else "" for v in x], axis = 1).set_precision(2)
 ```
 
 The probabilities for March
@@ -774,11 +800,11 @@ def highlight_max(s):
     is_max = s == s.max()
     return ['color: red' if v else 'black' for v in is_max]
 
-stats_region_aggrmeth_lt[stats_region_aggrmeth_lt.publication_month.dt.month.isin([3])].drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1).set_precision(2)
+df_stats_reg_aggrmeth_lt[df_stats_reg_aggrmeth_lt.publication_month.dt.month.isin([3])].drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1).set_precision(2)
 ```
 
 ```{code-cell} ipython3
 :tags: [hide_input]
 
-# stats_region_aggrmeth_lt[stats_region_aggrmeth_lt.publication_month.dt.month.isin([7])].drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1).set_precision(2)
+# df_stats_reg_aggrmeth_lt[df_stats_reg_aggrmeth_lt.publication_month.dt.month.isin([7])].drop("L",axis=1).set_index(["publication_month"]).style.apply(highlight_max,axis=1).set_precision(2)
 ```
