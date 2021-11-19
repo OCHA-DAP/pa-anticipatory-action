@@ -432,10 +432,12 @@ probability below average >= (probability above average + 5%)
 
 +++
 
-### Questions IRI
+### Questions IRI / PA team
 - Is it even worth using the forecasts if the GROC is <=0.5 (=grey in map)? 
 - Can we set the probability threshold based on meteorological knowledge? 
 - What is the preferred aggregation method? 
+- Should we instead of looking at tercile forecasts look at the [flexible forecasts](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/precip_full.html)?  
+- Would IRI be the best seasonal source or are there other sources that might be better? 
 
 +++
 
