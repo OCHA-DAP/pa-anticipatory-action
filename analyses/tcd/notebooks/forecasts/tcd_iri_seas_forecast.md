@@ -1,18 +1,3 @@
----
-jupytext:
-  cell_metadata_filter: -all
-  formats: ipynb,md:myst
-  text_representation:
-    extension: .md
-    format_name: myst
-    format_version: 0.13
-    jupytext_version: 1.10.3
-kernelspec:
-  display_name: antact
-  language: python
-  name: antact
----
-
 # IRI forecast as a trigger for drought in Chad
 This notebook explores the option of using IRI's seasonal forecast as part of drought-related trigger in Burkina Faso. 
 From the country team the proposed trigger is:
@@ -23,34 +8,27 @@ From the country team the proposed trigger is:
 
 This notebook explores if and when these triggers would be reached.
 
-+++
 
 #### Skill
 Before diving into any code, lets analyze the skill as produced by IRI. The GROC is shown below where grey indicates no skill, and white a dry mask. As can be seen from the images, over significant parts of Chad the forecasts don't show any skill.  
 
-It also seems the skill becomes lower with a lower leadtime which is the opposite from the expected pattern. 
+It also seems the skill becomes lower with a lower leadtime which is the opposite from the expected pattern.
 
-+++
 
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jja_Ld3.gif" alt="drawing" width="700"/>
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jja_Ld1.gif" alt="drawing" width="700"/>
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jas_Ld4.gif" alt="drawing" width="700"/>
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jas_Ld2.gif" alt="drawing" width="700"/>
 
-+++
 
 #### Load libraries
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 %load_ext autoreload
 %autoreload 2
 ```
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 import geopandas as gpd
 from shapely.geometry import mapping
 import pandas as pd
@@ -78,20 +56,16 @@ from src.indicators.drought.iri_rainfallforecast import get_iri_data,get_iri_dat
 from src.utils_general.raster_manipulation import compute_raster_statistics
 ```
 
-```{code-cell} ipython3
+```python
 hdx_blue="#007ce0"
 ```
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 #month number refers to the last month of the season
 month_season_mapping={1:"NDJ",2:"DJF",3:"JFM",4:"FMA",5:"MAM",6:"AMJ",7:"MJJ",8:"JJA",9:"JAS",10:"ASO",11:"SON",12:"OND"}
 ```
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 iso3="tcd"
 config=Config()
 parameters = config.parameters(iso3)
@@ -101,35 +75,30 @@ adm1_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_a
 
 #### Set variables
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 #TODO: some admins only part should be included, check with team
 adm_sel=['Barh-El-Gazel','Batha','Kanem','Lac','Ouaddaï','Sila','Wadi Fira']
 ```
 
-```{code-cell} ipython3
+```python
 #first entry refers to the publication month, second to the leadtime
 trig_mom=[(3,3),(3,4),(5,1),(5,2)]
 ```
 
 ## Inspect forecasts
 
-+++
 
 We load the iri data indicating the dominant tercile. The negative values indicate forecasted below average rainfall, and the positive values above average.
 
 We plot the forecast raster data for the periods and leadtimes of interest. The red areas are the admin1's we are focussing on. 
 These figures are is similair to [the figure on the IRI Maproom](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html), except that the bins are defined slightly differently
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 gdf_adm1=gpd.read_file(adm1_bound_path)
 gdf_reg=gdf_adm1[gdf_adm1.admin1Name.isin(adm_sel)]
 ```
 
-```{code-cell} ipython3
+```python
 #F indicates the publication month, and L the leadtime. 
 #A leadtime of 1 means a forecast published in May is forecasting JJA
 ds_iri_dom=get_iri_data_dominant(config,download=False)
@@ -138,7 +107,7 @@ da_iri_dom=ds_iri_dom.dominant
 da_iri_dom_clip=da_iri_dom.rio.clip(gdf_adm1["geometry"], all_touched=True)
 ```
 
-```{code-cell} ipython3
+```python
 #not very neat function but does the job for now
 #iri website bins
 # plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
@@ -171,26 +140,26 @@ def plt_raster_iri(da_iri_dom_clip,
     g.fig.suptitle(f"Forecasts published in {calendar.month_abbr[pub_mon]} predicting {for_seas} (lt={lt}) \n The subtitles indicate the publishing date",y=1.1);
 ```
 
-```{code-cell} ipython3
+```python
 #iri website bins
 # plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
 plt_levels=[-100,-70,-60,-50,-45,-40,40,45,50,60,70,100]
 plt_colors=['#783200','#ab461e','#d18132','#e8b832','#fafa02','#ffffff','#d1f8cc','#acf8a0','#73bb6e','#3a82b3','#0e3bf4']
 ```
 
-```{code-cell} ipython3
+```python
 plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=3,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
-```{code-cell} ipython3
+```python
 plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=4,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
-```{code-cell} ipython3
+```python
 plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=1,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
-```{code-cell} ipython3
+```python
 plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=2,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
@@ -198,9 +167,7 @@ Below we plot a few examples of "tricky" forecasts. For the left two: say the th
 
 These figures are to guide the discussion on which forecasts we would have wanted to trigger and for which we wouldn't
 
-```{code-cell} ipython3
-:tags: [hide_input]
-
+```python
 g=da_iri_dom_clip.where(da_iri_dom_clip.F.isin([cftime.Datetime360Day(2021, 2, 16, 0, 0, 0, 0),cftime.Datetime360Day(2021, 3, 16, 0, 0, 0, 0),cftime.Datetime360Day(2018, 7, 16, 0, 0, 0, 0),cftime.Datetime360Day(2019, 7, 16, 0, 0, 0, 0)]),drop=True).sel(L=3).plot(
     col="F",
     col_wrap=4,
@@ -227,14 +194,12 @@ We inspect 3 different methods: including all cells with their centre in the reg
 We should discuss as team (and with meteorologists) which is the best method. 
 At least with all methods we include a substantial number of cells.
 
-```{code-cell} ipython3
-:tags: []
-
+```python
 #sel random values to enable plotting of included cells (so values are irrelevant)
 da_iri_dom_blue=da_iri_dom.sel(F="2020-05-16",L=1).squeeze()
 ```
 
-```{code-cell} ipython3
+```python
 da_iri_dom_blue_centre=da_iri_dom_blue.rio.clip(gdf_reg["geometry"], all_touched=False)
 g=da_iri_dom_blue_centre.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
@@ -243,7 +208,7 @@ gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
-```{code-cell} ipython3
+```python
 da_iri_dom_blue_touched=da_iri_dom_blue.rio.clip(gdf_reg["geometry"], all_touched=True)
 g=da_iri_dom_blue_touched.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
@@ -252,7 +217,7 @@ gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
-```{code-cell} ipython3
+```python
 #approximate of a weighted average
 da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
     da_iri_dom_blue.rio.crs,
@@ -265,7 +230,7 @@ da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
 ).rio.clip(gdf_reg["geometry"], all_touched=False)
 ```
 
-```{code-cell} ipython3
+```python
 g=da_iri_dom_blue_res.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 g.axes.set_title(f"Included area with approx weighted average")
@@ -282,15 +247,12 @@ The first plot shows all values of the region of interest across all seasons. We
 We can see the same pattern when we only select the seasons and leadtimes that might be part of the trigger. 
 <!-- Based on this we experiment with a threshold of 4 but it might also be set to 40 or 50, this is open for discussion. However, a threshold of 60% would be advised again as this is very unlikely from a meteorological perspective to be met when requiring 20% of the area to meet this condition. -->
 
-+++
 
 For now we set the threshold to 40 for experimentation. With the reasoning that this might be the lowest threshold that could still be reasonable. However, we might want to increase the threshold to 45 or 50. How to determine this threshold is still to be disucssed we could either 
 1) approach it from a meteorological perspective and discuss with scientists
 2) understand probability values from a dataset that has a longer historical track record
 
-```{code-cell} ipython3
-:tags: [remove_cell]
-
+```python
 #C indicates the tercile (below-average, normal, or above-average).  
 #F indicates the publication month, and L the leadtime
 ds_iri = get_iri_data(config, download=False)
@@ -300,41 +262,39 @@ da_iri_allt=da_iri.rio.clip(gdf_reg.geometry.apply(mapping), da_iri.rio.crs, all
 da_iri_allt_bavg=da_iri_allt.sel(C=0)
 ```
 
-```{code-cell} ipython3
+```python
 da_iri_allt_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average")
 ```
 
-```{code-cell} ipython3
+```python
 da_plt=da_iri_allt_bavg.assign_coords(F=da_iri_allt_bavg.F.dt.month)
 da_plt=da_plt.stack(comb=["F","L"])
 da_iri_allt_trig_mom=xr.concat([da_plt.sel(comb=m) for m in trig_mom],dim="comb")
 ```
 
-```{code-cell} ipython3
+```python
 da_iri_allt_trig_mom.hvplot.violin('prob').opts(ylabel="Probability below average")
 ```
 
 #### Compute stats
-We can now compute the statistics of the region of interest. For now I am working with all cells touching the region, but this is something that still has to be thought about more. 
+We can now compute the statistics of the region of interest. For now I am working with all cells touching the region, but this is something that still has to be thought about more.
 
-
-+++
 
 The `perc_area` indicates the minimum percentage of the region that should reach the threshold. The 20% was proposed by FAO
 
-```{code-cell} ipython3
+```python
 #% probability of bavg
 threshold=40 #60
 #min percentage of the area that needs to reach the threshold
 perc_area=20
 ```
 
-```{code-cell} ipython3
+```python
 adm0_col="admin0Name"
 pcode0_col="admin0Pcod"
 ```
 
-```{code-cell} ipython3
+```python
 #compute stats
 #dissolve the region to one polygon
 gdf_reg_dissolved=gdf_reg.dissolve(by=adm0_col)
@@ -375,34 +335,33 @@ df_stats_reg_bavg["month"]=df_stats_reg_bavg.F.dt.month
 
 NaN values indicate that the whole region is covered by a dry mask at that point. See [here](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/) for more information
 
-```{code-cell} ipython3
+```python
 df_stats_reg_bavg=df_stats_reg_bavg[(~df_stats_reg_bavg.perc_thresh.isnull())]
 ```
 
-```{code-cell} ipython3
+```python
 df_stats_reg_bavg=df_stats_reg_bavg.sort_values("perc_thresh",ascending=False)
 ```
 
 ## Analyze statistics probability below average
 
-+++
 
-From the dataframe we can see that the maximum observed 
+From the dataframe we can see that the maximum observed
 
-```{code-cell} ipython3
+```python
 print(f"{round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area])/len(df_stats_reg_bavg)*100)}% of forecasts across all seasons and leadtimes"
       f"predicted >={perc_area}% of the area >={threshold}% prob of below average")
 ```
 
-```{code-cell} ipython3
+```python
 df_stats_reg_bavg_trig_mom=df_stats_reg_bavg[df_stats_reg_bavg[['month', 'L']].apply(tuple, axis=1).isin(trig_mom)]
 ```
 
-```{code-cell} ipython3
+```python
 df_stats_reg_bavg_trig_mom
 ```
 
-```{code-cell} ipython3
+```python
 histo=alt.Chart(df_stats_reg_bavg).mark_bar().encode(
     alt.X("perc_thresh:Q", bin=alt.Bin(step=5)),
     y='count()',
@@ -411,7 +370,7 @@ line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode
 histo+line
 ```
 
-```{code-cell} ipython3
+```python
 histo=alt.Chart(df_stats_reg_bavg_trig_mom).mark_bar().encode(
     alt.X("perc_thresh:Q", bin=alt.Bin(step=5)),
     y='count()',
@@ -424,31 +383,27 @@ histo+line
 
 Given the size of the area of interest, it might therefore be better to only focus on whether any cell within that region reached the probability threshold. However, in this case 40% might be too sensitive of a trigger -->
 
-+++
 
 #### Dominant tercile
 Just like with BFA we might also want to examine if the below average tercile is the dominant tercile. For BFA we required at the pixel level that 
 probability below average >= (probability above average + 5%)
 
-+++
 
 ### Questions IRI / PA team
 - Is it even worth using the forecasts if the GROC is <=0.5 (=grey in map)? 
 - Can we set the probability threshold based on meteorological knowledge? 
 - What is the preferred aggregation method? 
 - Should we instead of looking at tercile forecasts look at the [flexible forecasts](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/precip_full.html)?  
-- Would IRI be the best seasonal source or are there other sources that might be better? 
+- Would IRI be the best seasonal source or are there other sources that might be better?
 
-+++
 
 ### Extra
 
-+++
 
 Would be great to also have the data as the date projected instead of date published. In that way we can compare how values change across leadtimes. We did implement this from ecmwf so could copy that. 
 Below an attempt to do it in an easier fashion, but without success
 
-```{code-cell} ipython3
+```python
 #https://stackoverflow.com/questions/67342119/xarray-merge-separate-day-and-hour-dimensions-into-one-time-dimension-in-python
 ds_iri = get_iri_data(config, download=False)
 ds_iri=ds_iri.assign_coords(L=[31,62,93,124])
