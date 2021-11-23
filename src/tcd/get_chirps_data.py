@@ -22,6 +22,7 @@ COUNTRY_ISO3 = "tcd"
 get_chirps_data_monthly(
     config=Config(),
     country_iso3=COUNTRY_ISO3,
+    use_cache=True,
 )
 
 compute_seasonal_lowertercile_raster(
