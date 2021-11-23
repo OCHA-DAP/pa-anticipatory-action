@@ -23,13 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 def get_ecmwf_forecast(
-    country_iso3: str, version: int = 5, **kwargs
+    country_iso3: str, version: int = 5, source_cds: bool = True, **kwargs
 ) -> xr.Dataset:
     """
     Retrieve the processed dataset with the forecast for each
     publication date and corresponding lead times
     :param country_iso3: iso3 code of the country of interest
     :param version: version of the ecmwf model to use
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param kwargs: other args that can be given to EcmwfSeasonalForecast()
     :return: dataset with the ecmwf forecasts
     """
@@ -39,16 +40,27 @@ def get_ecmwf_forecast(
     years)
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(**kwargs)
-    ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
-        country_iso3=country_iso3,
-        version=version,
-    )
+    if source_cds:
+        ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
+            country_iso3=country_iso3,
+            version=version,
+        )
+    else:
+        dataset_path = (
+            Path(os.environ["AA_DATA_DIR"])
+            / f"private/processed/{country_iso3}/ecmwf_test/"
+            f"seasonal-monthly-individual-members/prate/"
+            f"mwi_seasonal-monthly-individual-members_prate.nc"
+        )
+        ds_ecmwf_forecast = xr.load_dataset(dataset_path)
     ds_ecmwf_forecast = convert_tprate_precipitation(ds_ecmwf_forecast)
 
     return ds_ecmwf_forecast
 
 
-def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
+def get_ecmwf_forecast_by_leadtime(
+    country_iso3, version: int = 5, source_cds: bool = True, **kwargs
+):
     """
     Reshape dataset to have the time variable as the month during the
     forecast was valid instead of the month the forecast was published
@@ -56,12 +68,16 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
     once every couple of years)
     :param country_iso3: iso3 code of country of interest
     :param version: version of the ecmwf model to use
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param kwargs: other args that can be given to get_ecmwf_forecast()
     :return: dataset with data, grouped by leadtime
     """
 
     ds_ecmwf_forecast = get_ecmwf_forecast(
-        country_iso3=country_iso3, version=version, **kwargs
+        country_iso3=country_iso3,
+        version=version,
+        source_cds=source_cds,
+        **kwargs,
     )
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
     return convert_dict_to_da(ds_ecmwf_forecast_dict)
