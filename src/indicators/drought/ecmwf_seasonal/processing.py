@@ -48,7 +48,7 @@ def get_ecmwf_forecast(
     else:
         dataset_path = (
             Path(os.environ["AA_DATA_DIR"])
-            / f"private/processed/{country_iso3}/ecmwf_test/"
+            / f"private/processed/{country_iso3}/ecmwf/"
             f"seasonal-monthly-individual-members/prate/"
             f"mwi_seasonal-monthly-individual-members_prate.nc"
         )
@@ -80,7 +80,9 @@ def get_ecmwf_forecast_by_leadtime(
         **kwargs,
     )
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
-    return convert_dict_to_da(ds_ecmwf_forecast_dict)
+    return convert_dict_to_da(ds_ecmwf_forecast_dict).dropna(
+        dim="time", how="all"
+    )
 
 
 def get_stats_filepath(
@@ -138,14 +140,15 @@ def get_stats_filepath(
 
 def compute_stats_per_admin(
     iso3,
-    adm_level=1,
-    pcode_col="ADM1_PCODE",
+    adm_level: int = 1,
+    pcode_col: str = "ADM1_PCODE",
     add_col: List[str] = None,
     use_cache: bool = True,
     resolution: float = None,
     date_list: List[str] = None,
-    use_unrounded_area_coords=False,
-    all_touched=False,
+    source_cds: bool = True,
+    use_unrounded_area_coords: bool = False,
+    all_touched: bool = False,
 ):
     """
     compute several statistics on admin level retrieved
@@ -160,6 +163,7 @@ def compute_stats_per_admin(
     If None, don't change the resolution of the original data
     :param date_list: list of dates to compute stats for. If None, the stats
     will be computed for all dates in ds
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
@@ -181,7 +185,9 @@ def compute_stats_per_admin(
 
     # read the forecasts
     ds = get_ecmwf_forecast_by_leadtime(
-        iso3, use_unrounded_area_coords=use_unrounded_area_coords
+        iso3,
+        source_cds=source_cds,
+        use_unrounded_area_coords=use_unrounded_area_coords,
     )
     ds = ds.rio.write_crs("EPSG:4326", inplace=True)
 
