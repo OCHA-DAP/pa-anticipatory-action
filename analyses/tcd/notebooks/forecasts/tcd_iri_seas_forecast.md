@@ -6,13 +6,13 @@ From the country team the proposed trigger is:
 - Targeted Admin1s: Barh el Gazel, Batha, Kanem, Lac (une partie), Ouaddaï (une partie), Sila (une partie), Wadi Fira
 - 20% of those admin1s meeting the threshold
 
-This notebook explores if and when these triggers would be reached.
+This notebook explores if and when these triggers would be reached. As part of this exploration methods for aggregation from raster level to the percentage of the area are discussed. 
 
 
 #### Skill
 Before diving into any code, lets analyze the skill as produced by IRI. The GROC is shown below where grey indicates no skill, and white a dry mask. As can be seen from the images, over significant parts of Chad the forecasts don't show any skill.  
 
-It also seems the skill becomes lower with a lower leadtime which is the opposite from the expected pattern.
+It also seems the skill becomes lower with a lower leadtime which is the opposite from the expected pattern. However the differences between leadtimes are small and thus should be interpreted with caution.
 
 
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jja_Ld3.gif" alt="drawing" width="700"/>
@@ -21,7 +21,7 @@ It also seems the skill becomes lower with a lower leadtime which is the opposit
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jas_Ld2.gif" alt="drawing" width="700"/>
 
 
-#### Load libraries
+#### Load libraries and set global constants
 
 ```python
 %load_ext autoreload
@@ -81,6 +81,7 @@ adm_sel=['Barh-El-Gazel','Batha','Kanem','Lac','Ouaddaï','Sila','Wadi Fira']
 ```
 
 ```python
+#list of months and leadtimes that could be part of the trigger
 #first entry refers to the publication month, second to the leadtime
 trig_mom=[(3,3),(3,4),(5,1),(5,2)]
 ```
@@ -88,7 +89,7 @@ trig_mom=[(3,3),(3,4),(5,1),(5,2)]
 ## Inspect forecasts
 
 
-We load the iri data indicating the dominant tercile. The negative values indicate forecasted below average rainfall, and the positive values above average.
+We load the iri data indicating the dominant tercile. The negative values indicate forecasted below average rainfall, and the positive values above average. We assign values between -40 and 40 as beloning to the normal tercile. On IRI's website the bins for the normal tercile are -37.5 and 37.5 so these differ slightly from what we use here. The reason for setting them to 40 for now is that in our opinion this is easier to interpret and generally preferred to use rounded numbers. 
 
 We plot the forecast raster data for the periods and leadtimes of interest. The red areas are the admin1's we are focussing on. 
 These figures are is similair to [the figure on the IRI Maproom](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html), except that the bins are defined slightly differently
@@ -109,8 +110,6 @@ da_iri_dom_clip=da_iri_dom.rio.clip(gdf_adm1["geometry"], all_touched=True)
 
 ```python
 #not very neat function but does the job for now
-#iri website bins
-# plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
 def plt_raster_iri(da_iri_dom_clip,
                    pub_mon,
                    lt,
@@ -152,16 +151,22 @@ plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=3,plt_levels=plt_levels,plt_colors=p
 ```
 
 ```python
-plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=4,plt_levels=plt_levels,plt_colors=plt_colors)
+plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=1,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
 ```python
-plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=1,plt_levels=plt_levels,plt_colors=plt_colors)
+plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=4,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
 ```python
 plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=2,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
+
+From the above plots we can conclude a couple of things: 
+- Since 2017 no extremely high below average probabilities were forecasted in our region of interest. 
+- The patterns in the region can differ, for example in 2021-03 where we see mainly above average, but with some below average areas in the eastern-south
+- The forecasted patterns can change heavily with changing leadtime. For example for the JAS season with 4 and 2 months leadtime. 
+
 
 Below we plot a few examples of "tricky" forecasts. For the left two: say the threshold would be at 40%, would the trigger be reached for the red region? For the right two plots we see a combination of below and above average across the region. What should we do with that? 
 
@@ -189,6 +194,7 @@ for ax in g.axes.flat:
 ```
 
 ### Which cells to include for aggregation?
+For the trigger we have to aggregate a selection of raster cells to one number. Before we can do this, we have to decide which cells to include for the aggregation. 
 We inspect 3 different methods: including all cells with their centre in the region, all cells touching the region, and an approximate weighted average. 
 
 We should discuss as team (and with meteorologists) which is the best method. 
@@ -258,33 +264,42 @@ For now we set the threshold to 40 for experimentation. With the reasoning that 
 ds_iri = get_iri_data(config, download=False)
 ds_iri=ds_iri.rio.write_crs("EPSG:4326",inplace=True)
 da_iri=ds_iri.prob
-da_iri_allt=da_iri.rio.clip(gdf_reg.geometry.apply(mapping), da_iri.rio.crs, all_touched=True)
+#select all cells touching the region
+da_iri_allt=da_iri.rio.clip(gdf_reg["geometry"], all_touched=True)
+#C=0 indicates the below average tercile
 da_iri_allt_bavg=da_iri_allt.sel(C=0)
 ```
 
 ```python
-da_iri_allt_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average")
+da_iri_allt_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average",xlabel="leadtime",
+title="Observed probabilities of bavg at raster level in the region of interest")
 ```
 
 ```python
+#transform data such that we can select by combinatiosn of publication month (F) and leadtime (L)
 da_plt=da_iri_allt_bavg.assign_coords(F=da_iri_allt_bavg.F.dt.month)
 da_plt=da_plt.stack(comb=["F","L"])
+#only select data that is selected for trigger
 da_iri_allt_trig_mom=xr.concat([da_plt.sel(comb=m) for m in trig_mom],dim="comb")
 ```
 
 ```python
-da_iri_allt_trig_mom.hvplot.violin('prob').opts(ylabel="Probability below average")
+da_iri_allt_trig_mom.hvplot.violin('prob').opts(ylabel="Probability below average",
+                                                title="observed probabilities of bavg for the month and leadtime combinations \n included in the triger")
 ```
 
 #### Compute stats
 We can now compute the statistics of the region of interest. For now I am working with all cells touching the region, but this is something that still has to be thought about more.
 
+We have to set two parameters: the minimum probability of below average, and the percentage of the area that should have this minimum probability assigned. 
 
-The `perc_area` indicates the minimum percentage of the region that should reach the threshold. The 20% was proposed by FAO
+For now we set the proability of below average threshold to 50 as this is the lowest that might still be reasonble, but this is something that has to be discussed furhter. 
+
+For now we set the minimum percentage of the area that should reach the threshold to 20% as that was proposed by the Atelier. However, this is also open for discussion
 
 ```python
 #% probability of bavg
-threshold=40 #60
+threshold=40
 #min percentage of the area that needs to reach the threshold
 perc_area=20
 ```
@@ -346,43 +361,39 @@ df_stats_reg_bavg=df_stats_reg_bavg.sort_values("perc_thresh",ascending=False)
 ## Analyze statistics probability below average
 
 
-From the dataframe we can see that the maximum observed
+We plot the occurrences of the probability of below average being above the given threshold and given minimum percentage of the area. This so far is a preliminary analysis which can be improved once we have made some decisions. 
 
 ```python
-print(f"{round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area])/len(df_stats_reg_bavg)*100)}% of forecasts across all seasons and leadtimes"
-      f"predicted >={perc_area}% of the area >={threshold}% prob of below average")
+print(f"{round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area])/len(df_stats_reg_bavg)*100)}%"
+      f"({round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area]))}/{len(df_stats_reg_bavg)}) "
+      "of forecasts across all seasons and leadtimes"
+      f" predicted >={perc_area}% of the area >={threshold}% prob of below average")
 ```
 
 ```python
+#select the months and leadtimes included in the trigger
 df_stats_reg_bavg_trig_mom=df_stats_reg_bavg[df_stats_reg_bavg[['month', 'L']].apply(tuple, axis=1).isin(trig_mom)]
 ```
 
 ```python
-df_stats_reg_bavg_trig_mom
-```
-
-```python
 histo=alt.Chart(df_stats_reg_bavg).mark_bar().encode(
-    alt.X("perc_thresh:Q", bin=alt.Bin(step=5)),
+    alt.X("perc_thresh:Q", bin=alt.Bin(step=1),title=f"% of region with >={threshold} probability of bavg"),
     y='count()',
-)
+).properties(title=[f"Occurence of the percentage of the region with >={threshold} probability of bavg","Red line indicates the threshold on the % of the area"])
 line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode(x='x')
 histo+line
 ```
 
 ```python
 histo=alt.Chart(df_stats_reg_bavg_trig_mom).mark_bar().encode(
-    alt.X("perc_thresh:Q", bin=alt.Bin(step=5)),
+    alt.X("perc_thresh:Q", bin=alt.Bin(step=1),title=f"% of region with >={threshold} probability of bavg"),
     y='count()',
-)
+).properties(title=[f"Occurence of the percentage of the region with >={threshold} probability of bavg",
+                    "For the publication months and leadtimes included in the trigger",
+                    "Red line indicates the threshold on the % of the area"])
 line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode(x='x')
 histo+line
 ```
-
-<!-- While we can include the spatial severity in the trigger threshold, we should also take into account that the spatial uncertainty of seasonal forecasts is large. 
-
-Given the size of the area of interest, it might therefore be better to only focus on whether any cell within that region reached the probability threshold. However, in this case 40% might be too sensitive of a trigger -->
-
 
 #### Dominant tercile
 Just like with BFA we might also want to examine if the below average tercile is the dominant tercile. For BFA we required at the pixel level that 
