@@ -54,6 +54,8 @@ data_ecmwf.coarsen(longitude=2, latitude=2).mean().plot()
 # Monkey-patch the filepath to access the 1 degree directory
 # Not hard-coding it in for now because it probably won't be necessary for 
 # further analysis
+from importlib import reload
+reload(processing)
 processing.ECMWF_API_FILEPATH = processing.ECMWF_API_FILEPATH.replace("ecmwf", "ecmwf_1deg")
 ```
 
@@ -84,5 +86,6 @@ processing.get_ecmwf_forecast(ISO3)
 ```
 
 ```python
-
+# Compare difference
+(data_cds - data_ecmwf).plot()
 ```
