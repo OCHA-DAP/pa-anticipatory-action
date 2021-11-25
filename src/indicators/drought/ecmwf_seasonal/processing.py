@@ -21,6 +21,12 @@ from src.utils_general.statistics import calc_crps
 
 logger = logging.getLogger(__name__)
 
+ECMWF_API_FILEPATH = (
+    "private/processed/{country_iso3}/ecmwf/"
+    "seasonal-monthly-individual-members/prate/"
+    "mwi_seasonal-monthly-individual-members_prate.nc"
+)
+
 
 def get_ecmwf_forecast(
     country_iso3: str, version: int = 5, source_cds: bool = True, **kwargs
@@ -46,12 +52,9 @@ def get_ecmwf_forecast(
             version=version,
         )
     else:
-        dataset_path = (
-            Path(os.environ["AA_DATA_DIR"])
-            / f"private/processed/{country_iso3}/ecmwf/"
-            f"seasonal-monthly-individual-members/prate/"
-            f"mwi_seasonal-monthly-individual-members_prate.nc"
-        )
+        dataset_path = Path(
+            os.environ["AA_DATA_DIR"]
+        ) / ECMWF_API_FILEPATH.format(country_iso3=country_iso3)
         ds_ecmwf_forecast = xr.load_dataset(dataset_path)
     ds_ecmwf_forecast = convert_tprate_precipitation(ds_ecmwf_forecast)
 
