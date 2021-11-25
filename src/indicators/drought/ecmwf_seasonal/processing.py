@@ -90,6 +90,7 @@ def get_stats_filepath(
     config: Config,
     date: datetime,
     adm_level: int,
+    source_cds: bool,
     use_unrounded_area_coords: bool,
     resolution: float = None,
     all_touched: bool = False,
@@ -102,6 +103,7 @@ def get_stats_filepath(
     :param date: the date of interest
     If None, data is in original resolution
     :param adm_level: the admin level the data is aggregated to
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
@@ -126,12 +128,32 @@ def get_stats_filepath(
         filename += "_all-touched"
     filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
 
-    country_data_processed_dir = (
-        Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
-    )
-    ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
+    if source_cds:
+        country_data_processed_dir = (
+            Path(config.DATA_DIR)
+            / config.PUBLIC_DIR
+            / config.PROCESSED_DIR
+            / iso3
+        )
+        stats_dir = (
+            country_data_processed_dir
+            / config.ECMWF_DIR
+            / "seasonal-monthly-single-levels"
+        )
+    else:
+        country_data_processed_dir = (
+            Path(config.DATA_DIR)
+            / config.PRIVATE_DIR
+            / config.PROCESSED_DIR
+            / iso3
+        )
+        stats_dir = (
+            country_data_processed_dir
+            / config.ECMWF_DIR
+            / "seasonal-monthly-individual-members"
+            / "prate"
+        )
 
-    stats_dir = ecmwf_processed_dir / "seasonal-monthly-single-levels"
     if use_unrounded_area_coords:
         stats_dir = stats_dir / "unrounded-coords"
 
@@ -203,6 +225,7 @@ def compute_stats_per_admin(
             config=config,
             date=date_dt,
             adm_level=adm_level,
+            source_cds=source_cds,
             use_unrounded_area_coords=use_unrounded_area_coords,
             resolution=resolution,
             all_touched=all_touched,
