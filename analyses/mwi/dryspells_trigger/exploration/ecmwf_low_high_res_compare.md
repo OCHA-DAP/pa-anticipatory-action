@@ -42,12 +42,50 @@ data_cds.plot()
 ```
 
 ```python
-data_ecmwf.latitude
-```
-
-```python
 # ECMWF has 0.4 deg resolution, but coarsen only lets you combine
 # integer number of pixels so can't reproduce the CDS resolution exactly.
 # But it does look pretty close.
 data_ecmwf.coarsen(longitude=2, latitude=2).mean().plot()
+```
+
+## Comparing at same res (allowing ECMWF API to interpolate)
+
+```python
+# Monkey-patch the filepath to access the 1 degree directory
+# Not hard-coding it in for now because it probably won't be necessary for 
+# further analysis
+from importlib import reload
+reload(processing)
+processing.ECMWF_API_FILEPATH = processing.ECMWF_API_FILEPATH.replace("ecmwf", "ecmwf_1deg")
+```
+
+```python
+da_cds = processing.get_ecmwf_forecast(ISO3)[VAR]
+da_ecmwf =  processing.get_ecmwf_forecast(ISO3, source_cds=False)[VAR]
+```
+
+```python
+time = datetime(1999, 1, 1)
+number = 3
+step = 2
+
+data_cds = da_cds.sel(time=time, number=number, step=step)
+data_ecmwf = da_ecmwf.sel(time=time, number=number, step=step)
+```
+
+```python
+data_cds.plot()
+```
+
+```python
+data_ecmwf.plot()
+```
+
+```python
+processing.get_ecmwf_forecast(ISO3)
+```
+
+```python
+# Compare difference
+(data_cds - data_ecmwf).plot()
 ```
