@@ -56,6 +56,7 @@ use_unrounded_area_coords = True #False
 interpolate=False
 resolution=None #0.05
 all_touched=False #True
+source_cds=False
 ```
 
 ```python
@@ -129,14 +130,14 @@ def compute_miss_false_leadtime(df,target_var,predict_var):
 ```
 
 ```python
-def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None):
+def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None,figsize=(15,8)):
     #number of dates with observed dry spell overlapping with forecasted per month
     num_plots = len(df.leadtime.unique())
     if num_plots==1:
         colp_num=1
     rows = math.ceil(num_plots / colp_num)
     position = range(1, num_plots + 1)
-    fig=plt.figure(figsize=(15,8))
+    fig=plt.figure(figsize=figsize)
     for i, m in enumerate(df.sort_values(by="leadtime").leadtime.unique()):
         ax = fig.add_subplot(rows,colp_num,i+1)
         y_target =    df.loc[df.leadtime==m,target_var]
@@ -258,7 +259,9 @@ end_date="2-1-2020"
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords,all_touched=all_touched) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,
+                                         adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords,
+                                         source_cds=source_cds,all_touched=all_touched) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -745,7 +748,8 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 ```
 
 ```python
-fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm")
+fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm",
+                                       figsize=(20,8),colp_num=4)
 # fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt123456_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
