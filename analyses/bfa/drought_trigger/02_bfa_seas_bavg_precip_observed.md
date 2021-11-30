@@ -121,7 +121,7 @@ alt.Chart(gdf_adm).mark_geoshape(stroke="black").encode(
 ## Analyzing observed precipitation patterns
 We first have a look at the observational data per month to better understand the yearly precipitation patterns.
 
-Below the total precipitation during each month of 2020 is plotted. We can clearly see that most rainfall is received between June and September.    
+Below the total precipitation during each month of 2020 is plotted. We can clearly see that most rainfall is received between June and September.
 
 ```{code-cell} ipython3
 #show distribution of rainfall across months for 2020 to understand rainy season patterns
@@ -404,17 +404,38 @@ g.map(plt.axhline,y=df_rps_empirical_rainy.loc[3,"rp_round"], linestyle='dashed'
 ```
 
 ```{code-cell} ipython3
-g = sns.catplot(data=df_stats_reg[df_stats_reg.year>=2006], x="season",y="perc_bavg",col="year", hue="rainy_seas_str", col_wrap=4, kind="bar",
-                  palette={"outside rainy season":grey_med,"rainy season":hdx_blue}, height=4, aspect=2)
-g.map(plt.axhline, y=df_rps_empirical_rainy.loc[5,"rp_round"], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
-g.map(plt.axhline,y=df_rps_empirical_rainy.loc[3,"rp_round"], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
+df_stats_reg_selm=df_stats_reg[df_stats_reg.end_month.dt.month.isin(end_months_sel)]
 ```
 
 ```{code-cell} ipython3
-g = sns.catplot(data=df_stats_reg[df_stats_reg.year.isin([1983,1984,1990,2004])], x="season",y="perc_bavg",col="year", hue="rainy_seas_str", col_wrap=4, kind="bar",
-                  palette={"outside rainy season":grey_med,"rainy season":hdx_blue}, height=4, aspect=2)
-g.map(plt.axhline, y=df_rps_empirical_rainy.loc[5,"rp_round"], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
-g.map(plt.axhline,y=df_rps_empirical_rainy.loc[3,"rp_round"], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period")
+df_rps_all_list=[]
+for seas in df_stats_reg_selm.season.unique():
+    df_rps=get_return_periods_dataframe(df_stats_reg_selm[df_stats_reg_selm.season==seas], rp_var="perc_bavg",method="empirical")
+    df_rps["season"]=seas
+    df_rps_all_list.append(df_rps)
+df_rps_seas=pd.concat(df_rps_all_list).rename_axis("rp_year").reset_index()
+```
+
+```{code-cell} ipython3
+for ry in [3,5]:
+    df_stats_reg_selm=df_stats_reg_selm.merge(df_rps_seas.loc[df_rps_seas.rp_year==ry,["rp","season"]].rename(columns={"rp":f"rp_{ry}"}),on="season")
+```
+
+We can also plot only the seasons of interest, which removes the clutter from the above bar plot.  
+We can see that large areas of below average rainfall were more common in the 80s and 90s. In the last 25 years the 5 year return period was only reached once. 
+
+```{code-cell} ipython3
+#TODO: the plot should have labels for the return periods lines but cannot get it to work..
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
+).properties(width=700,height=400)
+rp3_line = alt.Chart().mark_rule(color=hdx_green,strokeDash=[12,6]).encode(
+    y="rp_3:Q",)
+rp5_line = alt.Chart().mark_rule(color=hdx_red,strokeDash=[12,6]).encode(
+    y="rp_5:Q")
+(plot+rp3_line+rp5_line).facet(column=alt.Column("season:N",sort=df_stats_reg_selm.season.unique(),title="season"),data=df_stats_reg_selm[["year","perc_bavg","season","rp_3","rp_5"]], 
+title=["Percentage of the area with bavg obs precip by year and season","the green and red line are the 3 and 5 year return period"])
 ```
 
 ### Correlation with other sources of historical drought
@@ -427,7 +448,7 @@ To understand if this correlates with drought that results in humanitarian needs
 
 It was shared in the framework, but without source, that between 1969 and 2014 the worst drought impacts were observed in 1980, 1990, 2011, and 2014.  
 
-CHIRPS starts from 1981. From the dataframe we can see that the years 1990, 2011, and 2014 had the 3rd, 15th, and 18th worst observed precipitation deficits during our months of interest. Therefore there is not a very clear overlap with the indicated drought impacts and lack of precipitation. 
+CHIRPS starts from 1981. From the dataframe we can see that the years 1990, 2011, and 2014 had the 3rd, 15th, and 18th worst observed precipitation deficits during our months of interest. Therefore there is not a very clear overlap with the indicated drought impacts and lack of precipitation.
 
 ```{code-cell} ipython3
 df_rank=df_stats_reg_rainy.sort_values("perc_bavg",ascending=False).drop_duplicates("year").reset_index()
@@ -493,4 +514,41 @@ ax.spines['left'].set_visible(False)
 ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Funds allocated by CERF for drought in {iso3} from 2006 till 2019");
+```
+
+```{code-cell} ipython3
+2006,2007,2008, 2011, 2014, 2017
+```
+
+```{code-cell} ipython3
+1980, 1990, 2011, and 2014
+```
+
+```{code-cell} ipython3
+drought_years=[1980,1990,2006,2007,2008,2011,2014,2017]
+```
+
+```{code-cell} ipython3
+df_stats_drought=df_stats_reg_selm.copy()
+#drought years indicated by drought_years
+df_stats_drought["drought"]=np.where(df_stats_drought.year.isin(drought_years),True,False)
+# df_stats_drought["rp3"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[3,"rp_round"],True,False)
+# df_stats_drought["rp5"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[5,"rp_round"],True,False)
+```
+
+```{code-cell} ipython3
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
+    color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
+).properties(width=600,height=400)
+(plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
+title=["Percentage of the area with bavg obs precip by year and season"]).configure_legend(
+titleFontSize=18,
+labelFontSize=15
+) 
+```
+
+```{code-cell} ipython3
+
 ```

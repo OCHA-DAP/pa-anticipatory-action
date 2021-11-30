@@ -86,14 +86,11 @@ adm2_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 
 ```python
 iri_ds = get_iri_data(config, download=False)
+da_iri = iri_ds.prob
 ```
 
 these are the variables of the forecast data, where C indicates the tercile (below-average, normal, or above-average).  
 F indicates the publication month, and L the leadtime
-
-```python
-iri_ds
-```
 
 ```python
 gdf_adm1=gpd.read_file(adm1_bound_path)
@@ -133,6 +130,7 @@ def plt_raster_iri(da_iri_dom_clip,
                    lt,
                    plt_levels,
                    plt_colors,
+                   show_cbar=True,
                   ):
     for_seas=month_season_mapping[(pub_mon+lt+1)%12+1]
     g=da_iri_dom_clip.where(da_iri_dom_clip.F.dt.month.isin([pub_mon]), drop=True).sel(L=lt).plot(
@@ -147,6 +145,7 @@ def plt_raster_iri(da_iri_dom_clip,
         "pad": 0.1,
         'ticks': plt_levels,
     },
+    add_colorbar=show_cbar,
     figsize=(25,7)
     )
     for ax in g.axes.flat:
@@ -166,6 +165,39 @@ plt_colors=['#783200','#ab461e','#d18132','#e8b832','#fafa02','#ffffff','#d1f8cc
 
 ```python
 plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=3,plt_levels=plt_levels,plt_colors=plt_colors)
+```
+
+```python
+iri_clip_diff=iri_clip.sel(C=0)-iri_clip.sel(C=2)
+```
+
+```python
+plt_colors_rev=['#783200','#ab461e','#d18132','#e8b832','#fafa02','#fff7bc','#ffffff','#f7fcf0','#d1f8cc','#acf8a0','#73bb6e','#3a82b3','#0e3bf4']
+plt_colors_rev.reverse()
+```
+
+```python
+iri_trig=iri_clip.sel(C=0).where((iri_clip.sel(C=0).prob>=40)&(iri_clip.sel(C=0)>=iri_clip.sel(C=2)+5))
+```
+
+```python
+plt_raster_iri(iri_trig.prob,pub_mon=3,lt=3,plt_levels=[1,0],plt_colors=[hdx_blue],show_cbar=False)
+```
+
+```python
+plt_raster_iri(iri_clip_diff.prob,pub_mon=3,lt=3,plt_levels=[-40,-20,-15,-10,-7,-5,-2,2,5,10,20,40],plt_colors=plt_colors_rev)
+```
+
+```python
+plt_raster_iri(iri_clip_diff.prob,pub_mon=3,lt=3,plt_levels=[-40,-20,-15,-10,-7,-5,-2,2,5,10,20,40],plt_colors=plt_colors_rev)
+```
+
+```python
+plt_raster_iri(iri_clip.sel(C=0).prob,pub_mon=3,lt=3,plt_levels=[0,30,35,40,45,50,60,70,100],plt_colors=['#ffffff','#DDC0A6','#DB9D94','#fafa02','#e8b832','#d18132','#ab461e','#783200',])
+```
+
+```python
+plt_raster_iri(iri_clip.sel(C=2).prob,pub_mon=3,lt=3,plt_levels=[0,30,35,40,45,50,60,70,100],plt_colors=['#ffffff','#9e9ac8','#54278f','#d1f8cc','#acf8a0','#73bb6e','#3a82b3','#0e3bf4'])
 ```
 
 ```python
@@ -248,6 +280,8 @@ df_bound.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
+#we use this method instead of the rioxarray method as this allows multidimensional arrays
+#however in the future (and for monitoring) we probably want a standard function for this, which replaces this one
 def interpolate_ds(ds,transform,upscale_factor,lon_coord="longitude",lat_coord="latitude"):
     # Interpolated data
     new_lon = np.linspace(ds[lon_coord][0], ds[lon_coord][-1], ds.dims[lon_coord] * upscale_factor)
@@ -256,21 +290,18 @@ def interpolate_ds(ds,transform,upscale_factor,lon_coord="longitude",lat_coord="
     #choose nearest as interpolation method to assure no new values are introduced but instead old values are divided into smaller raster cells
     #TODO: also change this to lat_coord and lon_coord somehow
     dsi = ds.interp(latitude=new_lat, longitude=new_lon,method="nearest")
-#     transform_interp=transform*transform.scale(len(ds.longitude)/len(dsi.longitude),len(ds.latitude)/len(dsi.latitude))
     
-    return dsi#, transform_interp
+    return dsi
 ```
 
 ```python
 iri_clip_interp=interpolate_ds(iri_clip,iri_clip.rio.transform(),20)
+#recompute the crs else things go wrong
+iri_clip_interp.rio.transform(recalc=True)
 ```
 
 ```python
 iri_clip_interp
-```
-
-```python
-iri_clip_interp.rio.transform(recalc=True)
 ```
 
 ```python
@@ -302,7 +333,37 @@ iri_interp_reg=iri_clip_interp.rio.clip(gdf_reg["geometry"])
 ```python
 g=iri_interp_reg.sel(C=0,F="2020-01-16",L=1).squeeze().prob.plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 df_bound.boundary.plot(ax=g.axes,color="grey");
-g.axes.set_title(f"Included area with approx weighted average")
+g.axes.set_title(f"Approximate mask")
+gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+g.axes.axis("off");
+```
+
+```python
+
+```
+
+```python
+g=iri_interp_reg_trig.sel(F="2017-03",L=3).squeeze().prob.plot.imshow(cmap=matplotlib.colors.ListedColormap(["#f2645a"]),figsize=(6,10),add_colorbar=False)
+df_bound.boundary.plot(linewidth=1, ax=g.axes, color="grey")
+df_bound[~df_bound.ADM1_PCODE.isin(gdf_reg.ADM1_PCODE)].plot(linewidth=1, ax=g.axes, color="#cccccc")
+gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+g.axes.axis("off");
+```
+
+```python
+iri_reg_centre=iri_clip.rio.clip(gdf_reg["geometry"])
+g=iri_reg_centre.sel(C=0,F="2020-01-16",L=1).squeeze().prob.plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
+df_bound.boundary.plot(ax=g.axes,color="grey");
+g.axes.set_title(f"All cells centering the region")
+gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+g.axes.axis("off");
+```
+
+```python
+iri_allt_centre=iri_clip.rio.clip(gdf_reg["geometry"],all_touched=True)
+g=iri_allt_centre.sel(C=0,F="2020-01-16",L=1).squeeze().prob.plot.imshow(cmap=matplotlib.colors.ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
+df_bound.boundary.plot(ax=g.axes,color="grey");
+g.axes.set_title(f"All cells touching the region")
 gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
@@ -399,7 +460,33 @@ iri_interp_reg.sel(C=0).hvplot.violin('prob', by='L', color='L', cmap='Category2
 ```
 
 ```python
+iri_interp_reg_diff.where(iri_interp_reg.sel(C=0).prob>=40).count()
+```
+
+```python
+iri_interp_reg_bavg_th=iri_interp_reg.where(iri_interp_reg.sel(C=0).prob>=40)
+```
+
+```python
+iri_interp_reg_bavg_th_diff=iri_interp_reg_bavg_th.sel(C=0)-iri_interp_reg_bavg_th.sel(C=2)
+iri_interp_reg_bavg_th_diff.hvplot.violin('prob', by='L', color='L', cmap='Category20').opts(ylabel="%bavg - %abv avg")
+```
+
+```python
+iri_interp_reg_diff=iri_interp_reg.sel(C=0)-iri_interp_reg.sel(C=2)
+iri_interp_reg_diff.hvplot.violin('prob', by='L', color='L', cmap='Category20').opts(ylabel="Probability below average")
+```
+
+```python
+iri_interp_reg_diff.sel(F="2020-03",L=1).prob.plot()
+```
+
+```python
 iri_interp_reg.sel(C=0).hvplot.kde('prob', by='L', alpha=0.5)
+```
+
+```python
+iri_interp_reg_diff.hvplot.kde('prob', by='L', alpha=0.5)
 ```
 
 NOTE: the plots below only have 5 data points so in my opinion, looking back, really back plots that shouldn't be used
@@ -551,6 +638,14 @@ stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"]>=10]
 ```python
 #percentage of forecasts that met requirement
 len(stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"]>=10])/len(stats_region_bavg_ltjul.F.unique())*100
+```
+
+```python
+iri_interp_reg_trig
+```
+
+```python
+iri_interp_reg_trig=iri_interp_reg.sel(C=0).where((iri_interp_reg.sel(C=0).prob>=40)&(iri_interp_reg.sel(C=0)>=iri_interp_reg.sel(C=2)+5))
 ```
 
 ### Examine ONLY dominant region
