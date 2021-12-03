@@ -17,7 +17,7 @@ These include two separate zones for West Africa:
     to Senegal. This is specifically for rangelands:
     https://earlywarning.usgs.gov/fews/product/57
 
-Both are published using EPSG:7764. There is overlap between the
+Both are published using ESRI:102022. There is overlap between the
 two datasets where they don't agree, even though both are
 measuring the WRSI with respect to millet, due to their
 calculations for rangeland and cropland. Since most
@@ -25,6 +25,11 @@ countries in the Sahel overlap with both datasets, both
 should be considered and we should get clarification from
 experts on the differences between the two, how they relate,
 and how best to use them.
+
+I have also just found the CHIRPS WRSI data on the USGS website.
+These are available at:
+
+https://edcftp.cr.usgs.gov/project/fews/africa/west/dekadal/wrsi-chirps-etos
 """
 import datetime
 import logging
@@ -44,19 +49,28 @@ from rasterio.crs import CRS
 
 logger = logging.getLogger(__name__)
 
-_base_url = "https://edcftp.cr.usgs.gov/project/fews/dekadal/africa_west/"
+_base_url = (
+    "https://edcftp.cr.usgs.gov/project/fews/"
+    "africa/west/dekadal/wrsi-chirps-etos/{region}/"
+)
 
-_url_zip_filename = "w{year:02}{dekad}{region}.zip"
+_url_zip_filename = "w{year:04}{dekad}{region}.zip"
 
-_base_file_name = "w{year:02}{dekad}{type}.tif"
+_base_file_name = "w{year:04}{dekad}{type}.tif"
 
 
-def _get_url_path(year, dekad, region, historical=False):
+def _get_url_path(year, dekad, region):
+    if region == "cropland":
+        url_region, file_region = "west", "wa"
+    else:
+        url_region, file_region = "west1", "w1"
+
     url_zip_filename = _url_zip_filename.format(
-        year=year % 100, dekad=dekad, region=region
+        year=year, dekad=dekad, region=file_region
     )
-    historical = "historical/" if historical else ""
-    return _base_url + historical + url_zip_filename
+
+    base_url = _base_url.format(region=url_region)
+    return base_url + url_zip_filename
 
 
 def _download_wrsi(year: int, dekad: int, region: str, raw_dir: Path):
@@ -64,23 +78,15 @@ def _download_wrsi(year: int, dekad: int, region: str, raw_dir: Path):
         url = _get_url_path(year=year, dekad=dekad, region=region)
         resp = urlopen(url)
     except HTTPError:
-        try:
-            url = _get_url_path(
-                year=year, dekad=dekad, region=region, historical=True
-            )
-            resp = urlopen(url)
-        except HTTPError:
-            logger.error(
-                f"No data available for region {region} for "
-                f"dekad {dekad} of {year}, skipping."
-            )
-            return
+        logger.error(
+            f"No data available for region {region} for "
+            f"dekad {dekad} of {year}, skipping."
+        )
+        return
 
     zf = ZipFile(BytesIO(resp.read()))
     for type in ["do", "eo"]:
-        file_name = _base_file_name.format(
-            year=year % 100, dekad=dekad, type=type
-        )
+        file_name = _base_file_name.format(year=year, dekad=dekad, type=type)
         save_path = os.path.join(raw_dir, file_name)
         if os.path.exists(save_path):
             os.remove(save_path)
@@ -114,7 +120,7 @@ def _dekad_to_date(year: int, dekad: int):
 
 
 def _fp_date(fp):
-    return _dekad_to_date(int("20" + fp[1:3]), int(fp[3:5]))
+    return _dekad_to_date(int(fp[1:5]), int(fp[5:7]))
 
 
 RegionArgument = Literal["cropland", "rangeland"]
@@ -129,13 +135,9 @@ def download_wrsi(
 ):
     if region not in _valid_region:
         raise ValueError("`region` must be one of 'cropland' or 'rangeland'.")
-    else:
-        url_region = "wa" if region == "cropland" else "w1"
 
     if start_date is None:
         start_year, start_dekad = 2001, 13
-        if region == "rangeland":
-            start_year += 1
     elif isinstance(start_date, list):
         start_year, start_dekad = start_date[0], start_date[1]
     else:
@@ -195,7 +197,7 @@ def download_wrsi(
             i_year > end_year or (i_year == end_year and i_dekad > i_dekad)
         ):
             _download_wrsi(
-                year=i_year, dekad=i_dekad, region=url_region, raw_dir=raw_dir
+                year=i_year, dekad=i_dekad, region=region, raw_dir=raw_dir
             )
             i_dekad += 1
             if i_dekad > 33:
@@ -259,18 +261,20 @@ def process_wrsi(region, type):
     arrays_merged = xr.concat(arrays, "time").sortby("time")
     arrays_merged = arrays_merged.drop_vars("band")
 
+    # change missing values from 0 to nan
+    arrays_merged = arrays_merged.where(arrays_merged.values > 0)
+    arrays_merged.attrs["_FillValue"] = np.NaN
+
     # saving file
     if os.path.exists(processed_path):
         os.remove(processed_path)
     arrays_merged.to_netcdf(processed_path)
 
-    return
+    return arrays_merged
 
 
 def load_wrsi(region, type):
     processed_path = _get_processed_path(region, type)
-    a = rioxarray.open_rasterio(processed_path)
-    # change missing values from 0 to nan
-    a = a.where(a.values > 0)
-    a.attrs["_FillValue"] = np.NaN
+    a = rioxarray.open_rasterio(processed_path, masked=True)
+    a.rio.set_crs(_wrsi_crs)
     return a
