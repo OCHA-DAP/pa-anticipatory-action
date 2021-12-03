@@ -257,6 +257,20 @@ def process_wrsi(region, type):
         if filename.endswith(fp_type + ".tif")
     ]
     arrays_merged = xr.concat(arrays, "time").sortby("time")
+    arrays_merged = arrays_merged.drop_vars("band")
+
+    # saving file
+    if os.path.exists(processed_path):
+        os.remove(processed_path)
     arrays_merged.to_netcdf(processed_path)
 
     return
+
+
+def load_wrsi(region, type):
+    processed_path = _get_processed_path(region, type)
+    a = rioxarray.open_rasterio(processed_path)
+    # change missing values from 0 to nan
+    a = a.where(a.values > 0)
+    a.attrs["_FillValue"] = np.NaN
+    return a
