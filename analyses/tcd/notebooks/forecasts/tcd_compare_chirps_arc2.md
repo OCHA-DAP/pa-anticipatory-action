@@ -84,7 +84,11 @@ max_year=2021
 ```
 
 ```python
-gdf_reg=gdf_adm1[gdf_adm1.admin1Name.isin(adm_sel)]
+adm1_col="admin1Name"
+```
+
+```python
+gdf_reg=gdf_adm1[gdf_adm1[adm1_col].isin(adm_sel)]
 ```
 
 ### Load CHIRPS data
@@ -117,7 +121,7 @@ We first download the ARC2 data. ARC2 is daily data. We also group it to monthly
 # gdf_adm1.total_bounds
 #define class
 arc2 = DrySpells(
-    country_iso3 = "tcd",
+    country_iso3 = iso3,
     monitoring_start = "1983-01-01",#"2000-01-01",
     monitoring_end = "2021-11-25",
     range_x = ("13E", "25E"),
