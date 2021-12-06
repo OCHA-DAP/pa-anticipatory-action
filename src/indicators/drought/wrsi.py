@@ -43,7 +43,7 @@ from urllib.request import urlopen
 from zipfile import ZipFile
 
 import numpy as np
-import rioxarray
+import rioxarray  # noqa: F401
 import xarray as xr
 from rasterio.crs import CRS
 
@@ -85,7 +85,7 @@ def _download_wrsi(year: int, dekad: int, region: str, raw_dir: Path):
         return
 
     zf = ZipFile(BytesIO(resp.read()))
-    for type in ["do", "eo"]:
+    for type in ["do", "eo", "er"]:
         file_name = _base_file_name.format(year=year, dekad=dekad, type=type)
         save_path = os.path.join(raw_dir, file_name)
         if os.path.exists(save_path):
@@ -222,10 +222,12 @@ def _get_processed_path(region, type):
     )
 
 
-# defined here: https://epsg.io/102022
+# defined here: https://gis.stackexchange.com/questions/
+# 177447/defining-the-correct-aea-proj4string-for-
+# fewsnet-rainfall-data-southern-africa
 _wrsi_crs = CRS.from_proj4(
-    "+proj=aea +lat_1=20 +lat_2=-23 +lat_0=0 "
-    "+lon_0=25 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs "
+    "+proj=aea +lat_1=-19.0 +lat_2=21.0 +lat_0=1.0 "
+    "+lon_0=20 +x_0=0 +y_0=0 +ellps=clrk66 +units=m +no_defs"
 )
 
 
@@ -235,18 +237,21 @@ def process_wrsi(region, type):
 
     raw_dir = _get_raw_dir(region)
 
-    types = {"current": "do", "extended": "eo"}
+    types = {"current": "do", "extended": "eo", "anomaly": "er"}
 
     if type in types.keys():
         fp_type = types[type]
     else:
-        raise ValueError("`type` must be one of 'current' or 'extended'.")
+        raise ValueError(
+            "`type` must be one of 'current', 'extended', or 'anomaly'."
+        )
 
     processed_path = _get_processed_path(region, type)
 
     def _load_raw(fp):
-        arr = rioxarray.open_rasterio(os.path.join(raw_dir, fp), crs=_wrsi_crs)
+        arr = xr.open_rasterio(os.path.join(raw_dir, fp))
         dt = [_fp_date(fp)]
+
         arr = arr.expand_dims(time=dt)
         # round x dimension due to issues with
         # concat and tiny numerical differences
@@ -258,23 +263,40 @@ def process_wrsi(region, type):
         for filename in os.listdir(raw_dir)
         if filename.endswith(fp_type + ".tif")
     ]
+
     arrays_merged = xr.concat(arrays, "time").sortby("time")
-    arrays_merged = arrays_merged.drop_vars("band")
 
     # change missing values from 0 to nan
     arrays_merged = arrays_merged.where(arrays_merged.values > 0)
     arrays_merged.attrs["_FillValue"] = np.NaN
 
+    # convert to dataset
+    ad = arrays_merged.to_dataset("band")
+    ad = ad.rename({1: "wrsi"})
+
     # saving file
     if os.path.exists(processed_path):
         os.remove(processed_path)
-    arrays_merged.to_netcdf(processed_path)
 
-    return arrays_merged
+    ad.to_netcdf(processed_path)
+
+    return ad
 
 
 def load_wrsi(region, type):
     processed_path = _get_processed_path(region, type)
-    a = rioxarray.open_rasterio(processed_path, masked=True)
-    a.rio.set_crs(_wrsi_crs)
+    a = xr.open_dataset(processed_path).to_array("wrsi")
+    a = a.squeeze(drop=True)
+    a.rio.write_crs(_wrsi_crs, inplace=True)
+    a = a.rio.reproject("EPSG:4326")
     return a
+
+
+def filter_wrsi(da, dekad):
+    dt = _dekad_to_date(2001, dekad)
+    filter_month = dt.month
+    filter_day = dt.day
+    return da.where(
+        (da.time.dt.day == filter_day) & (da.time.dt.month == filter_month),
+        drop=True,
+    )
