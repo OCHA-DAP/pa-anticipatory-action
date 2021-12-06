@@ -12,7 +12,7 @@ Provide a basic overview of the context of anticipatory action in this country. 
 
 ## Overview of analysis
 
-Basic analysis of historical plague data provided by the [Insitut Pasteur](http://www.pasteur.mg/).   
+Basic analysis of historical plague data provided by the [Institut Pasteur](http://www.pasteur.mg/).   
 
 ## Data description
 The plague data used is not publicly available. 

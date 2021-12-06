@@ -38,6 +38,7 @@ ADM0_BOUND_PATH = os.path.join(
 )
 
 USE_UNROUNDED_AREA_COORDS = False
+SOURCE_CDS = False
 
 
 def main(download=False, compute_stats=True, use_cache=True):
@@ -63,6 +64,7 @@ def main(download=False, compute_stats=True, use_cache=True):
             # resolution=0.05,
             all_touched=False,
             use_cache=use_cache,
+            source_cds=SOURCE_CDS,
             use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
             # date_list=[d.strftime("%Y-%m-%d") for d in
             #            pd.date_range(start='2000-01-01',
