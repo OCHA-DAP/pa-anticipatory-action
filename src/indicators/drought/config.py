@@ -142,7 +142,7 @@ class Config:
     )
     CHIRPS_MONTHLY_COUNTRY_FILENAME = "{country_iso3}_chirps_monthly.nc"
     CHIRPS_SEASONAL_LOWERTERCILE_COUNTRY_FILENAME = (
-        "{country_iso3}_chirps_seasonal_lowertercile.nc"
+        "{country_iso3}_chirps_seasonal_lowertercile_test.nc"
     )
     CHIRPS_LON = "longitude"  # "x" #
     CHIRPS_LAT = "latitude"  # "y" #

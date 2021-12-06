@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import geopandas as gpd
-import numpy as np
 import rasterio
 import xarray as xr
 
@@ -218,6 +217,7 @@ def compute_seasonal_lowertercile_raster(
         parents=True, exist_ok=True
     )
     logger.debug("Computing lower tercile values...")
+    print(chirps_monthly_country_filepath)
     ds = xr.load_dataset(chirps_monthly_country_filepath)
     # compute the rolling sum over three month period. Rolling sum works
     # backwards, i.e. value for month 3 is sum of month 1 till 3. So
@@ -239,22 +239,18 @@ def compute_seasonal_lowertercile_raster(
     # a season
     ds_season_climate_quantile = ds_season_climate.groupby(
         ds_season_climate.time.dt.month
-    ).quantile(0.33)
-    # determine the raster cells that have below-average precipitation,
-    # other cells are set to -666
-    list_ds_seass = []
-    for s in np.unique(ds_season.time.dt.month):
-        ds_seas_sel = ds_season.sel(time=ds_season.time.dt.month == s)
-        # keep original values of cells that are either nan or have
-        # below average precipitation, all others are set to -666
-        ds_seas_below = ds_seas_sel.where(
-            (ds_seas_sel.isnull())
-            | (ds_seas_sel <= ds_season_climate_quantile.sel(month=s)),
-            -666,
-        )
-        list_ds_seass.append(ds_seas_below)
-    ds_season_below = xr.concat(list_ds_seass, dim="time")
-    ds_season_below.to_netcdf(chirps_seasonal_lowertercile_country_filepath)
+    ).quantile(1 / 3, skipna=True)
+
+    ds_lt = ds_season.where(
+        (ds_season.isnull()) | ds_season
+        < ds_season_climate_quantile.sel(month=ds_season.time.dt.month)
+    )
+    # ds_lt = ds_season.apply(lambda x:
+    #                                          x.where(
+    #                                              (x.isnull())|
+    # x < ds_season_climate_quantile.sel(month=x.time.dt.month)))
+    ds_season = ds_season.assign({"lower": ds_lt["precip"]})
+    ds_season.to_netcdf(chirps_seasonal_lowertercile_country_filepath)
     return chirps_seasonal_lowertercile_country_filepath
 
 
