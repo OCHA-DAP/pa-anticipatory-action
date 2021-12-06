@@ -1,0 +1,256 @@
+### ECMWF realtime data
+Exploratory notebook to understand the structure of ecmwfs realtime data. 
+We thereafter also compute the trigger metric for different methodologies. 
+
+ECMWFs realtime data is shared with us through an Amazon bucket. For testing I have transferred the relevant files to our private GDrive. 
+
+The filenames are cryptic and are explained here https://confluence.ecmwf.int/pages/viewpage.action?pageId=111155348
+For the Malawi trigger we are interested in the TL4 files
+
+```python
+%load_ext autoreload
+%autoreload 2
+```
+
+```python
+from importlib import reload
+from pathlib import Path
+import os
+import sys
+
+import pandas as pd
+import numpy as np
+
+import xarray as xr
+import fnmatch
+import geopandas as gpd
+
+from rasterio.enums import Resampling
+from matplotlib.colors import ListedColormap
+
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
+sys.path.append(path_mod)
+from src.indicators.drought.config import Config
+from src.indicators.drought.ecmwf_seasonal import processing
+from src.utils_general.raster_manipulation import compute_raster_statistics
+reload(processing);
+```
+
+#### Set config values
+
+```python
+country_iso3="mwi"
+config=Config()
+parameters = config.parameters(country_iso3)
+
+country_data_raw_dir = os.path.join(config.DATA_DIR,config.PUBLIC_DIR, config.RAW_DIR,country_iso3)
+adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
+ecmwf_realtime_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / "glb" / "ecmwf"
+```
+
+```python
+gdf_adm1=gpd.read_file(adm1_bound_path)
+```
+
+We select all files that contain the seasonal forecast with monthly mean, i.e. that Have T4L in their filename
+
+```python
+filepath_list = [
+        filename
+        for filename in ecmwf_realtime_dir.iterdir()
+        #T4L indicates the seasonal forecast with the monthly mean
+        #see here for a bit more explanation https://confluence.ecmwf.int/pages/viewpage.action?pageId=111155348
+        #without the 1 you also get .idx files which we don't want but not sure if this is the best method to select
+        if fnmatch.fnmatch(filename, '*T4L*1') 
+    ]
+```
+
+```python
+filepath_list
+```
+
+We first load one file without any concatenation and processing to understand the fileformat.  
+
+The files are very cryptic but they contain a dataType which can be "em" or "fcmean". As far as I understand "em" is the mean across all ensembles while "fcmean" is the value per ensemble 
+
+Then there also is the "numberOfPoints". This has to do with the geographical area, since we receive the forecast for several geographical areas. 
+Just by testing and looking at the latitude/longitude range I figured 384 is the one matching Malawi but no idea if there is a better way to set this
+
+```python
+xr.load_dataset(filepath_list[0],engine="cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'})
+```
+
+Next we load all files at once
+
+```python
+def _preprocess_monthly_mean_dataset(ds_date: xr.Dataset):
+        
+         return (
+            ds_date.assign_coords(
+                {
+                    #get the difference between the valid time month and the publication month 
+                    #valid time is one month ahead of the start of the actual valid time
+                    #so a leadtime of 1 means that the forecast is forecasting the same month as the publication month
+                    "step": (ds_date.valid_time.dt.month-ds_date.time.dt.month)+12*(ds_date.valid_time.dt.year-ds_date.time.dt.year)
+                }
+            )
+            .expand_dims("time")
+            #valid time is one month ahead of the start of the actual valid time --> only confusing so drop
+            #surface is empty
+             .drop_vars(["valid_time","surface"])
+        )
+```
+
+```python
+#i would think setting concat_dim=["time","step"] makes more sense 
+#but get an error "concat_dims has length 2 but the datasets passed are nested in a 1-dimensional structure"
+#it seems to work thought when using concat_dim="time" but would have to test once we have data from several dates.. 
+ds=xr.open_mfdataset(filepath_list, engine = "cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'},concat_dim=["step"],combine="nested",preprocess=lambda d: _preprocess_monthly_mean_dataset(d))
+```
+
+```python
+ds=processing.convert_tprate_precipitation(ds)
+ds=ds.rio.write_crs("EPSG:4326",inplace=True)
+da=ds.precip
+```
+
+```python
+da
+```
+
+Now that we have the raster data, we can compute the statistics. 
+We also take the 50% probability value as this is what is being used in the trigger. 
+
+For the trigger we are interested in the values of the forecast published in December which is predicting February, and specifically for the Southern region. So we select on this data. 
+
+```python
+def compute_raster_stats_test(da,prob=0.5,resolution=None,all_touched=False,pcode_col="ADM1_EN",add_col=["ADM1_PCODE"]):
+    for t in da.time.values:
+        df_lt_list=[]
+        for lt in da.step.values:
+            ds_sel_lt = da.sel(step=lt,time=t)
+            # reproject only working on 2D&3D arrays
+            # so only do after selecting the date and leadtime..
+            if resolution is not None:
+                ds_sel_lt = ds_sel_lt.rio.reproject(
+                    ds_sel_lt.rio.crs,
+                    resolution=resolution,
+                    resampling=Resampling.nearest,
+                    nodata=np.nan,
+                )
+                # we use longitude and latitude in other places
+                # so stick to those namings
+                ds_sel_lt = ds_sel_lt.rename(
+                    {"x": "longitude", "y": "latitude"}
+                )
+            df_lt = compute_raster_statistics(
+                gdf_adm1,
+                pcode_col,
+                ds_sel_lt,
+                lon_coord="longitude",
+                lat_coord="latitude",
+                all_touched=all_touched,
+            )
+            df_lt_list.append(df_lt)
+        df = pd.concat(df_lt_list)
+        df = df.merge(
+            gdf_adm1[[pcode_col] + add_col], on=pcode_col, how="left"
+        )
+        df["date"] = t
+        df_quant = df.groupby(
+        ["date", pcode_col, "step"]+add_col, as_index=False
+    ).quantile(prob)
+    return df_quant
+```
+
+```python
+df_center=compute_raster_stats_test(da)
+df_center[(df_center.step==3)&(df_center.ADM1_EN=="Southern")]
+```
+
+```python
+df_allt=compute_raster_stats_test(da,all_touched=True)
+df_allt[(df_allt.step==3)&(df_allt.ADM1_EN=="Southern")]
+```
+
+```python
+df_mask=compute_raster_stats_test(da,resolution=0.05)
+df_mask[(df_mask.step==3)&(df_mask.ADM1_EN=="Southern")]
+```
+
+From the statistics below we can see that the "mean_ADM1_EN" column is above the cap of 210 for each of the three methods. 
+This means that for none of the methods the trigger is reached. 
+
+However, they are all very close to 210 so we want to make sure we dont make mistakes :) 
+
+
+### Plotting
+Lastly we plot the data to understand the patterns better. We can see that approximately half of the southern region sees cells below the threshold. 
+
+```python
+da_feb=da.sel(step=3,time="2021-12-01").squeeze().quantile(0.5, dim="number")
+```
+
+```python
+#select part of latitude values for nicer plot
+da_feb_plt=da_feb.where(da_feb.latitude<=-9,drop=True)
+```
+
+```python
+#set bins
+bins=[0, 50, 100, 150, 210.1, 250, 300, 350]
+cmap=ListedColormap(
+    [
+        "#c25048",
+        "#f2645a",
+        "#f7a29c",
+        "#fce0de",
+        "#cce5f9",
+        "#66b0ec",
+        "#007ce0",
+        "#0063b3",
+    ])
+```
+
+```python
+g=da_feb_plt.plot(levels=bins,cmap=cmap,figsize=(10,15))
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+```
+
+```python
+
+```
+
+```python
+
+```
+
+```python
+
+```
+
+### Testing
+Old stuff
+
+```python
+ecmwf_filename = "T4L1201000003______1"
+ecmwf_path = ecmwf_realtime_dir / ecmwf_filename
+ds=xr.load_dataset(ecmwf_path, engine = "cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'})
+```
+
+```python
+xr.load_dataset("/Volumes/GoogleDrive/Shared drives/Predictive Analytics/CERF Anticipatory Action/General - All AA projects/Data/private/processed/mwi/ecmwf/seasonal-monthly-individual-members/prate/mwi_seasonal-monthly-individual-members_prate.nc")
+```
+
+```python
+f=-5
+p=1
+```
+
+```python
+'{:.1f}'.format(abs(f))
+```
+
+```python
+"S{}".format(round(abs(f), p))
+```
