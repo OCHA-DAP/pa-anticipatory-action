@@ -189,7 +189,17 @@ def get_filepath_seasonal_lowertercile_raster(
         )
     )
 
-    return chirps_seasonal_lowertercile_country_filepath
+    chirps_seasonal_tercile_bounds_country_filepath = (
+        chirps_seasonal_country_dir
+        / config.CHIRPS_SEASONAL_TERCILE_BOUNDS_FILENAME.format(
+            country_iso3=country_iso3
+        )
+    )
+
+    return (
+        chirps_seasonal_lowertercile_country_filepath,
+        chirps_seasonal_tercile_bounds_country_filepath,
+    )
 
 
 def compute_seasonal_lowertercile_raster(
@@ -203,9 +213,10 @@ def compute_seasonal_lowertercile_raster(
     chirps_monthly_country_filepath = get_filepath_chirps_monthly(
         country_iso3, config
     )
-    chirps_seasonal_lowertercile_country_filepath = (
-        get_filepath_seasonal_lowertercile_raster(country_iso3, config)
-    )
+    (
+        chirps_seasonal_lowertercile_country_filepath,
+        chirps_seaonal_tercile_bounds_country_filepath,
+    ) = get_filepath_seasonal_lowertercile_raster(country_iso3, config)
 
     if use_cache and chirps_seasonal_lowertercile_country_filepath.exists():
         logger.debug(
@@ -240,6 +251,10 @@ def compute_seasonal_lowertercile_raster(
     ds_season_climate_quantile = ds_season_climate.groupby(
         ds_season_climate.time.dt.month
     ).quantile(0.33)
+    # save below tercile boundaries
+    ds_season_climate_quantile.to_netcdf(
+        chirps_seaonal_tercile_bounds_country_filepath
+    )
     # determine the raster cells that have below-average precipitation,
     # other cells are set to -666
     list_ds_seass = []

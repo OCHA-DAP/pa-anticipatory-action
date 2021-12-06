@@ -32,10 +32,13 @@ import seaborn as sns
 import math
 from dateutil.relativedelta import relativedelta
 import calendar
+import holoviews as hv
+import hvplot.xarray
 
 import altair as alt
 #to plot maps with altair
 import gpdvega
+
 
 from pathlib import Path
 import sys
@@ -64,6 +67,7 @@ chirps_country_processed_dir = os.path.join(data_processed_dir,iso3,"chirps")
 
 chirps_country_processed_path = os.path.join(chirps_country_processed_dir,"monthly",f"{iso3}_chirps_monthly.nc")
 chirps_seasonal_lower_tercile_processed_path = os.path.join(chirps_country_processed_dir,"seasonal",f"{iso3}_chirps_seasonal_lowertercile.nc")
+chirps_seasonal_tercile_bounds_processed_path = os.path.join(chirps_country_processed_dir,"seasonal",f"{iso3}_chirps_seasonal_tercile_bounds.nc")
 cerf_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"cerf")
 cerf_path=os.path.join(cerf_dir,'CERF Allocations.csv')
 
@@ -170,6 +174,68 @@ g.fig.suptitle(f"Median per month between {da_country.time.dt.year.values.min()}
 g.fig.subplots_adjust(top=0.9,bottom=0.4,hspace=0.3)
 ```
 
+### Observed seasonal rainfall
+
+
+The plots below show the distribution of seasonal rainfall across the region for the JJA and JAS season. The values are computed per raster cell. 
+We can see that the rainfall ranges from 0 to 800 mm with about one third of the observations being below 150mm. The distribution for JAS is slightly wider than for JJA meaning that the values are on average a bit higher.
+<!-- The red line indicates the tercile value averaged across all raster cells. This means it is slightly different for each raster cell, but it helps to get a general feeling -->
+
+```python
+seas_len=3
+da_season=da_country.rolling(time=seas_len,min_periods=seas_len).sum().dropna(dim="time",how="all")
+```
+
+```python
+da_season_reg=da_season.rio.set_crs("EPSG:4326").rio.clip(gdf_reg["geometry"])
+```
+
+```python
+colp_num=2
+num_plots=len(end_months_sel)
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(20,6))
+for i, m in enumerate(end_months_sel):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    da_season_reg_sel=da_season_reg.sel(time=da_season_reg.time.dt.month==m)
+    g=sns.histplot(da_season_reg_sel.values.flatten(),color="#CCCCCC",ax=ax)
+    #I think this lower tercile cap is too generalized an not very useful in this case
+#     perc=np.percentile(da_season_reg_sel.values.flatten()[~np.isnan(da_season_reg_sel.values.flatten())], 33)
+#     plt.axvline(perc,color="#C25048",label="lower tercile cap")
+    ax.legend()
+    ax.set(xlabel="Seasonal precipitation (mm)")
+    ax.set_title(f"Distribution of seasonal precipitation in {month_season_mapping[m]} from {da_season_reg_sel.time.dt.year.values.min()}-{da_season_reg_sel.time.dt.year.values.max()}")
+    ax.set_xlim(0,np.nanmax(da_season_reg.values))
+```
+
+We also show the distribution of rain across the whole country. We can see that this is significantly lower than in our region of interest
+
+```python
+colp_num=2
+num_plots=len(end_months_sel)
+if num_plots==1:
+    colp_num=1
+rows = math.ceil(num_plots / colp_num)
+position = range(1, num_plots + 1)
+fig=plt.figure(figsize=(20,6))
+for i, m in enumerate(end_months_sel):
+    ax = fig.add_subplot(rows,colp_num,i+1)
+    da_season_sel=da_season.sel(time=da_season.time.dt.month==m)
+    g=sns.histplot(da_season_sel.values.flatten(),color="#CCCCCC",ax=ax)
+#     perc=np.percentile(da_season_sel.values.flatten()[~np.isnan(da_season_sel.values.flatten())], 33)
+#     plt.axvline(perc,color="#C25048",label="lower tercile cap")
+    ax.legend()
+    ax.set(xlabel="Seasonal precipitation (mm)")
+    ax.set_title(f"Distribution of seasonal precipitation in {month_season_mapping[m]} from 2000-2020")
+    ax.set_xlim(0,np.nanmax(da_season.values))
+```
+
+### Observed below average tercile
+
+
 IRI's seasonal forecast is produced as a probability of the rainfall being in the lower tercile, also referred to as being below average. We therefore compute the occurrence of observed below average rainfall.  
 
 Below the areas with below average rainfall for the JJA and JAS season between 2004 and 2011 are shown. The date indicates the end of the rainy season, i.e. 2011-08 equals the JJA season in 2020.
@@ -206,58 +272,35 @@ g.fig.suptitle("Pixels with below average rainfall",size=24)
 g.fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 ```
 
-The plots below show the distribution of seasonal rainfall across the region. The red line indicates the tercile value averaged across all raster cells. This means it is slightly different for each raster cell, but it helps to get a general feeling
+Above we showed which pixels were in the lower tercile for different years. Next we inspect the lower tercile bounds. When we are working with terciles, the bounds are computed per raster cell. A tercile is thus a relative definition instead of an absolute. When the range of precipitation seen in a raster call is very narrow, the difference between the tercile bounds will also be very now. This might lead to the forecast being too sensitive for small variations. 
+
+Therefore we check if the lower tercile bounds look reasonable. 
 
 ```python
-seas_len=3
-da_season=da_country.rolling(time=seas_len,min_periods=seas_len).sum().dropna(dim="time",how="all")
+ds_season_bounds=rioxarray.open_rasterio(chirps_seasonal_tercile_bounds_processed_path)
+da_season_bounds_reg=ds_season_bounds.rio.write_crs("EPSG:4326").rio.clip(gdf_reg["geometry"]).precip
 ```
 
 ```python
-da_season_reg=da_season.rio.set_crs("EPSG:4326").rio.clip(gdf_reg["geometry"])
+g=da_season_bounds_reg.where(ds_season_bounds.month.isin(end_months_sel),drop=True).plot(col="month")
+for m,ax in zip(end_months_sel,g.axes.flatten()):
+    ax.set_title(f"lower tercile boundary for {month_season_mapping[m]}");
 ```
 
 ```python
-colp_num=2
-num_plots=len(end_months_sel)
-if num_plots==1:
-    colp_num=1
-rows = math.ceil(num_plots / colp_num)
-position = range(1, num_plots + 1)
-fig=plt.figure(figsize=(20,6))
-for i, m in enumerate(end_months_sel):
-    ax = fig.add_subplot(rows,colp_num,i+1)
-    da_season_reg_sel=da_season_reg.sel(time=da_season_reg.time.dt.month==m)
-    g=sns.histplot(da_season_reg_sel.values.flatten(),color="#CCCCCC",ax=ax)
-    perc=np.percentile(da_season_reg_sel.values.flatten()[~np.isnan(da_season_reg_sel.values.flatten())], 33)
-    plt.axvline(perc,color="#C25048",label="lower tercile cap")
-    ax.legend()
-    ax.set(xlabel="Seasonal precipitation (mm)")
-    ax.set_title(f"Distribution of seasonal precipitation in {month_season_mapping[m]} from {da_season_reg_sel.time.dt.year.values.min()}-{da_season_reg_sel.time.dt.year.values.max()}")
-    ax.set_xlim(0,np.nanmax(da_season_reg.values))
+plots_list = []
+for m in end_months_sel:
+    this_plot =  da_season_bounds_reg.sel(month=m).hvplot.kde().opts(ylabel="JAS precipitation",
+title=f"Lower tercile boundary per raster cell for {month_season_mapping[m]}")
+    plots_list.append(this_plot)
+hv.Layout(plots_list).cols(2)
 ```
 
-We also show the distribution of rain across the whole country. We can see that this is significantly lower than in our region of interest
+From the plots above we can see that the tercile boundaries differ quite widely across the region. Especially in the north-western part of our region of interest the boundaries are quite low. It might therefore be advised to exclude this region. However, I don't know if that is a reasonable thing to do and should maybe be discussed with meteorologists. 
 
-```python
-colp_num=2
-num_plots=len(end_months_sel)
-if num_plots==1:
-    colp_num=1
-rows = math.ceil(num_plots / colp_num)
-position = range(1, num_plots + 1)
-fig=plt.figure(figsize=(20,6))
-for i, m in enumerate(end_months_sel):
-    ax = fig.add_subplot(rows,colp_num,i+1)
-    da_season_sel=da_season.sel(time=da_season.time.dt.month==m)
-    g=sns.histplot(da_season_sel.values.flatten(),color="#CCCCCC",ax=ax)
-    perc=np.percentile(da_season_sel.values.flatten()[~np.isnan(da_season_sel.values.flatten())], 33)
-    plt.axvline(perc,color="#C25048",label="lower tercile cap")
-    ax.legend()
-    ax.set(xlabel="Seasonal precipitation (mm)")
-    ax.set_title(f"Distribution of seasonal precipitation in {month_season_mapping[m]} from 2000-2020")
-    ax.set_xlim(0,np.nanmax(da_season.values))
-```
+
+### Percentage of area with below average rainfall
+
 
 Now that we have analyzed the data on pixel level, we aggregate to the area of interest. This area is the total area of the admins of interest.
 We compute the percentage of the area having experienced below average rainfall for each season.

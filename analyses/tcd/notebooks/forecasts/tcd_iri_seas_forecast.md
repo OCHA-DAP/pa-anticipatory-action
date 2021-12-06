@@ -271,6 +271,11 @@ da_iri_allt_bavg=da_iri_allt.sel(C=0)
 ```
 
 ```python
+da_iri.sel(C=0).hvplot.kde('prob',alpha=0.5).opts(ylabel="Probability below average",
+title="Forecasted probabilities of below average \n at raster level in the whole world across all seasons and leadtimes, 2017-2021")
+```
+
+```python
 da_iri_allt_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average",xlabel="leadtime",
 title="Observed probabilities of bavg at raster level in the region of interest")
 ```
