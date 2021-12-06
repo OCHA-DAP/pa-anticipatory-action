@@ -248,9 +248,10 @@ g.axes.axis("off");
 While before we looked at the dominant tercile, we now load the data containing the probability for each individual tercile. We focus on the below-average tercile.
 
 The proposed threshold by FAO was 60%. As can be seen in the image below, this is very high. 
-The first plot shows all values of the region of interest across all seasons. We can see that the median is around 35 and it doesn't differ much across leadtimes. Values higher than 50 are very rare. 
+The first plot shows all values across all raster cells in the world and all seasons. We can see that the median is around 35. Values above 60 are very very rare and above 50 are already exreme. 
+The second plot shows the values of only the raster cells within the region but across all seasons. We can see that the median is again around 35 and that the distribution doesn't differ much across leadtimes. Values higher than 50 are very rare. We should be aware though that we only have 5 years of data.  
 
-We can see the same pattern when we only select the seasons and leadtimes that might be part of the trigger. 
+Moreover, the pattern might be very different depending on the season. The third plot show the distribution when we only select the seasons and leadtimes that might be part of the trigger. We can again see a similair pattern, though the median is slighlty lower. However, we didn't observe below average precipitation the past 5 years so it is hard to say what the distribution might look like during a drought. 
 <!-- Based on this we experiment with a threshold of 4 but it might also be set to 40 or 50, this is open for discussion. However, a threshold of 60% would be advised again as this is very unlikely from a meteorological perspective to be met when requiring 20% of the area to meet this condition. -->
 
 
