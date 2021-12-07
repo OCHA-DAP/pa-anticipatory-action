@@ -76,8 +76,11 @@ The files are very cryptic but they contain a dataType which can be "em" or "fcm
 Then there also is the "numberOfPoints". This has to do with the geographical area, since we receive the forecast for several geographical areas. 
 Just by testing and looking at the latitude/longitude range I figured 384 is the one matching Malawi but no idea if there is a better way to set this
 
+
+Lastly, cfgrib automatically loads a coordinate names `valid_time` which is then loaded as the date after the end date of the forecast validity, which is very confusing. Due to [this Github issue](https://github.com/ecmwf/cfgrib/issues/97) we discovered you can set backend kwargs on which time dimensions to load. Now `forecastMonth` indicates the leadtime (ranging from 1 to 7) and `verifying_time` indicates the start date of the month the forecast is valid for. 
+
 ```python
-xr.load_dataset(filepath_list[0],engine="cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'})
+xr.load_dataset(filepath_list[0],engine="cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'},backend_kwargs=dict(time_dims=('time', 'forecastMonth','verifying_time')))
 ```
 
 Next we load all files at once
@@ -86,18 +89,10 @@ Next we load all files at once
 def _preprocess_monthly_mean_dataset(ds_date: xr.Dataset):
         
          return (
-            ds_date.assign_coords(
-                {
-                    #get the difference between the valid time month and the publication month 
-                    #valid time is one month ahead of the start of the actual valid time
-                    #so a leadtime of 1 means that the forecast is forecasting the same month as the publication month
-                    "step": (ds_date.valid_time.dt.month-ds_date.time.dt.month)+12*(ds_date.valid_time.dt.year-ds_date.time.dt.year)
-                }
-            )
+            ds_date
             .expand_dims("time")
-            #valid time is one month ahead of the start of the actual valid time --> only confusing so drop
             #surface is empty
-             .drop_vars(["valid_time","surface"])
+             .drop_vars("surface")
         )
 ```
 
@@ -105,7 +100,20 @@ def _preprocess_monthly_mean_dataset(ds_date: xr.Dataset):
 #i would think setting concat_dim=["time","step"] makes more sense 
 #but get an error "concat_dims has length 2 but the datasets passed are nested in a 1-dimensional structure"
 #it seems to work thought when using concat_dim="time" but would have to test once we have data from several dates.. 
-ds=xr.open_mfdataset(filepath_list, engine = "cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'},concat_dim=["step"],combine="nested",preprocess=lambda d: _preprocess_monthly_mean_dataset(d))
+ds=xr.open_mfdataset(filepath_list, engine = "cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'},concat_dim=["forecastMonth"],
+                     combine="nested",
+                     preprocess=lambda d: _preprocess_monthly_mean_dataset(d),
+                     #TODO: we currently don't use "verifying_time" so might want to remove that
+                    backend_kwargs=dict(time_dims=('time', 'forecastMonth','verifying_time')))
+```
+
+```python
+#rename to have consistent naming with the API data (though actually maybe we would want to change the API data as well.. )
+ds=ds.rename({"forecastMonth":"step"})
+```
+
+```python
+ds
 ```
 
 ```python
