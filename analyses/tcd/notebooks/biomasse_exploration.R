@@ -40,3 +40,205 @@ df %>%
        subtitle = "Central Chad region, season from first Dekad of April to last of March",
        y = "Biomasse (anomaly)",
        x = "Dekad (into the season)")
+
+
+df %>%
+  mutate(drought = factor(year %in% c(2001, 2004, 2009, 2011, 2017))) %>%
+  group_by(year) %>%
+  filter(dekad == 21) %>%
+  mutate(pred = factor(biomasse_anomaly <= 80)) %>%
+  distinct(year, drought, pred) %>%
+  ungroup() %>%
+  conf_mat(drought, pred) %>%
+  autoplot(type = "heatmap") +
+  labs(title="Confusion matrix, threshold of 80 on August 1")
+
+
+df %>%
+  mutate(drought = factor(year %in% c(2001, 2004, 2009, 2011, 2017))) %>%
+  group_by(year) %>%
+  filter(dekad == 27) %>%
+  mutate(pred = factor(biomasse_anomaly <= 86)) %>%
+  distinct(year, drought, pred) %>%
+  ungroup() %>%
+  conf_mat(drought, pred) %>%
+  autoplot(type = "heatmap") +
+  labs(title="Confusion matrix, threshold of 85 on November 1")
+
+## END OF YEAR IMPACT
+
+end_impact <- df %>%
+  filter(dekad == 33,
+         biomasse_anomaly <= 88)
+
+end_impact %>%
+  write_csv(
+    file.path(
+      aa_dir, "public", "processed", "tcd", "biomasse", "biomasse_impact_years.csv"
+    )
+  )
+
+## TEST IMPACT YEARS ACROSS PUB DATE AND THRESHOLDS
+
+imp_years <- end_impact$year
+list_years <- c(2001, 2004, 2009, 2011, 2017)
+
+test_df <- df %>%
+  mutate(drought_biom = factor(year %in% imp_years, levels = c(TRUE, FALSE)),
+         drought_list = factor(year %in% list_years, levels = c(TRUE, FALSE))) %>%
+  filter(between(dekad, 17, 33))
+
+param_test <- function(df) {
+  thresholds <- 70:90
+  scores <- map_df(thresholds, function(x) {
+    df %>%
+      mutate(pred = factor(biomasse_anomaly <= x, levels = c(TRUE, FALSE))) %>%
+      recall(drought_biom, pred)
+  })[[".estimate"]]
+  thresholds[which.max(scores)]
+}
+
+pred_df <- test_df %>%
+  select(dekad, year, biomasse_anomaly, starts_with("drought")) %>%
+  nest(data = -dekad) %>%
+  mutate(threshold = map_dbl(data, param_test),
+         threshold_fixed = 88) %>%
+  unnest(cols = c(data)) %>%
+  mutate(pred = factor(biomasse_anomaly <= threshold, levels = c(TRUE, FALSE)),
+         pred_fixed = factor(biomasse_anomaly <= threshold_fixed, levels = c(TRUE, FALSE))) %>%
+  group_by(dekad)
+
+## COMPARED AGAINST BIOMASSE END OF YEAR
+
+metrics_df <- bind_rows(metrics(pred_df, drought_biom, pred),
+                        precision(pred_df, drought_biom, pred),
+                        recall(pred_df, drought_biom, pred))
+
+metrics_df %>%
+  filter(.metric %in% c("precision" , "recall", "accuracy")) %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20)) %>%
+  ggplot(aes(x = date_pub, y = `.estimate`, color = `.metric`, group = `.metric`)) +
+  geom_line() +
+  theme_minimal() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%B") +
+  scale_color_manual(values = c("lightgrey", "darkgrey", "black")) +
+  labs(title = "Performance metrics, Biomasse, against end of season Biomasse drought",
+       subtitle = "Threshold optimized for each date of publication",
+       y = "Performance",
+       x = "Date of publication",
+       color = "Metric")
+
+## COMPARED AGAINST LIST OF DROUGHT YEARS
+
+metrics_df <- bind_rows(metrics(pred_df, drought_list, pred),
+                        precision(pred_df, drought_list, pred),
+                        recall(pred_df, drought_list, pred))
+
+metrics_df %>%
+  filter(.metric %in% c("precision" , "recall", "accuracy")) %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20)) %>%
+  ggplot(aes(x = date_pub, y = `.estimate`, color = `.metric`, group = `.metric`)) +
+  geom_line() +
+  theme_minimal() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%B") +
+  scale_color_manual(values = c("lightgrey", "darkgrey", "black")) +
+  labs(title = "Performance metrics, Biomasse, against list of drought years",
+       subtitle = "Threshold optimized for each date of publication",
+       y = "Performance",
+       x = "Date of publication",
+       color = "Metric")
+
+
+## PLOTTING THE THRESHOLDS
+
+pred_df %>%
+  ungroup() %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20)) %>%
+  distinct(date_pub, threshold) %>%
+  ggplot(aes(x = date_pub, y = threshold)) +
+  geom_line() +
+  theme_minimal() +
+  labs(title = "Threshold, by date of publication",
+       y = "Threshold",
+       x = "Date of publication")
+
+## COMPARED AGAINST BIOMASSE, FIXED THRESHOLD
+
+metrics_df <- bind_rows(metrics(pred_df, drought_biom, pred_fixed),
+                        precision(pred_df, drought_biom, pred_fixed),
+                        recall(pred_df, drought_biom, pred_fixed))
+
+metrics_df %>%
+  filter(.metric %in% c("precision" , "recall", "accuracy")) %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20)) %>%
+  ggplot(aes(x = date_pub, y = `.estimate`, color = `.metric`, group = `.metric`)) +
+  geom_line() +
+  theme_minimal() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%B") +
+  scale_color_manual(values = c("lightgrey", "darkgrey", "black")) +
+  labs(title = "Performance metrics, Biomasse, against end of season Biomasse drought",
+       subtitle = "Fixed threshold of 88% Biomasse anomaly",
+       y = "Performance",
+       x = "Date of publication",
+       color = "Metric")
+
+## COMPARED AGAINST DROUGHT LIST, FIXED THRESHOLD
+
+metrics_df <- bind_rows(metrics(pred_df, drought_list, pred_fixed),
+                        precision(pred_df, drought_list, pred_fixed),
+                        recall(pred_df, drought_list, pred_fixed))
+
+metrics_df %>%
+  filter(.metric %in% c("precision" , "recall", "accuracy")) %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20)) %>%
+  ggplot(aes(x = date_pub, y = `.estimate`, color = `.metric`, group = `.metric`)) +
+  geom_line() +
+  theme_minimal() +
+  scale_x_date(date_breaks = "1 month", date_labels = "%B") +
+  scale_color_manual(values = c("lightgrey", "darkgrey", "black")) +
+  labs(title = "Performance metrics, Biomasse, against list of drought years",
+       subtitle = "Fixed threshold of 88% Biomasse anomaly",
+       y = "Performance",
+       x = "Date of publication",
+       color = "Metric")
+
+## PLOTTING ALL THE SPECIFIC TN, TP, ... VALUES
+
+pred_df %>%
+  mutate(across(matches("drought|pred"), as.logical)) %>%
+  summarize(tp = sum(drought_list + pred_fixed == 2),
+            fp = sum(!(drought_list) & pred_fixed),
+            tn = sum(drought_list + pred_fixed == 0),
+            fn = sum(drought_list & !(pred_fixed))) %>%
+  pivot_longer(-dekad) %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20),
+         type_group = name %in% c("tp", "tn"),
+         pos_group = name %in% c("tp", "fp"),
+         name = toupper(name)) %>%
+  ggplot(aes(x = date_pub, y = value, group = name)) +
+  geom_line(aes(color = name, linetype = name)) +
+  theme_minimal() +
+  scale_color_manual(values = c("red", "red", "darkgrey", "darkgrey"), name = "Metric") +
+  scale_linetype_manual(values = c("dashed", "solid", "dashed", "solid"), name = "Metric") +
+  labs(x = "Date of publication",
+       y = "Value",
+       title = "Prediction outcomes, Biomasse, against list of drought years",
+       subtitle = "Fixed threshold of 88% Biomasse anomaly")

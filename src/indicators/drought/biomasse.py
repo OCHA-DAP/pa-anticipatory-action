@@ -28,6 +28,7 @@ from typing import List, Literal, Union, get_args
 
 import numpy as np
 import pandas as pd
+import rioxarray
 
 from src.utils_general.utils import download_ftp
 
@@ -313,3 +314,12 @@ def load_aggregated_biomasse_data(file_descriptor: str, start_dekad: int = 10):
         admin=file_descriptor, start_dekad=start_dekad
     )
     return pd.read_csv(processed_filepath)
+
+
+def load_biomasse_mean(mask: bool = True):
+    """Used to mask WRSI"""
+    bm_fp = os.path.join(_raw_path, "BiomassValueMean.tif")
+    da = rioxarray.open_rasterio(bm_fp)
+    if mask:
+        da = da.where(da.values <= 0, drop=True)
+    return da

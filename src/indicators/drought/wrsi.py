@@ -43,6 +43,7 @@ from urllib.request import urlopen
 from zipfile import ZipFile
 
 import numpy as np
+import pandas as pd
 import rioxarray  # noqa: F401
 import xarray as xr
 from rasterio.crs import CRS
@@ -300,3 +301,19 @@ def filter_wrsi(da, dekad):
         (da.time.dt.day == filter_day) & (da.time.dt.month == filter_month),
         drop=True,
     )
+
+
+def _wrsi_percent_below_thresh(da, threshold):
+    da = xr.where(da <= threshold, 1, 0).mean(dim=["x", "y"])
+    time = da.time
+    df = da.to_dataframe(name="wrsi_percent_area").reset_index(drop=True)
+    df["time"] = time
+    df["threshold"] = threshold
+    return df
+
+
+def wrsi_percent_below(da, thresholds):
+    dfs = [
+        _wrsi_percent_below_thresh(da, threshold) for threshold in thresholds
+    ]
+    return pd.concat(dfs)
