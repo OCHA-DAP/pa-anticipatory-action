@@ -51,17 +51,22 @@ def _get_raw_path(admin):
     return os.path.join(_raw_path, _raw_filename.format(admin=admin))
 
 
-_processed_filename = "biomasse_{admin}_dekad_{start_dekad}.csv"
-
-_processed_path = os.path.join(
-    os.getenv("AA_DATA_DIR"), "public", "processed", "general", "biomasse"
-)
+_processed_filename = "biomasse_{iso3}_{admin}_dekad_{start_dekad}.csv"
 
 
-def _get_processed_path(admin, start_dekad):
+def _get_processed_path(admin, start_dekad, iso3: Union[None, str] = None):
+    if iso3 is None:
+        iso3 = "general"
+
+    _processed_path = os.path.join(
+        os.getenv("AA_DATA_DIR"), "public", "processed", iso3, "biomasse"
+    )
+
     return os.path.join(
         _processed_path,
-        _processed_filename.format(admin=admin, start_dekad=start_dekad),
+        _processed_filename.format(
+            iso3=iso3, admin=admin, start_dekad=start_dekad
+        ),
     )
 
 
@@ -216,7 +221,9 @@ def process_dmp(
     ]
 
     # save file to processed filepath
-    processed_path = _get_processed_path(admin, start_dekad)
+    processed_path = _get_processed_path(
+        admin=admin, iso3=None, start_dekad=start_dekad
+    )
     df_merged.to_csv(processed_path, index=False)
 
     return df_merged
@@ -224,6 +231,7 @@ def process_dmp(
 
 def load_biomasse_data(
     admin: AdminArgument = "ADM2",
+    iso3: Union[bool, str] = None,
     start_dekad: int = 10,
     reprocess: bool = False,
     redownload: bool = False,
@@ -252,7 +260,9 @@ def load_biomasse_data(
         )
     else:
         _check_admin(admin)
-        processed_path = _get_processed_path(admin, start_dekad)
+        processed_path = _get_processed_path(
+            admin=admin, iso3=iso3, start_dekad=start_dekad
+        )
         return pd.read_csv(processed_path)
 
 
@@ -260,7 +270,7 @@ def aggregate_biomasse(
     admin_pcodes: List[str],
     admin: AdminArgument = "ADM2",
     start_dekad: int = 10,
-    file_descriptor: Union[None, str] = None,
+    iso3: Union[bool, str] = None,
 ):
     """Aggregate biomasse data to set of areas
 
@@ -279,7 +289,7 @@ def aggregate_biomasse(
     df_subset = df[df[admin_col].isin(admin_pcodes)]
     # just keep to year 2000 for unique value per dekad
     # when calculating biomasse mean aggregated
-    df_mean = df_subset[df["year"] == 2000]
+    df_mean = df_subset[df.year.isin([2000])]
     df_mean = (
         df_mean[["dekad", "biomasse_mean"]]
         .groupby("dekad")
@@ -300,9 +310,9 @@ def aggregate_biomasse(
     # sorting data again year then dekad
     df_merged.sort_values(by=["year", "dekad"], inplace=True)
 
-    if file_descriptor is not None:
+    if iso3 is not None:
         processed_filepath = _get_processed_path(
-            admin=file_descriptor, start_dekad=start_dekad
+            iso3=iso3, admin=admin, start_dekad=start_dekad
         )
         df_merged.to_csv(processed_filepath, index=False)
 
