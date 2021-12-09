@@ -55,18 +55,7 @@ gdf_adm1=gpd.read_file(adm1_bound_path)
 We select all files that contain the seasonal forecast with monthly mean, i.e. that Have T4L in their filename
 
 ```python
-filepath_list = [
-        filename
-        for filename in ecmwf_realtime_dir.iterdir()
-        #T4L indicates the seasonal forecast with the monthly mean
-        #see here for a bit more explanation https://confluence.ecmwf.int/pages/viewpage.action?pageId=111155348
-        #without the 1 you also get .idx files which we don't want but not sure if this is the best method to select
-        if fnmatch.fnmatch(filename, '*T4L*1') 
-    ]
-```
-
-```python
-filepath_list
+filepath_list=list(ecmwf_realtime_dir.glob('*T4L*1'))
 ```
 
 We first load one file without any concatenation and processing to understand the fileformat.  
@@ -177,13 +166,13 @@ df_center[(df_center.step==3)&(df_center.ADM1_EN=="Southern")]
 ```
 
 ```python
-df_allt=compute_raster_stats_test(da,all_touched=True)
-df_allt[(df_allt.step==3)&(df_allt.ADM1_EN=="Southern")]
+df_mask=compute_raster_stats_test(da,resolution=0.05)
+df_mask[(df_mask.step==3)&(df_mask.ADM1_EN=="Southern")]
 ```
 
 ```python
-df_mask=compute_raster_stats_test(da,resolution=0.05)
-df_mask[(df_mask.step==3)&(df_mask.ADM1_EN=="Southern")]
+df_allt=compute_raster_stats_test(da,all_touched=True)
+df_allt[(df_allt.step==3)&(df_allt.ADM1_EN=="Southern")]
 ```
 
 From the statistics below we can see that the "mean_ADM1_EN" column is above the cap of 210 for each of the three methods. 
@@ -221,12 +210,42 @@ cmap=ListedColormap(
 ```
 
 ```python
-g=da_feb_plt.plot(levels=bins,cmap=cmap,figsize=(10,15))
-gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+import matplotlib.pyplot as plt
 ```
 
 ```python
+g=da_feb_plt.plot(levels=bins,cmap=cmap,figsize=(10,15),)
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 
+g.axes.set_title(
+    f"Forecasted monthly precipitation \n with 50% "
+    f"probability for February 2022",
+    size=14,
+)
+plt.figtext(0, 0.05, f"Forecast published on 5 December 2021",size=14);
+```
+
+Inspect values of cells with their center in the Southern region
+
+```python
+gdf_reg=gdf_adm1[gdf_adm1.ADM1_EN=="Southern"]
+```
+
+```python
+da_feb_clip=da_feb.rio.write_crs("EPSG:4326").rio.clip(gdf_reg["geometry"])
+```
+
+```python
+da_feb_clip.values
+```
+
+```python
+(da_feb_clip.where(da_feb_clip<=210).count()/da_feb_clip.count()).values
+```
+
+```python
+g=da_feb_clip.plot.imshow(levels=bins,cmap=cmap,figsize=(10,15),extend="max")
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
