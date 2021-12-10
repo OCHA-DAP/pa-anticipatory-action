@@ -106,7 +106,7 @@ def plague_group_by_date(df, sel_start_date=None, sel_end_date=None):
 ```python
 #define period of current interest
 sel_start_date = "2021-08-02"
-sel_end_date = "2021-11-22"
+sel_end_date = "2021-12-06"
 sel_start_week = 31
 sel_end_week = 38
 ```
@@ -136,7 +136,7 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
 ```python
-plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-11-22.csv"
+plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-12-06.csv"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
 plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
@@ -213,7 +213,7 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-df_date=plague_group_by_date(df, sel_end_date="2021-11-22")
+df_date=plague_group_by_date(df, sel_end_date=sel_end_date)
 ```
 
 ```python
