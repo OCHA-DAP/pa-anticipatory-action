@@ -146,6 +146,13 @@ bm_mask = bm_mask.rio.reproject_match(da_range_anom)
 ```
 
 ```python
+ta = da_range_anom_clip.where(da_range_anom_clip.time.dt.year == 2021, drop = True)
+ta = ta.where(ta.time.dt.month == 11, drop = True)
+ta = ta.where(ta.time.dt.day == 1, drop = True)
+ta.plot()
+```
+
+```python
 da_range_anom_mask = da_range_anom_clip.where(bm_mask > 0)
 ta = da_range_anom_mask.where(da_range_anom_mask.time.dt.year == 2021, drop = True)
 ta = ta.where(ta.time.dt.month == 11, drop = True)
