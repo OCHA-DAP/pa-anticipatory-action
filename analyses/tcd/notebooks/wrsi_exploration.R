@@ -71,7 +71,7 @@ df <- bind_rows(
 
 # First, look at the anomalies and see percent of areas
 
-df %>%
+p_2d_anom <- df %>%
   filter(threshold == 100, str_detect(type, "anomaly")) %>%
   pivot_wider(names_from = type, values_from = wrsi_percent_area) %>%
   ggplot(aes(x = rangeland_anomaly, y = cropland_anomaly)) +
@@ -83,9 +83,11 @@ df %>%
        y = "Cropland anomaly (% of target area <= 100%)",
        x = "Rangeland anomaly (% of target area <= 100%)")
 
+p_2d_anom
+
 # Then check current
 
-df %>%
+p_2d_curr <- df %>%
   filter(threshold == 70, str_detect(type, "current")) %>%
   pivot_wider(names_from = type, values_from = wrsi_percent_area) %>%
   ggplot(aes(x = rangeland_current, y = cropland_current)) +
@@ -97,9 +99,11 @@ df %>%
        y = "Cropland current (% of target area <= 70%)",
        x = "Rangeland current (% of target area <= 70%)")
 
-# compare WRSI to Biomasse
+p_2d_curr
 
-df %>%
+# compare WRSI Rangeland to Biomasse
+
+p_crop_bm <- df %>%
   filter(threshold == 100, type == "rangeland_anomaly") %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -115,8 +119,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI rangeland anomaly vs.Biomasse anomaly",
@@ -125,9 +129,11 @@ df %>%
        x = "Rangeland WRSI anomaly (% of target area <= median)",
        fill = "Drought (from list)")
 
+p_crop_bm
+
 # Same graph, but setting threshold for WRSI to be 80% of median
 
-df %>%
+p_crop_bm_80 <- df %>%
   filter(threshold == 80, type == "rangeland_anomaly") %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -143,8 +149,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI rangeland anomaly vs.Biomasse anomaly",
@@ -153,9 +159,11 @@ df %>%
        x = "Rangeland WRSI anomaly (% of target area <= 80% median)",
        fill = "Drought (from list)")
 
+p_crop_bm_80
+
 ## Cropland VS Biomasse
 
-df %>%
+p_range_bm <- df %>%
   filter(threshold == 100, type == "cropland_anomaly") %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -171,8 +179,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI cropland anomaly vs.Biomasse anomaly",
@@ -181,8 +189,9 @@ df %>%
        x = "Cropland WRSI anomaly (% of target area <= median)",
        fill = "Drought (from list)")
 
+p_crop_bm
 
-df %>%
+p_crop_bm_80 <- df %>%
   filter(threshold == 80, type == "cropland_anomaly") %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -198,8 +207,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI cropland anomaly vs.Biomasse anomaly",
@@ -208,11 +217,13 @@ df %>%
        x = "Cropland WRSI anomaly (% of target area <= 80% median)",
        fill = "Drought (from list)")
 
+p_crop_bm_80
+
 # Problem above is that we are looking across all dekads in the season.
 # Let's examine how they look at the beginning of September, which we
 # found to be optimal for Biomasse
 
-df %>%
+p_range_bm_fy <- df %>%
   filter(threshold == 100, type == "rangeland_anomaly", dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -228,8 +239,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI rangeland anomaly vs.Biomasse anomaly",
@@ -238,9 +249,11 @@ df %>%
        x = "Rangeland WRSI anomaly (% of target area <= median)",
        fill = "Drought (from list)")
 
+p_range_bm_fy
+
 # Same but with 80% for rangeland
 
-df %>%
+p_range_bm_fy_80 <- df %>%
   filter(threshold == 80, type == "rangeland_anomaly", dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -256,8 +269,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI rangeland anomaly vs.Biomasse anomaly",
@@ -266,9 +279,11 @@ df %>%
        x = "Rangeland WRSI anomaly (% of target area <= 80% median)",
        fill = "Drought (from list)")
 
+p_range_bm_fy_80
+
 # Now back to looking at the WRSI cropland
 
-df %>%
+p_crop_bm_fy <- df %>%
   filter(threshold == 100, type == "cropland_anomaly", dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -284,8 +299,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI cropland anomaly vs.Biomasse anomaly",
@@ -294,8 +309,9 @@ df %>%
        x = "Cropland WRSI anomaly (% of target area <= median)",
        fill = "Drought (from list)")
 
+p_crop_bm_fy
 
-df %>%
+p_crop_bm_fy_80 <- df %>%
   filter(threshold == 80, type == "cropland_anomaly", dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -311,8 +327,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI cropland anomaly vs.Biomasse anomaly",
@@ -321,9 +337,11 @@ df %>%
        x = "Cropland WRSI anomaly (% of target area <= 80% median)",
        fill = "Drought (from list)")
 
+p_crop_bm_fy_80
+
 # Does using current WRSI show anything different?
 
-df %>%
+p_crop_curr_bm_fy <- df %>%
   filter(threshold == 80, type == "cropland_current", dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -339,8 +357,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI cropland current vs.Biomasse anomaly",
@@ -349,8 +367,9 @@ df %>%
        x = "Cropland WRSI current (% of target area <= 80%)",
        fill = "Drought (from list)")
 
+p_crop_curr_bm_fy
 
-df %>%
+p_range_curr_bm_fy <- df %>%
   filter(threshold == 80, type == "rangeland_current", dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   arrange(drought_list) %>%
@@ -366,8 +385,8 @@ df %>%
   geom_point(aes(fill = drought_list),
              shape = 21,
              color = "black") + 
-  scale_fill_manual(values = c("white", "black"),
-                    labels = c("No drought", "Drought")) +
+  scale_fill_manual(values = c("black", "white"),
+                    labels = c("Drought", "No drought")) +
   theme_minimal() +
   geom_hline(yintercept = 100) +
   labs(title = "WRSI rangeland current vs.Biomasse anomaly",
@@ -376,11 +395,62 @@ df %>%
        x = "Rangeland WRSI current (% of target area <= 80%)",
        fill = "Drought (from list)")
 
+p_range_curr_bm_fy
+  
+# Explore a bit more cropland anom vs biomasse anom
+
+p_crop_bm_fy_80 +
+  geom_hline(yintercept = 80,
+             color = "white") + 
+  geom_text(x = .1,
+            y = 60,
+            label = "Separation based on Biomasse anomaly <= 80% \n gives fairly clear grouping of values.",
+            check_overlap = T,
+            hjust = 0,
+            color = "white")
+
+p_crop_bm_fy_80 +
+  geom_vline(xintercept = 3,
+             color = "white") + 
+  geom_text(x = 3.5,
+            y = 85,
+            label = "Separation based on WRSI \ncropland anomaly <= 80% in >= 3% of areas\nis less clearly grouped",
+            check_overlap = T,
+            hjust = 0,
+            color = "white")
+
+point_year_df <- df %>%
+  filter(threshold == 80, type == "cropland_anomaly", dekad == 24) %>%
+  left_join(biomasse, by = c("year", "dekad")) %>%
+  filter(biomasse_anomaly <= 80 | wrsi_percent_area >= 3)
+
+p_crop_bm_fy_80 +
+  geom_text(
+    data = point_year_df,
+    aes(label = year),
+    color = "white",
+    nudge_x = 0.4
+  ) +
+  geom_vline(xintercept = 3,
+             color = "white") +
+  geom_hline(yintercept = 80,
+             color = "white") +
+  geom_text(x = 3.5,
+            y = 110,
+            label = "Question is, how do we consider\nyears 2008 & 2013 captured by WRSI\nvs 2006 captured by Biomasse?\nDo we trust our list of years?",
+            check_overlap = T,
+            hjust = 0,
+            color = "white")
+
+##########################
+#### WRSI PERFORMANCE ####
+##########################
+
 # Looking at performance of using cropland anomaly, 80%
 
 crop_anom_80_df <- df %>%
   filter(threshold == 80, type == "cropland_anomaly")
-  
+
 crop_anom_80_df %>%
   ggplot(aes(x = time, y = wrsi_percent_area, group = year)) +
   geom_area(fill = "#FF8080") +
@@ -392,10 +462,6 @@ crop_anom_80_df %>%
        x = "Month",
        title = "WRSI cropland anomaly, 80% of median",
        subtitle = "Central Chad region, May to November")
-  
-##########################
-#### WRSI PERFORMANCE ####
-##########################
 
 param_test <- function(df) {
   thresholds <- 1:20
