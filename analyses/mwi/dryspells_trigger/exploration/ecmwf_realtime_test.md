@@ -24,6 +24,7 @@ import numpy as np
 import xarray as xr
 import fnmatch
 import geopandas as gpd
+import matplotlib.pyplot as plt
 
 from rasterio.enums import Resampling
 from matplotlib.colors import ListedColormap
@@ -195,13 +196,58 @@ da_feb_plt=da_feb.where(da_feb.latitude<=-9,drop=True)
 
 ```python
 #set bins
-bins=[0, 50, 100, 150, 210.1, 250, 300, 350]
+bins=[0, 50, 100, 150, 210.1, 230, 250, 300, 350]
 cmap=ListedColormap(
     [
         "#c25048",
         "#f2645a",
         "#f7a29c",
         "#fce0de",
+        "#dbedfb",
+        "#cce5f9",
+        "#66b0ec",
+        "#007ce0",
+        "#0063b3",
+    ])
+```
+
+We experiment with different color scales and bins to get the clearest visual
+
+```python
+g=da_feb_plt.plot(levels=bins,cmap="Blues",figsize=(10,15),)
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+
+g.axes.set_title(
+    f"Forecasted monthly precipitation \n with 50% "
+    f"probability for February 2022",
+    size=14,
+)
+plt.figtext(0, 0.05, f"Forecast published on 5 December 2021",size=14);
+```
+
+```python
+g=da_feb_plt.plot(levels=bins,cmap=cmap,figsize=(10,15),)
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+
+g.axes.set_title(
+    f"Forecasted monthly precipitation \n with 50% "
+    f"probability for February 2022",
+    size=14,
+)
+plt.figtext(0, 0.05, f"Forecast published on 5 December 2021",size=14);
+```
+
+```python
+#set bins with grey area
+bins_grey=[0, 50, 100, 150, 190,  210.1, 230, 250, 300, 350]
+cmap_grey=ListedColormap(
+    [
+        "#c25048",
+        "#f2645a",
+        "#f7a29c",
+        "#fce0de",
+        "#d1d1d1",
+        "#eeeeee",
         "#cce5f9",
         "#66b0ec",
         "#007ce0",
@@ -210,11 +256,31 @@ cmap=ListedColormap(
 ```
 
 ```python
-import matplotlib.pyplot as plt
+g=da_feb_plt.plot(levels=bins_grey,cmap=cmap_grey,figsize=(10,15),)
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+
+g.axes.set_title(
+    f"Forecasted monthly precipitation \n with 50% "
+    f"probability for February 2022",
+    size=14,
+)
+plt.figtext(0, 0.05, f"Forecast published on 5 December 2021",size=14);
 ```
 
 ```python
-g=da_feb_plt.plot(levels=bins,cmap=cmap,figsize=(10,15),)
+g=da_feb_plt.plot.contourf(levels=bins,cmap=cmap,figsize=(10,15),)
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+
+g.axes.set_title(
+    f"Forecasted monthly precipitation \n with 50% "
+    f"probability for February 2022",
+    size=14,
+)
+plt.figtext(0, 0.05, f"Forecast published on 5 December 2021",size=14);
+```
+
+```python
+g=da_feb_plt.plot.contourf(levels=bins,cmap=cmap,figsize=(10,15),)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 
 g.axes.set_title(
@@ -240,6 +306,10 @@ da_feb_clip.values
 ```
 
 ```python
+da_feb_clip.mean().values
+```
+
+```python
 (da_feb_clip.where(da_feb_clip<=210).count()/da_feb_clip.count()).values
 ```
 
@@ -249,35 +319,18 @@ gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
-
+g=da_feb_clip.plot.imshow(levels=bins_grey,cmap=cmap_grey,figsize=(10,15),extend="max")
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
+g=da_feb_clip.plot.imshow(levels=bins,cmap="Blues",figsize=(10,15),extend="max")
+gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 
-```
-
-### Testing
-Old stuff
-
-```python
-ecmwf_filename = "T4L1201000003______1"
-ecmwf_path = ecmwf_realtime_dir / ecmwf_filename
-ds=xr.load_dataset(ecmwf_path, engine = "cfgrib",filter_by_keys={'numberOfPoints': 384, 'dataType': 'fcmean'})
-```
-
-```python
-xr.load_dataset("/Volumes/GoogleDrive/Shared drives/Predictive Analytics/CERF Anticipatory Action/General - All AA projects/Data/private/processed/mwi/ecmwf/seasonal-monthly-individual-members/prate/mwi_seasonal-monthly-individual-members_prate.nc")
-```
-
-```python
-f=-5
-p=1
-```
-
-```python
-'{:.1f}'.format(abs(f))
-```
-
-```python
-"S{}".format(round(abs(f), p))
+g.axes.set_title(
+    f"Forecasted monthly precipitation \n with 50% "
+    f"probability for February 2022",
+    size=14,
+)
+plt.figtext(0, 0.05, f"Forecast published on 5 December 2021",size=14);
 ```
