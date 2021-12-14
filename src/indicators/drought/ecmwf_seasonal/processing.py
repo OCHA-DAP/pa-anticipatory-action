@@ -21,10 +21,16 @@ from src.utils_general.statistics import calc_crps
 
 logger = logging.getLogger(__name__)
 
+# area string that is attached to the filename of ecmwf data
+# the functionality to generate the string is implemented in aa-toolbox
+# since we will migrate everything, hardcoding this for now
+# but should be adjusted once migrated to aa-toolbox
+GEOBB_STR_ISO3_MAPPING = {"mwi": "Nm5Sm17Ep37Wp33"}
+
 ECMWF_API_FILEPATH = (
     "private/processed/{country_iso3}/ecmwf/"
     "seasonal-monthly-individual-members/prate/"
-    "mwi_seasonal-monthly-individual-members_prate.nc"
+    "mwi_seasonal-monthly-individual-members_prate_comb_{geobb_str}.nc"
 )
 
 
@@ -54,7 +60,10 @@ def get_ecmwf_forecast(
     else:
         dataset_path = Path(
             os.environ["AA_DATA_DIR"]
-        ) / ECMWF_API_FILEPATH.format(country_iso3=country_iso3)
+        ) / ECMWF_API_FILEPATH.format(
+            country_iso3=country_iso3,
+            geobb_str=GEOBB_STR_ISO3_MAPPING[country_iso3],
+        )
         ds_ecmwf_forecast = xr.load_dataset(dataset_path)
     ds_ecmwf_forecast = convert_tprate_precipitation(ds_ecmwf_forecast)
 

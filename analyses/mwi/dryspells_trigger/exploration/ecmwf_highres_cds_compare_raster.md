@@ -88,7 +88,8 @@ The API call takes a resolution parameter so for testing we set this to 1 degree
 # Monkey-patch the filepath to access the 1 degree directory
 # Not hard-coding it in for now because it probably won't be necessary for 
 # further analysis
-processing.ECMWF_API_FILEPATH = processing.ECMWF_API_FILEPATH.replace("ecmwf", "ecmwf_1deg")
+#it is hacky but works for its purpose
+processing.ECMWF_API_FILEPATH = processing.ECMWF_API_FILEPATH.replace("ecmwf", "ecmwf_1deg").replace("_comb_{geobb_str}","").replace("processed","exploration")
 ```
 
 ```python
