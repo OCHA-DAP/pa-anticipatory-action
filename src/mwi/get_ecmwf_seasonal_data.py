@@ -47,7 +47,7 @@ def main(download=False, compute_stats=True, use_cache=True):
         use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
     )
     df_country_boundaries = gpd.read_file(ADM0_BOUND_PATH)
-    if download:
+    if download and SOURCE_CDS:
         # retrieve the area, with a buffer from the boundary shape
         area = AreaFromShape(df_country_boundaries.buffer(3))
         # download the ecmwf data for the area
