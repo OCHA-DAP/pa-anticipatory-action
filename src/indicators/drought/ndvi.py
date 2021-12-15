@@ -27,7 +27,7 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 from zipfile import ZipFile
 
-import numpy as np
+import pandas as pd
 import rioxarray  # noqa: F401
 import xarray as xr
 
@@ -160,75 +160,33 @@ def _get_processed_path(iso3):
     _processed_dir.mkdir(parents=True, exist_ok=True)
     return Path(
         _processed_dir,
-        "ndvi_anomaly_{iso3}.nc".format(iso3=iso3),
+        "{iso3}_ndvi_anomaly.csv".format(iso3=iso3),
     )
 
 
-def process_ndvi(iso3, geometries):
+def process_ndvi(iso3, geometries, thresholds):
     processed_path = _get_processed_path(iso3)
 
-    def _load_raw(fp):
-        arr = xr.open_rasterio(Path(_RAW_DIR, fp))
-        dt = [_fp_date(fp.stem)]
+    data = []
 
-        arr = arr.expand_dims(time=dt)
-        # much more time costly to merge all and then clip
-        arr = arr.rio.clip(geometries, drop=True, from_disk=True)
-        # round x dimension due to issues with
-        # concat and tiny numerical differences
-        # arr = arr.assign_coords({"x": np.round(arr.x.values, 7)})
-        return arr
+    for filename in _RAW_DIR.glob("*.tif"):
+        da = xr.open_rasterio(Path(_RAW_DIR, filename))
+        da = da.rio.clip(geometries, drop=True, from_disk=True)
+        da_date = _fp_date(filename.stem)
+        for threshold in thresholds:
+            area_pct = (
+                xr.where(da <= threshold, 1, 0).mean(dim=["x", "y"]).values[0]
+                * 100
+            )
+            data.append([da_date, iso3, threshold, area_pct])
 
-    arrays = [_load_raw(filename) for filename in _RAW_DIR.glob("*.tif")]
-
-    arrays_merged = xr.concat(arrays, "time").sortby("time")
-
-    # change missing values from 0 to nan
-    arrays_merged = arrays_merged.where(arrays_merged.values < 255)
-    arrays_merged.attrs["_FillValue"] = np.NaN
-
-    # convert to dataset
-    ad = arrays_merged.to_dataset("band")
-    ad = ad.rename({1: "ndvi"})
+    df = pd.DataFrame(
+        data, columns=["date", "iso3", "anomaly_thresholds", "percent_area"]
+    )
+    df.sort_values(by="date", inplace=True)
 
     # saving file
     processed_path.unlink(missing_ok=True)
+    df.to_csv(processed_path)
 
-    ad.to_netcdf(processed_path)
-
-    return ad
-
-
-def process_ndvi_es(iso3, geometries):
-    processed_path = _get_processed_path(iso3)
-
-    def _load_raw(fp):
-        arr = xr.open_rasterio(Path(_RAW_DIR, fp))
-        dt = [_fp_date(fp.stem)]
-
-        arr = arr.expand_dims(time=dt)
-        # much more time costly to merge all and then clip
-        arr = arr.rio.clip(geometries, drop=True)
-        # round x dimension due to issues with
-        # concat and tiny numerical differences
-        # arr = arr.assign_coords({"x": np.round(arr.x.values, 7)})
-        return arr
-
-    arrays = [_load_raw(filename) for filename in _RAW_DIR.glob("*.tif")]
-
-    arrays_merged = xr.concat(arrays, "time").sortby("time")
-
-    # change missing values from 0 to nan
-    arrays_merged = arrays_merged.where(arrays_merged.values < 255)
-    arrays_merged.attrs["_FillValue"] = np.NaN
-
-    # convert to dataset
-    ad = arrays_merged.to_dataset("band")
-    ad = ad.rename({1: "ndvi"})
-
-    # saving file
-    processed_path.unlink(missing_ok=True)
-
-    ad.to_netcdf(processed_path)
-
-    return ad
+    return df
