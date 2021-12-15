@@ -15,15 +15,17 @@ is not available in dekadal form. The only dekadal form data
 is for DMP values downsampled to the ADMIN0-2 levels across
 the region of interested. The code below accesses this dekadal
 data and then recalculates cumulative biomasse and anomaly
-using that. Since DMP measurements are productivity values, the
-calculation of total biomasse in a year is taken by averaging
-the DMP over the entire period and multiplying by 365.25.
-The default year starts in the 10th dekad (1st of April) until
-the last dekad of March, to correspond with the West African
-monsoon season.
+using that. Since DMP measurements are productivity values,
+measuring the daily dry matter productivity across the dekad of
+interest, the calculation of total biomasse in a year is taken
+by averaging the DMP over the entire period and multiplying by
+365.25. The default year starts in the 10th dekad (1st of
+April) until the last dekad of March, to correspond with the
+West African monsoon season.
 """
 
 import os
+from pathlib import Path
 from typing import List, Literal, Union, get_args
 
 import numpy as np
@@ -32,7 +34,7 @@ import rioxarray
 
 from src.utils_general.utils import download_ftp
 
-_base_url = (
+_BASE_URL = (
     "http://80.69.76.253:8080/geoserver"
     "/Biomass/wfs?&REQUEST="
     "GetFeature&SERVICE=wfs&VERSION=1.1.0"
@@ -40,42 +42,40 @@ _base_url = (
     "outputformat=CSV&srsName=EPSG:4326"
 )
 
-_raw_filename = "WA_DMP_{admin}_ef_v0.csv"
+_RAW_FILENAME = "WA_DMP_{admin}_ef_v0.csv"
 
-_raw_path = os.path.join(
-    os.getenv("AA_DATA_DIR"), "public", "raw", "general", "biomasse"
-)
+_RAW_PATH = Path(os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "biomasse")
 
 
 def _get_raw_path(admin):
-    return os.path.join(_raw_path, _raw_filename.format(admin=admin))
+    return Path(_RAW_PATH, _RAW_FILENAME.format(admin=admin))
 
 
-_processed_filename = "biomasse_{iso3}_{admin}_dekad_{start_dekad}.csv"
+_PROCESSED_FILENAME = "biomasse_{iso3}_{admin}_dekad_{start_dekad}.csv"
 
 
 def _get_processed_path(admin, start_dekad, iso3: Union[None, str] = None):
     if iso3 is None:
-        iso3 = "general"
+        iso3 = "glb"
 
-    _processed_path = os.path.join(
+    _processed_path = Path(
         os.getenv("AA_DATA_DIR"), "public", "processed", iso3, "biomasse"
     )
 
-    return os.path.join(
+    return Path(
         _processed_path,
-        _processed_filename.format(
+        _PROCESSED_FILENAME.format(
             iso3=iso3, admin=admin, start_dekad=start_dekad
         ),
     )
 
 
 AdminArgument = Literal["ADM0", "ADM1", "ADM2"]
-_valid_admin = get_args(AdminArgument)
+_VALID_ADMIN = get_args(AdminArgument)
 
 
 def _check_admin(admin):
-    if admin not in _valid_admin:
+    if admin not in _VALID_ADMIN:
         raise ValueError("`admin` must be one of 'ADM0', 'ADM1', or 'ADM2'.")
 
 
@@ -83,12 +83,16 @@ def download_dmp(admin: AdminArgument = "ADM2"):
     """Download raw DMP data
 
     Raw DMP data is downloaded for specified
-    administrative area. The data is downloaded
+    administrative area. This data is downloaded
+    for all countries in West Africa covered by
+    Biomasse, using those specific countries'
+    administrative boundaries, and is downloaded
+    for all available years. The data is downloaded
     in CSV format and can be processed using
     ``process_dmp()``.
     """
     _check_admin(admin)
-    url = _base_url.format(admin=admin)
+    url = _BASE_URL.format(admin=admin)
     raw_path = _get_raw_path(admin)
     download_ftp(url=url, save_path=raw_path)
     return None
@@ -97,12 +101,10 @@ def download_dmp(admin: AdminArgument = "ADM2"):
 def load_dmp(admin: AdminArgument = "ADM2", redownload: bool = False):
     _check_admin(admin)
     raw_path = _get_raw_path(admin)
-    if not os.path.exists(raw_path):
-        download_dmp(admin)
-    elif redownload:
-        os.remove(raw_path)
-        download_dmp(admin)
+    raw_path.unlink(missing_ok=True)
+    download_dmp(admin)
 
+    # na values set by Biomasse as -9998.8
     df = pd.read_csv(raw_path, na_values=["-9998.8"])
     df.dropna(axis="columns", how="all", inplace=True)
     return df
@@ -127,29 +129,37 @@ def process_dmp(
     # process mean and DMP separately since mean values
     # are dekadal and DMP are year/dekadal
     # keep ID column for working with multipolygon admin areas
-    df_mean = df.filter(regex="(^admin|^DMP_MEA|^ID)")
-    df_dmp = df.filter(regex="(^admin|^DMP_[0-9]+|^ID)")
+    id_col = "IDBIOHYDRO"
+    df_mean = df.filter(regex=f"(^admin|^DMP_MEA|^{id_col}|^AREA)")
+    df_dmp = df.filter(regex=f"(^admin|^DMP_[0-9]+|^{id_col})")
     admin_cols = [col for col in df_mean.columns if col.startswith("admin")]
 
     # groupby to average out for the few cases where admin areas
-    # are not contiguous
+    # are not contiguous, because noncontiguous polygons
+    # appear as separate rows in the data frame
+    # happens in Cote d'Ivoire and Liberia
     df_mean_long = (
         pd.wide_to_long(
             df_mean,
-            i=admin_cols + ["IDBIOHYDRO"],
+            i=admin_cols + [id_col],
             j="dekad",
             stubnames="DMP_MEA",
             sep="_",
         )
         .reset_index()
-        .drop(labels="IDBIOHYDRO", axis=1)
+        .drop(labels=id_col, axis=1)
         .groupby(admin_cols + ["dekad"])
-        .mean()
+        .apply(
+            lambda x: pd.Series(
+                {"DMP_MEA": np.average(x["DMP_MEA"], weights=x["AREA"])}
+            )
+        )
         .reset_index()
     )
 
     # calculate anomaly for mean separate from
     # observed to ensure unique dekadal values
+    # based on what we removed in the above code
     df_mean_long["season_index"] = np.where(
         df_mean_long["dekad"] >= start_dekad,
         df_mean_long["dekad"] - start_dekad,
@@ -163,13 +173,13 @@ def process_dmp(
     df_dmp_long = (
         pd.wide_to_long(
             df_dmp,
-            i=admin_cols + ["IDBIOHYDRO"],
+            i=admin_cols + [id_col],
             j="time",
             stubnames="DMP",
             sep="_",
         )
         .reset_index()
-        .drop(labels="IDBIOHYDRO", axis=1)
+        .drop(labels=id_col, axis=1)
         .groupby(admin_cols + ["time"])
         .sum()
         .reset_index()
@@ -196,9 +206,18 @@ def process_dmp(
     df_merged.sort_values(
         by=admin_cols + ["year", "dekad"], inplace=True, ignore_index=True
     )
-    df_merged["season"] = df_merged["year"] + (
-        df_merged["dekad"] >= start_dekad
+    df_merged["season"] = (
+        df_merged["year"] + (df_merged["dekad"] >= start_dekad) - 1
     )
+    # if the season isn't starting from 1
+    # create clear season definition of year1-year2
+    if start_dekad > 1:
+        df_merged["season_end"] = (df["season"] + 1).astype("str")
+        df_merged["season"] = df_merged["season"].astype("str")
+        df_merged["season"] = df_merged[["season", "season_end"]].agg(
+            "-".join, axis=1
+        )
+
     df_merged["biomasse"] = df_merged.groupby(by=admin_cols + ["season"])[
         "DMP"
     ].apply(lambda x: x.cumsum() * 365.25 / 36)
@@ -212,6 +231,7 @@ def process_dmp(
         + [
             "year",
             "dekad",
+            "season",
             "DMP_MEA",
             "DMP",
             "biomasse_mean",
@@ -289,6 +309,7 @@ def aggregate_biomasse(
     df_subset = df[df[admin_col].isin(admin_pcodes)]
     # just keep to year 2000 for unique value per dekad
     # when calculating biomasse mean aggregated
+    # since mean is the same each year
     df_mean = df_subset[df.year.isin([2000])]
     df_mean = (
         df_mean[["dekad", "biomasse_mean"]]
@@ -327,9 +348,15 @@ def load_aggregated_biomasse_data(file_descriptor: str, start_dekad: int = 10):
 
 
 def load_biomasse_mean(mask: bool = True):
-    """Used to mask WRSI"""
-    bm_fp = os.path.join(_raw_path, "BiomassValueMean.tif")
+    """Used to mask WRSI
+
+    Static file loaded from
+    http://www.geosahel.info/MetaDownload/BiomassValueMean.tif
+    so didn't bother including code to download.
+    """
+    bm_fp = Path(_RAW_PATH, "BiomassValueMean.tif")
     da = rioxarray.open_rasterio(bm_fp)
+    return da
     if mask:
-        da = da.where(da.values <= 0, drop=True)
+        da = da.where(da.values <= 0, drop=False)
     return da
