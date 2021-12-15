@@ -3,48 +3,51 @@ This notebook explores the WRSI trigger related to Chad. Given that the WRSI is 
 ```python
  #### Load libraries and set global constants
 
- %load_ext autoreload
- %autoreload 2
+% load_ext
+autoreload
+% autoreload
+2
 
- import geopandas as gpd
- from shapely.geometry import mapping
- import pandas as pd
- import rioxarray
- import rioxarray.merge
- import numpy as np
- import xarray as xr
- import seaborn as sns
- import cftime
- import calendar
- from dateutil.relativedelta import relativedelta
- from matplotlib.colors import ListedColormap
- from rasterio.enums import Resampling
- import hvplot.xarray
- import altair as alt
+import geopandas as gpd
+from shapely.geometry import mapping
+import pandas as pd
+import rioxarray
+import rioxarray.merge
+import numpy as np
+import xarray as xr
+import seaborn as sns
+import cftime
+import calendar
+from dateutil.relativedelta import relativedelta
+from matplotlib.colors import ListedColormap
+from rasterio.enums import Resampling
+import hvplot.xarray
+import altair as alt
 
- from pathlib import Path
- import sys
- import os
+from pathlib import Path
+import sys
+import os
 
- path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
- sys.path.append(path_mod)
- from src.indicators.drought.config import Config
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
+sys.path.append(path_mod)
+from src.indicators.drought.config import Config
 
- from src.indicators.drought.wrsi import load_wrsi, filter_wrsi, wrsi_percent_below, _processed_dir
- from src.indicators.drought.biomasse import load_biomasse_mean
- from src.utils_general.raster_manipulation import compute_raster_statistics
+from src.indicators.drought.wrsi import load_wrsi, filter_wrsi, wrsi_percent_below, _PROCESSED_DIR
+from src.indicators.drought.biomasse import load_biomasse_mean
+from src.utils_general.raster_manipulation import compute_raster_statistics
 
- hdx_blue="#007ce0"
+hdx_blue = "#007ce0"
 
- iso3="tcd"
- config=Config()
- parameters = config.parameters(iso3)
- country_data_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
- adm1_bound_path=country_data_processed_dir / config.SHAPEFILE_DIR / "tcd_adm2_area_of_interest.gpkg"
+iso3 = "tcd"
+config = Config()
+parameters = config.parameters(iso3)
+country_data_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
+adm1_bound_path = country_data_processed_dir / config.SHAPEFILE_DIR / "tcd_adm2_area_of_interest.gpkg"
 
- #### Set variables
+#### Set variables
 
-_save_processed_path = os.path.join(path_mod, Path(config.DATA_DIR), config.PUBLIC_DIR, config.PROCESSED_DIR, iso3, "wrsi")
+_save_processed_path = os.path.join(path_mod, Path(config.DATA_DIR), config.PUBLIC_DIR, config.PROCESSED_DIR, iso3,
+                                    "wrsi")
 ```
 
 Let's load the WRSI data and then plot just the end of season WRSI, to first inspect how it's behaving across the years. We will also subset to the relevant administrative areas. For now, we will just look at croplands since that covers the dominant portion of our area of interest.

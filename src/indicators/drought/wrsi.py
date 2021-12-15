@@ -50,14 +50,14 @@ from rasterio.crs import CRS
 
 logger = logging.getLogger(__name__)
 
-_base_url = (
+_BASE_URL = (
     "https://edcftp.cr.usgs.gov/project/fews/"
     "africa/west/dekadal/wrsi-chirps-etos/{region}/"
 )
 
-_url_zip_filename = "w{year:04}{dekad}{region}.zip"
+_URL_ZIP_FILENAME = "w{year:04}{dekad}{region}.zip"
 
-_base_file_name = "w{year:04}{dekad}{type}.tif"
+_BASE_FILENAME = "w{year:04}{dekad}{type}.tif"
 
 
 def _get_url_path(year, dekad, region):
@@ -66,11 +66,11 @@ def _get_url_path(year, dekad, region):
     else:
         url_region, file_region = "west1", "w1"
 
-    url_zip_filename = _url_zip_filename.format(
+    url_zip_filename = _URL_ZIP_FILENAME.format(
         year=year, dekad=dekad, region=file_region
     )
 
-    base_url = _base_url.format(region=url_region)
+    base_url = _BASE_URL.format(region=url_region)
     return base_url + url_zip_filename
 
 
@@ -87,21 +87,20 @@ def _download_wrsi(year: int, dekad: int, region: str, raw_dir: Path):
 
     zf = ZipFile(BytesIO(resp.read()))
     for type in ["do", "eo", "er"]:
-        file_name = _base_file_name.format(year=year, dekad=dekad, type=type)
-        save_path = os.path.join(raw_dir, file_name)
-        if os.path.exists(save_path):
-            os.remove(save_path)
+        file_name = _BASE_FILENAME.format(year=year, dekad=dekad, type=type)
+        save_path = Path(raw_dir, file_name)
+        save_path.unlink(missing_ok=True)
 
         zf.extract(file_name, raw_dir)
 
 
-_raw_path = os.path.join(
-    os.getenv("AA_DATA_DIR"), "public", "raw", "general", "wrsi", "west_africa"
+_RAW_PATH = Path(
+    os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "wrsi", "west_africa"
 )
 
 
 def _get_raw_dir(region):
-    return Path(os.path.join(_raw_path, region))
+    return Path(_RAW_PATH, region)
 
 
 def _date_to_dekad(date_obj: Union[date, str]):
@@ -125,7 +124,7 @@ def _fp_date(fp):
 
 
 RegionArgument = Literal["cropland", "rangeland"]
-_valid_region = get_args(RegionArgument)
+_VALID_REGION = get_args(RegionArgument)
 
 
 def download_wrsi(
@@ -134,7 +133,7 @@ def download_wrsi(
     end_date: Union[date, str, List[int], None] = None,
     redownload: bool = False,
 ):
-    if region not in _valid_region:
+    if region not in _VALID_REGION:
         raise ValueError("`region` must be one of 'cropland' or 'rangeland'.")
 
     if start_date is None:
@@ -157,11 +156,7 @@ def download_wrsi(
     raw_dir.mkdir(parents=True, exist_ok=True)
 
     if not redownload:
-        dts = [
-            _fp_date(filename)
-            for filename in os.listdir(raw_dir)
-            if filename.endswith(".tif")
-        ]
+        dts = [_fp_date(filename) for filename in raw_dir.glob("*.tif")]
         if dts:
             min_year, min_dekad = _date_to_dekad(min(dts))
             max_year, max_dekad = _date_to_dekad(max(dts))
@@ -206,34 +201,32 @@ def download_wrsi(
                 i_dekad = 13
 
 
-_processed_filename = "wrsi_{region}_{type}.nc"
+_PROCESSED_FILENAME = "wrsi_{region}_{type}.nc"
 
-_processed_dir = Path(
-    os.path.join(
-        os.getenv("AA_DATA_DIR"), "public", "processed", "general", "wrsi"
-    )
+_PROCESSED_DIR = Path(
+    os.getenv("AA_DATA_DIR"), "public", "processed", "glb", "wrsi"
 )
 
 
 def _get_processed_path(region, type):
-    _processed_dir.mkdir(parents=True, exist_ok=True)
-    return os.path.join(
-        _processed_dir,
-        _processed_filename.format(region=region, type=type),
+    _PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    return Path(
+        _PROCESSED_DIR,
+        _PROCESSED_FILENAME.format(region=region, type=type),
     )
 
 
 # defined here: https://gis.stackexchange.com/questions/
 # 177447/defining-the-correct-aea-proj4string-for-
 # fewsnet-rainfall-data-southern-africa
-_wrsi_crs = CRS.from_proj4(
+_WRSI_CRS = CRS.from_proj4(
     "+proj=aea +lat_1=-19.0 +lat_2=21.0 +lat_0=1.0 "
     "+lon_0=20 +x_0=0 +y_0=0 +ellps=clrk66 +units=m +no_defs"
 )
 
 
 def process_wrsi(region, type):
-    if region not in _valid_region:
+    if region not in _VALID_REGION:
         raise ValueError("`region` must be one of 'cropland' or 'rangeland'.")
 
     raw_dir = _get_raw_dir(region)
@@ -250,7 +243,7 @@ def process_wrsi(region, type):
     processed_path = _get_processed_path(region, type)
 
     def _load_raw(fp):
-        arr = xr.open_rasterio(os.path.join(raw_dir, fp))
+        arr = xr.open_rasterio(Path(raw_dir, fp))
         dt = [_fp_date(fp)]
 
         arr = arr.expand_dims(time=dt)
@@ -260,9 +253,7 @@ def process_wrsi(region, type):
         return arr
 
     arrays = [
-        _load_raw(filename)
-        for filename in os.listdir(raw_dir)
-        if filename.endswith(fp_type + ".tif")
+        _load_raw(filename) for filename in raw_dir.glob(fp_type + "*.tif")
     ]
 
     arrays_merged = xr.concat(arrays, "time").sortby("time")
@@ -276,8 +267,7 @@ def process_wrsi(region, type):
     ad = ad.rename({1: "wrsi"})
 
     # saving file
-    if os.path.exists(processed_path):
-        os.remove(processed_path)
+    processed_path.unlink(missing_ok=True)
 
     ad.to_netcdf(processed_path)
 
@@ -288,7 +278,7 @@ def load_wrsi(region, type):
     processed_path = _get_processed_path(region, type)
     a = xr.open_dataset(processed_path).to_array("wrsi")
     a = a.squeeze(drop=True)
-    a.rio.write_crs(_wrsi_crs, inplace=True)
+    a.rio.write_crs(_WRSI_CRS, inplace=True)
     a = a.rio.reproject("EPSG:4326")
     return a
 
