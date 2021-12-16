@@ -2,12 +2,30 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
+
+from pathlib import Path
+import sys
+import os
+
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
+sys.path.append(path_mod)
+from src.indicators.drought.config import Config
+```
+
+```python
+iso3="tcd"
+```
+
+```python
+config=Config()
+data_processed_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR)
+chirps_country_processed_dir = os.path.join(data_processed_dir,iso3,"chirps")
+chirps_country_processed_path = os.path.join(chirps_country_processed_dir,"monthly",f"{iso3}_chirps_monthly.nc")
 ```
 
 ```python
 # Read in monthly Chad dataset
-filename = '/home/turnerm/sync/aa_repo_data/Data/public/processed/tcd/chirps/monthly/tcd_chirps_monthly.nc'
-ds = xr.load_dataset(filename)
+ds = xr.load_dataset(chirps_country_processed_path)
 ```
 
 ```python
@@ -94,8 +112,7 @@ sum(da_season_below.values > -666) / len(da_season_below)
 ### Compute from scratch with new method
 
 ```python
-filename = '/home/turnerm/sync/aa_repo_data/Data/public/processed/tcd/chirps/monthly/tcd_chirps_monthly.nc'
-ds = xr.load_dataset(filename)
+ds = xr.load_dataset(chirps_country_processed_path)
 seas_len = 3
 ds_season = (
         ds.rolling(time=seas_len, min_periods=seas_len)
