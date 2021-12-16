@@ -228,6 +228,8 @@ def create_map(
         if False, download the forecast at integer coordinates
         If True, no rounding to the coordinates will be done which results in
         a shift in data which is interpolated
+    source_cds: bool
+        whether the data comes from CDS or ECMWF directly
     round_precip_int : bool
         If True, round the values in the dataarray to the closest
         integer before plotting
@@ -306,7 +308,15 @@ def create_map(
             f"probability for {target_date.strftime('%b %Y')}",
             size=10,
         )
-        plt.figtext(0, 0.05, f"Forecast published on 13 {published_month}")
+        # day of the month the forecast is published
+        # in some shared graphs we have only included the month
+        if source_cds:
+            pub_day = 13
+        else:
+            pub_day = 5
+        plt.figtext(
+            0, 0.05, f"Forecast published on {pub_day} {published_month}"
+        )
         g.axes.set_xlabel("longitude")
         g.axes.set_ylabel("latitude")
         g.axes.spines["right"].set_visible(False)
@@ -366,6 +376,7 @@ def compute_trigger(
     integer coordinates
     If True, no rounding to the coordinates will be done which results in
     a shift in data which is interpolated
+    :param source_cds: whether the data comes from CDS or ECMWF directly
     :param interpolate_raster: if True, interpolate the original raster
     to a higher resolution
     :param leadtimes: list of leadtimes to compute the trigger for
