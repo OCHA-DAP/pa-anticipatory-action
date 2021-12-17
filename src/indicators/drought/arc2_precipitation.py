@@ -456,8 +456,11 @@ class DrySpells(ARC2):
         # only process data for dates that have not already been downsampled
         if os.path.exists(downsampled_filepath) and not reprocess:
             exist_stats = pd.read_csv(downsampled_filepath, parse_dates=["T"])
-            lookup = da.indexes["T"]
-            lookup = ~lookup.isin(exist_stats["T"])
+            exist_time = (
+                exist_stats.set_index("T").index.astype("datetime64[ns]").date
+            )
+            lookup = da.indexes["T"].to_datetimeindex().date
+            lookup = ~np.in1d(lookup, exist_time)
             if np.sum(lookup) == 0:
                 logger.info(
                     "No additional dates to process for %s.",
@@ -535,15 +538,23 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
-    def load_downsampled_data(self) -> pd.DataFrame:
+    def load_downsampled_data(self, filter: bool = False) -> pd.DataFrame:
         """
-        Load data downsampled data.
+        Load data downsampled data. If `filter`, then
+        just `filter` the data frame to the period for monitoring.
         """
         downsampled_fp = self._get_downsampled_filepath()
         df = pd.read_csv(downsampled_fp, parse_dates=["T"])
+
+        if filter:
+            t_col = df.columns[0]
+            df = df[
+                (df[t_col].dt.date >= self.date_min)
+                & (df[t_col].dt.date <= self.date_max)
+            ]
         return df
 
-    def calculate_rolling_sum(self):
+    def calculate_rolling_sum(self, reprocess: bool = False) -> pd.DataFrame:
         """
         Calculates rolling sum from the latest downsampled
         data, based on the DrySpell objects window of
@@ -551,14 +562,40 @@ class DrySpells(ARC2):
         """
         df = self.load_downsampled_data()
 
-        # TODO: only re-calculate rolling sum where necessary
-        rollsum_df = self._calculate_rolling_sum(df)
+        # only re-calculate rolling sum where necessary
+        if not reprocess:
+            prev_rollsum_df = self.load_rolling_sum_data()
+            t_col = df.columns[0]
+            # first we look at data before our previous roll sum
+            # and recalculate if sufficient data available
+            if min(prev_rollsum_df[t_col]) - min(df[t_col]) >= pd.Timedelta(
+                self.rolling_window, unit="days"
+            ):
+                before_df = df[df[t_col] < min(prev_rollsum_df[t_col])]
+                before_rs = self._calculate_rolling_sum(before_df)
+                prev_rollsum_df = pd.concat(before_rs, prev_rollsum_df)
+            # now we look at data after our previous roll sum
+            # and calculate for any new data after
+            if max(df[t_col]) > max(prev_rollsum_df[t_col]):
+                after_df = df[
+                    df[t_col]
+                    > (
+                        max(prev_rollsum_df[t_col])
+                        - pd.Timedelta(self.rolling_window, unit="days")
+                    )
+                ]
+                after_rs = self._calculate_rolling_sum(after_df)
+                prev_rollsum_df = pd.concat(prev_rollsum_df, after_rs)
+            rollsum_df = prev_rollsum_df
+        # otherwise, just calculate across entire dataframe
+        else:
+            rollsum_df = self._calculate_rolling_sum(df)
 
         rollsum_fp = self._get_rolling_sum_filepath()
         rollsum_df.to_csv(rollsum_fp, index=False)
         return rollsum_df
 
-    def _calculate_rolling_sum(self, df: pd.DataFrame):
+    def _calculate_rolling_sum(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates rolling sum on specific data frame.
         """
@@ -587,6 +624,18 @@ class DrySpells(ARC2):
             f"master.csv"
         )
         return directory / filename
+
+    def load_rolling_sum_data(self, filter: bool = False) -> pd.DataFrame:
+        """Load rolling sum data"""
+        rollsum_fp = self._get_rolling_sum_filepath()
+        df = pd.read_csv(rollsum_fp, parse_dates=["T"])
+        if filter:
+            t_col = df.columns[0]
+            df = df[
+                (df[t_col].dt.date >= self.date_min)
+                & (df[t_col].dt.date <= self.date_max)
+            ]
+        return df
 
     def identify_dry_spells(self, reprocess: bool = False) -> pd.DataFrame:
         """
@@ -689,12 +738,21 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
-    def load_dry_spell_data(self) -> pd.DataFrame:
+    def load_dry_spell_data(self, filter: bool = True) -> pd.DataFrame:
         """
         Load dry spells classified through method.
         """
         fp = self._get_dry_spell_filepath()
-        df = pd.read_csv(filepath_or_buffer=fp)
+        df = pd.read_csv(
+            filepath_or_buffer=fp,
+            parse_dates=["ds_first_date", "ds_confirmation", "ds_last_date"],
+        )
+        if filter:
+            t_col = "ds_confirmation"
+            df = df[
+                (df[t_col].dt.date >= self.date_min)
+                & (df[t_col].dt.date <= self.date_max)
+            ]
         return df
 
     def _write_to_monitoring_file(self, dry_spells: Union[None, int] = None):
@@ -717,3 +775,104 @@ class DrySpells(ARC2):
                 )
         f.close()
         return
+
+    def find_longest_runs(self, filter: bool = True):
+        """Find longest runs under mm of rainfall
+
+        Defaults to only finding the longest runs
+        across the dates of interest, otherwise
+        the algorithm for calculating would take
+        an extremely long time.
+        """
+        df = self.load_downsampled_data(filter=filter)
+
+        precip_col = df.columns[1]
+        adm_col = df.columns[2]
+
+        def _find_longest_run(x, threshold):
+            for i in range(len(x)):
+                rs = x.rolling(i).sum()
+                if ~np.any(rs <= threshold):
+                    return i - 1
+            return i
+
+        df_agg = df.groupby(adm_col).agg(
+            longest_run=(
+                precip_col,
+                lambda x: _find_longest_run(x, self.rainfall_mm),
+            )
+        )
+
+        return df_agg
+
+    def count_dry_spells(self, filter: bool = True) -> int:
+        """Return the number of admins in dry spell
+
+        Defaults to returning the number of unique
+        admins within the monitoring period, otherwise
+        returns across the entire data frame.
+        """
+        df = self.load_dry_spell_data(filter=filter)
+        return len(np.unique(df.iloc[:, 0]))
+
+    def days_under_threshold(self, raster: bool = True) -> pd.DataFrame:
+        """Calculate days precipitation has been under threshold
+
+        From the most recent day in the dataset, calculates the
+        number of days the rolling sum has remained under the
+        threshold for each administrative area. The calculations
+        are always performed solely on data in the monitoring
+        period, and checks consecutive days from the end of the
+        monitoring period.
+
+        If `raster`, calculates on the raw raster file. Otherwise
+        calculates on data aggregated to the administrative
+        boundaries.
+        """
+        if raster:
+            da = self.load_raw_data()
+            da_date = da.indexes["T"].to_datetimeindex().date
+            da = da[
+                (da_date >= self.date_min) & (da_date <= self.date_max), :, :
+            ]
+            da = da.reindex(T=list(reversed(da.indexes["T"])))
+            return xr.where(
+                da.cumsum(dim="T") <= self.rainfall_mm, 0, 1
+            ).argmax(dim="T")
+
+        else:
+            df = self.load_downsampled_data(filter=True)
+            precip_col = df.columns[1]
+            adm_col = df.columns[2]
+            df = (
+                df.iloc[::-1]
+                .groupby(adm_col)
+                .agg(
+                    days_under_threshold=(
+                        precip_col,
+                        lambda x: sum(x.cumsum() <= self.rainfall_mm),
+                    )
+                )
+                .reset_index()
+            )
+            return df
+
+    def count_days_under_threshold(self, number_days: int) -> int:
+        """Count number of admin areas under threshold for `number_days`
+
+        Counts the number of administrative areas under
+        the threshold for greater than or equal to
+        `number_days`. The calculations
+        are always performed solely on data in the monitoring
+        period, and checks consecutive days from the end of the
+        monitoring period.
+        """
+        df = self.days_under_threshold(raster=False)
+        return sum(df.iloc[:, 1] >= number_days)
+
+    def cumulative_rainfall(self) -> xr.DataArray:
+        """Calculate cumulative rainfall across monitoring period"""
+        da = self.load_raw_data()
+        da_date = da.indexes["T"].to_datetimeindex().date
+        da = da[(da_date >= self.date_min) & (da_date <= self.date_max), :, :]
+        return da.sum(dim="T")
