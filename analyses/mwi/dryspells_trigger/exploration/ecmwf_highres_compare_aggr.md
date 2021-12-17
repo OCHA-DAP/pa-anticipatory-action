@@ -323,43 +323,43 @@ med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color=
 ```
 
 ```python
-# #select methods for plotting of slides
-# #is stacked!
-# sel_meth=["api_center","api_weightavg","api_alltouched"]
-# df_comb_med["ds_str"]=np.where(df_comb_med.dry_spell==1,"yes","no")
-# histo = alt.Chart().mark_bar().encode(
-#     x=alt.X("mean_ADM1_PCODE",bin=alt.Bin(step=10),title="Forecasted precipitation"),
-#     y="count()",
-#     color=alt.Color('ds_str:N',scale=alt.Scale(range=[no_ds_color,ds_color]),legend=alt.Legend(title="Dry spell")),
-# )
-# med_line = alt.Chart().mark_rule(color="purple").encode(
-#     x='median(mean_ADM1_PCODE)')
-# #TODO: for some reason text not readable, no idea why..
-# med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color="purple").encode(
-#     text="label:N",
-# ).transform_calculate(label="Median: " + alt.datum.median_for)
+#select methods for plotting of slides
+#is stacked!
+sel_meth=["api_center","api_weightavg","api_alltouched"]
+df_comb_med["ds_str"]=np.where(df_comb_med.dry_spell==1,"yes","no")
+histo = alt.Chart().mark_bar().encode(
+    x=alt.X("mean_ADM1_PCODE",bin=alt.Bin(step=10),title="Forecasted precipitation"),
+    y="count()",
+    color=alt.Color('ds_str:N',scale=alt.Scale(range=[no_ds_color,ds_color]),legend=alt.Legend(title="Dry spell")),
+)
+med_line = alt.Chart().mark_rule(color="purple").encode(
+    x='median(mean_ADM1_PCODE)')
+#TODO: for some reason text not readable, no idea why..
+med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color="purple").encode(
+    text="label:N",
+).transform_calculate(label="Median: " + alt.datum.median_for)
 
-# (histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
-#                                        data=df_comb_med[(df_comb_med.leadtime==3)&(df_comb_med.method.isin(sel_meth))],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
+(histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
+                                       data=df_comb_med[(df_comb_med.leadtime==3)&(df_comb_med.method.isin(sel_meth))],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
 ```
 
 ```python
-# #select methods for plotting of slides
-# #is stacked!
-# sel_meth=["cds_unrounded_center","api_center"]
-# df_comb_med["ds_str"]=np.where(df_comb_med.dry_spell==1,"yes","no")
-# histo = alt.Chart().mark_bar().encode(
-#     x=alt.X("mean_ADM1_PCODE",bin=alt.Bin(step=10),title="Forecasted precipitation"),
-#     y="count()",
-#     color=alt.Color('ds_str:N',scale=alt.Scale(range=[no_ds_color,ds_color]),legend=alt.Legend(title="Dry spell")),
-# )
-# med_line = alt.Chart().mark_rule(color="purple").encode(
-#     x='median(mean_ADM1_PCODE)')
-# #TODO: for some reason text not readable, no idea why..
-# med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color="purple").encode(
-#     text="label:N",
-# ).transform_calculate(label="Median: " + alt.datum.median_for)
+#select methods for plotting of slides
+#is stacked!
+sel_meth=["cds_unrounded_center","api_center"]
+df_comb_med["ds_str"]=np.where(df_comb_med.dry_spell==1,"yes","no")
+histo = alt.Chart().mark_bar().encode(
+    x=alt.X("mean_ADM1_PCODE",bin=alt.Bin(step=10),title="Forecasted precipitation"),
+    y="count()",
+    color=alt.Color('ds_str:N',scale=alt.Scale(range=[no_ds_color,ds_color]),legend=alt.Legend(title="Dry spell")),
+)
+med_line = alt.Chart().mark_rule(color="purple").encode(
+    x='median(mean_ADM1_PCODE)')
+#TODO: for some reason text not readable, no idea why..
+med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color="purple").encode(
+    text="label:N",
+).transform_calculate(label="Median: " + alt.datum.median_for)
 
-# (histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
-#                                        data=df_comb_med[(df_comb_med.leadtime==3)&(df_comb_med.method.isin(sel_meth))],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
+(histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
+                                       data=df_comb_med[(df_comb_med.leadtime==3)&(df_comb_med.method.isin(sel_meth))],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
 ```
