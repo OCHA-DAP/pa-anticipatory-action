@@ -18,21 +18,22 @@ import xarray as xr
 import pandas as pd
 import cftime
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import colors
 
 poly_path = os.path.join(
     os.getenv('AA_DATA_DIR'),
     'public',
-    'raw',
+    'processed',
     'mwi',
     'cod_ab',
-    'mwi_adm_nso_20181016_shp',
-    'mwi_admbnda_adm2_nso_20181016.shp'
+    'mwi_drought_adm2.gpkg'
 )
 
 arc2_centr = DrySpells(
     country_iso3 = "mwi",
-    monitoring_start = "1999-12-19",
-    monitoring_end = date.today(),
+    monitoring_start = "2018-01-07",
+    monitoring_end = "2018-03-07",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
@@ -41,8 +42,8 @@ arc2_centr.download_data()
 
 arc2_touch = DrySpells(
     country_iso3 = "mwi",
-    monitoring_start = "1999-12-19",
-    monitoring_end = date.today(),
+    monitoring_start = "2018-01-07",
+    monitoring_end = "2018-03-07",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S"),
     agg_method = "touching"
@@ -50,27 +51,41 @@ arc2_touch = DrySpells(
 
 arc2_approx = DrySpells(
     country_iso3 = "mwi",
-    monitoring_start = "1999-12-19",
-    monitoring_end = date.today(),
+    monitoring_start = "2018-01-07",
+    monitoring_end = "2018-03-07",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S"),
     agg_method = "approximate_mask"
 )
 ```
 
+```python
+
+arc2_approx = DrySpells(
+    country_iso3 = "mwi",
+    monitoring_start = "2018-01-07",
+    monitoring_end = "2018-03-07",
+    range_x = ("32E", "34E"),
+    range_y = ("20S", "5S"),
+    agg_method = "approximate_mask"
+)
+
+arc2_approx.download_data(master=False)
+```
+
 Below we process and calculate dry spells using the variety of possible methods.
 
 ```python
-arc2_centr.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
-arc2_centr.calculate_rolling_sum()
+arc2_centr.aggregate_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_centr.calculate_rolling_sum(True)
 arc2_centr.identify_dry_spells()
 
-arc2_touch.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
-arc2_touch.calculate_rolling_sum()
+arc2_touch.aggregate_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_touch.calculate_rolling_sum(True)
 arc2_touch.identify_dry_spells()
 
-arc2_approx.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
-arc2_approx.calculate_rolling_sum()
+arc2_approx.aggregate_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_approx.calculate_rolling_sum(True)
 arc2_approx.identify_dry_spells()
 ```
 
@@ -161,6 +176,93 @@ ds_year.to_netcdf(
         "arc2_raster_dry_spells_cum.nc"
     )
 )
+```
+
+```python
+arc2_centr.find_longest_runs()
+```
+
+```python
+arc2_centr.dry_spell_count()
+```
+
+```python
+arc2_centr.load_rolling_sum_data(True)
+```
+
+```python
+df = arc2_centr.days_under_threshold()
+gdf_merged = gdf_adm2.merge(df, on="ADM2_PCODE")
+
+alt.Chart(gdf_merged).mark_geoshape(
+).encode(
+    color="days_under_threshold"
+)
+```
+
+```python
+ds = arc2_centr.load_raw_data()
+```
+
+```python
+ds2 = ds[ds.indexes["T"].to_datetimeindex().date >= arc2_centr.date_min,:,:]
+ds2 = ds2.reindex(T=list(reversed(ds2.indexes["T"])))
+xr.where(ds2.cumsum(dim="T") <= 200, 0, 1).argmax(dim="T").plot()
+```
+
+```python
+
+```
+
+```python
+# twoslopenorm class
+divnorm = colors.TwoSlopeNorm(vmin=0, vcenter=14, vmax = 28)
+ds = arc2_centr.days_under_threshold()
+gdf_adm3 = gpd.read_file(os.path.join(
+    os.getenv('AA_DATA_DIR'),
+    'public',
+    'processed',
+    'mwi',
+    'cod_ab',
+    'mwi_drought_adm2.gpkg'
+)
+f, ax = plt.subplots()
+ds = ds.rio.clip(gdf_adm2.geometry)
+ds = ds.where(ds.values >= 0, np.NaN)
+ds.plot(ax = ax,
+        cmap='Greys',
+        norm=divnorm)
+gdf_adm2.plot(ax=ax, facecolor="none")
+
+plt.title("Consecutive days under 2mm cumulative rainfall")
+```
+
+```python
+ ds.where(ds.values < 0, np.NaN)
+```
+
+```python
+gdf_adm2 = gpd.read_file(
+os.path.join(
+    os.getenv('AA_DATA_DIR'),
+    'public',
+    'processed',
+    'mwi',
+    'cod_ab',
+    'mwi_drought_adm2.gpkg'
+))
+
+gdf_adm2 = gdf_adm2[gdf_adm2.ADM1_PCODE == "MW3"]
+```
+
+```python
+f, ax = plt.subplots()
+
+ds.plot(ax = ax)
+```
+
+```python
+np.unique(ds)
 ```
 
 ```python

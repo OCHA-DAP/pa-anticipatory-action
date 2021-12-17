@@ -184,6 +184,7 @@ def create_map(
     target_date: date,
     prob: float,
     use_unrounded_area_coords: bool,
+    source_cds: bool,
     round_precip_int: bool = True,
     leadtimes: List[int] = None,
     gdf_adm: gpd.GeoDataFrame = None,
@@ -233,7 +234,9 @@ def create_map(
         Size of the figure
     """
     da_for = get_ecmwf_forecast_by_leadtime(
-        iso3, use_unrounded_area_coords=use_unrounded_area_coords
+        iso3,
+        use_unrounded_area_coords=use_unrounded_area_coords,
+        source_cds=source_cds,
     )
     da_for_date = da_for.sel(time=target_date.strftime("%Y-%m-%d"))
     if round_precip_int:
@@ -312,6 +315,7 @@ def compute_trigger(
     precip_cap: int,
     download: bool,
     use_unrounded_area_coords: bool,
+    source_cds: bool,
     resolution: str = None,
     leadtimes: List[int] = None,
     pcodes: List[str] = None,
@@ -378,6 +382,7 @@ def compute_trigger(
         target_date,
         resolution=resolution,
         adm_level=adm_level,
+        source_cds=source_cds,
         use_unrounded_area_coords=use_unrounded_area_coords,
         all_touched=all_touched,
     )
@@ -436,6 +441,7 @@ def compute_trigger(
 
 
 def main():
+    source_cds = True
     prob = 0.5
     precip_cap = 210
     adm_level = 1
@@ -464,6 +470,7 @@ def main():
                 target_date=target_date,
                 prob=prob,
                 precip_cap=precip_cap,
+                source_cds=source_cds,
                 download=True,
                 use_unrounded_area_coords=use_unrounded_area_coords,
                 resolution=None,
@@ -473,9 +480,10 @@ def main():
             create_map(
                 iso3=COUNTRY_ISO3,
                 target_date=target_date,
-                leadtimes=[3, 4],
+                leadtimes=[1, 2, 3],
                 prob=prob,
                 use_unrounded_area_coords=use_unrounded_area_coords,
+                source_cds=source_cds,
                 gdf_adm=gdf_adm,
                 slice_lon=slice(32, 37),
                 slice_lat=slice(-9, -19),
@@ -502,6 +510,7 @@ def main():
             target_date=target_date,
             prob=prob,
             precip_cap=precip_cap,
+            source_cds=source_cds,
             download=True,
             use_unrounded_area_coords=False,
             resolution=0.05,
@@ -514,6 +523,7 @@ def main():
             target_date=target_date,
             prob=prob,
             precip_cap=precip_cap,
+            source_cds=source_cds,
             download=True,
             use_unrounded_area_coords=False,
             resolution=None,
