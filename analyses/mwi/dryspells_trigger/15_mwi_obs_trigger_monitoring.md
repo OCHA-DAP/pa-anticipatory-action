@@ -86,15 +86,15 @@ arc2_approx = DrySpells(
 Now with each of these, we can just re-process our data and calculate rolling sums and dry spells.
 
 ```python
-arc2_centr.downsample_data(POLY_PATH, "ADM2_PCODE")
+arc2_centr.aggregate_data(POLY_PATH, "ADM2_PCODE")
 arc2_centr.calculate_rolling_sum()
 arc2_centr.identify_dry_spells()
 
-arc2_touch.downsample_data(POLY_PATH, "ADM2_PCODE")
+arc2_touch.aggregate_data(POLY_PATH, "ADM2_PCODE")
 arc2_touch.calculate_rolling_sum()
 arc2_touch.identify_dry_spells()
 
-arc2_approx.downsample_data(POLY_PATH, "ADM2_PCODE")
+arc2_approx.aggregate_data(POLY_PATH, "ADM2_PCODE")
 arc2_approx.calculate_rolling_sum()
 arc2_approx.identify_dry_spells()
 ```
@@ -128,7 +128,7 @@ So, if we have triggered, we also want to plot the cumulative rainfall across ou
 da_days = arc2_centr.days_under_threshold()
 f, ax = plt.subplots()
 da_days = da_days.rio.clip(gdf_adm3.geometry)
-da_days = da_days.where(da.values >= 0, np.NaN)
+da_days = da_days.where(da_days.values >= 0, np.NaN)
 divnorm = colors.TwoSlopeNorm(vmin=0, vcenter=14, vmax = 28)
 da_days.plot(ax = ax,
              cmap='Greys',
@@ -142,9 +142,13 @@ plt.title("Most consecutive days under 2mm cumulative rainfall")
 da_cum = arc2_centr.cumulative_rainfall()
 f, ax = plt.subplots()
 da_cum = da_cum.rio.clip(gdf_adm3.geometry)
-da_cum = da_cum.where(da.values >= 0, np.NaN)
+da_cum = da_cum.where(da_cum.values >= 0, np.NaN)
 da_cum.plot(ax = ax,
             cmap='Greys')
 gdf_adm3.plot(ax=ax, facecolor="none", alpha=0.5)
 plt.title(f"Cumulative rainfall from {arc2_centr.monitoring_start}")
+```
+
+```python
+
 ```

@@ -59,18 +59,32 @@ arc2_approx = DrySpells(
 )
 ```
 
+```python
+
+arc2_approx = DrySpells(
+    country_iso3 = "mwi",
+    monitoring_start = "2018-01-07",
+    monitoring_end = "2018-03-07",
+    range_x = ("32E", "34E"),
+    range_y = ("20S", "5S"),
+    agg_method = "approximate_mask"
+)
+
+arc2_approx.download_data(master=False)
+```
+
 Below we process and calculate dry spells using the variety of possible methods.
 
 ```python
-arc2_centr.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_centr.aggregate_data(poly_path, "ADM2_PCODE", reprocess=True)
 arc2_centr.calculate_rolling_sum(True)
 arc2_centr.identify_dry_spells()
 
-arc2_touch.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_touch.aggregate_data(poly_path, "ADM2_PCODE", reprocess=True)
 arc2_touch.calculate_rolling_sum(True)
 arc2_touch.identify_dry_spells()
 
-arc2_approx.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
+arc2_approx.aggregate_data(poly_path, "ADM2_PCODE", reprocess=True)
 arc2_approx.calculate_rolling_sum(True)
 arc2_approx.identify_dry_spells()
 ```
