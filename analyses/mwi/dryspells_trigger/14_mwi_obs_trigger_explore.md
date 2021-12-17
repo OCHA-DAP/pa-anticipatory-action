@@ -33,6 +33,8 @@ DRY_SPELLS = 'mwi_arc2_centroid_dry_spells.csv'
 DAILY_RAIN = 'mwi_arc2_precip_long_raw.csv'
 PLOT_DIR = DATA_DIR / 'public' / 'processed' / COUNTRY_ISO3 / 'plots' / 'dry_spells' / 'arc2'
 
+RAINY_SEASON = ARC2_DIR / 'mwi_arc2_rainy_seasons.csv'
+
 N_YEARS = 21 # Dry spells based on 21 years of ARC2 data - from 2000-2020, inclusive
 ```
 
@@ -112,7 +114,10 @@ rainy_df = daily_df[(daily_df.rain_less_25) & ((daily_df.date.dt.month >= 4) | (
     .reset_index(drop = True) \
     .assign(pcode = lambda x: x.pcode.str[0],
             year = lambda x: x.year.str[0],
+            season = lambda x: (x.year-1).astype('str') + "-" + x.year.astype('str'),
             dry_season_first_date = lambda x: x.dry_season_confirmation - pd.to_timedelta(14, unit = 'd'))
+
+rainy_df
 ```
 
 Let's merge this back into the dry spell data to see how many of the dry spells confirmed in March would be overlapping with the dry season.
@@ -193,6 +198,13 @@ rainy_onset_df = rainy_onset_df \
     .drop('date', axis = 1)
             
 rainy_onset_df
+```
+
+Merge the dry season onset and rainy season data frames for saving.
+
+```python
+arc2_rs_df = pd.merge(rainy_onset_df, rainy_df[['pcode', 'season', 'dry_season_first_date']], on = ['pcode', 'season'], how = 'left')
+#arc2_rs_df.to_csv(RAINY_SEASON, index=False)
 ```
 
 Okay, now we can merge back in with old dataset to compare with our triggers.
