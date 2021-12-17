@@ -12,6 +12,7 @@ import pandas as pd
 import requests
 import rioxarray
 import xarray as xr
+from rasterio.enums import Resampling
 
 from src.utils_general.raster_manipulation import compute_raster_statistics
 
@@ -371,7 +372,9 @@ class DrySpells(ARC2):
         available.
     monitoring_end: Maximum date to load data from, either string
         in ISO 8601 format, e.g. '2021-04-20' or `datetime.date` object.
-    :param agg_method: One of 'centroid' or 'touching'.
+    :param agg_method: One of 'centroid',  'touching', or 'approximate_mask'.
+        If 'approximate_mask', the data is upsampled 4x before aggregating
+        using the 'centroid' method.
     :param rolling_window: Number of days for rolling sum of precipitation.
     :param rainfall_mm: Maximum precipitation during window to
         classify as dry spell.
@@ -475,6 +478,12 @@ class DrySpells(ARC2):
         da["T"] = [x.date() for x in da.indexes["T"].to_datetimeindex()]
 
         all_touched = self.agg_method == "touching"
+        if self.agg_method == "approximate_mask":
+            width = da.rio.width * 4
+            height = da.rio.height * 4
+            da = da.rio.reproject(
+                da.rio.crs, shape=(height, width), resampling=Resampling.mode
+            )
 
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,

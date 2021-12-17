@@ -54,7 +54,7 @@ We can see here that we have data corrresponding to the 2nd and 3rd of September
 ```python
 arc2_test = DrySpells(
     country_iso3 = "mwi",
-    monitoring_start = "2021-09-01",
+    monitoring_start = "2000-01-01",
     monitoring_end = "2021-09-04",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S"),
@@ -74,6 +74,8 @@ We can also see that if we process the data that we can calculate rolling sums a
 arc2_test.downsample_data(poly_path, "ADM2_PCODE", reprocess=True)
 arc2_test.calculate_rolling_sum()
 arc2_test.identify_dry_spells()
+
+
 ```
 
 Of course, we're in the middle of the dry season so in fact everywhere identifies a dry spell! Now, let's say we are again wanting to re-run the system. We can do data from the beginning of the year until today, since `monitoring_end` (and `monitoring_start`) accepts strings *or* dates. We can also use just 2 simple functions to redownload, reprocess, and identify all dry spells.
