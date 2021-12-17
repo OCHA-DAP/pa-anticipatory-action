@@ -2,6 +2,8 @@
 import xarray as xr
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
+import geopandas as gpd
 
 from pathlib import Path
 import sys
@@ -21,6 +23,14 @@ config=Config()
 data_processed_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR)
 chirps_country_processed_dir = os.path.join(data_processed_dir,iso3,"chirps")
 chirps_country_processed_path = os.path.join(chirps_country_processed_dir,"monthly",f"{iso3}_chirps_monthly.nc")
+```
+
+```python
+parameters = config.parameters(iso3)
+country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
+adm1_bound_path = os.path.join(
+    country_data_raw_dir, config.SHAPEFILE_DIR, parameters["path_admin1_shp"]
+)
 ```
 
 ```python
@@ -88,30 +98,12 @@ for i, group in da_season_climate.groupby(
     print(group.quantile(0.33))
 ```
 
-```python
-# This is how it's calculated in the code
-list_ds_seass = []
-for s in sorted(np.unique(da_season.time.dt.month)):
-    da_seas_sel = da_season_climate.sel(time=da_season_climate.time.dt.month == s)
-    # keep original values of cells that are either nan or have
-    # below average precipitation, all others are set to -666
-    limit = da_season_climate_quantile.sel(month=s)
-    da_seas_below = da_seas_sel.where(
-        da_seas_sel <= da_season_climate_quantile.sel(month=s),
-        -666,
-    )
-    list_ds_seass.append(da_seas_below)
-da_season_below = xr.concat(list_ds_seass, dim="time")
-```
+### Compare methods of computation
+One method is implemented in the code. This gives correct results but is not an optimal method of computation and saving. 
+Thus, test a new method and see if the results are the same
 
 ```python
-# Check that it corresponds to 1/3
-sum(da_season_below.values > -666) / len(da_season_below)
-```
-
-### Compute from scratch with new method
-
-```python
+#load data
 ds = xr.load_dataset(chirps_country_processed_path)
 seas_len = 3
 ds_season = (
@@ -128,43 +120,111 @@ ds_season_climate_quantile = ds_season_climate.groupby(
 ```
 
 ```python
-ds_season
+da_season=ds_season.precip
+da_season_climate=ds_season_climate.precip
+da_season_climate_quantile=ds_season_climate_quantile.precip
 ```
+
+#### Old method
+
+```python
+# This is how it's calculated in the code
+list_ds_seass = []
+for s in np.unique(da_season.time.dt.month):
+    da_seas_sel = da_season.sel(time=da_season.time.dt.month == s)
+    # keep original values of cells that are either nan or have
+    # below average precipitation, all others are set to -666
+    da_seas_below = da_seas_sel.where(
+        (da_seas_sel.isnull())
+        | (da_seas_sel <= da_season_climate_quantile.sel(month=s)),
+        -666,
+    )
+    list_ds_seass.append(da_seas_below)
+da_season_below = xr.concat(list_ds_seass, dim="time")
+```
+
+```python
+# Check that it corresponds to 1/3
+da_season_below.where(da_season_below>-666).count()/da_season.count()
+```
+
+#### New method
 
 ```python
 # With new method, use groupby to create boolean mask
 ds_season = ds_season.assign_coords({'month': ds_season.time.dt.month})
 ds_lt = ds_season.groupby('month').apply(lambda x: 
-                x.where(x < ds_season_climate_quantile.sel(month=x.time.dt.month)))
+                x.where(x <= ds_season_climate_quantile.sel(month=x.time.dt.month)))
 ds_gt = ds_season.groupby('month').apply(lambda x: 
                 x.where(x > ds_season_climate_quantile.sel(month=x.time.dt.month)))
-ds_season = ds_season.assign({'lower': ds_lt['precip'], 'upper': ds_gt['precip']})
+ds_season_lowup = ds_season.assign({'lower': ds_lt['precip'], 'upper': ds_gt['precip']})
 ```
 
 ```python
 # Confirm lower tercile is 1/3
-lower = (~np.isnan(ds_season['lower'])).sum() 
-upper = (~np.isnan(ds_season['upper'])).sum()
+lower = (~np.isnan(ds_season_lowup['lower'])).sum() 
+upper = (~np.isnan(ds_season_lowup['upper'])).sum()
 lower / (lower + upper)
 ```
 
+#### Even newer method
+Yet another option is to compute each of the three terciles, so the below normal, normal and above average. 
+Moreover, we don't need the groupby and thus can simplify a bit
+
+```python
+da_season_climate_quantile_list = da_season_climate.groupby(
+        da_season_climate.time.dt.month
+    ).quantile([0.33,0.66])
+ds_bn = da_season.where(da_season <= da_season_climate_quantile_list.sel(quantile=0.33,month=da_season.time.dt.month))
+ds_an = da_season.where(da_season >= da_season_climate_quantile_list.sel(quantile=0.66,month=da_season.time.dt.month))
+ds_no = da_season.where((da_season > da_season_climate_quantile_list.sel(quantile=0.33,month=da_season.time.dt.month))&
+                             (da_season < da_season_climate_quantile_list.sel(quantile=0.66,month=da_season.time.dt.month)))
+ds_season_terc = ds_season.assign({'below_normal': ds_bn.drop('quantile'), 'normal': ds_no,'above_normal':ds_an.drop('quantile')})
+```
+
+```python
+# Confirm lower tercile is 1/3
+lower = (~np.isnan(ds_season_terc['below_normal'])).sum() 
+total = (~np.isnan(ds_season_terc.precip)).sum()
+lower / total
+```
+
+As we can see all of the three methods align. We therefore go with the third method, which is the most complete and cleanest
+
+
+Below we do a bit more analysis to make sure the outcomes are correct
+
 ```python
 # Make a plot showing fraction of pixels in lower tercile (so "dryness")
-n_lower = (~np.isnan(ds_season['lower'])).sum(dim=['longitude', 'latitude']) 
-n_upper = (~np.isnan(ds_season['upper'])).sum(dim=['longitude', 'latitude'])
-frac = n_lower / (n_lower + n_upper)
+n_lower = (~np.isnan(ds_season_terc['below_normal'])).sum(dim=['longitude', 'latitude']) 
+n_tot = (~np.isnan(ds_season_terc['precip'])).sum(dim=['longitude', 'latitude'])
+frac = n_lower / n_tot
 
 fig, ax = plt.subplots()
 ax.axhline(0.33, c='k')
 frac.plot(ax=ax)
 ```
 
+Check that the division of terciles look correct
+
 ```python
 # Make a plot of a particular time point
-time = 240
-ds_season['lower'].isel(time=time).plot(vmin=-1, vmax=5)
+#points with below normal precip
+time = 340
+#large figsize needed to see indeed the two plots align
+g=ds_season_terc['below_normal'].isel(time=time).plot(cmap=matplotlib.colors.ListedColormap(["blue"]),figsize=(10,15))
+gdf_adm=gpd.read_file(adm1_bound_path)
+gdf_adm.boundary.plot(ax=g.axes);
 ```
 
 ```python
-ds_season['upper'].isel(time=time).plot(vmin=-1, vmax=5)
+#points with normal or above normal precip
+#large figsize needed to see indeed the two plots align
+g=ds_season_terc['normal'].isel(time=time).plot(cmap=matplotlib.colors.ListedColormap(["blue"]),figsize=(10,15))
+ds_season_terc['above_normal'].isel(time=time).plot(cmap=matplotlib.colors.ListedColormap(["blue"]),ax=g.axes,add_colorbar=False)
+gdf_adm.boundary.plot(ax=g.axes);
+```
+
+```python
+
 ```
