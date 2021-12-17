@@ -52,11 +52,15 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
-use_unrounded_area_coords = True #False
+source_cds=False
+use_unrounded_area_coords = False
 interpolate=False
 resolution=None #0.05
 all_touched=False #True
-source_cds=False
+
+#cannot have unrounded area coords when source_cds=False so check and set to False
+if not source_cds:
+    use_unrounded_area_coords = False
 ```
 
 ```python
