@@ -46,40 +46,13 @@ _RAW_FILENAME = "WA_DMP_{admin}_ef_v0.csv"
 
 _RAW_PATH = Path(os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "biomasse")
 
-
-def _get_raw_path(admin):
-    return Path(_RAW_PATH, _RAW_FILENAME.format(admin=admin))
-
+AdminArgument = Literal["ADM0", "ADM1", "ADM2"]
+_VALID_ADMIN = get_args(AdminArgument)
 
 _PROCESSED_FILENAME = "biomasse_{iso3}_{admin}_dekad_{start_dekad}.csv"
 
 
-def _get_processed_path(admin, start_dekad, iso3: Union[None, str] = None):
-    if iso3 is None:
-        iso3 = "glb"
-
-    _processed_path = Path(
-        os.getenv("AA_DATA_DIR"), "public", "processed", iso3, "biomasse"
-    )
-
-    return Path(
-        _processed_path,
-        _PROCESSED_FILENAME.format(
-            iso3=iso3, admin=admin, start_dekad=start_dekad
-        ),
-    )
-
-
-AdminArgument = Literal["ADM0", "ADM1", "ADM2"]
-_VALID_ADMIN = get_args(AdminArgument)
-
-
-def _check_admin(admin):
-    if admin not in _VALID_ADMIN:
-        raise ValueError("`admin` must be one of 'ADM0', 'ADM1', or 'ADM2'.")
-
-
-def download_dmp(admin: AdminArgument = "ADM2"):
+def download_dmp(admin: AdminArgument = "ADM2") -> None:
     """Download raw DMP data
 
     Raw DMP data is downloaded for specified
@@ -89,42 +62,80 @@ def download_dmp(admin: AdminArgument = "ADM2"):
     administrative boundaries, and is downloaded
     for all available years. The data is downloaded
     in CSV format and can be processed using
-    ``process_dmp()``.
+    ``calculate_biomasse()``. Since it is provided
+    in a single file, the existing file is
+    always overwritten.
+
+    Parameters
+    ----------
+    admin: AdminArgument
+        Admin area to load DMP for, one of
+        'ADM0', 'ADM1', or 'ADM2'.
+
+    Returns
+    -------
+    None
     """
     _check_admin(admin)
     url = _BASE_URL.format(admin=admin)
     raw_path = _get_raw_path(admin)
     download_ftp(url=url, save_path=raw_path)
-    return None
 
 
-def load_dmp(admin: AdminArgument = "ADM2", redownload: bool = False):
+def load_dmp(admin: AdminArgument = "ADM2") -> pd.DataFrame:
+    """Load raw DMP data
+
+    Parameters
+    ----------
+    admin: AdminArgument
+        Admin area to load DMP for, one of
+        'ADM0', 'ADM1', or 'ADM2'.
+
+    Returns
+    -------
+    pd.DataFrame
+    """
     _check_admin(admin)
     raw_path = _get_raw_path(admin)
-    raw_path.unlink(missing_ok=True)
-    download_dmp(admin)
-
+    if not raw_path.is_file():
+        raise OSError(
+            "Raw DMP data not available, run `download_dmp()` first."
+        )
     # na values set by Biomasse as -9998.8
     df = pd.read_csv(raw_path, na_values=["-9998.8"])
     df.dropna(axis="columns", how="all", inplace=True)
     return df
 
 
-def process_dmp(
+def calculate_biomasse(
     admin: AdminArgument = "ADM2",
-    redownload: bool = False,
     start_dekad: int = 10,
-):
-    """Process DMP raw data
+) -> pd.DataFrame:
+    """Calculate Biomasse from DMP raw data
 
     DMP raw data is received in a wide format
     dataset that needs processing. This pivots
     the data from wide to long format with
     DMP dekadal observations for all years, while
     also pivoting the mean values to allow for
-    calculation of biomasse anomaly.
+    calculation of biomasse anomaly. Outputs
+    dataframe of Biomasse values.
+
+    Parameters
+    ----------
+    admin: AdminArgument
+        Admin area to load DMP for, one of
+        'ADM0', 'ADM1', or 'ADM2'.
+    start_dekad: int
+        Starting dekad of the season to use
+        in calculations. Season will start
+        in starting dekad and end in the
+        previous dekad.
+    Returns
+    -------
+    pd.DataFrame
     """
-    df = load_dmp(admin, redownload)
+    df = load_dmp(admin)
 
     # process mean and DMP separately since mean values
     # are dekadal and DMP are year/dekadal
@@ -242,7 +253,7 @@ def process_dmp(
 
     # save file to processed filepath
     processed_path = _get_processed_path(
-        admin=admin, iso3=None, start_dekad=start_dekad
+        admin=admin, start_dekad=start_dekad, iso3=None
     )
     df_merged.to_csv(processed_path, index=False)
 
@@ -253,55 +264,70 @@ def load_biomasse_data(
     admin: AdminArgument = "ADM2",
     iso3: Union[bool, str] = None,
     start_dekad: int = 10,
-    reprocess: bool = False,
-    redownload: bool = False,
 ):
     """Load biomasse processed data
 
     Load the data that has been processed at the
     specified ADM2 level and starting dekad.
 
-    Args:
-        admin: Admin level, one of 'ADM0', 'ADM1',
-            or 'ADM2'.
-        start_dekad: Starting dekad for annual
-            calculations.
-        reprocess: Boolean, whether to reprocess.
-        redownload: Boolean, whether to reprocess.
-        file_descriptor: If not None, file descriptor
-            to access non-admin file.
+    Parameters
+    ----------
+    admin: AdminArgument
+        Admin level, one of 'ADM0', 'ADM1',
+        or 'ADM2'.
+    iso3: str
+        ISO3 string. If present, saves data
+        within that countries folder for
+        download.
+    start_dekad: int
+        Starting dekad for annual
+        calculations.
 
-    Returns:
-        Pandas data frame.
+    Returns
+    -------
+    pd.DataFrame
     """
-    if reprocess:
-        return process_dmp(
-            admin=admin, start_dekad=start_dekad, redownload=redownload
-        )
-    else:
-        _check_admin(admin)
-        processed_path = _get_processed_path(
-            admin=admin, iso3=iso3, start_dekad=start_dekad
-        )
-        return pd.read_csv(processed_path)
+    _check_admin(admin)
+    processed_path = _get_processed_path(
+        admin=admin, start_dekad=start_dekad, iso3=iso3
+    )
+    return pd.read_csv(processed_path)
 
 
 def aggregate_biomasse(
     admin_pcodes: List[str],
     admin: AdminArgument = "ADM2",
-    start_dekad: int = 10,
     iso3: Union[bool, str] = None,
-):
-    """Aggregate biomasse data to set of areas
+    start_dekad: int = 10,
+) -> pd.DataFrame:
+    """Aggregate Biomasse data to set of areas
 
     While the generic processed administrative
-    biomasse data is useful, sometimes we want
-    to aggregate the biomasse values to a set
+    Biomasse data is useful, sometimes we want
+    to aggregate the Biomasse values to a set
     of administrative areas. This should be done
     by summing up the mean biomasse for each dekad
     for those areas and the reported biomasse for
     each year and dekad, then recalculating the
     anomaly.
+
+    Output is saved only if ``iso3`` is passed as
+    an argument.
+
+    Parameters
+    ----------
+    admin_pcodes: List[str]
+        List of administrative pcodes to aggregate to.
+    admin: AdminArgument
+        Admin type to subset with, one of 'ADM0', 'ADM1',
+        or 'ADM2'.
+    iso3: Union[bool, str]
+        ISO3 string or ``None``. If present, saves data
+        within that countries folder for download.
+    start_dekad: int
+        Starting dekad for annual
+        calculations.
+
     """
     _check_admin(admin)
     df = load_biomasse_data(admin=admin, start_dekad=start_dekad)
@@ -333,16 +359,33 @@ def aggregate_biomasse(
 
     if iso3 is not None:
         processed_filepath = _get_processed_path(
-            iso3=iso3, admin=admin, start_dekad=start_dekad
+            admin=admin, start_dekad=start_dekad, iso3=iso3
         )
         df_merged.to_csv(processed_filepath, index=False)
 
     return df_merged
 
 
-def load_aggregated_biomasse_data(file_descriptor: str, start_dekad: int = 10):
+def load_aggregated_biomasse_data(
+    iso3: str, admin: AdminArgument, start_dekad: int = 10
+) -> pd.DataFrame:
+    """Load aggregated Biomasse data
+
+    Parameters
+    ----------
+    iso3: str
+        ISO3 string to download data from.
+    admin: AdminArgument
+        Admin type to load, one of 'ADM0', 'ADM1',
+        or 'ADM2'.
+    start_dekad: int
+        Starting dekad for filename.
+    Returns
+    -------
+    pd.DataFrame
+    """
     processed_filepath = _get_processed_path(
-        admin=file_descriptor, start_dekad=start_dekad
+        admin=admin, start_dekad=start_dekad, iso3=iso3
     )
     return pd.read_csv(processed_filepath)
 
@@ -354,9 +397,36 @@ def load_biomasse_mean(mask: bool = True):
     http://www.geosahel.info/MetaDownload/BiomassValueMean.tif
     so didn't bother including code to download.
     """
-    bm_fp = Path(_RAW_PATH, "BiomassValueMean.tif")
+    bm_fp = _RAW_PATH / "BiomassValueMean.tif"
     da = rioxarray.open_rasterio(bm_fp)
     return da
     if mask:
         da = da.where(da.values <= 0, drop=False)
     return da
+
+
+def _get_raw_path(admin):
+    return _RAW_PATH / _RAW_FILENAME.format(admin=admin)
+
+
+def _get_processed_path(
+    admin: AdminArgument, start_dekad: int, iso3: Union[None, str] = None
+):
+    if iso3 is None:
+        iso3 = "glb"
+
+    _processed_path = Path(
+        os.getenv("AA_DATA_DIR"), "public", "processed", iso3, "biomasse"
+    )
+
+    return Path(
+        _processed_path,
+        _PROCESSED_FILENAME.format(
+            iso3=iso3, admin=admin, start_dekad=start_dekad
+        ),
+    )
+
+
+def _check_admin(admin):
+    if admin not in _VALID_ADMIN:
+        raise ValueError("`admin` must be one of 'ADM0', 'ADM1', or 'ADM2'.")

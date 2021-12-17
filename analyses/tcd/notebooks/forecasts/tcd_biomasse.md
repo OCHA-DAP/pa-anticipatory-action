@@ -27,10 +27,11 @@ _save_processed_path = os.path.join(path_mod, Path(config.DATA_DIR), config.PUBL
 import src.indicators.drought.biomasse as bm
 ```
 
-This is just the code for downloading and procesing the Biomasse data, then aggregating to a specific set of admin codes (our region of interest in Chad.
+This is just the code for downloading and procesing the Biomasse data, then aggregating to a specific set of admin codes (our region of interest in Chad. Additional analysis and exploration is done within `biomasse_exploration.R`.
 
 ```python
-dmp = bm.process_dmp(admin="ADM2") # set redownload=True if needing new data
+# bm.download_dmp()
+dmp = bm.process_dmp(admin="ADM2")
 gdf_adm2 = gpd.read_file(adm2_bound_path)
 gdf_reg = gdf_adm2[gdf_adm2.area_of_interest == True]
 bm_df = bm.aggregate_biomasse(

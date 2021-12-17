@@ -1,28 +1,13 @@
 This notebook explores the WRSI trigger related to Chad. Given that the WRSI is not a forecast based method (although the extended version does include historical precipitation averages), I have been unable to find any evaluations of its accuracy or skill. We will thus dive straight into understanding how the historical patterns look in Chad and what a reasonable threshold and trigger might look like.
 
 ```python
- #### Load libraries and set global constants
+#### Load libraries and set global constants
 
-% load_ext
-autoreload
-% autoreload
-2
+%load_ext autoreload
+%autoreload 2
 
 import geopandas as gpd
-from shapely.geometry import mapping
-import pandas as pd
 import rioxarray
-import rioxarray.merge
-import numpy as np
-import xarray as xr
-import seaborn as sns
-import cftime
-import calendar
-from dateutil.relativedelta import relativedelta
-from matplotlib.colors import ListedColormap
-from rasterio.enums import Resampling
-import hvplot.xarray
-import altair as alt
 
 from pathlib import Path
 import sys
@@ -32,11 +17,9 @@ path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
-from src.indicators.drought.wrsi import load_wrsi, filter_wrsi, wrsi_percent_below, _PROCESSED_DIR
+from src.indicators.drought.wrsi import load_wrsi, filter_wrsi, wrsi_percent_below, _PROCESSED_DIR, process_wrsi
 from src.indicators.drought.biomasse import load_biomasse_mean
 from src.utils_general.raster_manipulation import compute_raster_statistics
-
-hdx_blue = "#007ce0"
 
 iso3 = "tcd"
 config = Config()
@@ -51,6 +34,15 @@ _save_processed_path = os.path.join(path_mod, Path(config.DATA_DIR), config.PUBL
 ```
 
 Let's load the WRSI data and then plot just the end of season WRSI, to first inspect how it's behaving across the years. We will also subset to the relevant administrative areas. For now, we will just look at croplands since that covers the dominant portion of our area of interest.
+
+```python
+da = process_wrsi("cropland", "current")
+
+```
+
+```python
+type(gdf_adm1.geometry)
+```
 
 ```python
 gdf_adm1=gpd.read_file(adm1_bound_path)
@@ -187,14 +179,14 @@ Here we see almost no reduction in the coverage as there's limited arid regions 
 
 ```python
 d = wrsi_percent_below(da_range_anom_mask, [70, 80,90,100,110,120])
-d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_anomaly_rangeland_thresholds.csv"))
+# d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_anomaly_rangeland_thresholds.csv"))
 ```
 
 Let's do the same for croplands anomaly.
 
 ```python
 d = wrsi_percent_below(da_crop_anom_mask, [70, 80,90,100,110,120])
-d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_anomaly_cropland_thresholds.csv"))
+# d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_anomaly_cropland_thresholds.csv"))
 ```
 
 And for the current values.
@@ -203,10 +195,10 @@ And for the current values.
 # cropland
 da_crop_clip_mask = da_crop_clip.where(bm_mask > 100)
 d = wrsi_percent_below(da_crop_clip_mask, [50, 60, 70, 80,90,100,110,120])
-d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_current_cropland_thresholds.csv"))
+# d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_current_cropland_thresholds.csv"))
 
 # rangeland
 da_range_clip_mask = da_range_clip.where(bm_mask > 100)
 d = wrsi_percent_below(da_range_clip_mask, [50, 60, 70, 80,90,100,110,120])
-d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_current_rangeland_thresholds.csv"))
+# d.to_csv(os.path.join(_save_processed_path, "tcd_wrsi_current_rangeland_thresholds.csv"))
 ```
