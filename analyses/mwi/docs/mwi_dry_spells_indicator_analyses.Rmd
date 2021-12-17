@@ -42,6 +42,7 @@ data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Ren
 plot_dir <-paste0(data_dir,'/public/processed/mwi/plots/dry_spells')
 enso_plot_dir <- paste0(plot_dir,'/enso')
 exploration_dry_spell_dir <- paste0(data_dir,'/public/exploration/mwi/dryspells/v1/')
+plot_seasonal_dir <- paste0(plot_dir, '/seasonal/unrounded-coords')
 
 ```
 ### Definitions
@@ -135,7 +136,7 @@ The confusion matrix below represents the occurrence of dry spells and below-ave
 
 Based on this confusion matrix and the other analyses, we concluded that the occurrence of below-average precipitation is not a reliable indicator for the likelihood of a dry spell occurring. We therefore didn't move on to seasonal forecasts.
 
-![](`r paste0(plot_dir,'/seasonal/seasonal_below_average_confusionmatrix.png')`)
+![](`r paste0(plot_seasonal_dir,'/seasonal_below_average_confusionmatrix.png')`)
 
 
 ### Total monthly precipitation
@@ -164,7 +165,7 @@ Before looking at the correlations, it is important to note that these methodolo
 
 Below is the distribution of monthly precipitation, with and without dry spells.
 
-![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds73_adm1.png')`)
+![](`r paste0(plot_seasonal_dir,'/mwi_plot_monthly_precipitation_boxplot_decjanfeb_southern_ds73_adm1.png')`)
 
 From this figure we can see that 
 
@@ -179,15 +180,15 @@ We investigated different thresholds of monthly precipitation and the ability to
 
 NOTE: false alarms are defined as False Positives / (False Positives + True Negatives) i.e. the percentage of times where monthly precipitation was below x mm but there was no dry spell over the number of times monthly precipitation was below x mm.
 
-![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_days_ds}{min_adm_ds}_adm1_permonth.png'))`)
+![](`r paste0(plot_seasonal_dir,glue('/mwi_plot_monthly_precipitation_threshold_missfalse_ds{min_days_ds}{min_adm_ds}_adm1_permonth.png'))`)
 
 We combined months to determine what (single) threshold could be applied to both months in a trigger.
 
-![](`r paste0(plot_dir,'/seasonal/mwi_plot_monthly_precipitation_threshold_missfalse_janfeb_southern_ds73.png')`)
+![](`r paste0(plot_seasonal_dir,'/mwi_plot_monthly_precipitation_threshold_missfalse_janfeb_southern_ds73.png')`)
 
 Based on that figure, we applied a threshold of `r thresh_mon_prec`mm since this is where the lines of misses and false alarms cross. We can see that all occurrences of dry spells had <=`r thresh_mon_prec` mm. However, 6 months with less <=`r thresh_mon_prec` mm rainfall didn't co-occur with a dry spell, which would mean a false alarm rate of 60% (6/10). 
 
-![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_monthly_precipitation_confusionmatrix_janfeb_southern_ds73_th{thresh_mon_prec}.png'))`)
+![](`r paste0(plot_seasonal_dir,glue('/mwi_plot_monthly_precipitation_confusionmatrix_janfeb_southern_ds73_th{thresh_mon_prec}.png'))`)
 
 Below is a heatmap showing the dates during which a dry spell and/or <=`r thresh_mon_prec` mm was observed.
 
@@ -229,24 +230,24 @@ NOTE: We also tested other probabilities, but this didn't lead to better results
 
 The figure below shows the distribution of probabilities with and without a dry spell per leadtime. From this figure it can be seen that the distribution of the months with and without a dry spell is a lot less separable than we saw with observed data. Only the data with a leadtime of 1 month shows a high separability, but this month information is a lot less usable, since it is only released midway into the month it is predicting for.
 
-![](`r paste0(plot_dir,glue('/seasonal/mwi_boxplot_formonth_dsobs_perlt_perc_50_{adm_str}_{month_str}.png'))`){width=70%}
+![](`r paste0(plot_seasonal_dir,glue('/mwi_boxplot_formonth_dsobs_perlt_perc_50_{adm_str}_{month_str}.png'))`){width=70%}
 
 The figure below shows the miss (=trigger unmet but there was a dry spell) and false alarm rates for different mm thresholds across all leadtimes. Based on this the threshold was set at the point where the false alarm and miss rates intersect across all leadtimes. This is at `r {thresh_month_for}` mm. This is a different threshold than what we saw for the observational data, which was at `r thresh_mon_prec` mm. We chose the `r {thresh_month_for}` threshold as this showed the best balance between detection and false alarms, as shown in the graph below. We investigated using the `r thresh_mon_prec` threshold on the forecasts as well, but this lead to a much lower detection rate. 
 
 NOTE: False alarm rate is defined as False Positives / (False Positives + True Negatives) i.e. the percentage of times the monthly precipitation was below x mm, but there was no dry spell over the number of times the monthly precipitation was below x mm
 
-![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_missfalse_perc_50_{adm_str}_{month_str}.png'))`)
+![](`r paste0(plot_seasonal_dir,glue('/mwi_plot_formonth_dsobs_missfalse_perc_50_{adm_str}_{month_str}.png'))`)
 
 With the threshold at `r {thresh_month_for}`, we computed the confusion matrix per leadtime:
 
-![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt123456_th{thresh_month_for}_perc_50_{adm_str}_{month_str}.png'))`)
+![](`r paste0(plot_seasonal_dir,glue('/mwi_plot_formonth_dsobs_cm_lt123456_th{thresh_month_for}_perc_50_{adm_str}_{month_str}.png'))`)
 
 Taking into consideration logistical constraints for deploying an AAF, it was decided that the most suitable leadtimes were 2 and 4 months. A leadtime of 2 months means that a forecast covering January is published mid December. A leadtime of 4 months means that a forecast for January is published mid October.
 
 For the 2 and 4 months leadtimes we computed a confusion matrix per month, to understand if there are large differences between the months. If we combined the numbers for January and February, we can see that with a leadtime of 4 months, 75% (3/4) of the dry spells are forecasted, but 86% (19/22) of the activations would be false alarms. With a leadtime of 2 months, 50% (2/4) of the dry spells would be forecasted, and 83% (11/13) of the activations would be false alarms. We can thus conclude that we can detect most of the dry spells but this comes at a very high false alarm rate. Most of these false alarms are expected to occur in February.
 
-![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt24_th{thresh_month_for}_perc_50_{adm_str}_jan.png'))`){width=50%}
-![](`r paste0(plot_dir,glue('/seasonal/mwi_plot_formonth_dsobs_cm_lt24_th{thresh_month_for}_perc_50_{adm_str}_feb.png'))`){width=50%}
+![](`r paste0(plot_seasonal_dir,glue('/mwi_plot_formonth_dsobs_cm_lt24_th{thresh_month_for}_perc_50_{adm_str}_jan.png'))`){width=100%}
+![](`r paste0(plot_seasonal_dir,glue('/mwi_plot_formonth_dsobs_cm_lt24_th{thresh_month_for}_perc_50_{adm_str}_feb.png'))`){width=100%}
 
 To understand the frequency of the threshold being met and/or occurrence of dry spells across time, we looked at the heatmaps.
 

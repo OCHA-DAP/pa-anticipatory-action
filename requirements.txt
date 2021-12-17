@@ -2,10 +2,10 @@ matplotlib==3.4.2
 numpy==1.19.1
 scipy==1.6.1
 rasterio==1.1.7
-xarray==0.16.2
+xarray==0.18.2
 geopandas==0.8.1
 coloredlogs==14.0
-rioxarray==0.1.1
+rioxarray==0.8.0
 tqdm==4.50.2
 rasterstats==0.14.0
 cdsapi==0.5.1
@@ -45,3 +45,5 @@ pre-commit==2.13.0
 plotly==5.1.0
 dataframe-image==0.1.1
 h5netcdf==0.11.0
+python-dateutil==2.8.1
+altair==4.1.0

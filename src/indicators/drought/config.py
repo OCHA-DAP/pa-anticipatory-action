@@ -144,6 +144,9 @@ class Config:
     CHIRPS_SEASONAL_LOWERTERCILE_COUNTRY_FILENAME = (
         "{country_iso3}_chirps_seasonal_lowertercile.nc"
     )
+    CHIRPS_SEASONAL_TERCILE_BOUNDS_FILENAME = (
+        "{country_iso3}_chirps_seasonal_tercile_bounds.nc"
+    )
     CHIRPS_LON = "longitude"  # "x" #
     CHIRPS_LAT = "latitude"  # "y" #
     CHIRPS_VARNAME = "precip"
@@ -156,3 +159,13 @@ class Config:
     )
     CHIRPSGEFS_RAW_FILENAME = "chirpsgefs_africa_{days_ahead}days_{date}.tif"
     CHIRPSGEFS_DATE_STR_FORMAT = "%Y%m%d"
+
+    # ECMWF
+    ECMWF_DIR = "ecmwf"
+    DEFAULT_VERSION = 5
+
+    # DRYSPELLS
+    DRY_SPELLS_DIR = "dry_spells"
+
+    # TRIGGER
+    TRIGGER_METRICS_DIR = "trigger_metrics"

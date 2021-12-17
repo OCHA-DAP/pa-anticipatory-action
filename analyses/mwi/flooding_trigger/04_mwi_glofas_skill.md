@@ -25,6 +25,7 @@ sys.path.append(path_mod)
 
 from src.indicators.flooding.config import Config
 from src.indicators.flooding.glofas import utils
+from src.utils_general import statistics 
 
 config = Config()
 mpl.rcParams['figure.dpi'] = 300
@@ -42,7 +43,7 @@ stations_adm2 = {
 }
 COUNTRY_ISO3 = 'mwi'
 
-RP = 3
+RP = 2
 ```
 
 Read in the processed GloFAS data and calculate the return periods. We can also plot the river discharge thresholds for each return period level.
@@ -74,11 +75,11 @@ for code, station in stations_adm2.items():
 Look into forecast skill by calculating the CRPS. We'll first do this by looking at all discharge values, and then recalculate looking specifically at extreme discharge values (eg. at the 3-year return period level). 
 
 ```python
-df_crps_all = utils.get_crps(ds_glofas_reanalysis, 
+df_crps_all = utils.get_crps_glofas(ds_glofas_reanalysis, 
                          ds_glofas_reforecast,
                         normalization="mean")
 
-df_crps_high = utils.get_crps(ds_glofas_reanalysis, 
+df_crps_high = utils.get_crps_glofas(ds_glofas_reanalysis, 
                          ds_glofas_reforecast,
                          normalization="mean", 
                          thresh=df_return_period.loc[RP].to_dict())
@@ -154,9 +155,9 @@ for code, station in stations_adm2.items():
     mpe_ev = np.empty(len(da_forecast.leadtime))
     for ilt, leadtime in enumerate(da_forecast.leadtime):
         observations, forecast = utils.get_same_obs_and_forecast(da_observations, da_forecast, leadtime)
-        mpe[ilt] = utils.calc_mpe(observations, forecast)
+        mpe[ilt] = statistics.calc_mpe(observations, forecast)
         observations_ev, forecast_ev = utils.get_same_obs_and_forecast(da_observations_ev, da_forecast, leadtime)
-        mpe_ev[ilt] = utils.calc_mpe(observations_ev, forecast_ev)
+        mpe_ev[ilt] = statistics.calc_mpe(observations_ev, forecast_ev)
     ax.plot(da_forecast.leadtime, mpe, label='All values')
     ax.plot(da_forecast.leadtime, mpe_ev, label=f'RP > 1 in {RP} y')
     ax.axhline(y=0, c='k', ls=':')
