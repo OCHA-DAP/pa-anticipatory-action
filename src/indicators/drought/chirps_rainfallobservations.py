@@ -195,17 +195,7 @@ def get_filepath_seasonal_lowertercile_raster(
         )
     )
 
-    chirps_seasonal_tercile_bounds_country_filepath = (
-        chirps_seasonal_country_dir
-        / config.CHIRPS_SEASONAL_TERCILE_BOUNDS_FILENAME.format(
-            country_iso3=country_iso3
-        )
-    )
-
-    return (
-        chirps_seasonal_lowertercile_country_filepath,
-        chirps_seasonal_tercile_bounds_country_filepath,
-    )
+    return chirps_seasonal_lowertercile_country_filepath
 
 
 def get_filepath_seasonal_tercile_raster(country_iso3: str, config: Config):
@@ -327,7 +317,7 @@ def compute_seasonal_tercile_raster(
         True,
         False,
     )
-    da_season_terc = da_season.assign(
+    da_season_terc = da_season.to_dataset(name="precip").assign(
         {
             "below_normal": da_bn.drop("quantile"),
             "normal": da_no,
