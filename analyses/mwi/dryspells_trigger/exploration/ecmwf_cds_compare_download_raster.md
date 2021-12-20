@@ -183,3 +183,7 @@ g=da_rounded_sel.rio.clip(gdf_south["geometry"], all_touched=True).plot.imshow(c
 gdf_adm.boundary.plot(ax=g.axes,color="grey");
 g.axes.set_title("All cells touching the Southern region")
 ```
+
+```python
+
+```

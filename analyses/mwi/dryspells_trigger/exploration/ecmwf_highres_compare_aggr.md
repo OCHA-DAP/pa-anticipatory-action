@@ -1,7 +1,9 @@
-### Distributions of values with different cells included
-We experimented with different methods of aggregating the raster cells to a mean value for the Southern region.   
-This notebook explores the differences in values between these methods.   
-Which cells are included with each method is shown [here](https://docs.google.com/presentation/d/1SgimPGrgOB5zLxVqOpxk2D6szx48c8ShWG0zBJNfejk/edit?usp=sharing)
+### Distributions of values with different aggregation methods
+This notebook is similair to `ecmwf_cds_compare_aggr.md`. However, here we focus on the data directly retrieved from ECMWF's API. This data has a higher resolution of 0.4 degrees compared to the 1 degree of CDS. 
+
+We only recently got access to this data, so in this notebook we compare the values between this high resolution data and the CDS data when aggregating to the Southern region. 
+
+A written summary of this analysis can be found [here](https://docs.google.com/presentation/d/1jBdZEnzWwOKoFA9-h4xR4x0FmTyMRDCNBkWGKptfZs8/edit)
 
 ```python
 %load_ext autoreload
@@ -134,10 +136,10 @@ stat_col_for="mean_ADM1_PCODE"
 ```
 
 ```python
-def load_forecast_data(iso3,config,use_unrounded_area_coords,resolution,all_touched,start_date,end_date,adm_level,stat_col_for):
+def load_forecast_data(iso3,config,use_unrounded_area_coords,resolution,all_touched,start_date,end_date,adm_level,stat_col_for,source_cds=True):
     #read the ecmwf forecast per adm1 per date and concat all dates
     date_list=pd.date_range(start=start_date, end=end_date, freq='MS')
-    all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=adm_level,use_unrounded_area_coords=use_unrounded_area_coords,all_touched=all_touched) for date in date_list]
+    all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=adm_level,use_unrounded_area_coords=use_unrounded_area_coords,source_cds=source_cds,all_touched=all_touched) for date in date_list]
 
     df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
     df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -177,10 +179,11 @@ def combine_for_obs(df_for,df_obs):
 ```
 
 ```python
-meth_dict={"unrounded_center":{"use_unrounded_area_coords":True,"resolution":None,"all_touched":False},
-"rounded_center":{"use_unrounded_area_coords":False,"resolution":None,"all_touched":False},
-"rounded_weightavg":{"use_unrounded_area_coords":False,"resolution":0.05,"all_touched":False},
-"rounded_alltouched":{"use_unrounded_area_coords":False,"resolution":None,"all_touched":True},
+#define the parameters for the different aggregation metods
+meth_dict={"cds_unrounded_center":{"use_unrounded_area_coords":True,"resolution":None,"all_touched":False,"source_cds":True},
+"api_center":{"use_unrounded_area_coords":False,"resolution":None,"all_touched":False,"source_cds":False},
+"api_weightavg":{"use_unrounded_area_coords":False,"resolution":0.05,"all_touched":False,"source_cds":False},
+"api_alltouched":{"use_unrounded_area_coords":False,"resolution":None,"all_touched":True,"source_cds":False},
 }
 ```
 
@@ -188,7 +191,8 @@ Load the forecast data for different methods of aggregation
 
 ```python
 for key, values in meth_dict.items():
-    values["df"]=load_forecast_data(country_iso3,config,values["use_unrounded_area_coords"],resolution=values["resolution"],all_touched=values["all_touched"],
+    values["df"]=load_forecast_data(country_iso3,config,values["use_unrounded_area_coords"],
+                                    resolution=values["resolution"],all_touched=values["all_touched"],source_cds=values["source_cds"],
                                     start_date=start_date,end_date=end_date,adm_level=adm_level,stat_col_for=stat_col_for)
     values["df_sel"]=sel_forecast_data(values["df"],sel_adm=sel_adm,sel_months=sel_months,seas_years=seas_years)
     values["df_sel_quant"]=compute_quantile(values["df_sel"],probability=0.5)
@@ -197,7 +201,7 @@ for key, values in meth_dict.items():
 
 ```python
 #check that same number of months in observed and forecasted
-print("number of months in forecasted data",len(meth_dict["unrounded_center"]["df_sel"].date.unique()))
+print("number of months in forecasted data",len(meth_dict["cds_unrounded_center"]["df_sel"].date.unique()))
 print("number of months in observed data",len(df_obs_month_sel.date.unique()))
 ```
 
@@ -230,50 +234,53 @@ df_comb_pivot.loc[:,"dry_spell"]=df_comb_pivot.dry_spell.replace(np.nan,0).astyp
 ```
 
 ```python
-#inspired by https://www.geeksforgeeks.org/diverging-bar-chart-using-python/
-meth_comb=[[m,"unrounded_center"] for m in ["rounded_center","rounded_weightavg","rounded_alltouched"]]
-# meth_comb.append(["rounded_alltouched","rounded_weightavg"])
-sel_lt=3
-colp_num=3
-num_plots=len(meth_comb)
-rows = math.ceil(num_plots / colp_num)
-position = range(1, num_plots + 1)
-fig=plt.figure(figsize=(30,10))
-df_comb_plot=df_comb_pivot.copy()
-df_comb_plot_sel=df_comb_plot[df_comb_plot.leadtime==sel_lt]
+def plt_div_bar(meth_comb,colp_num=2,figsize=(30,10)):
+    sel_lt=3
+    num_plots=len(meth_comb)
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+    fig=plt.figure(figsize=figsize)
+    df_comb_plot=df_comb_pivot.copy()
+    df_comb_plot_sel=df_comb_plot[df_comb_plot.leadtime==sel_lt]
 
-for i, meth in enumerate(meth_comb):
-    ax = fig.add_subplot(rows,colp_num,i+1)
-    val_col=f"{meth[0]}-{meth[1]}"
-    df_comb_plot_sel[val_col]=df_comb_plot_sel[meth[0]]-df_comb_plot_sel[meth[1]]
-    df_comb_plot_sel.sort_values(val_col,inplace=True,ascending=False)
-    df_comb_plot_sel["colors"]=np.where(df_comb_plot_sel["dry_spell"]==1,ds_color,no_ds_color)
-    df_comb_plot_sel=df_comb_plot_sel.reset_index(drop=True)
-    # Plotting the horizontal lines
-    plt.hlines(y=df_comb_plot_sel.index
-            , xmin=0, xmax=df_comb_plot_sel[val_col],
-               color=df_comb_plot_sel.colors,
-               linewidth=5)
+    for i, meth in enumerate(meth_comb):
+        ax = fig.add_subplot(rows,colp_num,i+1)
+        val_col=f"{meth[0]}-{meth[1]}"
+        df_comb_plot_sel[val_col]=df_comb_plot_sel[meth[0]]-df_comb_plot_sel[meth[1]]
+        df_comb_plot_sel.sort_values(val_col,inplace=True,ascending=False)
+        df_comb_plot_sel["colors"]=np.where(df_comb_plot_sel["dry_spell"]==1,ds_color,no_ds_color)
+        df_comb_plot_sel=df_comb_plot_sel.reset_index(drop=True)
+        # Plotting the horizontal lines
+        plt.hlines(y=df_comb_plot_sel.index
+                , xmin=0, xmax=df_comb_plot_sel[val_col],
+                   color=df_comb_plot_sel.colors,
+                   linewidth=5)
 
-    # Decorations
-    # Setting the labels of x-axis and y-axis
-    plt.gca().set(ylabel='Month', xlabel=f'Difference (mm),{val_col.replace("-"," minus ")}')
+        # Decorations
+        # Setting the labels of x-axis and y-axis
+        plt.gca().set(ylabel='Month', xlabel=f'Difference (mm),{val_col.replace("-"," minus ")}')
 
-    # Setting Date to y-axis
-    plt.yticks(df_comb_plot_sel.index, df_comb_plot_sel.date.dt.strftime("%Y-%m"), fontsize=12)
-    ax.xaxis.label.set_size(16)
+        # Setting Date to y-axis
+        plt.yticks(df_comb_plot_sel.index, df_comb_plot_sel.date.dt.strftime("%Y-%m"), fontsize=12)
+        ax.xaxis.label.set_size(16)
 
-    plt.title(f'{val_col.replace("-"," minus ")}', fontdict={
-              'size': 20})
-    plt.grid(linestyle='--', alpha=0.5)
-    ds_patch = mpatches.Patch(color=ds_color, label="dry spell")
-    nods_patch = mpatches.Patch(color=no_ds_color, label="no dry spell")
-    
-    ax.set_xlim(-20,55)
+        plt.title(f'{val_col.replace("-"," minus ")}', fontdict={
+                  'size': 20})
+        plt.grid(linestyle='--', alpha=0.5)
+        ds_patch = mpatches.Patch(color=ds_color, label="dry spell")
+        nods_patch = mpatches.Patch(color=no_ds_color, label="no dry spell")
 
-    plt.legend(handles=[ds_patch, nods_patch])
-fig.suptitle("Difference in forecasted precipitation at leadtime=3 for different aggregation methods",fontsize=30)
-fig.tight_layout(rect=[0, 0.03, 1, 0.98])
+        ax.set_xlim(-20,55)
+#         ax.set_xlim(-40,35)
+
+        plt.legend(handles=[ds_patch, nods_patch])
+    fig.suptitle("Difference in forecasted precipitation at leadtime=3 for different aggregation methods",fontsize=30)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.98])
+```
+
+```python
+meth_comb=[[m,"cds_unrounded_center"] for m in ["api_center","api_weightavg","api_alltouched"]]
+plt_div_bar(meth_comb,colp_num=3)
 ```
 
 #### Boxplot
@@ -312,50 +319,47 @@ med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color=
 ).transform_calculate(label="Median: " + alt.datum.median_for)
 
 (histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
-                                       data=df_comb_med[df_comb_med.leadtime==3],title="Stacked histogram of forecated precipitation for leadtime=3, facetted by month and aggregation method")
-```
-
-### Conclusion
-
-
-When using rounded coordinates instead of unrounded coordinates, the median values increase. This is expected as the rounded values are not interpolated and thus hold more extremes.   
-When using the weighted average or all cells that touch the region, it depends on the leadtime and month whether the median is higher than when only using the cells with their centre in the region.   
-However, we can generally see that when using all touched cells we get slightly higher values, also during the months that dry spells occurred. 
-
-
-### Archive
-
-
-Seaborn method to plot histograms. Only advantage that the text is readable..
-
-```python
-def hist_plot(df,stat_col,sel_months):
-    colp_num=3
-    num_plots=len(df["leadtime"].unique())
-    if num_plots==1:
-        colp_num=1
-    rows = math.ceil(num_plots / colp_num)
-    position = range(1, num_plots + 1)
-    fig=plt.figure(figsize=(20,6))
-    for i, lt in enumerate(df["leadtime"].unique()):
-        ax = fig.add_subplot(rows,colp_num,i+1)
-        df_sel=df[df.leadtime==lt]
-        g=sns.histplot(df_sel[stat_col],color="#CCCCCC",ax=ax,binwidth=10,common_norm=False)
-        med=df_sel[stat_col].median()
-        plt.axvline(med,color="#C25048",label=f"median: {round(med)} mm")
-        ax.legend()
-        ax.set(xlabel="Monthly precipitation (mm)")
-#         ax.set_title(f"Distribution of monthly precipitation in {sel_months} from {df.date.dt.year.min()}-{df.date.dt.year.max()}")
-    fig.tight_layout()
+                                       data=df_comb_med[df_comb_med.leadtime==3],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
 ```
 
 ```python
-bla=meth_dict["rounded_alltouched"]["df_sel_quant"]
-for m in sel_months:
-    bla_sel=bla[bla.date.dt.month==m]
-    hist_plot(bla_sel,stat_col=stat_col_for,sel_months=sel_months)
+#select methods for plotting of slides
+#is stacked!
+sel_meth=["api_center","api_weightavg","api_alltouched"]
+df_comb_med["ds_str"]=np.where(df_comb_med.dry_spell==1,"yes","no")
+histo = alt.Chart().mark_bar().encode(
+    x=alt.X("mean_ADM1_PCODE",bin=alt.Bin(step=10),title="Forecasted precipitation"),
+    y="count()",
+    color=alt.Color('ds_str:N',scale=alt.Scale(range=[no_ds_color,ds_color]),legend=alt.Legend(title="Dry spell")),
+)
+med_line = alt.Chart().mark_rule(color="purple").encode(
+    x='median(mean_ADM1_PCODE)')
+#TODO: for some reason text not readable, no idea why..
+med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color="purple").encode(
+    text="label:N",
+).transform_calculate(label="Median: " + alt.datum.median_for)
+
+(histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
+                                       data=df_comb_med[(df_comb_med.leadtime==3)&(df_comb_med.method.isin(sel_meth))],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
 ```
 
 ```python
+#select methods for plotting of slides
+#is stacked!
+sel_meth=["cds_unrounded_center","api_center"]
+df_comb_med["ds_str"]=np.where(df_comb_med.dry_spell==1,"yes","no")
+histo = alt.Chart().mark_bar().encode(
+    x=alt.X("mean_ADM1_PCODE",bin=alt.Bin(step=10),title="Forecasted precipitation"),
+    y="count()",
+    color=alt.Color('ds_str:N',scale=alt.Scale(range=[no_ds_color,ds_color]),legend=alt.Legend(title="Dry spell")),
+)
+med_line = alt.Chart().mark_rule(color="purple").encode(
+    x='median(mean_ADM1_PCODE)')
+#TODO: for some reason text not readable, no idea why..
+med_text = alt.Chart().mark_text(align='left', dx=90, dy=-130,fontSize=15,color="purple").encode(
+    text="label:N",
+).transform_calculate(label="Median: " + alt.datum.median_for)
 
+(histo+med_line+med_text).facet(column=alt.Column("month_name:N",sort=df_comb_med.month_name.unique(),title="Month"), row=alt.Row('method:N',sort=df_comb_med.method.unique()),
+                                       data=df_comb_med[(df_comb_med.leadtime==3)&(df_comb_med.method.isin(sel_meth))],title="Stacked histogram of forecasted precipitation for leadtime=3, facetted by month and aggregation method")
 ```
