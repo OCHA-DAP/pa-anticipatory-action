@@ -27,7 +27,7 @@ import os
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
-from src.indicators.drought.chirps_rainfallobservations import compute_seasonal_lowertercile_raster, \
+from src.indicators.drought.chirps_rainfallobservations import compute_seasonal_tercile_raster, \
 get_filepath_seasonal_lowertercile_raster
 ```
 

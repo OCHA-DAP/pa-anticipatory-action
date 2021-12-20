@@ -13,6 +13,11 @@ from src.utils_general.utils import download_ftp
 
 logger = logging.getLogger(__name__)
 
+_SEASONAL_TERCILE_FILENAME = "{country_iso3}_chirps_seasonal_terciles.nc"
+_SEASONAL_TERCILE_BOUNDS_FILENAME = (
+    "{country_iso3}_chirps_seasonal_terciles_bounds.nc"
+)
+
 
 def download_chirps_daily(config, year, resolution="25", write_crs=False):
     """
@@ -166,6 +171,8 @@ def get_filepath_chirps_monthly(country_iso3: str, config: Config):
     return chirps_monthly_country_filepath
 
 
+# leaving this function for now, since it is being called
+# by some notebooks
 def get_filepath_seasonal_lowertercile_raster(
     country_iso3: str, config: Config
 ):
@@ -188,10 +195,49 @@ def get_filepath_seasonal_lowertercile_raster(
         )
     )
 
-    return chirps_seasonal_lowertercile_country_filepath
+    chirps_seasonal_tercile_bounds_country_filepath = (
+        chirps_seasonal_country_dir
+        / config.CHIRPS_SEASONAL_TERCILE_BOUNDS_FILENAME.format(
+            country_iso3=country_iso3
+        )
+    )
+
+    return (
+        chirps_seasonal_lowertercile_country_filepath,
+        chirps_seasonal_tercile_bounds_country_filepath,
+    )
 
 
-def compute_seasonal_lowertercile_raster(
+def get_filepath_seasonal_tercile_raster(country_iso3: str, config: Config):
+    chirps_country_dir = (
+        Path(config.DATA_DIR)
+        / config.PUBLIC_DIR
+        / config.PROCESSED_DIR
+        / country_iso3
+        / config.CHIRPS_DIR
+    )
+
+    chirps_seasonal_country_dir = (
+        chirps_country_dir / config.CHIRPS_SEASONAL_DIR
+    )
+
+    chirps_seasonal_tercile_filepath = (
+        chirps_seasonal_country_dir
+        / _SEASONAL_TERCILE_FILENAME.format(country_iso3=country_iso3)
+    )
+
+    chirps_seasonal_tercile_bounds_filepath = (
+        chirps_seasonal_country_dir
+        / _SEASONAL_TERCILE_BOUNDS_FILENAME.format(country_iso3=country_iso3)
+    )
+
+    return (
+        chirps_seasonal_tercile_filepath,
+        chirps_seasonal_tercile_bounds_filepath,
+    )
+
+
+def compute_seasonal_tercile_raster(
     config,
     country_iso3: str,
     use_cache: bool = True,
@@ -202,28 +248,31 @@ def compute_seasonal_lowertercile_raster(
     chirps_monthly_country_filepath = get_filepath_chirps_monthly(
         country_iso3, config
     )
-    chirps_seasonal_lowertercile_country_filepath = (
-        get_filepath_seasonal_lowertercile_raster(country_iso3, config)
-    )
+    (
+        chirps_seasonal_tercile_filepath,
+        chirps_seasonal_tercile_bounds_filepath,
+    ) = get_filepath_seasonal_tercile_raster(country_iso3, config)
 
-    if use_cache and chirps_seasonal_lowertercile_country_filepath.exists():
+    if use_cache and chirps_seasonal_tercile_filepath.exists():
         logger.debug(
-            f"{chirps_seasonal_lowertercile_country_filepath} already exists"
+            f"{chirps_seasonal_tercile_filepath} already exists"
             " and cache is set to True, skipping"
         )
-        return chirps_seasonal_lowertercile_country_filepath
+        return chirps_seasonal_tercile_filepath
 
-    Path(chirps_seasonal_lowertercile_country_filepath.parent).mkdir(
+    Path(chirps_seasonal_tercile_filepath.parent).mkdir(
         parents=True, exist_ok=True
     )
     logger.debug("Computing lower tercile values...")
-    print(chirps_monthly_country_filepath)
+    # for some unknown reason the rolling sum takes very long to
+    # compute when using rioxarray so sticking to xarray for now
     ds = xr.load_dataset(chirps_monthly_country_filepath)
+    da = ds.precip
     # compute the rolling sum over three month period. Rolling sum works
     # backwards, i.e. value for month 3 is sum of month 1 till 3. So
     # month==1 is NDJ season
-    ds_season = (
-        ds.rolling(time=seas_len, min_periods=seas_len)
+    da_season = (
+        da.rolling(time=seas_len, min_periods=seas_len)
         .sum()
         .dropna(dim="time", how="all")
     )
@@ -231,27 +280,63 @@ def compute_seasonal_lowertercile_raster(
     # 1982-2010 since this is also the period used by IRI's seasonal
     # forecasts see
     # https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/
-    ds_season_climate = ds_season.sel(
-        time=ds_season.time.dt.year.isin(range(1982, 2011))
+    da_season_climate = da_season.sel(
+        time=da_season.time.dt.year.isin(range(1982, 2011))
     )
     # compute the thresholds for the lower tercile, i.e. below average,
     # per season since we computed a rolling sum, each month represents
     # a season
-    ds_season_climate_quantile = ds_season_climate.groupby(
-        ds_season_climate.time.dt.month
-    ).quantile(1 / 3, skipna=True)
+    da_season_climate_quantile = da_season_climate.groupby(
+        da_season_climate.time.dt.month
+    ).quantile([1 / 3, 2 / 3], skipna=True)
 
-    ds_lt = ds_season.where(
-        (ds_season.isnull()) | ds_season
-        < ds_season_climate_quantile.sel(month=ds_season.time.dt.month)
+    # save tercile boundaries
+    da_season_climate_quantile.to_netcdf(
+        chirps_seasonal_tercile_bounds_filepath
     )
-    # ds_lt = ds_season.apply(lambda x:
-    #                                          x.where(
-    #                                              (x.isnull())|
-    # x < ds_season_climate_quantile.sel(month=x.time.dt.month)))
-    ds_season = ds_season.assign({"lower": ds_lt["precip"]})
-    ds_season.to_netcdf(chirps_seasonal_lowertercile_country_filepath)
-    return chirps_seasonal_lowertercile_country_filepath
+
+    da_bn = xr.where(
+        da_season
+        <= da_season_climate_quantile.sel(
+            quantile=1 / 3, month=da_season.time.dt.month
+        ),
+        True,
+        False,
+    )
+    da_an = xr.where(
+        da_season
+        >= da_season_climate_quantile.sel(
+            quantile=2 / 3, month=da_season.time.dt.month
+        ),
+        True,
+        False,
+    )
+    da_no = xr.where(
+        (
+            da_season
+            > da_season_climate_quantile.sel(
+                quantile=1 / 3, month=da_season.time.dt.month
+            )
+        )
+        & (
+            da_season
+            < da_season_climate_quantile.sel(
+                quantile=2 / 3, month=da_season.time.dt.month
+            )
+        ),
+        True,
+        False,
+    )
+    da_season_terc = da_season.assign(
+        {
+            "below_normal": da_bn.drop("quantile"),
+            "normal": da_no,
+            "above_normal": da_an.drop("quantile"),
+        }
+    )
+
+    da_season_terc.to_netcdf(chirps_seasonal_tercile_filepath)
+    return chirps_seasonal_tercile_filepath
 
 
 def get_chirps_data_daily(config, year, resolution="25", download=False):

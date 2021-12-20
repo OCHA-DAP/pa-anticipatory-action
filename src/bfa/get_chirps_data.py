@@ -9,7 +9,7 @@ path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
 sys.path.append(path_mod)
 
 from src.indicators.drought.chirps_rainfallobservations import (
-    compute_seasonal_lowertercile_raster,
+    compute_seasonal_tercile_raster,
     get_chirps_data_monthly,
 )
 from src.indicators.drought.config import Config
@@ -26,7 +26,4 @@ get_chirps_data_monthly(
     country_iso3=COUNTRY_ISO3,
 )
 
-compute_seasonal_lowertercile_raster(
-    config=Config(),
-    country_iso3=COUNTRY_ISO3,
-)
+compute_seasonal_tercile_raster(config=Config(), country_iso3=COUNTRY_ISO3)
