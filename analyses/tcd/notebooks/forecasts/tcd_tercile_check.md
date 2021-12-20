@@ -56,9 +56,8 @@ da_season = (
 ```python
 # Plot to make sure it makes sense
 fig, ax = plt.subplots(figsize=(20,10))
-da.plot(ax=ax,label="monthly precipitation")
-da_season.plot(ax=ax,label="sum of 3month precipitation")
-plt.legend()
+da.plot(ax=ax)
+da_season.plot(ax=ax)
 ```
 
 ```python
@@ -76,24 +75,12 @@ da_season_climate = da_season.sel(time=da_season.time.dt.year.isin(range(1982, 2
 ```
 
 ```python
-da_season_climate.groupby(
-        da_season_climate.time.dt.month
-    )
-```
-
-```python
-group
-```
-
-```python
 # Plot the preipitation in each month group
 for i, group in da_season_climate.groupby(
         da_season_climate.time.dt.month
     ):
-    #take log such that values are in comparable range
     group = np.log10(group)
     group.plot.hist(bins=np.arange(-5, 5, 0.1), histtype='step', label=i, alpha=0.5, lw=2)
-plt.legend()
 ```
 
 ```python
@@ -127,31 +114,10 @@ ds_season = (
 ds_season_climate = ds_season.sel(
         time=ds_season.time.dt.year.isin(range(1982, 2011))
     )
-```
-
-```python
-ds_season.precip.count()
-```
-
-```python
-ds_lt_simple.precip.count()
-```
-
-```python
-ds_lt.precip.count()
-```
-
-```python
-np.unique(ds_lt.precip)
-```
-
-```python
 ds_season_climate_quantile = ds_season_climate.groupby(
         ds_season_climate.time.dt.month
-    ).quantile([1/3,2/3])
+    ).quantile(0.33)
 ```
-
-#TODO: add season coord
 
 ```python
 da_season=ds_season.precip
@@ -257,10 +223,6 @@ gdf_adm.boundary.plot(ax=g.axes);
 g=ds_season_terc['normal'].isel(time=time).plot(cmap=matplotlib.colors.ListedColormap(["blue"]),figsize=(10,15))
 ds_season_terc['above_normal'].isel(time=time).plot(cmap=matplotlib.colors.ListedColormap(["blue"]),ax=g.axes,add_colorbar=False)
 gdf_adm.boundary.plot(ax=g.axes);
-```
-
-```python
-
 ```
 
 ```python
