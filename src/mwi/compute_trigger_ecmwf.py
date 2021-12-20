@@ -46,9 +46,16 @@ COUNTRY_DATA_RAW_DIR = (
     Path(CONFIG.DATA_DIR) / CONFIG.PUBLIC_DIR / CONFIG.RAW_DIR / COUNTRY_ISO3
 )
 
-COUNTRY_DATA_PROCESSED_DIR = (
+COUNTRY_DATA_PROCESSED_DIR_CDS = (
     Path(CONFIG.DATA_DIR)
     / CONFIG.PUBLIC_DIR
+    / CONFIG.PROCESSED_DIR
+    / COUNTRY_ISO3
+)
+
+COUNTRY_DATA_PROCESSED_DIR_ECMWF = (
+    Path(CONFIG.DATA_DIR)
+    / CONFIG.PRIVATE_DIR
     / CONFIG.PROCESSED_DIR
     / COUNTRY_ISO3
 )
@@ -62,9 +69,15 @@ def _get_output_path_metrics(
     use_unrounded_area_coords: bool,
     all_touched: bool,
     resolution: str,
+    source_cds: bool,
 ):
+
+    if source_cds:
+        base_dir = COUNTRY_DATA_PROCESSED_DIR_CDS
+    else:
+        base_dir = COUNTRY_DATA_PROCESSED_DIR_ECMWF
     directory = (
-        COUNTRY_DATA_PROCESSED_DIR
+        base_dir
         / CONFIG.DRY_SPELLS_DIR
         / f"v{version}"
         / CONFIG.TRIGGER_METRICS_DIR
@@ -88,9 +101,14 @@ def _get_output_path_map(
     target_month: str,
     leadtime: str,
     use_unrounded_area_coords: bool,
+    source_cds: bool,
 ):
+    if source_cds:
+        base_dir = COUNTRY_DATA_PROCESSED_DIR_CDS
+    else:
+        base_dir = COUNTRY_DATA_PROCESSED_DIR_ECMWF
     directory = (
-        COUNTRY_DATA_PROCESSED_DIR
+        base_dir
         / CONFIG.PLOT_DIR
         / CONFIG.DRY_SPELLS_DIR
         / f"v{version}"
@@ -184,6 +202,7 @@ def create_map(
     target_date: date,
     prob: float,
     use_unrounded_area_coords: bool,
+    source_cds: bool,
     round_precip_int: bool = True,
     leadtimes: List[int] = None,
     gdf_adm: gpd.GeoDataFrame = None,
@@ -209,6 +228,8 @@ def create_map(
         if False, download the forecast at integer coordinates
         If True, no rounding to the coordinates will be done which results in
         a shift in data which is interpolated
+    source_cds: bool
+        whether the data comes from CDS or ECMWF directly
     round_precip_int : bool
         If True, round the values in the dataarray to the closest
         integer before plotting
@@ -233,7 +254,9 @@ def create_map(
         Size of the figure
     """
     da_for = get_ecmwf_forecast_by_leadtime(
-        iso3, use_unrounded_area_coords=use_unrounded_area_coords
+        iso3,
+        use_unrounded_area_coords=use_unrounded_area_coords,
+        source_cds=source_cds,
     )
     da_for_date = da_for.sel(time=target_date.strftime("%Y-%m-%d"))
     if round_precip_int:
@@ -285,7 +308,15 @@ def create_map(
             f"probability for {target_date.strftime('%b %Y')}",
             size=10,
         )
-        plt.figtext(0, 0.05, f"Forecast published on 13 {published_month}")
+        # day of the month the forecast is published
+        # in some shared graphs we have only included the month
+        if source_cds:
+            pub_day = 13
+        else:
+            pub_day = 5
+        plt.figtext(
+            0, 0.05, f"Forecast published on {pub_day} {published_month}"
+        )
         g.axes.set_xlabel("longitude")
         g.axes.set_ylabel("latitude")
         g.axes.spines["right"].set_visible(False)
@@ -300,7 +331,9 @@ def create_map(
             target_month=target_date.month,
             leadtime=lt,
             use_unrounded_area_coords=use_unrounded_area_coords,
+            source_cds=source_cds,
         )
+        plt_path.parent.mkdir(exist_ok=True, parents=True)
         plt.savefig(plt_path, facecolor="white", bbox_inches="tight")
 
 
@@ -312,6 +345,7 @@ def compute_trigger(
     precip_cap: int,
     download: bool,
     use_unrounded_area_coords: bool,
+    source_cds: bool,
     resolution: str = None,
     leadtimes: List[int] = None,
     pcodes: List[str] = None,
@@ -342,6 +376,7 @@ def compute_trigger(
     integer coordinates
     If True, no rounding to the coordinates will be done which results in
     a shift in data which is interpolated
+    :param source_cds: whether the data comes from CDS or ECMWF directly
     :param interpolate_raster: if True, interpolate the original raster
     to a higher resolution
     :param leadtimes: list of leadtimes to compute the trigger for
@@ -378,6 +413,7 @@ def compute_trigger(
         target_date,
         resolution=resolution,
         adm_level=adm_level,
+        source_cds=source_cds,
         use_unrounded_area_coords=use_unrounded_area_coords,
         all_touched=all_touched,
     )
@@ -427,6 +463,7 @@ def compute_trigger(
         use_unrounded_area_coords=use_unrounded_area_coords,
         all_touched=all_touched,
         resolution=resolution,
+        source_cds=source_cds,
     )
     Path(output_path.parent).mkdir(parents=True, exist_ok=True)
     df_stats_quant.to_csv(output_path, index=False)
@@ -436,6 +473,7 @@ def compute_trigger(
 
 
 def main():
+    download = False
     prob = 0.5
     precip_cap = 210
     adm_level = 1
@@ -451,74 +489,83 @@ def main():
     ]
     # run all different combinations of methods and dates that we
     # want to know
-    for target_date in target_dates:
-        # when use_unrounded_area_coords=True,
-        # the area coordinates for which to retrieve the forecast
-        # are not rounded to integers
-        # since the original forecast is produced for integer coordinates,
-        # in this case the data is automatically interpolated by CDS
-        for use_unrounded_area_coords in [True, False]:
+    for source_cds in [True, False]:
+        for target_date in target_dates:
+            # when use_unrounded_area_coords=True,
+            # the area coordinates for which to retrieve the forecast
+            # are not rounded to integers
+            # since the original forecast is produced for integer coordinates,
+            # in this case the data is automatically interpolated by CDS
+            if source_cds:
+                use_unrounded_area_coords_list = [True, False]
+            else:
+                use_unrounded_area_coords_list = [False]
+            for use_unrounded_area_coords in use_unrounded_area_coords_list:
+                compute_trigger(
+                    COUNTRY_ISO3,
+                    gdf_adm=gdf_adm,
+                    target_date=target_date,
+                    prob=prob,
+                    precip_cap=precip_cap,
+                    source_cds=source_cds,
+                    download=download,
+                    use_unrounded_area_coords=use_unrounded_area_coords,
+                    resolution=None,
+                    all_touched=False,
+                )
+
+                create_map(
+                    iso3=COUNTRY_ISO3,
+                    target_date=target_date,
+                    leadtimes=[1, 2, 3],
+                    prob=prob,
+                    use_unrounded_area_coords=use_unrounded_area_coords,
+                    source_cds=source_cds,
+                    gdf_adm=gdf_adm,
+                    slice_lon=slice(32, 37),
+                    slice_lat=slice(-9, -19),
+                    # bins are left-inclusive, i.e. if value is 150,
+                    # it will fall in the 150-210.1 bin, not the 100-150
+                    # therefore use 210.1 instead of 210 as boundary
+                    bins=[0, 50, 100, 150, 210.1, 250, 300, 350],
+                    cmap=ListedColormap(
+                        [
+                            "#c25048",
+                            "#f2645a",
+                            "#f7a29c",
+                            "#fce0de",
+                            "#cce5f9",
+                            "#66b0ec",
+                            "#007ce0",
+                            "#0063b3",
+                        ]
+                    ),
+                )
             compute_trigger(
                 COUNTRY_ISO3,
                 gdf_adm=gdf_adm,
                 target_date=target_date,
                 prob=prob,
                 precip_cap=precip_cap,
-                download=True,
-                use_unrounded_area_coords=use_unrounded_area_coords,
-                resolution=None,
+                source_cds=source_cds,
+                download=download,
+                use_unrounded_area_coords=False,
+                resolution=0.05,
                 all_touched=False,
             )
 
-            create_map(
-                iso3=COUNTRY_ISO3,
-                target_date=target_date,
-                leadtimes=[3, 4],
-                prob=prob,
-                use_unrounded_area_coords=use_unrounded_area_coords,
+            compute_trigger(
+                COUNTRY_ISO3,
                 gdf_adm=gdf_adm,
-                slice_lon=slice(32, 37),
-                slice_lat=slice(-9, -19),
-                # bins are left-inclusive, i.e. if value is 150,
-                # it will fall in the 150-210.1 bin, not the 100-150
-                # therefore use 210.1 instead of 210 as boundary
-                bins=[0, 50, 100, 150, 210.1, 250, 300, 350],
-                cmap=ListedColormap(
-                    [
-                        "#c25048",
-                        "#f2645a",
-                        "#f7a29c",
-                        "#fce0de",
-                        "#cce5f9",
-                        "#66b0ec",
-                        "#007ce0",
-                        "#0063b3",
-                    ]
-                ),
+                target_date=target_date,
+                prob=prob,
+                precip_cap=precip_cap,
+                source_cds=source_cds,
+                download=download,
+                use_unrounded_area_coords=False,
+                resolution=None,
+                all_touched=True,
             )
-        compute_trigger(
-            COUNTRY_ISO3,
-            gdf_adm=gdf_adm,
-            target_date=target_date,
-            prob=prob,
-            precip_cap=precip_cap,
-            download=True,
-            use_unrounded_area_coords=False,
-            resolution=0.05,
-            all_touched=False,
-        )
-
-        compute_trigger(
-            COUNTRY_ISO3,
-            gdf_adm=gdf_adm,
-            target_date=target_date,
-            prob=prob,
-            precip_cap=precip_cap,
-            download=True,
-            use_unrounded_area_coords=False,
-            resolution=None,
-            all_touched=True,
-        )
 
 
 if __name__ == "__main__":

@@ -144,6 +144,9 @@ class Config:
     CHIRPS_SEASONAL_LOWERTERCILE_COUNTRY_FILENAME = (
         "{country_iso3}_chirps_seasonal_lowertercile_test.nc"
     )
+    CHIRPS_SEASONAL_TERCILE_BOUNDS_FILENAME = (
+        "{country_iso3}_chirps_seasonal_tercile_bounds.nc"
+    )
     CHIRPS_LON = "longitude"  # "x" #
     CHIRPS_LAT = "latitude"  # "y" #
     CHIRPS_VARNAME = "precip"

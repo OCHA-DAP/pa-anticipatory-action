@@ -52,10 +52,15 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
-use_unrounded_area_coords = True #False
+source_cds=False
+use_unrounded_area_coords = False
 interpolate=False
 resolution=None #0.05
 all_touched=False #True
+
+#cannot have unrounded area coords when source_cds=False so check and set to False
+if not source_cds:
+    use_unrounded_area_coords = False
 ```
 
 ```python
@@ -129,14 +134,14 @@ def compute_miss_false_leadtime(df,target_var,predict_var):
 ```
 
 ```python
-def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None):
+def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None,figsize=(15,8)):
     #number of dates with observed dry spell overlapping with forecasted per month
     num_plots = len(df.leadtime.unique())
     if num_plots==1:
         colp_num=1
     rows = math.ceil(num_plots / colp_num)
     position = range(1, num_plots + 1)
-    fig=plt.figure(figsize=(15,8))
+    fig=plt.figure(figsize=figsize)
     for i, m in enumerate(df.sort_values(by="leadtime").leadtime.unique()):
         ax = fig.add_subplot(rows,colp_num,i+1)
         y_target =    df.loc[df.leadtime==m,target_var]
@@ -258,7 +263,9 @@ end_date="2-1-2020"
 # the mwi_seasonal-monthly-single-levels_v5_interp*.csv contain results when interpolating the forecasts to be more granular
 # but results actually worsen with this
 date_list=pd.date_range(start=f'1-1-{start_year}', end=end_date, freq='MS')
-all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords,all_touched=all_touched) for date in date_list]
+all_files=[processing.get_stats_filepath(country_iso3,config,date,resolution=resolution,
+                                         adm_level=1,use_unrounded_area_coords=use_unrounded_area_coords,
+                                         source_cds=source_cds,all_touched=all_touched) for date in date_list]
 
 df_from_each_file = (pd.read_csv(f,parse_dates=["date"]) for f in all_files)
 df_for   = pd.concat(df_from_each_file, ignore_index=True)
@@ -745,7 +752,8 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 ```
 
 ```python
-fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm")
+fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm",
+                                       figsize=(20,8),colp_num=4)
 # fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt123456_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
 ```
 
@@ -772,304 +780,4 @@ for l in sel_leadtime:#df_ds_for.leadtime.unique():
 #show the numbers for months and leadtimes of interest
 df_pr_sel=compute_miss_false_leadtime(df_ds_for[df_ds_for.date.dt.month.isin(sel_months)],"dry_spell","for_below_th")
 df_pr_sel[df_pr_sel.leadtime.isin(sel_leadtime)]
-```
-
-### Determine skill based on set threshold, with varying probability
-**NOTE: from here on the code hasn't been kept up-to-date, so might not work anymore**
-From here on different methods of defining the threshold and probability are experimented with. However, we chose to go with the first method that was presented above.    
-
-Threshold is set based on the analysis of observed monthly precipitation and dry spells. 
-The probability is set by equalling the forecasted months that the threshold would have been met, equal to the number of months the observed precip was below the threshold
-
-```python
-#max mm precip/month for which the month is classified as "dry spell likely"
-#based on analysis with overlap dry spells
-threshold=170
-```
-
-```python
-#set all rows for which below threshold was forecasted
-df_for_sel.loc[:,"below_threshold"]=np.where(df_for_sel.loc[:,aggr_meth]<=threshold,1,0)
-```
-
-```python
-#compute the percentage of ensemble members that were below the threshold for each date-adm-leadtime combination
-df_sel_date=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).agg(mem_below=("below_threshold","sum"),mem_num=("below_threshold","count"))
-df_sel_date["perc_below"]=df_sel_date["mem_below"]/df_sel_date["mem_num"]*100
-```
-
-```python
-#plot the % of members that are below the threshold per leadtime
-num_plots = len(df_sel_date.leadtime.unique())
-colp_num=3
-if num_plots==1:
-    colp_num=1
-rows = math.ceil(num_plots / colp_num)
-position = range(1, num_plots + 1)
-fig=plt.figure(figsize=(20,10))
-for i, m in enumerate(df_sel_date.leadtime.unique()):
-    ax = fig.add_subplot(rows,colp_num,i+1)
-    sns.ecdfplot(data=df_sel_date[df_sel_date.leadtime==m],x="perc_below",stat="count",complementary=True,ax=ax)
-
-    ax.set_xlabel(f"% of members forecast below {threshold} mm", labelpad=20, weight='bold', size=12)
-    ax.set_ylabel("Number of months", labelpad=20, weight='bold', size=12)
-    ax.set_title(f"leadtime = {m} months")
-    ax.set_xlim(0,100)
-    sns.despine(left=True, bottom=True)
-
-
-fig.suptitle(f"Number of months for which x% of the members forecasts below {threshold} mm",size=20)
-fig.tight_layout()
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_percmembers_th{threshold}_{adm_str}_{month_str}.png"))
-```
-
-```python
-#merge observed and forecasted data
-df_obs_for=df_obs_month_sel.merge(df_sel_date,on=["date","ADM1_EN"],how="right")[["date","leadtime","ADM1_EN",aggr_meth,"perc_below"]]
-df_obs_for["date_month"]=df_obs_for.date.dt.to_period("M")
-```
-
-```python
-df_obs_for=df_obs_for.merge(df_ds[["ADM1_EN","date_month","dry_spell"]],how="left",on=["ADM1_EN","date_month"])
-df_obs_for.loc[:,"dry_spell"]=df_obs_for.dry_spell.replace(np.nan,0).astype(int)
-```
-
-```python
-df_obs_for.head()
-```
-
-```python
-# for i in df_obs_for.leadtime.unique():
-#     for a in df_obs_for.ADM1_EN.unique():
-#         print(i)
-#         print(df_obs_for[(df_obs_for.leadtime==i)&(df_obs_for.ADM1_EN==a)].corr())
-```
-
-```python
-#check that threshold didn't change with some code
-threshold
-```
-
-```python
-#indicate months with observed precip below threshold
-df_obs_for.loc[:,"obs_below_th"]=np.where(df_obs_for.loc[:,aggr_meth]<=threshold,1,0)
-```
-
-```python
-#plot distribution of probability with and without dry spell
-g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="dry_spell",palette={0:no_ds_color,1:ds_color})
-g.map_dataframe(sns.histplot, "perc_below",common_norm=False,kde=True,alpha=1,binwidth=10)
-
-g.add_legend(title="Dry spell occurred")  
-for ax in g.axes.flatten():
-    ax.tick_params(labelbottom=True)
-    ax.set_ylabel("Number of months")
-    ax.set_xlabel(f"Probability <={threshold} mm")
-g.fig.suptitle(f"Probability <={threshold} mm separated by dry spell occurred")
-g.fig.tight_layout()
-```
-
-```python
-g = sns.FacetGrid(df_obs_for, height=5, col="leadtime",hue="obs_below_th",palette={0:no_ds_color,1:ds_color})
-g.map_dataframe(sns.histplot, "perc_below",common_norm=False,kde=True,alpha=1,binwidth=10)
-
-g.add_legend(title=f"<={threshold} mm occurred")  
-for ax in g.axes.flatten():
-    ax.tick_params(labelbottom=True)
-    ax.set_ylabel("Number of months")
-    ax.set_xlabel(f"Probability <={threshold} mm")
-g.fig.suptitle(f"Probability <={threshold} mm separated by observed <={threshold} mm")
-g.fig.tight_layout()
-```
-
-```python
-#compute number of months for which we would want to trigger
-#can either set this to the number of months with observed below threshold monthly precipitation
-#but from experimentation, saw that with number of months with dry spell, get very bad results, i.e. trigger is too strict
-#or number of months with observed dry spell 
-#compute number of observed months below threshold
-num_obs_months_belowth=len(df_obs_month_sel[df_obs_month_sel[aggr_meth]<=threshold])
-#compute number of months with observed dry spell
-# num_obs_months_belowth=len(df_obs_for[(df_obs_for.leadtime==1)&(df_obs_for.ADM1_EN=="Southern")&(df_obs_for.dry_spell==1)])
-num_obs_months_belowth
-```
-
-```python
-#compute threshold of percentage of ensemble members forecasting to be below mm/month threshold
-#compute the percentage threshold, by choosing the percentage such that the number of forecasted months below mm/month threshold are closest to the observed months with below threshold mm/month
-#compute cumulative sum of months wit at least x% of members forecasting below the threshold
-df_sel_perc=df_sel_date.sort_values("perc_below",ascending=False).groupby(["leadtime","ADM1_EN","perc_below"],sort=False).agg(num_months=("date","count"))
-df_sel_perc["cum_months_below"]=df_sel_perc.groupby(level=0,sort=False).cumsum()
-df_sel_perc=df_sel_perc.reset_index()
-```
-
-```python
-#gap between forecasted months meeting the threshold and observed
-df_sel_perc["gap_months_obs_for"]=(df_sel_perc['cum_months_below']-num_obs_months_belowth).abs()
-#choose probability thresholds with smallest gap
-df_perc_threshold=df_sel_perc.loc[df_sel_perc.groupby(["leadtime","ADM1_EN"]).gap_months_obs_for.idxmin()]
-```
-
-```python
-df_perc_threshold
-```
-
-```python
-ax = df_perc_threshold[["leadtime","perc_below"]].plot(kind='bar',x="leadtime",y="perc_below", figsize=(10, 8), color='#86bf91', zorder=2, width=0.85,legend=False)
-
-# Draw vertical axis lines
-vals = ax.get_yticks()
-for tick in vals:
-    ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
-
-ax.set_xlabel("Leadtime", labelpad=20, weight='bold', size=12)
-ax.set_ylabel(f"Percentage of members", labelpad=20, weight='bold', size=12)
-sns.despine(left=True,bottom=True)
-
-plt.title(f"Threshold of percentage of members forecasting below {threshold} mm per leadtime")
-# plt.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_percth_th{threshold}_{adm_str}_{month_str}.png"))
-```
-
-```python
-#set forecasted months that meet criteria
-for i in df_obs_for.leadtime.unique():
-    for a in df_obs_for.ADM1_EN.unique():
-        df_obs_for.loc[(df_obs_for.leadtime==i)&(df_obs_for.ADM1_EN==a),"for_below_th"]=np.where(df_obs_for.loc[(df_obs_for.leadtime==i)&(df_obs_for.ADM1_EN==a),"perc_below"]>=df_perc_threshold[(df_perc_threshold.ADM1_EN==a)&(df_perc_threshold.leadtime==i)].perc_below.values[0],1,0)
-```
-
-```python
-# for i in df_obs_for.leadtime.unique():
-#     for a in df_obs_for.ADM1_EN.unique():
-#         print(i)
-#         print(df_obs_for[(df_obs_for.leadtime==i)&(df_obs_for.ADM1_EN==a)].corr())
-```
-
-```python
-df_pr=compute_miss_false_leadtime(df_obs_for,"obs_below_th","for_below_th")
-```
-
-```python
-fig,ax=plt.subplots()
-
-df_pr.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=True,ax=ax,label="observed below and forecasted above threshold (misses)")
-df_pr.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=True,ax=ax,label="observed above and forecasted below threshold (false alarms)")
-
-ax.set_xlabel("Leadtime (months)", labelpad=20, weight='bold', size=12)
-ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
-ax.set_ylim(0,100)
-sns.despine(left=True,bottom=True)
-
-vals = ax.get_yticks()
-for tick in vals:
-    ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
-
-plt.title(f"Percentage of misses and false alarms compared to observed monthly precipitation per leadtime")
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_obsmonth_missfalse_th{threshold}_percvar_{adm_str}_{month_str}.png"))
-```
-
-```python
-#compute metrics comparing to dry spells
-df_pr_ds=compute_miss_false_leadtime(df_obs_for,"dry_spell","for_below_th")
-```
-
-```python
-fig,ax=plt.subplots()
-
-df_pr_ds.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=True,ax=ax,label="observed dry spell and forecasted above threshold (misses)")
-df_pr_ds.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=True,ax=ax,label="observed dry spell and forecasted below threshold (false alarms)") 
-
-ax.set_xlabel("Leadtime (months)", labelpad=20, weight='bold', size=12)
-ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
-sns.despine(left=True,bottom=True)
-ax.set_ylim(0,100)
-
-vals = ax.get_yticks()
-for tick in vals:
-    ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
-
-plt.title(f"Percentage of misses and false alarms compared to observed dry spells per leadtime")
-# fig.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_ds_missfalse_th{threshold}_percvar_{adm_str}_{month_str}.png"))
-```
-
-```python
-fig_cm=compute_confusionmatrix_leadtime(df_obs_for,"obs_below_th","for_below_th",ylabel=f"Observed precipitation <={threshold}",xlabel=f">=x% ensemble members <={threshold}")
-# fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_cm_formonth_obsmonth_th{threshold}_percvar_{adm_str}_{month_str}.png"))
-```
-
-```python
-fig_cm_ds=compute_confusionmatrix_leadtime(df_obs_for,"dry_spell","for_below_th",ylabel="Observed dry spell",xlabel=f">=x% ensemble members <={threshold}")
-# fig_cm_ds.savefig(os.path.join(plots_seasonal_dir,f"mwi_cm_formonth_ds_th{threshold}_percvar_{adm_str}_{month_str}.png"))
-```
-
-### Compute based on set percentage and set threshold
-
-```python
-fig,ax=plt.subplots(figsize=(10,10))
-g=sns.boxplot(data=df_obs_for,x="leadtime",y="perc_below",ax=ax,color=no_ds_color_dark,hue="dry_spell",palette={0:no_ds_color,1:ds_color})
-ax.set_ylabel(f"Probability of <={int(threshold)}mm")
-sns.despine()
-ax.set_xlabel("Lead time")
-ax.get_legend().set_title("Dry spell occurred")
-# fig.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_precipitation_boxplot_{month_str}_southern_ds7_adm1.png"))
-```
-
-```python
-perc=40
-```
-
-```python
-df_obs_for["for_below_th_perc"]=np.where(df_obs_for.perc_below>=perc,1,0)
-```
-
-```python
-#set forecasted months that meet criteria
-for i in df_obs_for.leadtime.unique():
-    for a in df_obs_for.ADM1_EN.unique():
-        df_obs_for.loc[(df_obs_for.leadtime==i)&(df_obs_for.ADM1_EN==a),"for_below_th"]=np.where(df_obs_for.loc[(df_obs_for.leadtime==i)&(df_obs_for.ADM1_EN==a),"perc_below"]>=df_perc_threshold[(df_perc_threshold.ADM1_EN==a)&(df_perc_threshold.leadtime==i)].perc_below.values[0],1,0)
-```
-
-```python
-df_pr_ds=compute_miss_false_leadtime(df_obs_for,"dry_spell","for_below_th_perc")
-```
-
-```python
-fig,ax=plt.subplots()
-
-df_pr_ds.plot(x="leadtime",y="month_miss_rate" ,figsize=(16, 8), color=ds_color,legend=True,ax=ax,label="observed dry spell and forecasted above threshold (misses)")
-df_pr_ds.plot(x="leadtime",y="month_false_alarm_rate" ,figsize=(16, 8), color=no_ds_color_dark,legend=True,ax=ax,label="observed dry spell and forecasted below threshold (false alarms)") 
-
-ax.set_xlabel("Leadtime (months)", labelpad=20, weight='bold', size=12)
-ax.set_ylabel("Percentage", labelpad=20, weight='bold', size=12)
-sns.despine(left=True,bottom=True)
-ax.set_ylim(0,100)
-
-vals = ax.get_yticks()
-for tick in vals:
-    ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
-
-plt.title(f"Percentage of misses and false alarms per leadtime")
-# fig.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_ds_miss_falsealarms.png"))
-# 
-```
-
-```python
-cm_perc=compute_confusionmatrix_leadtime(df_obs_for,"dry_spell","for_below_th_perc",ylabel="Observed dry spell",xlabel=f">={perc}% below {threshold} mm")
-# fig_cm.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_contigencymatrices.png"))
-```
-
-```python
-cm_perc=compute_confusionmatrix_leadtime(df_obs_for,"dry_spell","for_below_th_perc",ylabel="Observed dry spell",xlabel=f">={perc}% below {threshold} mm")
-# fig_cm.savefig(os.path.join(plots_seasonal_dir,"mwi_plot_monthly_forecast_contigencymatrices.png"))
-```
-
-```python
-# df_obs_for["pcode"]="MW3"
-# adm_str="".join([a.lower() for a in sel_adm])
-# month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
-# for l in df_obs_for.leadtime.unique():
-#     df_obs_for_lt=df_obs_for[df_obs_for.leadtime==l]
-#     df_hm_daterange_lt=refactor_data_hm(df_obs_for_lt,"dry_spell","for_below_th_perc")
-
-#     lt_str=str(l)
-#     df_hm_daterange_lt.to_csv(os.path.join(monthly_precip_exploration_dir,f"monthly_precip_dsobs_formonth_lt{lt_str}_th{int(threshold)}_perc_{int(perc)}_{adm_str}_{month_str}.csv"))
 ```

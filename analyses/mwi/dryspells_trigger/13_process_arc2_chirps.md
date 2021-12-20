@@ -20,7 +20,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
 config = Config()
-parameters = config.parameters('malawi')
+parameters = config.parameters('mwi')
 COUNTRY_ISO3 = parameters["iso3_code"]
 DATA_DIR = Path(config.DATA_DIR)
 
@@ -79,7 +79,7 @@ arc2_centroid_df = arc2_precip_df[arc2_precip_df.dry_spell_centroid] \
             dry_spell_first_date = lambda x: x.dry_spell_confirmation - pd.to_timedelta(13, unit = 'd'),
             dry_spell_duration = lambda x: (x.dry_spell_last_date - x.dry_spell_first_date).dt.days + 1)
 
-arc2_centroid_df.to_csv(ARC2_CENTER_FILEPATH)
+# arc2_centroid_df.to_csv(ARC2_CENTER_FILEPATH)
 ```
 
 ### Calculate ARC2 dry spells using all raster cells (touching)
@@ -112,7 +112,7 @@ arc2_touch_df = arc2_precip_df[arc2_precip_df.dry_spell_touched] \
             dry_spell_first_date = lambda x: x.dry_spell_confirmation - pd.to_timedelta(13, unit = 'd'),
             dry_spell_duration = lambda x: (x.dry_spell_last_date - x.dry_spell_first_date).dt.days + 1)
 
-arc2_touch_df.to_csv(ARC2_TOUCHING_FILEPATH)
+# arc2_touch_df.to_csv(ARC2_TOUCHING_FILEPATH)
 ```
 
 ### Filter ARC2 data frame (centroids)
@@ -138,7 +138,7 @@ arc2_centroid_filter_df = arc2_centroid_filter_df[arc2_centroid_filter_df.region
 
 # rearrange columns and save
 arc2_centroid_filter_df = arc2_centroid_filter_df[['pcode', 'ADM2_EN', 'dry_spell_first_date', 'dry_spell_confirmation', 'dry_spell_last_date', 'dry_spell_duration']]
-arc2_centroid_filter_df.to_csv(ARC2_CENTER_FILTERED_FILEPATH)
+# arc2_centroid_filter_df.to_csv(ARC2_CENTER_FILTERED_FILEPATH)
 ```
 
 ### Filter ARC2 data frame (touching)
@@ -158,5 +158,5 @@ arc2_touch_filter_df = arc2_touch_filter_df[arc2_touch_filter_df.region == 'Sout
 
 # rearrange columns and save
 arc2_touch_filter_df = arc2_touch_filter_df[['pcode', 'ADM2_EN', 'dry_spell_first_date', 'dry_spell_confirmation', 'dry_spell_last_date', 'dry_spell_duration']]
-arc2_touch_filter_df.to_csv(ARC2_TOUCHING_FILTERED_FILEPATH)
+# arc2_touch_filter_df.to_csv(ARC2_TOUCHING_FILTERED_FILEPATH)
 ```
