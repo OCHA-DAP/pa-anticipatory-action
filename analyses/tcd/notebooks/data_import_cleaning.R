@@ -2,11 +2,13 @@ library(dplyr)
 ## Load in and transform datasets
 
 # list of adms regions (70 Départements (Admin2) and 23 Regions (Admin1), 1:1 relationship between pcodes and names)
-adms <- read_excel(paste0(data_dir, '/raw/tcd/', 'cod_ab/tcd_adminboundaries_tabulardata-20170616.xlsx'), sheet = 2) %>%
+cod_ab_path <- paste0(data_dir, '/public/raw/tcd/cod_ab', '/tcd_adminboundaries_tabulardata-20170616.xlsx')
+adms <- read_excel(cod_ab_path, sheet = 2) %>%
   dplyr::select(admin2Pcode, admin2Name_fr, admin1Pcode, admin1Name_fr)
 
 # Shapefiles 
-shp <- st_read(paste0(data_dir, '/raw/tcd/', 'cod_ab/tcd_admbnda_adm1_ocha/tcd_admbnda_adm1_ocha.shp'))
+shapefile_path <- paste0(data_dir, '/public/raw/tcd/cod_ab', '/tcd_admbnda_adm1_ocha/tcd_admbnda_adm1_ocha.shp')
+shp <- st_read(shapefile_path)
 
 # Drought (data at adm2) # DO NOT USE 'adm2_code'. NPGS = number of poor growing seasons
 shp_drought_all <- st_read(paste0(tcd_dir, 'tcd_ica_droughtrisk_geonode_mar2017/tcd_ica_droughtrisk_geonode_mar2017.shp')) # Iriba listed but is a town not an adm2. It is in Wadi Hawar (adm2)
