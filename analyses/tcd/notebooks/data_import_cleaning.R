@@ -4,19 +4,17 @@ tcd_dir <- paste0(data_dir, '/public/raw/tcd')
 ## Load in and transform datasets
 
 # list of adms regions (70 Départements (Admin2) and 23 Regions (Admin1), 1:1 relationship between pcodes and names)
-cod_ab_path <- paste0(data_dir, '/public/raw/tcd/cod_ab', '/tcd_adminboundaries_tabulardata-20170616.xlsx')
+cod_ab_path <- paste0(tcd_dir, '/cod_ab', '/tcd_adminboundaries_tabulardata-20170616.xlsx')
 adms <- read_excel(cod_ab_path, sheet = 2) %>%
   dplyr::select(admin2Pcode, admin2Name_fr, admin1Pcode, admin1Name_fr)
 
 # Shapefiles 
-shapefile_path <- paste0(data_dir, '/public/raw/tcd/cod_ab', '/tcd_admbnda_adm1_ocha/tcd_admbnda_adm1_ocha.shp')
+shapefile_path <- paste0(tcd_dir, '/cod_ab/tcd_admbnda_adm1_ocha/tcd_admbnda_adm1_ocha.shp')
 shp <- st_read(shapefile_path)
 
 # Drought (data at adm2) # DO NOT USE 'adm2_code'. NPGS = number of poor growing seasons
-drought_risk_filepath <- public/raw/tcd/risk/tcd_ica_droughtrisk_geonode_mar2017/tcd_ica_droughtrisk_geonode_mar2017.shp
-
-
-shp_drought_all <- st_read(paste0(tcd_dir, 'tcd_ica_droughtrisk_geonode_mar2017/tcd_ica_droughtrisk_geonode_mar2017.shp')) # Iriba listed but is a town not an adm2. It is in Wadi Hawar (adm2)
+drought_filepath <- paste0(tcd_dir, '/risk/tcd_ica_droughtrisk_geonode_mar2017/tcd_ica_droughtrisk_geonode_mar2017.shp')
+shp_drought_all <- st_read(drought_filepath) # Iriba listed but is a town not an adm2. It is in Wadi Hawar (adm2)
 
 shp_drought_all$adm2_name[shp_drought_all$adm2_name == "Tibesti-Ouest"] <- 'Tibesti Ouest' # name changes don't work in a user-defined function
 shp_drought_all$adm2_name[shp_drought_all$adm2_name == "Megri"] <- 'Mégri'
@@ -68,7 +66,8 @@ shp_drought <- shp_drought_all %>% # compute mean drought index per admin1 (=tak
                                  ifelse(DroughtClass == 3, "High", NA))))
 
 # Flood
-shp_flood_all <- st_read(paste0(tcd_dir, 'tcd_ica_floodrisk_geonode_mar2017/tcd_ica_floodrisk_geonode_mar2017.shp')) # Iriba listed but is a town not an adm2. It is in Wadi Hawar (adm2)
+flood_filepath <- paste0(tcd_dir, '/risk/tcd_ica_floodrisk_geonode_mar2017/tcd_ica_floodrisk_geonode_mar2017.shp')
+shp_flood_all <- st_read(flood_filepath)  # Iriba listed but is a town not an adm2. It is in Wadi Hawar (adm2)
 
 shp_flood_all$adm2_name[shp_flood_all$adm2_name == "Tibesti-Ouest"] <- 'Tibesti Ouest'
 shp_flood_all$adm2_name[shp_flood_all$adm2_name == "Megri"] <- 'Mégri'
@@ -120,7 +119,8 @@ shp_flood <- shp_flood_all %>% # compute mean drought index per admin1 (=take me
                                  ifelse(FloodClass == 3, "High", NA))))
 
 # Natural shock risk
-shp_shocks_all <- st_read(paste0(tcd_dir, 'tcd_ica_naturalshocksrisk_geonode_mar2017/tcd_ica_naturalshocksrisk_geonode_mar2017.shp'))
+shocks_all_filepath <- paste0(tcd_dir, '/risk/tcd_ica_naturalshocksrisk_geonode_mar2017/tcd_ica_naturalshocksrisk_geonode_mar2017.shp')
+shp_shocks_all <- st_read(shocks_all_filepath)
 
 shp_shocks_all$adm2_name[shp_shocks_all$adm2_name == "Tibesti-Ouest"] <- 'Tibesti Ouest'
 shp_shocks_all$adm2_name[shp_shocks_all$adm2_name == "Megri"] <- 'Mégri'
@@ -172,7 +172,8 @@ shp_shocks <- shp_shocks_all %>% # compute mean drought index per admin1 (= take
                                  ifelse(NSClass == 3, "High", NA))))
 
 # ICA Categories
-shp_ica_all <- st_read(paste0(tcd_dir, 'tcd_ica_categories_areas_geonode_mar2017/tcd_ica_categories_areas_geonode_mar2017.shp'))
+ica_filepath <- paste0(tcd_dir, '/risk/tcd_ica_categories_areas_geonode_mar2017/tcd_ica_categories_areas_geonode_mar2017.shp')
+shp_ica_all <- st_read(ica_filepath)
 
 shp_ica_all$adm2_name[shp_ica_all$adm2_name == "Tibesti-Ouest"] <- 'Tibesti Ouest'
 shp_ica_all$adm2_name[shp_ica_all$adm2_name == "Megri"] <- 'Mégri'
@@ -214,15 +215,17 @@ st_geometry(shp_ica_all) <- NULL # remove geometry
 
 
 # Population
-#df_pop <- read_excel(paste0(tcd_dir, 'tcd_admpop_2020.xlsx'), sheet = 2) %>% # adm 0-2 | 2021 projected sex and age disaggregated population statistics
-df_pop <- read_excel(paste0(tcd_dir, 'tcd_admpop_2019.xlsx'), sheet = 2) %>% # adm 0-2 disaggregated by gender and age 
+#df_pop <- read_excel(paste0(tcd_dir, '/risk/tcd_admpop_2020.xlsx'), sheet = 2) %>% # adm 0-2 | 2021 projected sex and age disaggregated population statistics
+admpop_2019_filepath <- paste0(tcd_dir, '/risk/tcd_admpop_2019.xlsx') # adm 0-2 disaggregated by gender and age 
+df_pop <- read_excel(admpop_2019_filepath, sheet = 2) %>% 
   mutate(across(c('F': 'T_80plus'), as.numeric)) %>% # reformat into numeric 
   rename(Female = 'F',
          Male = 'M',
          Total_pop = 'T')
 
 # IDP
-df_idp <- read_excel(paste0(tcd_dir, 'tcd_data_cod_ps_idp_rt_rf_20201130.xlsx'), skip = 3)
+idp_filepath <- paste0(tcd_dir, '/risk/tcd_data_cod_ps_idp_rt_rf_20201130.xlsx')
+df_idp <- read_excel(idp_filepath, skip = 3)
 
 df_idp$Admin2[df_idp$Admin2 == "Bahr-Koh"] <- 'Bahr-Köh'
 df_idp$Admin1[df_idp$Admin1 == "Ouaddai"] <- 'Ouaddaï'
@@ -232,7 +235,8 @@ df_idp_sum <- df_idp %>% # Get the number of idps per adm1
   summarise(num_idp = sum(`NbPersonnes`))
 
 # Food security 
-df_fsec_all <- read_excel(paste0(tcd_dir, 'cadre_harmonise_caf_ipc.xlsx')) # 1 sheet 
+fsec_filepath <- paste0(tcd_dir, '/risk/cadre_harmonise_caf_ipc.xlsx')
+df_fsec_all <- read_excel(fsec_filepath)
 
 df_fsec_all$adm1_name[df_fsec_all$adm1_name == "Ouaddai"] <- 'Ouaddaï'
 df_fsec_all$adm1_name[df_fsec_all$adm1_name == "Ennedi-Ouest"] <- 'Ennedi Ouest'
@@ -252,7 +256,8 @@ df_fsec <- df_fsec_all %>%
   mutate(ipc_plus_3_avg = round(ipc_plus_3_avg, 0))
 
 # Poverty 
-df_pov <- read_excel(paste0(tcd_dir, 'tcd-subnational-results-mpi-2020.xlsx'), sheet = 1) %>% # first sheet MPI by region
+pov_filepath <- paste0(tcd_dir, '/risk/tcd-subnational-results-mpi-2020.xlsx')
+df_pov <- read_excel(pov_filepath, sheet = 1) %>% # first sheet MPI by region
   select(c(7:13)) %>% # select columns of mpi by region
   slice(9:n()) %>% # remove header rows
   slice(1:21) # remove NA rows at bottom
@@ -280,7 +285,8 @@ df_pov <- df_pov %>%
   mutate(across(c('mpi_adm0':'sev_pov'), as.numeric))
 
 # Operational presence 
-df_op <- read_excel(paste0(tcd_dir, '3w_tcd_june2020.xlsx'), sheet = 1) %>%
+op_filepath <- paste0(tcd_dir, '/risk/3w_tcd_june2020.xlsx')
+df_op <- read_excel(op_filepath, sheet = 1) %>%
   slice(2:n()) # remove hxl tags row
 
 df_op_sum <- df_op %>% # Get the number of activities per adm1
