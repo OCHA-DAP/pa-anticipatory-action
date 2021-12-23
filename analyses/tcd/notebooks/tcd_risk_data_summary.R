@@ -8,7 +8,6 @@ library(tidyverse)
 library(ztable)
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
-tcd_dir <- paste0(data_dir, '/raw/chad/risk/')
 
 # UNIT OF ANALYSIS = ADM1. 23 adm1 regions. Note some datasets only available at adm2.
 
