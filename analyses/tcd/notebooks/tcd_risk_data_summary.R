@@ -16,7 +16,7 @@ tcd_dir <- paste0(data_dir, '/raw/chad/risk/')
 #### 1. Load in and clean the data
 ###############
 
-source("data_import_cleaning.R")
+source("notebooks/data_import_cleaning.R")
 
 ###############
 ##### 2. Combine the variables 
