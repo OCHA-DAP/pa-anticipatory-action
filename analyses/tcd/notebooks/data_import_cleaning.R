@@ -1,4 +1,6 @@
 library(dplyr)
+tcd_dir <- paste0(data_dir, '/public/raw/tcd')
+
 ## Load in and transform datasets
 
 # list of adms regions (70 Départements (Admin2) and 23 Regions (Admin1), 1:1 relationship between pcodes and names)
@@ -11,6 +13,9 @@ shapefile_path <- paste0(data_dir, '/public/raw/tcd/cod_ab', '/tcd_admbnda_adm1_
 shp <- st_read(shapefile_path)
 
 # Drought (data at adm2) # DO NOT USE 'adm2_code'. NPGS = number of poor growing seasons
+drought_risk_filepath <- public/raw/tcd/risk/tcd_ica_droughtrisk_geonode_mar2017/tcd_ica_droughtrisk_geonode_mar2017.shp
+
+
 shp_drought_all <- st_read(paste0(tcd_dir, 'tcd_ica_droughtrisk_geonode_mar2017/tcd_ica_droughtrisk_geonode_mar2017.shp')) # Iriba listed but is a town not an adm2. It is in Wadi Hawar (adm2)
 
 shp_drought_all$adm2_name[shp_drought_all$adm2_name == "Tibesti-Ouest"] <- 'Tibesti Ouest' # name changes don't work in a user-defined function
