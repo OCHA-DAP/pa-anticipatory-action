@@ -1,4 +1,9 @@
 library(dplyr)
+library(tidyverse)
+library(readxl)
+library(sf)
+
+data_dir <- Sys.getenv("AA_DATA_DIR")
 tcd_dir <- paste0(data_dir, '/public/raw/tcd')
 
 ## Load in and transform datasets
