@@ -13,6 +13,10 @@ output:
 editor_options:
   chunk_output_type: inline
 ---
+```{r wd-setup, include=FALSE}
+wd <- getwd()
+knitr::opts_knit$set(root.dir = wd)
+```
 
 ```{css style settings, echo = FALSE}
 
