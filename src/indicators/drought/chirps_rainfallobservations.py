@@ -234,6 +234,20 @@ def compute_seasonal_tercile_raster(
 ):
     # number of months that is considered a season
     seas_len = 3
+    end_month_season_mapping = {
+        1: "NDJ",
+        2: "DJF",
+        3: "JFM",
+        4: "FMA",
+        5: "MAM",
+        6: "AMJ",
+        7: "MJJ",
+        8: "JJA",
+        9: "JAS",
+        10: "ASO",
+        11: "SON",
+        12: "OND",
+    }
 
     chirps_monthly_country_filepath = get_filepath_chirps_monthly(
         country_iso3, config
@@ -256,8 +270,7 @@ def compute_seasonal_tercile_raster(
     logger.debug("Computing lower tercile values...")
     # for some unknown reason the rolling sum takes very long to
     # compute when using rioxarray so sticking to xarray for now
-    ds = xr.load_dataset(chirps_monthly_country_filepath)
-    da = ds.precip
+    da = xr.load_dataset(chirps_monthly_country_filepath).precip
     # compute the rolling sum over three month period. Rolling sum works
     # backwards, i.e. value for month 3 is sum of month 1 till 3. So
     # month==1 is NDJ season
@@ -266,6 +279,15 @@ def compute_seasonal_tercile_raster(
         .sum()
         .dropna(dim="time", how="all")
     )
+    da_season = da_season.assign_coords(
+        season=(
+            "time",
+            [
+                end_month_season_mapping[end_month]
+                for end_month in da_season.time.dt.month.values
+            ],
+        )
+    )
     # define the years that are used to define the climatology. We use
     # 1982-2010 since this is also the period used by IRI's seasonal
     # forecasts see
@@ -273,49 +295,18 @@ def compute_seasonal_tercile_raster(
     da_season_climate = da_season.sel(
         time=da_season.time.dt.year.isin(range(1982, 2011))
     )
-    # compute the thresholds for the lower tercile, i.e. below average,
-    # per season since we computed a rolling sum, each month represents
-    # a season
-    da_season_climate_quantile = da_season_climate.groupby(
-        da_season_climate.time.dt.month
-    ).quantile([1 / 3, 2 / 3], skipna=True)
+
+    # compute the thresholds for the lower and upper tercile per season
+    da_season_climate_quantile = _compute_bounds_terciles(
+        da_season_climate.groupby("season")
+    )
 
     # save tercile boundaries
     da_season_climate_quantile.to_netcdf(
         chirps_seasonal_tercile_bounds_filepath
     )
-
-    da_bn = xr.where(
-        da_season
-        <= da_season_climate_quantile.sel(
-            quantile=1 / 3, month=da_season.time.dt.month
-        ),
-        True,
-        False,
-    )
-    da_an = xr.where(
-        da_season
-        >= da_season_climate_quantile.sel(
-            quantile=2 / 3, month=da_season.time.dt.month
-        ),
-        True,
-        False,
-    )
-    da_no = xr.where(
-        (
-            da_season
-            > da_season_climate_quantile.sel(
-                quantile=1 / 3, month=da_season.time.dt.month
-            )
-        )
-        & (
-            da_season
-            < da_season_climate_quantile.sel(
-                quantile=2 / 3, month=da_season.time.dt.month
-            )
-        ),
-        True,
-        False,
+    da_bn, da_no, da_an = _compute_tercile_category(
+        da_season, da_season_climate_quantile
     )
     da_season_terc = da_season.to_dataset(name="precip").assign(
         {
@@ -327,6 +318,30 @@ def compute_seasonal_tercile_raster(
 
     da_season_terc.to_netcdf(chirps_seasonal_tercile_filepath)
     return chirps_seasonal_tercile_filepath
+
+
+def _compute_bounds_terciles(da):
+    """compute lower and upper tercile bounds."""
+    # rename quantiles such that don't have to select on floats later on
+    return da.quantile([1 / 3, 2 / 3], skipna=True).assign_coords(
+        {"quantile": ["lower_bound", "upper_bound"]}
+    )
+
+
+def _compute_tercile_category(da, da_quantile):
+    da_bn = xr.where(
+        da <= da_quantile.sel(quantile="lower_bound"), True, False
+    )
+    da_an = xr.where(
+        da >= da_quantile.sel(quantile="upper_bound"), True, False
+    )
+    da_no = xr.where(
+        (da > da_quantile.sel(quantile="lower_bound"))
+        & (da < da_quantile.sel(quantile="upper_bound")),
+        True,
+        False,
+    )
+    return da_bn, da_no, da_an
 
 
 def get_chirps_data_daily(config, year, resolution="25", download=False):
