@@ -21,15 +21,28 @@ from src.utils_general.statistics import calc_crps
 
 logger = logging.getLogger(__name__)
 
+# area string that is attached to the filename of ecmwf data
+# the functionality to generate the string is implemented in aa-toolbox
+# since we will migrate everything, hardcoding this for now
+# but should be adjusted once migrated to aa-toolbox
+GEOBB_STR_ISO3_MAPPING = {"mwi": "Nm5Sm17Ep37Wp33"}
+
+ECMWF_API_FILEPATH = (
+    "private/processed/{country_iso3}/ecmwf/"
+    "seasonal-monthly-individual-members/prate/"
+    "mwi_seasonal-monthly-individual-members_prate_comb_{geobb_str}.nc"
+)
+
 
 def get_ecmwf_forecast(
-    country_iso3: str, version: int = 5, **kwargs
+    country_iso3: str, version: int = 5, source_cds: bool = True, **kwargs
 ) -> xr.Dataset:
     """
     Retrieve the processed dataset with the forecast for each
     publication date and corresponding lead times
     :param country_iso3: iso3 code of the country of interest
     :param version: version of the ecmwf model to use
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param kwargs: other args that can be given to EcmwfSeasonalForecast()
     :return: dataset with the ecmwf forecasts
     """
@@ -39,16 +52,27 @@ def get_ecmwf_forecast(
     years)
     """
     ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(**kwargs)
-    ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
-        country_iso3=country_iso3,
-        version=version,
-    )
+    if source_cds:
+        ds_ecmwf_forecast = ecmwf_forecast.read_processed_dataset(
+            country_iso3=country_iso3,
+            version=version,
+        )
+    else:
+        dataset_path = Path(
+            os.environ["AA_DATA_DIR"]
+        ) / ECMWF_API_FILEPATH.format(
+            country_iso3=country_iso3,
+            geobb_str=GEOBB_STR_ISO3_MAPPING[country_iso3],
+        )
+        ds_ecmwf_forecast = xr.load_dataset(dataset_path)
     ds_ecmwf_forecast = convert_tprate_precipitation(ds_ecmwf_forecast)
 
     return ds_ecmwf_forecast
 
 
-def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
+def get_ecmwf_forecast_by_leadtime(
+    country_iso3, version: int = 5, source_cds: bool = True, **kwargs
+):
     """
     Reshape dataset to have the time variable as the month during the
     forecast was valid instead of the month the forecast was published
@@ -56,15 +80,21 @@ def get_ecmwf_forecast_by_leadtime(country_iso3, version: int = 5, **kwargs):
     once every couple of years)
     :param country_iso3: iso3 code of country of interest
     :param version: version of the ecmwf model to use
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param kwargs: other args that can be given to get_ecmwf_forecast()
     :return: dataset with data, grouped by leadtime
     """
 
     ds_ecmwf_forecast = get_ecmwf_forecast(
-        country_iso3=country_iso3, version=version, **kwargs
+        country_iso3=country_iso3,
+        version=version,
+        source_cds=source_cds,
+        **kwargs,
     )
     ds_ecmwf_forecast_dict = dates_per_leadtime(ds_ecmwf_forecast)
-    return convert_dict_to_da(ds_ecmwf_forecast_dict)
+    return convert_dict_to_da(ds_ecmwf_forecast_dict).dropna(
+        dim="time", how="all"
+    )
 
 
 def get_stats_filepath(
@@ -72,6 +102,7 @@ def get_stats_filepath(
     config: Config,
     date: datetime,
     adm_level: int,
+    source_cds: bool,
     use_unrounded_area_coords: bool,
     resolution: float = None,
     all_touched: bool = False,
@@ -84,6 +115,7 @@ def get_stats_filepath(
     :param date: the date of interest
     If None, data is in original resolution
     :param adm_level: the admin level the data is aggregated to
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
@@ -108,12 +140,32 @@ def get_stats_filepath(
         filename += "_all-touched"
     filename += f"_{date.year}_{date.month}_adm{adm_level}_stats.csv"
 
-    country_data_processed_dir = (
-        Path(config.DATA_DIR) / config.PUBLIC_DIR / config.PROCESSED_DIR / iso3
-    )
-    ecmwf_processed_dir = country_data_processed_dir / config.ECMWF_DIR
+    if source_cds:
+        country_data_processed_dir = (
+            Path(config.DATA_DIR)
+            / config.PUBLIC_DIR
+            / config.PROCESSED_DIR
+            / iso3
+        )
+        stats_dir = (
+            country_data_processed_dir
+            / config.ECMWF_DIR
+            / "seasonal-monthly-single-levels"
+        )
+    else:
+        country_data_processed_dir = (
+            Path(config.DATA_DIR)
+            / config.PRIVATE_DIR
+            / config.PROCESSED_DIR
+            / iso3
+        )
+        stats_dir = (
+            country_data_processed_dir
+            / config.ECMWF_DIR
+            / "seasonal-monthly-individual-members"
+            / "prate"
+        )
 
-    stats_dir = ecmwf_processed_dir / "seasonal-monthly-single-levels"
     if use_unrounded_area_coords:
         stats_dir = stats_dir / "unrounded-coords"
 
@@ -122,14 +174,15 @@ def get_stats_filepath(
 
 def compute_stats_per_admin(
     iso3,
-    adm_level=1,
-    pcode_col="ADM1_PCODE",
+    adm_level: int = 1,
+    pcode_col: str = "ADM1_PCODE",
     add_col: List[str] = None,
     use_cache: bool = True,
     resolution: float = None,
     date_list: List[str] = None,
-    use_unrounded_area_coords=False,
-    all_touched=False,
+    source_cds: bool = True,
+    use_unrounded_area_coords: bool = False,
+    all_touched: bool = False,
 ):
     """
     compute several statistics on admin level retrieved
@@ -144,6 +197,7 @@ def compute_stats_per_admin(
     If None, don't change the resolution of the original data
     :param date_list: list of dates to compute stats for. If None, the stats
     will be computed for all dates in ds
+    :param source_cds: whether the data comes from CDS, or the ECMWF API
     :param use_unrounded_area_coords: Generally meant to be False,
         needed for backward compatibility with some historical data.
         If True, no rounding to the coordinates will be done which results in
@@ -165,7 +219,9 @@ def compute_stats_per_admin(
 
     # read the forecasts
     ds = get_ecmwf_forecast_by_leadtime(
-        iso3, use_unrounded_area_coords=use_unrounded_area_coords
+        iso3,
+        source_cds=source_cds,
+        use_unrounded_area_coords=use_unrounded_area_coords,
     )
     ds = ds.rio.write_crs("EPSG:4326", inplace=True)
 
@@ -181,6 +237,7 @@ def compute_stats_per_admin(
             config=config,
             date=date_dt,
             adm_level=adm_level,
+            source_cds=source_cds,
             use_unrounded_area_coords=use_unrounded_area_coords,
             resolution=resolution,
             all_touched=all_touched,
