@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # the functionality to generate the string is implemented in aa-toolbox
 # since we will migrate everything, hardcoding this for now
 # but should be adjusted once migrated to aa-toolbox
-GEOBB_STR_ISO3_MAPPING = {"mwi": "Nm5Sm17Ep37Wp33"}
+GEOBB_STR_ISO3_MAPPING = {"mwi": "Nm4d8Sm17d2Ep37d2Wp32d8"}
 
 ECMWF_API_FILEPATH = (
     "private/processed/{country_iso3}/ecmwf/"
