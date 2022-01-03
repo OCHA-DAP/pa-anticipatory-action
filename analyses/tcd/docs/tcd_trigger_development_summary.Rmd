@@ -1,0 +1,121 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+
+pagetitle: 'Chad  - Trigger development'
+output:
+  html_document:
+    css: style.css
+    includes:
+      in_header: header.html
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+<br>
+<br>
+<br>
+
+# Chad - trigger development
+Analysis last updated 2022-01-03
+
+<br>
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+# source("") # Link to external script
+library(kableExtra)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+
+
+
+```
+
+```{r data-load-formatting}
+#define directories
+data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
+plot_dir <-paste0(data_dir,'/public/processed/tcd/plots/')
+```
+
+For Chad an OCHA anticipatory action framework is being developed to anticipate drought. This document summarizes the work done by the Centre for Humanitarian Data (CHD), whose work focuses on the development of the trigger. The development of the trigger in Chad has been a collaborative process for which a preliminary trigger was proposed by a technical working group consisting of several in-country organizations. The validation and fine-tuning of this trigger was thereafter executed by CHD. 
+
+## Definitions
+
+## Context
+- area of interest
+- rainy season
+- github
+
+## Preliminary trigger
+
+
+The preliminary trigger was as follows: 
+
+```{r table-prelim-trig, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '70%',fig.cap="Proposed preliminary trigger"}
+
+knitr::include_graphics(paste0(plot_dir,'/tcd_table_prelim_trigger.png'))
+
+```
+
+## Trigger validation
+
+This validation consisted of four steps: 
+1) compiling a list of historical socio-economic years
+2) extract the **observed** values of the trigger indicators at the end of the rainy season and see how these correlate with the list of historical drought years
+3) extract the date of the same trigger indicators but that is **forecasted** or available during the rainy season and see how these correlate with the **observed** end of season data.
+4) if no strong correlation in 2) or 3) test correlations with the same indicators but at different thresholds. 
+
+
+### Historical socio-economic drought
+With anticipatory action we want to anticipate droughts that cause an increase in humanitarian needs. Therefore for a historical analysis of years we would have wanted to release anticipatory funds, a list of historical years with humanitarian needs caused by drought is needed. We refer to this as socio-economic drought. This kind of impact data is not widely available, both temporarily and spatially. 
+
+Nevertheless, we attempted to compile a list of worst drought years. This list is by no means fully validated and shouldn't be seen as a ground-truth dataset. We therefore use the list for part of the analyses but don't base all decisions on it. The list was compiled in discussion with CERF colleagues and based on several sources. 
+
+One source is the official drought declarations. These are known to be in 2005/2006, 2009/2010, 2016/2017 [though we don't have the reference.. ]
+
+Another source are the CERF allocations since 2006. These were in 2010-01, 2011-12, and 2018-05. Analyzing the documents these allocations were in response to poor rainy seasons during 2009, 2011, and 2017. 
+
+Then there is FewsNet which maps the food insecurity situation. In their reports the causes of food insecurity are often mentioned and thus we can use these reports to look for a mention of meteorological drought. We scanned this manually. [The 2010 report](https://fews.net/sites/default/files/documents/reports/Chad_ol_2010_01_en.pdf) indicates increased food insecurity caused by erratic patterns during the 2009 rainy season. [In 2011]((https://fews.net/west-africa/chad/food-security-outlook/october-2011)) a shorter than usual rainy season is mentioned. [2017](https://fews.net/west-africa/chad/food-security-outlook/october-2017) mentions localized dry spells causing bad pastoral conditions.
+
+Lastly, we can inspect other sources of literature such as the African Risk Capacity 2016/17 operations plan and the 2017 multi-risk contigency plan. [we have the documents but couldn't find them online]
+
+ARC reports 1968 to 1973, 1983, 1984, 2004, and 2009 as drought years. 
+
+The multi-risk contigency plan reports the years 1969, 1981, 1993, 1997, 2001, 2009, and 2012. For both sources it is unclear if these years refer to the rainy season or the lean season. Moreover, while they do contain detailed information they don't clearly cite the source of the information. 
+
+All in all, we can see that the different sources slightly diverge. Moreover, with the reports of FewsNet and CERF we see that there are still different causes of meteorological drought, e.g. overall deficitis of rain, erratic pattterns both temporal and spatial, and dry spells. 
+
+We take the union of the different sources. With the exception of 2012 as we assume this refers to the drought observed in 2011. We thus get as drought years list: 
+1968-1973, 1983, 1984, 1993, 1997, 2001, 2004, 2005, 2009, 2011, and 2017. Note that three of the five sources only include data after 2004. 
+
+[We could further dive into the FN reports.. basically now we only checked the years for which there were CERF allocations]
+[what to do with the drought declarations? I am not convinced by the 2005 year.. might be caused by 2004? ]
+[Make a table with the different sources? ]
+
+### Indicator data sources
+
+
+### Observed trigger indicators
+We have 7 proposed trigger indicator values: below average rainfall, late onset, long dry stretches, end of season rainfall, WRSI and Biomass. We decided to first focus on those we know there is wide availability of forecasts, which are below average rainfall, WRSI, and Biomass. We also added NDVI as this came up during several discussions with the team. Given the definitions, WRSI, Biomass, and NDVI are expected to have some correlation. 
+
+#### Below average rainfall
+As data source to determine observed below average rainfall, we used [CHIRPS](https://www.chc.ucsb.edu/data/chirps). CHIRPS is raster data at 0.05 degree resolution and is available since 1981. We compute for each of the raster cells whether it observed below average rainfall for each 3-month period (commonly referred to as season). We then aggregated this to the area of interest, expressing the percentage of the area that observed below average rainfall. The climatological reference period to compute the terciles was 1981-2010. The graph below shows the percentage of the area of interest experiencing below average precipitation for the JJA and JAS season. 
+
+
+
+
+```{r fig-obs-bavg, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%',fig.cap="Proposed preliminary trigger"}
+
+knitr::include_graphics(paste0(plot_dir,'tcd_obs_bavg_perc_jja_jas.png'))
+
+```
+
+
+## Proposed trigger January 2022
