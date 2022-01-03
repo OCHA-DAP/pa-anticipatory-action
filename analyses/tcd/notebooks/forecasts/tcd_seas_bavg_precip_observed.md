@@ -60,18 +60,20 @@ iso3="tcd"
 ```python
 config=Config()
 parameters = config.parameters(iso3)
-data_raw_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR)
-data_processed_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR)
-country_data_raw_dir = os.path.join(data_raw_dir,iso3)
-chirps_country_processed_dir = os.path.join(data_processed_dir,iso3,"chirps")
+data_raw_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.RAW_DIR
+data_processed_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.PROCESSED_DIR
+country_data_raw_dir = data_raw_dir/iso3
+chirps_country_processed_dir = data_processed_dir/iso3/"chirps"
 
-chirps_country_processed_path = os.path.join(chirps_country_processed_dir,"monthly",f"{iso3}_chirps_monthly.nc")
-chirps_seasonal_lower_tercile_processed_path = os.path.join(chirps_country_processed_dir,"seasonal",f"{iso3}_chirps_seasonal_lowertercile.nc")
-chirps_seasonal_tercile_bounds_processed_path = os.path.join(chirps_country_processed_dir,"seasonal",f"{iso3}_chirps_seasonal_tercile_bounds.nc")
-cerf_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"cerf")
-cerf_path=os.path.join(cerf_dir,'CERF Allocations.csv')
+chirps_country_processed_path = chirps_country_processed_dir/"monthly"/f"{iso3}_chirps_monthly.nc"
+chirps_seasonal_lower_tercile_processed_path = chirps_country_processed_dir/"seasonal"/f"{iso3}_chirps_seasonal_lowertercile.nc"
+chirps_seasonal_tercile_bounds_processed_path = chirps_country_processed_dir/"seasonal"/f"{iso3}_chirps_seasonal_tercile_bounds.nc"
+cerf_dir=data_raw_dir/config.GLOBAL_ISO3/"cerf"
+cerf_path=cerf_dir/'CERF Allocations.csv'
+plot_dir = data_processed_dir/iso3/"plots"
 
-adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
+adm1_bound_path=country_data_raw_dir/config.SHAPEFILE_DIR/parameters["path_admin1_shp"]
+adm2_path=data_processed_dir/iso3/config.SHAPEFILE_DIR / "tcd_adm2_area_of_interest.gpkg"
 ```
 
 ```python
@@ -88,25 +90,22 @@ grey_med="#CCCCCC"
 ### Define parameters
 
 ```python
-adm_sel=['Barh-El-Gazel','Batha','Kanem','Lac','Ouaddaï','Sila','Wadi Fira']
+gdf_adm1=gpd.read_file(adm1_bound_path)
+gdf_adm2=gpd.read_file(adm2_path)
+incl_adm_col="area_of_interest"
+gdf_aoi = gdf_adm2[gdf_adm2[incl_adm_col] == True]
 #the end months of 3 months periods that we are interested in
 #i.e. end_month=8 represents the JJA season
 end_months_sel=[8,9]
+months_sel=[6,7,8,9]
 ```
 
 ### Included areas
 
 ```python
-gdf_adm=gpd.read_file(adm1_bound_path)
-adm_col="admin1Name"
-gdf_reg=gdf_adm[gdf_adm[adm_col].isin(adm_sel)]
-```
-
-```python
-gdf_adm['include']=np.where(gdf_adm[adm_col].isin(adm_sel),True,False)
-alt.Chart(gdf_adm).mark_geoshape(stroke="black").encode(
-    color=alt.Color("include",scale=alt.Scale(range=["grey","red"])),
-    tooltip=[adm_col]
+alt.Chart(gdf_adm2).mark_geoshape(stroke="black").encode(
+    color=alt.Color(incl_adm_col,scale=alt.Scale(range=["grey","red"])),
+    tooltip=["admin2Name"]
 ).properties(width=600,title="Included admins")
 ```
 
@@ -137,16 +136,18 @@ g=da_country.sel(time=da_country.time.dt.year.isin([2020])).plot(
 )
 
 for ax in g.axes.flat:
-    gdf_adm.boundary.plot(linewidth=1, ax=ax, color="grey")
+    gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
     ax.axis("off")
 ```
+
+Next we plot the median over all years of the monthly rainfall. We can see a similair pattern as in 2020
 
 ```python
 #compute median rainfall per month, grouped by the years
 da_country_month_med=da_country.groupby(
         da_country.time.dt.month
     ).median()
-#show distribution of rainfall across months for 2020 to understand rainy season patterns
+
 da_country_month_med=da_country.groupby(
         da_country.time.dt.month
     ).median()
@@ -165,14 +166,47 @@ g=da_country_month_med.plot(
 )
 
 for ax in g.axes.flat:
-    gdf_adm.boundary.plot(linewidth=1, ax=ax, color="grey")
+    gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
     #dissolve to one polygon so we only plot the outer boundaries
-    gdf_reg.dissolve("admin0Pcod").boundary.plot(linewidth=0.5,ax=ax,color="red")
+    gdf_aoi.dissolve("admin0Pcod").boundary.plot(linewidth=0.5,ax=ax,color="red")
     ax.axis("off")
     ax.set_title(calendar.month_name[int(ax.get_title().split(" ")[-1])])
 g.fig.suptitle(f"Median per month between {da_country.time.dt.year.values.min()} and {da_country.time.dt.year.values.max()}",size=16)
 g.fig.subplots_adjust(top=0.9,bottom=0.4,hspace=0.3)
 ```
+
+To understand the differences between years, we aggregate the raster data to our area of interest by taking the mean. We then plot the observed mean precipitation per year and month. 
+
+```python
+da_country_aoi=da_country.rio.set_crs("EPSG:4326").rio.clip(gdf_aoi["geometry"])
+da_country_aoi_mean=da_country_aoi.mean(dim=("latitude","longitude"))
+da_country_aoi_mean_sel=da_country_aoi_mean.sel(time=da_country_aoi_mean.time.dt.month.isin(months_sel))
+```
+
+```python
+df_country_aoi_mean_sel=da_country_aoi_mean_sel.to_dataframe().reset_index()
+df_country_aoi_mean_sel["year"]=df_country_aoi_mean_sel.time.dt.year
+df_country_aoi_mean_sel["month"]=df_country_aoi_mean_sel.time.dt.month
+```
+
+```python
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('precip', title = "mean precipitation"),
+#     color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
+).properties(width=600,height=400)
+(plot).facet(columns=2,
+             facet="month:N",
+             data=df_country_aoi_mean_sel, 
+title=["Mean precipitation in the AOI per month and year"]).resolve_axis(
+    x='independent',
+)
+```
+
+From the graph above we can see that July and August clearly recieve the most rain. Moreover, we can see that the pattern can strongly differ per month. For example in 2000 the rain was very poor in August but normal in the other months. In 2004 it wasn't great during all months. It is unclear which month has the most impact and whether we should look at them in relative or absolute terms as the quantities differ so much per month. 
+
+However, for now we stick to the notion of below average 3-monthly (=season) rainfall which we will explore next. 
+
 
 ### Observed seasonal rainfall
 
@@ -187,7 +221,7 @@ da_season=da_country.rolling(time=seas_len,min_periods=seas_len).sum().dropna(di
 ```
 
 ```python
-da_season_reg=da_season.rio.set_crs("EPSG:4326").rio.clip(gdf_reg["geometry"])
+da_season_reg=da_season.rio.set_crs("EPSG:4326").rio.clip(gdf_aoi["geometry"])
 ```
 
 ```python
@@ -265,7 +299,7 @@ g=da_plot.plot(
 )
 
 for ax, title in zip(g.axes.flat, da_plot_titles):
-    gdf_adm.boundary.plot(linewidth=1, ax=ax, color="grey")
+    gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
     ax.axis("off")
     ax.set_title(title)
 g.fig.suptitle("Pixels with below average rainfall",size=24)
@@ -278,7 +312,7 @@ Therefore we check if the lower tercile bounds look reasonable.
 
 ```python
 ds_season_bounds=rioxarray.open_rasterio(chirps_seasonal_tercile_bounds_processed_path)
-da_season_bounds_reg=ds_season_bounds.rio.write_crs("EPSG:4326").rio.clip(gdf_reg["geometry"]).precip
+da_season_bounds_reg=ds_season_bounds.rio.write_crs("EPSG:4326").rio.clip(gdf_aoi["geometry"]).precip
 ```
 
 ```python
@@ -306,21 +340,15 @@ Now that we have analyzed the data on pixel level, we aggregate to the area of i
 We compute the percentage of the area having experienced below average rainfall for each season.
 
 ```python
-gdf_adm1=gpd.read_file(adm1_bound_path)
-#select the adms of interest
-gdf_reg=gdf_adm1[gdf_adm1[adm_col].isin(adm_sel)]
-```
-
-```python
 #since we are only selecting below avg values, only the count stat makes sense
 #e.g. the mean doesn't reflect the actual situation, for that da_country would need to be used
-gdf_reg_dissolved=gdf_reg.dissolve(by="admin0Name")
-gdf_reg_dissolved=gdf_reg_dissolved[["admin0Pcod","geometry"]]
-da_season_below_clip=da_season_below.rio.clip(gdf_reg["geometry"],all_touched=False)
+gdf_aoi_dissolved=gdf_aoi.dissolve(by="admin0Name")
+gdf_aoi_dissolved=gdf_aoi_dissolved[["admin0Pcod","geometry"]]
+da_season_below_clip=da_season_below.rio.clip(gdf_aoi["geometry"],all_touched=False)
 da_season_below_bavg=da_season_below_clip.where(da_season_below >=0)
 
 df_stats_reg=compute_raster_statistics(
-        gdf=gdf_reg_dissolved,
+        gdf=gdf_aoi_dissolved,
         bound_col="admin0Pcod",
         raster_array=da_season_below_bavg,
         lon_coord="x",
@@ -328,7 +356,7 @@ df_stats_reg=compute_raster_statistics(
         stats_list=["count"],
         percentile_list=[90],
     )
-df_stats_reg_all=compute_raster_statistics(gdf=gdf_reg_dissolved,bound_col="admin0Pcod",raster_array=da_season_below,lon_coord="x",lat_coord="y",stats_list=["count"])
+df_stats_reg_all=compute_raster_statistics(gdf=gdf_aoi_dissolved,bound_col="admin0Pcod",raster_array=da_season_below,lon_coord="x",lat_coord="y",stats_list=["count"])
 
 df_stats_reg["perc_bavg"] = df_stats_reg[f"count_admin0Pcod"]/df_stats_reg_all[f"count_admin0Pcod"]*100
 df_stats_reg.time=pd.to_datetime(df_stats_reg.time.apply(lambda x: x.strftime("%Y-%m-%d")))
@@ -636,6 +664,17 @@ fig=compute_confusionmatrix_column(df_stats_drought_yearly,"admin0Pcod","drought
 plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
     x=alt.X('year:N',title="Year"),
     y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
+#     color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
+).properties(width=600,height=400)
+(plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
+title=["Percentage of the area with bavg obs precip by year and season"])
+# plt_facet.save(str(plot_dir / "tcd_obs_bavg_perc_jja_jas.png"))#,format="png")
+```
+
+```python
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
     color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
 ).properties(width=600,height=400)
 (plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
@@ -645,3 +684,7 @@ title=["Percentage of the area with bavg obs precip by year and season"])
 ### Conclusions
 While we cannot relate all reported drought years with below average precipitation, we generally see quite a good correspondence.   
 From this analysis it also seems that a 1 in 3 year return period is not too sensitive. Simeltaneously, we can conclude that the years for which we have IRI data (since 2017), there was not much observed below average precipitation
+
+```python
+
+```
