@@ -38,18 +38,18 @@ _BASE_URL = (
     "http://80.69.76.253:8080/geoserver"
     "/Biomass/wfs?&REQUEST="
     "GetFeature&SERVICE=wfs&VERSION=1.1.0"
-    "&TYPENAME=WA_DMP_{admin}_ef_v0&"
+    "&TYPENAME=WA_DMP_{admin_level}_ef_v0&"
     "outputformat=CSV&srsName=EPSG:4326"
 )
 
-_RAW_FILENAME = "WA_DMP_{admin}_ef_v0.csv"
+_RAW_FILENAME = "WA_DMP_{admin_level}_ef_v0.csv"
 
 _RAW_PATH = Path(os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "biomasse")
 
 AdminArgument = Literal["ADM0", "ADM1", "ADM2"]
 _VALID_ADMIN = get_args(AdminArgument)
 
-_PROCESSED_FILENAME = "biomasse_{iso3}_{admin}_dekad_{start_dekad}.csv"
+_PROCESSED_FILENAME = "biomasse_{iso3}_{admin_level}_dekad_{start_dekad}.csv"
 
 
 def download_dmp(admin_level: AdminArgument = "ADM2") -> None:
@@ -83,7 +83,7 @@ def download_dmp(admin_level: AdminArgument = "ADM2") -> None:
     download_ftp(url=url, save_path=raw_path)
 
 
-def load_dmp(admin: AdminArgument = "ADM2") -> pd.DataFrame:
+def load_dmp(admin_level: AdminArgument = "ADM2") -> pd.DataFrame:
     """Load raw DMP data
 
     Parameters
@@ -96,14 +96,14 @@ def load_dmp(admin: AdminArgument = "ADM2") -> pd.DataFrame:
     -------
     pd.DataFrame
     """
-    _check_admin(admin)
-    raw_path = _get_raw_path(admin)
+    _check_admin(admin_level)
+    raw_path = _get_raw_path(admin_level)
     if not raw_path.is_file():
         raise OSError(
             "Raw DMP data not available, run `download_dmp()` first."
         )
-    # na values set by Biomasse as -9998.8
-    df = pd.read_csv(raw_path, na_values=["-9998.8"])
+    # na values set by Biomasse as -9998.8 or -9999.0
+    df = pd.read_csv(raw_path, na_values=["-9998.8", "-9999.0"])
     df.dropna(axis="columns", how="all", inplace=True)
     return df
 
@@ -143,7 +143,7 @@ def calculate_biomasse(
     # keep ID column for working with multipolygon admin areas
     id_col = "IDBIOHYDRO"
     df_mean = df.filter(regex=f"(^admin|^DMP_MEA|^{id_col}|^AREA)")
-    df_dmp = df.filter(regex=f"(^admin|^DMP_[0-9]+|^{id_col})")
+    df_dmp = df.filter(regex=f"(^admin|^DMP_[0-9]+|^{id_col}|^AREA)")
     admin_cols = [col for col in df_mean.columns if col.startswith("admin")]
 
     # groupby to average out for the few cases where admin areas
@@ -228,7 +228,7 @@ def calculate_biomasse(
     # if the season isn't starting from 1
     # create clear season definition of year1-year2
     if start_dekad > 1:
-        df_merged["season_end"] = (df["season"] + 1).astype("str")
+        df_merged["season_end"] = (df_merged["season"] + 1).astype("str")
         df_merged["season"] = df_merged["season"].astype("str")
         df_merged["season"] = df_merged[["season", "season_end"]].agg(
             "-".join, axis=1
@@ -258,7 +258,7 @@ def calculate_biomasse(
 
     # save file to processed filepath
     processed_path = _get_processed_path(
-        admin=admin_level, start_dekad=start_dekad, iso3=None
+        admin_level=admin_level, start_dekad=start_dekad, iso3=None
     )
     df_merged.to_csv(processed_path, index=False)
 
@@ -266,7 +266,7 @@ def calculate_biomasse(
 
 
 def load_biomasse_data(
-    admin: AdminArgument = "ADM2",
+    admin_level: AdminArgument = "ADM2",
     iso3: Optional[str] = None,
     start_dekad: int = 10,
 ):
@@ -277,7 +277,7 @@ def load_biomasse_data(
 
     Parameters
     ----------
-    admin: AdminArgument
+    admin_level: AdminArgument
         Admin level, one of 'ADM0', 'ADM1',
         or 'ADM2'.
     iso3: Optional[str]
@@ -292,9 +292,9 @@ def load_biomasse_data(
     -------
     pd.DataFrame
     """
-    _check_admin(admin)
+    _check_admin(admin_level)
     processed_path = _get_processed_path(
-        admin=admin, start_dekad=start_dekad, iso3=iso3
+        admin_level=admin_level, start_dekad=start_dekad, iso3=iso3
     )
     return pd.read_csv(processed_path)
 
@@ -302,7 +302,7 @@ def load_biomasse_data(
 def aggregate_biomasse(
     admin_pcodes: List[str],
     iso3: Optional[str],
-    admin: AdminArgument = "ADM2",
+    admin_level: AdminArgument = "ADM2",
     start_dekad: int = 10,
 ) -> pd.DataFrame:
     """Aggregate Biomasse data to set of areas
@@ -326,7 +326,7 @@ def aggregate_biomasse(
     iso3: Optional[str]
         ISO3 string or ``None``. If present, saves data
         within that country's folder for download.
-    admin: AdminArgument
+    admin_level: AdminArgument
         Admin type to subset with, one of 'ADM0', 'ADM1',
         or 'ADM2'.
     start_dekad: int
@@ -334,14 +334,14 @@ def aggregate_biomasse(
         calculations.
 
     """
-    _check_admin(admin)
-    df = load_biomasse_data(admin=admin, start_dekad=start_dekad)
-    admin_col = admin.replace("ADM", "admin") + "Pcod"
+    _check_admin(admin_level)
+    df = load_biomasse_data(admin_level=admin_level, start_dekad=start_dekad)
+    admin_col = admin_level.replace("ADM", "admin") + "Pcod"
     df_subset = df[df[admin_col].isin(admin_pcodes)]
     # just keep to year 2000 for unique value per dekad
     # when calculating biomasse mean aggregated
     # since mean is the same each year
-    df_mean = df_subset[df.year.isin([2000])]
+    df_mean = df_subset[df_subset.year.isin([2000])]
     df_mean = (
         df_mean[["dekad", "biomasse_mean"]]
         .groupby("dekad")
@@ -364,7 +364,7 @@ def aggregate_biomasse(
 
     if iso3 is not None:
         processed_filepath = _get_processed_path(
-            admin=admin, start_dekad=start_dekad, iso3=iso3
+            admin_level=admin_level, start_dekad=start_dekad, iso3=iso3
         )
         df_merged.to_csv(processed_filepath, index=False)
 
@@ -372,7 +372,7 @@ def aggregate_biomasse(
 
 
 def load_aggregated_biomasse_data(
-    iso3: str, admin: AdminArgument, start_dekad: int = 10
+    iso3: str, admin_level: AdminArgument, start_dekad: int = 10
 ) -> pd.DataFrame:
     """Load aggregated Biomasse data
 
@@ -380,7 +380,7 @@ def load_aggregated_biomasse_data(
     ----------
     iso3: str
         ISO3 string to download data from.
-    admin: AdminArgument
+    admin_level: AdminArgument
         Admin type to load, one of 'ADM0', 'ADM1',
         or 'ADM2'.
     start_dekad: int
@@ -390,7 +390,7 @@ def load_aggregated_biomasse_data(
     pd.DataFrame
     """
     processed_filepath = _get_processed_path(
-        admin=admin, start_dekad=start_dekad, iso3=iso3
+        admin_level=admin_level, start_dekad=start_dekad, iso3=iso3
     )
     return pd.read_csv(processed_filepath)
 
@@ -410,12 +410,12 @@ def load_biomasse_mean(mask: bool = True):
     return da
 
 
-def _get_raw_path(admin):
-    return _RAW_PATH / _RAW_FILENAME.format(admin=admin)
+def _get_raw_path(admin_level):
+    return _RAW_PATH / _RAW_FILENAME.format(admin_level=admin_level)
 
 
 def _get_processed_path(
-    admin: AdminArgument, start_dekad: int, iso3: Optional[str] = None
+    admin_level: AdminArgument, start_dekad: int, iso3: Optional[str] = None
 ):
     if iso3 is None:
         iso3 = "glb"
@@ -427,11 +427,13 @@ def _get_processed_path(
     return Path(
         _processed_path,
         _PROCESSED_FILENAME.format(
-            iso3=iso3, admin=admin, start_dekad=start_dekad
+            iso3=iso3, admin_level=admin_level, start_dekad=start_dekad
         ),
     )
 
 
-def _check_admin(admin):
-    if admin not in _VALID_ADMIN:
-        raise ValueError("`admin` must be one of 'ADM0', 'ADM1', or 'ADM2'.")
+def _check_admin(admin_level):
+    if admin_level not in _VALID_ADMIN:
+        raise ValueError(
+            "`admin_level` must be one of 'ADM0', 'ADM1', or 'ADM2'."
+        )
