@@ -15,7 +15,7 @@ data_dir <- Sys.getenv("AA_DATA_DIR")
 #### 1. Load in and clean the data
 ###############
 
-source("data_import_cleaning.R")
+source("notebooks/tcd_risk_data_cleaning.R")
 
 ###############
 ##### 2. Combine the variables 
