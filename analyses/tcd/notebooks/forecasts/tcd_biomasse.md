@@ -31,15 +31,11 @@ This is just the code for downloading and procesing the Biomasse data, then aggr
 
 ```python
 # bm.download_dmp()
-# dmp = bm.calculate_biomasse(admin="ADM2")
+# dmp = bm.calculate_biomasse(admin_level="ADM2")
 gdf_adm2 = gpd.read_file(adm2_bound_path)
 gdf_reg = gdf_adm2[gdf_adm2.area_of_interest == True]
 bm_df = bm.aggregate_biomasse(
     admin_pcodes = gdf_reg.admin2Pcod,
     iso3 = "tcd"
 )
-```
-
-```python
-
 ```
