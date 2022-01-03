@@ -3,7 +3,9 @@
 The WRSI data is made publicly available through
 the USGS website. The data is dekadal and each
 dekadal dataset is shared through zip files.
-https://edcftp.cr.usgs.gov/project/fews/dekadal/
+The WRSI is calculated using CHIRPS and NOAA
+ETos, as described at the links below.
+https://edcftp.cr.usgs.gov/project/fews/africa/west/dekadal/wrsi-chirps-etos
 
 These include two separate zones for West Africa:
 
@@ -17,6 +19,8 @@ These include two separate zones for West Africa:
     to Senegal. This is specifically for rangelands:
     https://earlywarning.usgs.gov/fews/product/57
 
+Dekadal data is available from the 13th to the 33rd
+dekads of the year, from May 1st to November 30th.
 Both are published using ESRI:102022. There is overlap between the
 two datasets where they don't agree, even though both are
 measuring the WRSI with respect to millet, due to their
@@ -24,11 +28,6 @@ calculations for rangeland and cropland. Since many
 countries in the Sahel overlap with both datasets, both
 should be considered and we should be careful in learning
 to apply and use both products where applications.
-
-I have also just found the CHIRPS WRSI data on the USGS website.
-These are available at:
-
-https://edcftp.cr.usgs.gov/project/fews/africa/west/dekadal/wrsi-chirps-etos
 """
 
 # TODO: investigate having multiple dimensions for year/dekad vs. time
@@ -119,12 +118,14 @@ def download_wrsi(
     if region not in _VALID_REGION:
         raise ValueError("`region` must be one of 'cropland' or 'rangeland'.")
 
-    if start_date is None:
-        start_year, start_dekad = 2001, 13
-    elif isinstance(start_date, list):
+    if isinstance(start_date, list):
         start_year, start_dekad = start_date[0], start_date[1]
+    elif start_date is None:
+        start_year, start_dekad = 2001, 13
     else:
         start_year, start_dekad = _date_to_dekad(start_date)
+    start_year = max(start_year, 2001)
+    start_dekad = max(min(start_dekad, 33), 13)
 
     if isinstance(end_date, list):
         end_year, end_dekad = end_date[0], end_date[1]
@@ -133,8 +134,6 @@ def download_wrsi(
             end_date = date.today()
         end_year, end_dekad = _date_to_dekad(end_date)
 
-    i_year = max(start_year, 2001)
-    i_dekad = max(min(start_dekad, 33), 13)
     raw_dir = _get_raw_dir(region)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -143,17 +142,16 @@ def download_wrsi(
         _date_to_dekad(_fp_date(filename))
         for filename in raw_dir.glob("*.tif")
     ]
-    while not (
-        i_year > end_year or (i_year == end_year and i_dekad > i_dekad)
-    ):
-        if clobber or [i_year, i_dekad] not in dts:
+
+    for year, dekad in zip(range(start_year, end_year), range(13, 34)):
+        if year == start_year and dekad < start_dekad:
+            continue
+        if year == end_year and dekad > end_dekad:
+            continue
+        if clobber or [year, dekad] not in dts:
             _download_wrsi_dekad(
-                year=i_year, dekad=i_dekad, region=region, raw_dir=raw_dir
+                year=year, dekad=dekad, region=region, raw_dir=raw_dir
             )
-        i_dekad += 1
-        if i_dekad > 33:
-            i_year += 1
-            i_dekad = 13
 
 
 def process_wrsi(region: RegionArgument, type: str):

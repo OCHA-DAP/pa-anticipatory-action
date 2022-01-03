@@ -1,7 +1,8 @@
 """Code to download and process USGS NDVI data
 
-NDVI data is downloadable and available through the USGS
-with a description available at
+USGS processed and smoothed NDVI data is downloadable
+and available through the USGS webiste
+with methods described at
 https://earlywarning.usgs.gov/fews/product/451 and the
 actual data from the USGS file explorer:
 https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/web/africa/west/dekadal/emodis/ndvi_c6/temporallysmoothedndvi/downloads/monthly/
@@ -84,20 +85,15 @@ def download_ndvi(
             end_date = date.today()
         end_year, end_dekad = _date_to_dekad(end_date)
 
-    i_year = start_year
-    i_dekad = max(min(start_dekad, 36), 1)
-
     dts = [_fp_date(filename.stem) for filename in _RAW_DIR.glob("*.tif")]
 
-    while not (
-        i_year > end_year or (i_year == end_year and i_dekad > i_dekad)
-    ):
-        if clobber or [i_year, i_dekad] not in dts:
-            _download_ndvi_dekad(year=i_year, dekad=i_dekad)
-        i_dekad += 1
-        if i_dekad > 36:
-            i_year += 1
-            i_dekad = 1
+    for year, dekad in zip(range(start_year, end_year), range(1, 37)):
+        if year == start_year and dekad < start_dekad:
+            continue
+        if year == end_year and dekad > end_dekad:
+            continue
+        if clobber or [year, dekad] not in dts:
+            _download_ndvi_dekad(year=year, dekad=dekad)
 
 
 def process_ndvi(

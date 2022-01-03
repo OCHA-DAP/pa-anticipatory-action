@@ -26,7 +26,7 @@ West African monsoon season.
 
 import os
 from pathlib import Path
-from typing import List, Literal, Union, get_args
+from typing import List, Literal, Optional, get_args
 
 import numpy as np
 import pandas as pd
@@ -52,11 +52,12 @@ _VALID_ADMIN = get_args(AdminArgument)
 _PROCESSED_FILENAME = "biomasse_{iso3}_{admin}_dekad_{start_dekad}.csv"
 
 
-def download_dmp(admin: AdminArgument = "ADM2") -> None:
+def download_dmp(admin_level: AdminArgument = "ADM2") -> None:
     """Download raw DMP data
 
     Raw DMP data is downloaded for specified
-    administrative area. This data is downloaded
+    administrative level, either ADM0, ADM1,
+    or ADM2. This data is downloaded
     for all countries in West Africa covered by
     Biomasse, using those specific countries'
     administrative boundaries, and is downloaded
@@ -68,7 +69,7 @@ def download_dmp(admin: AdminArgument = "ADM2") -> None:
 
     Parameters
     ----------
-    admin: AdminArgument
+    admin_level: AdminArgument
         Admin area to load DMP for, one of
         'ADM0', 'ADM1', or 'ADM2'.
 
@@ -76,9 +77,9 @@ def download_dmp(admin: AdminArgument = "ADM2") -> None:
     -------
     None
     """
-    _check_admin(admin)
-    url = _BASE_URL.format(admin=admin)
-    raw_path = _get_raw_path(admin)
+    _check_admin(admin_level)
+    url = _BASE_URL.format(admin=admin_level)
+    raw_path = _get_raw_path(admin_level)
     download_ftp(url=url, save_path=raw_path)
 
 
@@ -108,7 +109,7 @@ def load_dmp(admin: AdminArgument = "ADM2") -> pd.DataFrame:
 
 
 def calculate_biomasse(
-    admin: AdminArgument = "ADM2",
+    admin_level: AdminArgument = "ADM2",
     start_dekad: int = 10,
 ) -> pd.DataFrame:
     """Calculate Biomasse from DMP raw data
@@ -123,7 +124,7 @@ def calculate_biomasse(
 
     Parameters
     ----------
-    admin: AdminArgument
+    admin_level: AdminArgument
         Admin area to load DMP for, one of
         'ADM0', 'ADM1', or 'ADM2'.
     start_dekad: int
@@ -135,7 +136,7 @@ def calculate_biomasse(
     -------
     pd.DataFrame
     """
-    df = load_dmp(admin)
+    df = load_dmp(admin_level)
 
     # process mean and DMP separately since mean values
     # are dekadal and DMP are year/dekadal
@@ -192,7 +193,11 @@ def calculate_biomasse(
         .reset_index()
         .drop(labels=id_col, axis=1)
         .groupby(admin_cols + ["time"])
-        .sum()
+        .apply(
+            lambda x: pd.Series(
+                {"DMP": np.average(x["DMP"], weights=x["AREA"])}
+            )
+        )
         .reset_index()
     )
 
@@ -253,7 +258,7 @@ def calculate_biomasse(
 
     # save file to processed filepath
     processed_path = _get_processed_path(
-        admin=admin, start_dekad=start_dekad, iso3=None
+        admin=admin_level, start_dekad=start_dekad, iso3=None
     )
     df_merged.to_csv(processed_path, index=False)
 
@@ -262,7 +267,7 @@ def calculate_biomasse(
 
 def load_biomasse_data(
     admin: AdminArgument = "ADM2",
-    iso3: Union[bool, str] = None,
+    iso3: Optional[str] = None,
     start_dekad: int = 10,
 ):
     """Load biomasse processed data
@@ -275,7 +280,7 @@ def load_biomasse_data(
     admin: AdminArgument
         Admin level, one of 'ADM0', 'ADM1',
         or 'ADM2'.
-    iso3: str
+    iso3: Optional[str]
         ISO3 string. If present, saves data
         within that countries folder for
         download.
@@ -296,8 +301,8 @@ def load_biomasse_data(
 
 def aggregate_biomasse(
     admin_pcodes: List[str],
+    iso3: Optional[str],
     admin: AdminArgument = "ADM2",
-    iso3: Union[bool, str] = None,
     start_dekad: int = 10,
 ) -> pd.DataFrame:
     """Aggregate Biomasse data to set of areas
@@ -318,12 +323,12 @@ def aggregate_biomasse(
     ----------
     admin_pcodes: List[str]
         List of administrative pcodes to aggregate to.
+    iso3: Optional[str]
+        ISO3 string or ``None``. If present, saves data
+        within that country's folder for download.
     admin: AdminArgument
         Admin type to subset with, one of 'ADM0', 'ADM1',
         or 'ADM2'.
-    iso3: Union[bool, str]
-        ISO3 string or ``None``. If present, saves data
-        within that countries folder for download.
     start_dekad: int
         Starting dekad for annual
         calculations.
@@ -410,7 +415,7 @@ def _get_raw_path(admin):
 
 
 def _get_processed_path(
-    admin: AdminArgument, start_dekad: int, iso3: Union[None, str] = None
+    admin: AdminArgument, start_dekad: int, iso3: Optional[str] = None
 ):
     if iso3 is None:
         iso3 = "glb"
