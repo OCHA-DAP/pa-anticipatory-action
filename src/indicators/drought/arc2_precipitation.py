@@ -911,7 +911,9 @@ class DrySpells(ARC2):
         df = self.days_under_threshold(raster=False)
         return sum(df.iloc[:, 1] >= number_days)
 
-    def cumulative_rainfall(self) -> xr.DataArray:
+    def cumulative_rainfall(
+        self, date_min: date = None, date_max: date = None
+    ) -> xr.DataArray:
         """Calculate cumulative rainfall across monitoring period"""
         da = self.load_raw_data()
         da_date = da.indexes[T_COL]
