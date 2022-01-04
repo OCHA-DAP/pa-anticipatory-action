@@ -264,8 +264,6 @@ class ARC2:
 
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
-        # convert to standard date
-        da["T"] = da.indexes["T"].to_datetimeindex().date
 
         return da
 
@@ -600,7 +598,7 @@ class DrySpells(ARC2):
             ):
                 before_df = df[df[T_COL] < min(prev_rollsum_df[T_COL])]
                 before_rs = self._calculate_rolling_sum(before_df)
-                prev_rollsum_df = pd.concat(before_rs, prev_rollsum_df)
+                prev_rollsum_df = pd.concat([before_rs, prev_rollsum_df])
             # now we look at data after our previous roll sum
             # and calculate for any new data after
             if max(df[T_COL]) > max(prev_rollsum_df[T_COL]):
@@ -612,7 +610,7 @@ class DrySpells(ARC2):
                     )
                 ]
                 after_rs = self._calculate_rolling_sum(after_df)
-                prev_rollsum_df = pd.concat(prev_rollsum_df, after_rs)
+                prev_rollsum_df = pd.concat([prev_rollsum_df, after_rs])
             rollsum_df = prev_rollsum_df
         # otherwise, just calculate across entire dataframe
         else:
@@ -895,9 +893,15 @@ class DrySpells(ARC2):
         df = self.days_under_threshold(raster=False)
         return sum(df.iloc[:, 1] >= number_days)
 
-    def cumulative_rainfall(self) -> xr.DataArray:
+    def cumulative_rainfall(
+        self, date_min: date = None, date_max: date = None
+    ) -> xr.DataArray:
         """Calculate cumulative rainfall across monitoring period"""
         da = self.load()
         da_date = da.indexes["T"].to_datetimeindex().date
-        da = da[(da_date >= self.date_min) & (da_date <= self.date_max), :, :]
+        if date_min is None:
+            date_min = self.date_min
+        if date_max is None:
+            date_max = self.date_max
+        da = da[(da_date >= date_min) & (da_date <= date_max), :, :]
         return da.sum(dim="T")
