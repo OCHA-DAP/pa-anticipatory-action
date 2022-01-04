@@ -27,7 +27,7 @@ import os
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
-from src.indicators.drought.chirps_rainfallobservations import compute_seasonal_lowertercile_raster, \
+from src.indicators.drought.chirps_rainfallobservations import compute_seasonal_tercile_raster, \
 get_filepath_seasonal_lowertercile_raster
 ```
 
@@ -47,7 +47,7 @@ adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameter
 ## compute historical below average precipitation
 ## only needed if data needs to be updated
 # get_chirps_data_monthly(config,iso3, use_cache=False)
-# compute_seasonal_lowertercile_raster(config, iso3, use_cache=False)
+# compute_seasonal_tercile_raster(config, iso3, use_cache=False)
 ```
 
 ```python
