@@ -230,7 +230,7 @@ p_ndvi_bm_fy_80 +
 ndvi_anom_80_df <- df %>%
   filter(anomaly_thresholds == 80)
 
-ndvi_anom_80_df %>%
+plt_ndvi_anom_80 <- ndvi_anom_80_df %>%
   ggplot(aes(x = date, y = ndvi_percent_area, group = year)) +
   geom_area(fill = "#FF8080") +
   facet_wrap(~year, scales = "free_x", ncol = 4) +

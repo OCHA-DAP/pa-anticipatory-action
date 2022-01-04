@@ -451,7 +451,7 @@ p_crop_bm_fy_80 +
 crop_anom_80_df <- df %>%
   filter(threshold == 80, type == "cropland_anomaly")
 
-crop_anom_80_df %>%
+plt_crop_anom_80 <- crop_anom_80_df %>%
   ggplot(aes(x = time, y = wrsi_percent_area, group = year)) +
   geom_area(fill = "#FF8080") +
   facet_wrap(~year, scales = "free_x", ncol = 4) +
