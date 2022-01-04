@@ -465,6 +465,12 @@ g.set_ylabels("% of area observed below average precip")
 g.set_xlabels("3-month period");
 ```
 
+```python
+#the years with highest percentage of bavg since 2000
+#computing this since other data sources we use only start from 2000
+df_stats_reg_selm[df_stats_reg_selm.year>=2000].sort_values("perc_bavg",ascending=False).head(10)
+```
+
 compute the rp per season as these can differ per season, depending on the geospatial correlation
 However, I am surprised by the relatively large difference, especially when lookin at the 5 year return period..
 
@@ -529,7 +535,8 @@ df_rank=df_stats_reg_selm[df_stats_reg_selm.year>=1993].sort_values("perc_bavg",
 ```
 
 ```python
-drought_years=[1993,1997,2001,2004,2009,2011,2017]
+# drought_years=[1993,1997,2001,2004,2009,2011,2017]
+drought_years=[1968,1969,1970,1971,1972,1973, 1983, 1984, 1993, 1997, 2001, 2004, 2005, 2009, 2011, 2017]
 ```
 
 #### CERF allocations
@@ -674,11 +681,12 @@ title=["Percentage of the area with bavg obs precip by year and season"])
 ```python
 plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
     x=alt.X('year:N',title="Year"),
-    y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
+    y=alt.Y('perc_bavg', title = "% of AOI with below avg precip"),
     color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
 ).properties(width=600,height=400)
 (plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
-title=["Percentage of the area with bavg obs precip by year and season"])
+title=["Percentage of the AOI with below average observed precipitation by year and season"])
+# plt_facet.save(str(plot_dir/"tcd_obs_bavg_perc_drought_jja_jas.png"))
 ```
 
 ### Conclusions

@@ -44,13 +44,15 @@ data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Ren
 plot_dir <-paste0(data_dir,'/public/processed/tcd/plots/')
 ```
 
-For Chad an OCHA anticipatory action framework is being developed to anticipate drought. This document summarizes the work done by the Centre for Humanitarian Data (CHD), whose work focuses on the development of the trigger. The development of the trigger in Chad has been a collaborative process for which a preliminary trigger was proposed by a technical working group consisting of several in-country organizations. The validation and fine-tuning of this trigger was thereafter executed by CHD. 
+For Chad an OCHA anticipatory action framework is being developed to anticipate drought. Such a framework consists of activities, financing, and a trigger. This document summarizes the work done by the Centre for Humanitarian Data (CHD), whose work focuses on the development of the trigger. The development of the trigger in Chad has been a collaborative process for which a preliminary trigger was proposed by a technical working group consisting of several in-country organizations. The validation and fine-tuning of this trigger was thereafter executed by CHD. 
 
 ## Definitions
+- rainfall vs precipitation
+
 
 ## Context
-- area of interest
-- rainy season
+- area of interest --> ignore trade
+- rainy season - JJAS but JA main months
 - github
 
 ## Preliminary trigger
@@ -74,10 +76,10 @@ This validation consisted of four steps:
 
 
 ### Historical socio-economic drought
-With anticipatory action we want to anticipate droughts that cause an increase in humanitarian needs. Therefore for a historical analysis of years we would have wanted to release anticipatory funds, a list of historical years with humanitarian needs caused by drought is needed. We refer to this as socio-economic drought. This kind of impact data is not widely available, both temporarily and spatially. 
+With anticipatory action we want to anticipate droughts that cause an increase in humanitarian needs. Such droughts are often referred to as socio-economic droughts. Therefore for a historical analysis of years we would have wanted to release anticipatory funds, a list of historical socio-economic droughts is needed. This kind of impact data is not widely available, both temporarily and spatially. 
 
 Nevertheless, we attempted to compile a list of worst drought years. This list is by no means fully validated and shouldn't be seen as a ground-truth dataset. We therefore use the list for part of the analyses but don't base all decisions on it. The list was compiled in discussion with CERF colleagues and based on several sources. 
-
+[no spatial data]
 One source is the official drought declarations. These are known to be in 2005/2006, 2009/2010, 2016/2017 [though we don't have the reference.. ]
 
 Another source are the CERF allocations since 2006. These were in 2010-01, 2011-12, and 2018-05. Analyzing the documents these allocations were in response to poor rainy seasons during 2009, 2011, and 2017. 
@@ -103,19 +105,36 @@ We take the union of the different sources. With the exception of 2012 as we ass
 
 
 ### Observed trigger indicators
-We have 7 proposed trigger indicator values: below average rainfall, late onset, long dry stretches, end of season rainfall, WRSI and Biomass. We decided to first focus on those we know there is wide availability of forecasts, which are below average rainfall, WRSI, and Biomass. We also added NDVI as this came up during several discussions with the team. Given the definitions, WRSI, Biomass, and NDVI are expected to have some correlation. 
+We have 7 proposed trigger indicator values: below average rainfall, late onset, long dry stretches, end of season rainfall, WRSI and Biomass. We decided to first focus on the indicators for which we know there is wide availability of forecasts, which are below average rainfall, WRSI, and Biomass. We also added NDVI as this came up during several discussions with the team. Given the definitions, WRSI, Biomass, and NDVI are expected to have some correlation. 
 
 #### Below average rainfall
-As data source to determine observed below average rainfall, we used [CHIRPS](https://www.chc.ucsb.edu/data/chirps). CHIRPS is raster data at 0.05 degree resolution and is available since 1981. We compute for each of the raster cells whether it observed below average rainfall for each 3-month period (commonly referred to as season). We then aggregated this to the area of interest, expressing the percentage of the area that observed below average rainfall. The climatological reference period to compute the terciles was 1981-2010. The graph below shows the percentage of the area of interest experiencing below average precipitation for the JJA and JAS season. 
+As data source to determine observed below average rainfall, we used [CHIRPS](https://www.chc.ucsb.edu/data/chirps). CHIRPS is raster data at 0.05 degree resolution and is available since 1981. We compute for each of the raster cells whether it observed below average rainfall for each 3-month period (commonly referred to as season). We then aggregated this to the area of interest, expressing the percentage of the area that observed below average rainfall. The climatological reference period to compute the terciles was 1982-2010. The graph below shows the percentage of the area of interest experiencing below average precipitation for the JJA and JAS season. The bars colored red are those indicated as drought years from our previous exploration. 
 
 
 
 
 ```{r fig-obs-bavg, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%',fig.cap="Proposed preliminary trigger"}
 
-knitr::include_graphics(paste0(plot_dir,'tcd_obs_bavg_perc_jja_jas.png'))
+knitr::include_graphics(paste0(plot_dir,'tcd_obs_bavg_perc_drought_jja_jas.png'))
 
 ```
+
+From these graphs, we can conclude several things: 
+- In the 80s there was a particularly dry period. This is also confirmed by other sources. 
+- Since 2000 the 5 years with the largest percentage of below average rainfall were 2000, 2004, 2008, 2013, and 2015.
+- Since 2017 we haven't seen any significant percentage of below average rainfall. 
+- There is a limited correlation between below average precipitation and the list of socio-economic droughts. It is important to note here that the list of historical droughts is not fully validated and thus not too many conclusions should be drawn to it. For example the 2005 drought might refer to the 2004 rainy season. Nevertheless, for example in 2017 we know there was localized meteorological drought that are clearly not reflected in the below average seasonal precipitation. 
+
+[Do you think we should show a confusion matrix here as well?]
+
+### Biomasse
+
+### WRSI
+
+### NDVI
+
+
+### Comparison of the data sources
 
 
 ## Proposed trigger January 2022
