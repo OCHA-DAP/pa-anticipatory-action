@@ -39,13 +39,13 @@ arc2_test = DrySpells(
     country_iso3 = "mwi",
     monitoring_start = "2021-09-02",
     monitoring_end = "2021-09-03",
-    range_x = ("32E", "35E"),
-    range_y = ("20S", "10S")
+    range_x = ("32E", "36E"),
+    range_y = ("20S", "5S")
 )
 
-arc2_test.download_data(master=True)
+arc2_test.download(main=True)
 
-ds = arc2_test.load_raw_data()
+ds = arc2_test.load()
 ds.indexes['T']
 ```
 
@@ -54,15 +54,15 @@ We can see here that we have data corrresponding to the 2nd and 3rd of September
 ```python
 arc2_test = DrySpells(
     country_iso3 = "mwi",
-    monitoring_start = "2021-09-01",
-    monitoring_end = "2021-09-04",
+    monitoring_start = "2000-01-01",
+    monitoring_end = "2022-01-04",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S"),
 )
 
-arc2_test.download_data()
+arc2_test.download()
 
-ds2 = arc2_test.load_raw_data()
+ds2 = arc2_test.load()
 ds2.indexes['T']
 ```
 

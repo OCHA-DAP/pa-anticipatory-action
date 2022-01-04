@@ -38,7 +38,7 @@ def main(download=True, process=True, dry_spells=True):
     )
 
     if download:
-        arc2._download()
+        arc2._download_date_ranges()
 
     if process:
         arc2.process_data(

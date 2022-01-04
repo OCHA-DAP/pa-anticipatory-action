@@ -4,7 +4,7 @@ from datetime import date, datetime
 from itertools import groupby
 from operator import itemgetter
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -13,7 +13,6 @@ import requests
 import rioxarray
 import xarray as xr
 from fiona.errors import DriverError
-from rasterio.enums import Resampling
 from rasterio.errors import RasterioIOError
 
 from src.utils_general.raster_manipulation import compute_raster_statistics
@@ -26,6 +25,7 @@ RAW_DATA_DIR = "raw"
 PROCESSED_DATA_DIR = "processed"
 ARC2_DIR = "arc2"
 ARC2_CRS = "EPSG:4326"
+T_COL = "T"
 
 # TODO: Convert documentation to Sphinx
 
@@ -42,11 +42,18 @@ ARC2_CRS = "EPSG:4326"
 
 # TODO: Write tests
 
+# TODO: Change the function order
+
+# TODO: make class variables private where applicable
+# when porting to toolbox
+
 
 class ARC2:
     """Summary of class
 
-    TODO: fill
+    TODO: fill, but this class will be replaced by a pipeline class
+    and much of the code integrated into different aspects of the
+    toolbox format, so not bothering to fill out now
 
     Attributes:
         country_iso3: ISO3 string.
@@ -83,7 +90,7 @@ class ARC2:
         self.range_x = range_x
         self.range_y = range_y
 
-    def _download(
+    def _download_date_ranges(
         self, date_min_dl: date, date_max_dl: date, main: bool = False
     ):
 
@@ -168,11 +175,9 @@ class ARC2:
             raw_filepath.unlink()
             main_filepath.unlink()
 
-            # Ensuring fill value encodign is properly set in new
+            # Ensuring fill value encoding is properly set in new
             # merged dataset
-            if "_FillValue" in main_merge.encoding and np.isnan(
-                main_merge.encoding["_FillValue"]
-            ):
+            if "_FillValue" in main_merge.encoding:
                 main_merge.encoding["_FillValue"] = -999
 
             main_merge.to_netcdf(main_filepath)
@@ -226,11 +231,10 @@ class ARC2:
         fp = self._get_raw_filepath(main=True)
         if not fp.exists():
             raise OSError(
-                "Main file does not exist. "
-                "First run `download_data(main=True)`."
+                "Main file does not exist. " "First run `download(main=True)`."
             )
 
-    def load_raw_data(
+    def load(
         self,
         raw_filepath: Union[Path, None] = None,
     ) -> pd.DataFrame:
@@ -254,14 +258,30 @@ class ARC2:
         except RasterioIOError:
             raise OSError(
                 "Raw raster file %s does not exist, "
-                "first download using `download_data()`.",
+                "first download using `download()`.",
                 raw_filepath.name,
             )
 
+        # explicitly remove missing values
+        da.values[da.values == -999] = np.NaN
+        # convert to standard date
+        da["T"] = da.indexes["T"].to_datetimeindex().date
+
         return da
 
-    def download_data(
-        self, main: bool = False, replace_missing: Union[bool, str] = False
+    # TODO: redownload option for toolbox in case data gets
+    # updated.
+
+    # TODO: check for dates first for clarity
+
+    # TODO: reconsider replace_missing during refactor as part
+    # of shift to using clobber like the rest
+
+    def download(
+        self,
+        main: bool = False,
+        replace_missing: bool = False,
+        start_replace_date: Optional[str] = None,
     ):
         """
         Download ARC2 data for all dates between `self.date_min`
@@ -277,48 +297,48 @@ class ARC2:
             and merge to main if `False`.
         :param replace_missing: Only relevant if not `main`.
             If `True`, looks for missing values through entire
-            dataset and ensures they are re-downloaded. If an
-            ISO 8601 string is passed, then missing values are
-            only looked for on or after that date.
+            dataset and ensures they are re-downloaded.
+        :param start_replace_date: Only relevant if
+            ``replace_missing``. If an ISO 8601 string is
+            passed, then missing values are only looked for on
+            or after that date.
         """
         if main:
-            self._download(self.date_min, self.date_max, main)
+            self._download_date_ranges(self.date_min, self.date_max, main)
         else:
             self._check_main_exists()
             # load main data and find all dates covered
             # compare to min/max and then download missing
-            mr = self.load_raw_data()
+            da_main = self.load()
 
             # drop missing data if requested
             if replace_missing:
-                if isinstance(replace_missing, str):
-                    replace_date = datetime.fromisoformat(replace_missing)
+                if start_replace_date:
+                    replace_date = datetime.fromisoformat(start_replace_date)
                 else:
                     replace_date = datetime.combine(
                         self.date_min, datetime.min.time()
                     )
 
-                t_subset = mr.indexes["T"] < replace_date
+                t_subset = da_main.indexes["T"] < replace_date
                 val_subset = np.max(
-                    np.max(mr.values != -999, array=1), array=1
+                    np.max(np.isnan(da_main.values), array=1), array=1
                 )
 
                 # keeps rows if date is less than specified or
                 # value is different than -999 (missing)
-                mr = mr.loc[t_subset | val_subset, :, :]
+                da_main = da_main.loc[t_subset | val_subset, :, :]
 
             # subtracting 12 hours to ensure they match with dates
             # generated from pd.date_range()
-            loaded_dates = mr.indexes[
-                "T"
-            ].to_datetimeindex() - pd.to_timedelta("12:00:00")
+            loaded_dates = da_main.indexes["T"] - pd.to_timedelta("12:00:00")
             full_dates = pd.date_range(self.date_min, self.date_max)
             needed_dates = full_dates.difference(loaded_dates)
 
             if len(needed_dates) > 0:
                 date_ranges = self._group_date_ranges(needed_dates)
                 for dates in date_ranges:
-                    self._download(
+                    self._download_date_ranges(
                         date_min_dl=dates[0],
                         date_max_dl=dates[1],
                         main=False,
@@ -331,9 +351,9 @@ class ARC2:
     def _group_date_ranges(self, dates) -> list:
         """
         Group range of dates into list of consecutive dates to pass to
-        `self._download()` for calling to the API. For each group, only
-        the min and max dates are returned rather than the full list
-        of dates in the group.
+        `self._download_date_ranges()` for calling to the API. For each
+        group, only the min and max dates are returned rather than the
+        full list of dates in the group.
 
         :param dates: Date range generated by `pd.date_range()`
         """
@@ -382,10 +402,8 @@ class DrySpells(ARC2):
         If 'approximate_mask', the data is upsampled 4x before aggregating
         using the 'centroid' method.
     :param rolling_window: Number of days for rolling sum of precipitation.
-    :param rainfall_mm: Maximum precipitation during window to
+    :param rainfall_mm: Maximum cumulative precipitation during window to
         classify as dry spell.
-    :param date_min: Minimum date to load data from, either string
-        in ISO 8601 format, e.g. '2021-03-20' or `datetime.date` object.
     """
 
     def __init__(
@@ -420,6 +438,11 @@ class DrySpells(ARC2):
             range_y=range_y,
         )
 
+    # TODO: Consider dropping reprocessing because not necessary
+
+    # TODO: Remove redownload when refactoring and just check that dates
+    # are available.
+
     def aggregate_data(
         self,
         polygon_path: Union[Path, str] = None,
@@ -434,24 +457,31 @@ class DrySpells(ARC2):
         pre-aggregated data, otherwise aggregates additional data and joins
         to aggregated main file.
 
+        Where data is missing, it is infilled using linear interpolation for
+        the day before and after the missing date. This is done because missing
+        data as observed is more geographically correlated than temporally, so
+        data for interpolation is typically available on previous and following
+        days but often unavailable across large areas on the same day.
+
         :param polygon_path: Path to polygon file for clipping and aggregating
             raster data.
         :param bound_col: Column in polygon file to aggregate raster to.
         :param reprocess: Boolean, if `True` reprocesses all raster data.
             Otherwise, only processes dates that have not already been
             aggregated.
-        :param redownload: Boolean, if `True`, calls `download_data()`
+        :param redownload: Boolean, if `True`, calls `download()`
             without replacing missing data or the main file,
             only downloading for new dates not already downloaded.
         """
         self._check_main_exists()
 
         if redownload:
-            self.download_data(main=False, replace_missing=False)
+            self.download(main=False, replace_missing=False)
 
         aggregated_filepath = self._get_aggregated_filepath()
+        aggregated_filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        da = self.load_raw_data()
+        da = self.load()
 
         # load polygon data
         try:
@@ -462,36 +492,30 @@ class DrySpells(ARC2):
             )
 
         # only process data for dates that have not already been aggregated
+        exist_stats = None
         if aggregated_filepath.exists() and not reprocess:
-            exist_stats = pd.read_csv(aggregated_filepath, parse_dates=["T"])
-            exist_time = (
-                exist_stats.set_index("T").index.astype("datetime64[ns]").date
-            )
-            lookup = da.indexes["T"].to_datetimeindex().date
-            lookup = ~np.in1d(lookup, exist_time)
-            if np.sum(lookup) == 0:
+            exist_time = pd.read_csv(
+                aggregated_filepath,
+                parse_dates=["T"],
+                usecols=["T"],
+                index_col=["T"],
+            ).index.date
+
+            da = da.sel(T=~da["T"].isin(exist_time))
+            exist_stats = self.load_aggregated_data()
+
+            if da.shape[0] == 0:
                 logger.info(
                     "No additional dates to process for %s.",
                     aggregated_filepath,
                 )
                 return exist_stats
 
-            else:
-                da = da.loc[lookup, :, :]
-        else:
-            aggregated_filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # explicitly remove missing values
-        da.values[da.values == -999] = np.NaN
-        # convert to standard date
-        da["T"] = [x.date() for x in da.indexes["T"].to_datetimeindex()]
-
         all_touched = self.agg_method == "touching"
         if self.agg_method == "approximate_mask":
-            width = da.rio.width * 4
-            height = da.rio.height * 4
+            x_res, y_res = da.rio.resolution()
             da = da.rio.reproject(
-                da.rio.crs, shape=(height, width), resampling=Resampling.mode
+                da.rio.crs, resolution=(x_res / 4, y_res / 4)
             )
 
         df_zonal_stats = compute_raster_statistics(
@@ -503,25 +527,24 @@ class DrySpells(ARC2):
         )
 
         # join up existing data if necessary
-        if "exist_stats" in locals():
+        if exist_stats is not None:
             # explicitly convert to datetime64 series before joining
             # and add infilled to ensure what's happening
             df_zonal_stats["T"] = pd.to_datetime(df_zonal_stats["T"])
-            df_zonal_stats["infilled"] = False
             df_zonal_stats = df_zonal_stats.append(
                 exist_stats, ignore_index=True
             )
             df_zonal_stats.sort_values(by=["T"], inplace=True)
 
         # infill missing data with interpolation
-        data_col = "mean_" + bound_col
-        if "infilled" not in df_zonal_stats.columns:
-            df_zonal_stats["infilled"] = False
+        data_col = f"mean_{bound_col}"
 
         df_zonal_stats["infilled"] = np.where(
-            df_zonal_stats[data_col].isna(), True, df_zonal_stats["infilled"]
+            df_zonal_stats[data_col].isna(), True, False
         )
 
+        # TODO: look into limiting NA infilling only if there's
+        # enough data value
         df_zonal_stats[data_col] = df_zonal_stats.groupby(bound_col)[
             data_col
         ].transform(lambda x: x.interpolate())
@@ -553,10 +576,9 @@ class DrySpells(ARC2):
         df = pd.read_csv(aggregated_fp, parse_dates=["T"])
 
         if filter:
-            t_col = df.columns[0]
             df = df[
-                (df[t_col].dt.date >= self.date_min)
-                & (df[t_col].dt.date <= self.date_max)
+                (df[T_COL].dt.date >= self.date_min)
+                & (df[T_COL].dt.date <= self.date_max)
             ]
         return df
 
@@ -569,24 +591,23 @@ class DrySpells(ARC2):
         df = self.load_aggregated_data()
 
         # only re-calculate rolling sum where necessary
-        if not reprocess:
+        if not reprocess and self._get_rolling_sum_filepath().exists():
             prev_rollsum_df = self.load_rolling_sum_data()
-            t_col = df.columns[0]
             # first we look at data before our previous roll sum
             # and recalculate if sufficient data available
-            if min(prev_rollsum_df[t_col]) - min(df[t_col]) >= pd.Timedelta(
+            if min(prev_rollsum_df[T_COL]) - min(df[T_COL]) >= pd.Timedelta(
                 self.rolling_window, unit="days"
             ):
-                before_df = df[df[t_col] < min(prev_rollsum_df[t_col])]
+                before_df = df[df[T_COL] < min(prev_rollsum_df[T_COL])]
                 before_rs = self._calculate_rolling_sum(before_df)
                 prev_rollsum_df = pd.concat(before_rs, prev_rollsum_df)
             # now we look at data after our previous roll sum
             # and calculate for any new data after
-            if max(df[t_col]) > max(prev_rollsum_df[t_col]):
+            if max(df[T_COL]) > max(prev_rollsum_df[T_COL]):
                 after_df = df[
-                    df[t_col]
+                    df[T_COL]
                     > (
-                        max(prev_rollsum_df[t_col])
+                        max(prev_rollsum_df[T_COL])
                         - pd.Timedelta(self.rolling_window, unit="days")
                     )
                 ]
@@ -605,7 +626,6 @@ class DrySpells(ARC2):
         """
         Calculates rolling sum on specific data frame.
         """
-        t_col = df.columns[0]
         precip_col = df.columns[1]
         adm_col = df.columns[2]
 
@@ -614,7 +634,7 @@ class DrySpells(ARC2):
             lambda x: x.rolling(window=self.rolling_window).sum()
         )
         df.dropna(subset=[rollsum_col], inplace=True)
-        df = df[[t_col, adm_col, rollsum_col]]
+        df = df[[T_COL, adm_col, rollsum_col]]
         return df
 
     def _get_rolling_sum_filepath(self) -> Path:
@@ -636,10 +656,10 @@ class DrySpells(ARC2):
         rollsum_fp = self._get_rolling_sum_filepath()
         df = pd.read_csv(rollsum_fp, parse_dates=["T"])
         if filter:
-            t_col = df.columns[0]
+            T_COL = df.columns[0]
             df = df[
-                (df[t_col].dt.date >= self.date_min)
-                & (df[t_col].dt.date <= self.date_max)
+                (df[T_COL].dt.date >= self.date_min)
+                & (df[T_COL].dt.date <= self.date_max)
             ]
         return df
 
@@ -657,7 +677,6 @@ class DrySpells(ARC2):
         rollsum_fp = self._get_rolling_sum_filepath()
         df = pd.read_csv(rollsum_fp, parse_dates=["T"])
 
-        t_col = df.columns[0]
         adm_col = df.columns[1]
         rs_col = df.columns[2]
 
@@ -671,8 +690,8 @@ class DrySpells(ARC2):
             .groupby("dsg")
             .agg(
                 adm_col=(adm_col, "unique"),
-                ds_confirmation=(t_col, "min"),
-                ds_last_date=(t_col, "max"),
+                ds_confirmation=(T_COL, "min"),
+                ds_last_date=(T_COL, "max"),
             )
             .reset_index(drop=True)
             .assign(
@@ -696,8 +715,8 @@ class DrySpells(ARC2):
         )
 
         # Filter dates to just those within the dry spell and sum
-        total_df = total_df[total_df[t_col] >= total_df["ds_first_date"]]
-        total_df = total_df[total_df[t_col] <= total_df["ds_last_date"]]
+        total_df = total_df[total_df[T_COL] >= total_df["ds_first_date"]]
+        total_df = total_df[total_df[T_COL] <= total_df["ds_last_date"]]
         total_df = (
             total_df.groupby([adm_col, "ds_confirmation"])[precip_col]
             .agg("sum")
@@ -836,7 +855,7 @@ class DrySpells(ARC2):
         boundaries.
         """
         if raster:
-            da = self.load_raw_data()
+            da = self.load()
             da_date = da.indexes["T"].to_datetimeindex().date
             da = da[
                 (da_date >= self.date_min) & (da_date <= self.date_max), :, :
@@ -878,7 +897,7 @@ class DrySpells(ARC2):
 
     def cumulative_rainfall(self) -> xr.DataArray:
         """Calculate cumulative rainfall across monitoring period"""
-        da = self.load_raw_data()
+        da = self.load()
         da_date = da.indexes["T"].to_datetimeindex().date
         da = da[(da_date >= self.date_min) & (da_date <= self.date_max), :, :]
         return da.sum(dim="T")
