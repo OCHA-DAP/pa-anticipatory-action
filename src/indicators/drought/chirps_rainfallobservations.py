@@ -1,6 +1,7 @@
 import logging
 import os
 import urllib
+from calendar import month_name
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -231,22 +232,16 @@ def compute_seasonal_tercile_raster(
     config,
     country_iso3: str,
     use_cache: bool = True,
+    climatology_min_year: int = 1982,
+    climatology_max_year: int = 2011,
 ):
     # number of months that is considered a season
     seas_len = 3
     end_month_season_mapping = {
-        1: "NDJ",
-        2: "DJF",
-        3: "JFM",
-        4: "FMA",
-        5: "MAM",
-        6: "AMJ",
-        7: "MJJ",
-        8: "JJA",
-        9: "JAS",
-        10: "ASO",
-        11: "SON",
-        12: "OND",
+        m: "".join(
+            [month_name[(m - i) % 12 + 1][0] for i in range(seas_len, 0, -1)]
+        )
+        for m in range(1, 13)
     }
 
     chirps_monthly_country_filepath = get_filepath_chirps_monthly(
@@ -293,11 +288,13 @@ def compute_seasonal_tercile_raster(
     # forecasts see
     # https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/
     da_season_climate = da_season.sel(
-        time=da_season.time.dt.year.isin(range(1982, 2011))
+        time=da_season.time.dt.year.isin(
+            range(climatology_min_year, climatology_max_year)
+        )
     )
 
     # compute the thresholds for the lower and upper tercile per season
-    da_season_climate_quantile = _compute_bounds_terciles(
+    da_season_climate_quantile = _compute_tercile_bounds(
         da_season_climate.groupby("season")
     )
 
@@ -320,7 +317,7 @@ def compute_seasonal_tercile_raster(
     return chirps_seasonal_tercile_filepath
 
 
-def _compute_bounds_terciles(da):
+def _compute_tercile_bounds(da):
     """compute lower and upper tercile bounds."""
     # rename quantiles such that don't have to select on floats later on
     return da.quantile([1 / 3, 2 / 3], skipna=True).assign_coords(

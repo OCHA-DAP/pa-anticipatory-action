@@ -3,7 +3,7 @@ import pandas as pd
 import xarray as xr
 
 from src.indicators.drought.chirps_rainfallobservations import (
-    _compute_bounds_terciles,
+    _compute_tercile_bounds,
     _compute_tercile_category,
 )
 
@@ -17,7 +17,7 @@ def test_tercile_assignment():
             "lon": np.arange(2),
         },
     )
-    da_bounds = _compute_bounds_terciles(da)
+    da_bounds = _compute_tercile_bounds(da)
     assert np.array_equal(da_bounds.values, [3, 6])
     da_bn, da_no, da_an = _compute_tercile_category(da, da_bounds)
     assert np.array_equal(
@@ -42,7 +42,7 @@ def test_tercile_groupby():
         ],
         dims=["lon", "time"],
     )
-    da_bounds = _compute_bounds_terciles(da.groupby(da.time.dt.month))
+    da_bounds = _compute_tercile_bounds(da.groupby(da.time.dt.month))
     assert np.array_equal(da_bounds.squeeze().values, [[3, 6], [13, 16]])
     da_bn, da_no, da_an = _compute_tercile_category(da, da_bounds)
     assert np.array_equal(
