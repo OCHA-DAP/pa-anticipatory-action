@@ -31,7 +31,7 @@ sf_aoi <- filter(sf, area_of_interest)
 # raster
 
 dr <- rast(file.path(
-  aa_dir, "public", "raw", "general", "biomasse", "BiomassValueMean.tif"
+  aa_dir, "public", "raw", "glb", "biomasse", "BiomassValueMean.tif"
 ))
 
 dr <- crop(dr, sf_aoi)
