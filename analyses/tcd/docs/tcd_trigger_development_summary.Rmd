@@ -50,15 +50,15 @@ For Chad an [OCHA anticipatory action framework](https://anticipatory-action-too
 This document is a summary, more elaborate analyses and code can be found [on GitHub](https://github.com/OCHA-DAP/pa-anticipatory-action/tree/develop/analyses/tcd). 
 
 ## Context
-Chad consists of several zones that show very different climates. For this pilot the focus is on a part of the Sahelian zone, see the map below. More specifically the ADMIN1 areas of Lac, Kanem, Barh-El-Gazel, Batha, and Wadi Fira. For the trigger it was decided to also only include this area of interest within the analyses, i.e. we look at the drought within the area and not at e.g. a possible decreased trade due to drought in other areas. 
-
-The focus of the trigger is on the rainy season. In Chad the rainy season is from June to September, with most rainfall in July and August. 
+Chad has several climatological zones. For this pilot the focus is on a part of the Sahelian zone, see the map below, as this area was identified as most vulnerable to drought. More specifically the ADMIN1 areas of Lac, Kanem, Barh-El-Gazel, Batha, and Wadi Fira are the focus. For the trigger it was decided to also only include this area of interest within the analyses, i.e. we look at the drought within the area and not at e.g. a possible decreased trade due to drought in other areas. 
 
 ```{r map-aoi, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '70%'}
 
 knitr::include_graphics(paste0(plot_dir,'/tcd_map_aoi.png'))
 
 ```
+The focus of the trigger is on the rainy season. In Chad the rainy season is from June to September, with most rainfall in July and August.
+Below the historical median rainfall per month is shown. As can be seen there is very little rain in our area of interest in June and September (on average .. and ..)
 
 <!-- ## Definitions -->
 <!-- - rainfall vs precipitation -->
@@ -139,8 +139,6 @@ From these graphs, we can conclude several things:
 - Since 2017 we haven't seen any significant percentage of below average rainfall. 
 - There is a limited correlation between below average precipitation and the list of socio-economic droughts. It is important to note here that the list of historical droughts is not fully validated and thus not too many conclusions should be drawn to it. For example the 2001 drought might refer to the 2000 rainy season. Nevertheless, for example in 2017 we know there was localized meteorological drought that are clearly not reflected in the below average seasonal precipitation. 
 
-[Do you think we should show a confusion matrix here as well?]
-
 
 ### Biomasse
 Biomasse is based on a productivity measure of dry matter production (DMP) over 36 dekads in the year, measuring average daily production in each dekad (from VEGETATION sensor of PROBA-V). We use the biomasse anomaly which is the biomasse divided by the mean biomasse. 
@@ -190,10 +188,26 @@ plt_ndvi_anom_80
 
 Now that we have analyzed the 4 indicators individually, we can see how they correlate. If two or more indicators show a same pattern, then we prefer to simplify the trigger by not including all of them. 
 
+We can firstly do a very simple comparison by looking at the 5 worst years for each indicator since 2000, see below. 
+
+
+
+```{r tab-worst-years, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
+
+knitr::include_graphics(paste0(plot_dir,'tcd_table_worst_5years.png'))
+
+```
+
+It is not only about the match of years, but also about the separability between drought and non-drought years that shows the quality of the indicator [add some of Seth's green/red graphs? ]
 
 
 ## Forecasted indicators
 Forecast bit misleading
+
+### Below average precipitation
+In the previous section we saw that the observed below average precipitation in JJA and JAS doesn't correspond very well with our list of historical socio-economic droughts. Nevertheless, it was decided to inspect the use of forecast of below average precipitation as this is the only widely-used product that is available well-ahead of time. Several seasonal forecast providers exist and the proposed provider was IRI. This data is only available since 2017. Since we didn't see any observed below average precipitation since 2017
+
+
 
 
 ## Proposed trigger January 2022

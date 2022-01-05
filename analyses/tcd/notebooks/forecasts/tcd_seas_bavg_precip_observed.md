@@ -173,6 +173,7 @@ for ax in g.axes.flat:
     ax.set_title(calendar.month_name[int(ax.get_title().split(" ")[-1])])
 g.fig.suptitle(f"Median per month between {da_country.time.dt.year.values.min()} and {da_country.time.dt.year.values.max()}",size=16)
 g.fig.subplots_adjust(top=0.9,bottom=0.4,hspace=0.3)
+# plt.savefig(plot_dir/"tcd_map_med_monthly_precip.png")
 ```
 
 To understand the differences between years, we aggregate the raster data to our area of interest by taking the mean. We then plot the observed mean precipitation per year and month. 
@@ -187,6 +188,10 @@ da_country_aoi_mean_sel=da_country_aoi_mean.sel(time=da_country_aoi_mean.time.dt
 df_country_aoi_mean_sel=da_country_aoi_mean_sel.to_dataframe().reset_index()
 df_country_aoi_mean_sel["year"]=df_country_aoi_mean_sel.time.dt.year
 df_country_aoi_mean_sel["month"]=df_country_aoi_mean_sel.time.dt.month
+```
+
+```python
+df_country_aoi_mean_sel.groupby("month").mean()
 ```
 
 ```python
