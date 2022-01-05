@@ -287,14 +287,28 @@ arc2_centr_check = DrySpells(
 
 rainy_days = arc2_centr_check.count_rainy_days()
 dry_days = arc2_centr_check.count_dry_days()
+# days under 4mm
+df_agg = arc2_centr_check.load_aggregated_data(True)
+dry_days_4mm = df_agg.groupby("ADM2_PCODE").agg(
+            dry_days_4mm=(
+                "mean_ADM2_PCODE",
+                lambda x: sum(x < 4),
+            )
+        )
+
 long_run = arc2_centr_check.find_longest_runs()
 admin_en_df = gdf_adm2_south[["ADM2_EN", "ADM2_PCODE"]].set_index("ADM2_PCODE")
 
-df = pd.merge(rainy_days, dry_days, left_index=True, right_index=True) \
+df = pd.merge(rainy_days, dry_days_4mm, left_index=True, right_index=True) \
+    .merge(dry_days, left_index=True, right_index=True) \
     .merge(long_run, left_index=True, right_index=True) \
     .merge(admin_en_df, left_index=True, right_index=True) \
     .reset_index(drop=True)
 df = df[df.columns[::-1]]
-df.columns = ["admin_area", "cumulative_days_under_2mm", "days_without_rainfall", "days_with_rainfall_gt_4mm"]
-# df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
+df.columns = ["admin_area",
+              "cumulative_days_under_2mm",
+              "days_without_rainfall",
+              "days_with_rainfall_lt_4mm",
+              "days_with_rainfall_gte_4mm"]
+df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
 ```
