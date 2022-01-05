@@ -58,7 +58,14 @@ knitr::include_graphics(paste0(plot_dir,'/tcd_map_aoi.png'))
 
 ```
 The focus of the trigger is on the rainy season. In Chad the rainy season is from June to September, with most rainfall in July and August.
-Below the historical median rainfall per month is shown. As can be seen there is very little rain in our area of interest in June and September (on average .. and ..)
+Below the historical median rainfall per month is shown. The average monthly rainfall over all the whole area and all years is 14mm in June, 61mm in July, 89mm in August, and 29mm in September. 
+
+```{r map-med-precip, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
+
+knitr::include_graphics(paste0(plot_dir,'/tcd_map_med_monthly_precip.png'))
+
+```
+
 
 <!-- ## Definitions -->
 <!-- - rainfall vs precipitation -->
@@ -202,7 +209,7 @@ It is not only about the match of years, but also about the separability between
 
 
 ## Forecasted indicators
-Forecast bit misleading
+Note: naming it forecast is bit misleading
 
 ### Below average precipitation
 In the previous section we saw that the observed below average precipitation in JJA and JAS doesn't correspond very well with our list of historical socio-economic droughts. Nevertheless, it was decided to inspect the use of forecast of below average precipitation as this is the only widely-used product that is available well-ahead of time. Several seasonal forecast providers exist and the proposed provider was IRI. This data is only available since 2017. Since we didn't see any observed below average precipitation since 2017
