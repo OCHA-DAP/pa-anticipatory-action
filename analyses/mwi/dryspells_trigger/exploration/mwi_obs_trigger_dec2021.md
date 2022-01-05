@@ -134,13 +134,22 @@ rainy_onset_df = rainy_onset_df \
     .drop('date', axis = 1)
 ```
 
-Only in 2 adm2's the rainy season has started according to the definition by 02-01-2022
+Only in 2 adm2's the rainy season has started according to the definition by 02-01-2022.     
+
+It should be noted here that this means that by 02-01-2022 the start of the rainy season hadn't been confirmed yet. This thus can mean that the rainy season might have already started in more admins, but given the definition we can only confirm this 40 days after the occurrence. 
 
 ```python
 rainy_onset_df[rainy_onset_df.year==2022]
 ```
 
-We plot the distribution of rainfall to understand slightly better why the rainy season hasn't started for most admins. As can be seen from the graph many admin2's experienced a 10 day dry spell between 3 Dec and 12 Dec. According to our definitions this breaks the start of the rainy season.
+The requirement of 30 days without 10 day long dry spells is quite strict. We therefore also check if and when the first condition of the onset, namely 40 mm in 10 days has been met for the different admins.    
+We can see this has been met for all admins. This occured already quite early in November as the dates shown are the last of the 10 day period. 
+
+```python
+daily_df[(daily_df.date>="2021-11-01")&(daily_df.rainfall_40mm_10d_prior)].groupby("ADM2_PCODE").first()
+```
+
+We plot the distribution of rainfall to understand slightly better why the rainy season hasn't started for most admins. As can be seen from the graph many admin2's experienced a 10 day dry spell between 3 Dec and 12 Dec. According to our definitions this breaks the start of the rainy season. 
 
 Moreover, from this graph we can see that many admins got very little rain between the 25th and 30th of Dec, but all received rain thereafter. 
 
@@ -154,12 +163,12 @@ chart_rain_2021=alt.Chart(daily_df_south_sel).mark_area().encode(
     x='date:T',
     y=alt.Y('mean_ADM2_PCODE',title='Daily rainfall')
 ).properties(
-    width=600,
-    height=300,
+    width=200,#600,
+    height=100,
     title="Rainfall from 01-11 2021 till Jan 2022"
 ).facet(
     facet='ADM2_PCODE:N',
-    columns=1
+    columns=3
 )
 chart_rain_2021
 ```
