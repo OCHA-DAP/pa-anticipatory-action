@@ -864,6 +864,26 @@ class DrySpells(ARC2):
 
         return df_agg
 
+    def count_rainy_days(self, filter: bool = True):
+        """Find number of days with >= 4mm rainfall in period
+
+        Defaults to only finding the days with no rainfall
+        across the dates of interest.
+        """
+        df = self.load_aggregated_data(filter=filter)
+
+        precip_col = f"mean_{self.bound_col}"
+        adm_col = self.bound_col
+
+        df_agg = df.groupby(adm_col).agg(
+            rainy_days=(
+                precip_col,
+                lambda x: sum(x >= 4),
+            )
+        )
+
+        return df_agg
+
     def count_dry_spells(self, filter: bool = True) -> int:
         """Return the number of admins in dry spell
 

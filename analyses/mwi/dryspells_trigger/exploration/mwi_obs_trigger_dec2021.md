@@ -13,7 +13,7 @@ import pandas as pd
 import altair as alt
 from datetime import date
 
-path_mod = f"{Path.cwd().parents[2]}/"
+path_mod = f"{Path.cwd().parents[3]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.arc2_precipitation import DrySpells
 
@@ -268,7 +268,7 @@ for i in range(5):
 
 ax[1,2].set_visible(False)
 f.suptitle(f"Cumulative rainfall from December 1 until January 4", size=20)
-f.savefig(save_path / "mwi_december_cum_rainfall.png")
+# f.savefig(save_path / "mwi_december_cum_rainfall.png")
 ```
 
 Lastly, let's look at the number of dry days and lengths across December and January.
@@ -285,16 +285,16 @@ arc2_centr_check = DrySpells(
     range_y = RANGE_Y
 )
 
+rainy_days = arc2_centr_check.count_rainy_days()
 dry_days = arc2_centr_check.count_dry_days()
 long_run = arc2_centr_check.find_longest_runs()
 admin_en_df = gdf_adm2_south[["ADM2_EN", "ADM2_PCODE"]].set_index("ADM2_PCODE")
 
-df = pd.merge(dry_days, long_run, left_index=True, right_index=True).merge(admin_en_df, left_index=True, right_index=True).reset_index(drop=True)
+df = pd.merge(rainy_days, dry_days, left_index=True, right_index=True) \
+    .merge(long_run, left_index=True, right_index=True) \
+    .merge(admin_en_df, left_index=True, right_index=True) \
+    .reset_index(drop=True)
 df = df[df.columns[::-1]]
-df.columns = ["admin_area", "cumulative_days_under_2mm", "days_without_rainfall"]
-df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
-```
-
-```python
-
+df.columns = ["admin_area", "cumulative_days_under_2mm", "days_without_rainfall", "days_with_rainfall_gt_4mm"]
+# df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
 ```
