@@ -39,13 +39,15 @@ POLY_PATH = os.path.join(
 )
 
 
-MONITORING_END = "2022-01-04"
+MONITORING_END = date.today()
 RANGE_X = ("32E", "36E")
 RANGE_Y = ("20S", "5S")
 
 # centroid method
 arc2_centr_dec = DrySpells(
     country_iso3 = "mwi",
+    polygon_path = POLY_PATH,
+    bound_col = "ADM2_PCODE",
     monitoring_start = "2021-12-01",
     monitoring_end = MONITORING_END,
     range_x = RANGE_X,
@@ -54,16 +56,18 @@ arc2_centr_dec = DrySpells(
 
 arc2_centr_mon = DrySpells(
     country_iso3 = "mwi",
+    polygon_path = POLY_PATH,
+    bound_col = "ADM2_PCODE",
     monitoring_start = "2021-12-25",
     monitoring_end = MONITORING_END,
     range_x = RANGE_X,
     range_y = RANGE_Y
 )
 
-# arc2_centr_dec.download()
-# arc2_centr_dec.aggregate_data(POLY_PATH, "ADM2_PCODE")
-# arc2_centr_dec.calculate_rolling_sum()
-# df_ds=arc2_centr_dec.identify_dry_spells()
+#arc2_centr_dec.download()
+#arc2_centr_dec.aggregate_data()
+#arc2_centr_dec.calculate_rolling_sum()
+#df_ds=arc2_centr_dec.identify_dry_spells()
 ```
 
 We compute the rainy season onset. Several definitions exist but we use "the occurrence of at least 40 mm of rainfall accumulated within 10 days after 1st November and not to be followed by a dry spell of 10 or more consecutive days within one month." [source](https://tjet.udsm.ac.tz/index.php/tjet/article/view/418)
@@ -146,20 +150,22 @@ daily_df_south_sel=daily_df_south[daily_df_south.date>="2021-11-01"]
 ```
 
 ```python
-chart_rain_2021=alt.Chart(daily_df_south_sel).mark_line().encode(
+chart_rain_2021=alt.Chart(daily_df_south_sel).mark_area().encode(
     x='date:T',
-    y='mean_ADM2_PCODE',
-    color=alt.Color('ADM2_PCODE:N')#, scale=alt.Scale(range=["#D3D3D3"]))
+    y=alt.Y('mean_ADM2_PCODE',title='Daily rainfall')
 ).properties(
     width=600,
     height=300,
     title="Rainfall from 01-11 2021 till Jan 2022"
+).facet(
+    facet='ADM2_PCODE:N',
+    columns=1
 )
 chart_rain_2021
 ```
 
 Nevertheless, we can see what the longest runs of consecutive days with less than 2mm were. 
-When looking at all of december, we  can see that many admin2's experienced a dry spell of around 12 days, with MW301 even reaching 21 days. All these long dry spells took place around the middle of December. 
+When looking at all of december, we  can see that many admin2's experienced a dry spell of around 12 days, with MW301 even reaching 21 days. All these long dry spells took place around the beginning to middle of December. 
 
 ```python
 df_dec_longest=arc2_centr_dec.find_longest_runs()
@@ -210,7 +216,7 @@ plt.title(f"Cumulative rainfall from {date_min} to {date_max}");
 ```
 
 ### Fun coding bug present
-The below code is indicating 1 during the monitoring period but I believe it should be 0 as we haven't seen any 14-day dry spell yet? 
+The below code is indicating 1 during the monitoring period but I believe it should be 0 as we haven't seen any 14-day dry spell yet?
 
 ```python
 print(
