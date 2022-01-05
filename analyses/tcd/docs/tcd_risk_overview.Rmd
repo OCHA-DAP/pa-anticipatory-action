@@ -40,7 +40,8 @@ Dernière mise à jour `r Sys.Date()`
 <br>
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE, error=FALSE}
-source("notebooks/tcd_risk_data_summary.R")
+library(here)
+source(here("notebooks/tcd_risk_data_summary.R"))
 
 data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
 plot_dir <-paste0(data_dir,'/public/processed/tcd/plots/')
