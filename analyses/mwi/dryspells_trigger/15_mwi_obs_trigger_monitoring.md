@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from datetime import date
 
-path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
+path_mod = f"{Path.cwd().parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.arc2_precipitation import DrySpells
 
@@ -24,7 +24,7 @@ The first we will do is setup the 3 monitors, which are going to use the 3 separ
 ```python
 ## Global variables for all monitoring
 
-POLY_PATH = os.path.join(
+POLY_PATH = Path(
     os.getenv('AA_DATA_DIR'),
     'public',
     'processed',
@@ -34,7 +34,7 @@ POLY_PATH = os.path.join(
 )
 
 # Admin3 file for mapping
-gdf_adm3 = gpd.read_file(os.path.join(
+gdf_adm3 = gpd.read_file(Path(
     os.getenv('AA_DATA_DIR'),
     'public',
     'raw',
@@ -46,25 +46,29 @@ gdf_adm3 = gpd.read_file(os.path.join(
 
 gdf_adm3 = gdf_adm3[gdf_adm3.ADM1_PCODE == "MW3"]
 
-MONITORING_START = "2018-01-07"
-MONITORING_END = "2018-03-07"
+MONITORING_START = "2000-01-01"
+MONITORING_END = "2022-01-05"
 RANGE_X = ("32E", "36E")
 RANGE_Y = ("20S", "5S")
 
 # centroid method
 arc2_centr = DrySpells(
     country_iso3 = "mwi",
+    polygon_path = POLY_PATH,
+    bound_col = "ADM2_PCODE",
     monitoring_start = MONITORING_START,
     monitoring_end = MONITORING_END,
     range_x = RANGE_X,
     range_y = RANGE_Y
 )
 
-arc2_centr.download_data()
+arc2_centr.download()
 
 # touching method
 arc2_touch = DrySpells(
     country_iso3 = "mwi",
+    polygon_path = POLY_PATH,
+    bound_col = "ADM2_PCODE",
     monitoring_start = MONITORING_START,
     monitoring_end = MONITORING_END,
     range_x = RANGE_X,
@@ -75,6 +79,8 @@ arc2_touch = DrySpells(
 # approximate mask
 arc2_approx = DrySpells(
     country_iso3 = "mwi",
+    polygon_path = POLY_PATH,
+    bound_col = "ADM2_PCODE",
     monitoring_start = MONITORING_START,
     monitoring_end = MONITORING_END,
     range_x = RANGE_X,
@@ -86,15 +92,15 @@ arc2_approx = DrySpells(
 Now with each of these, we can just re-process our data and calculate rolling sums and dry spells.
 
 ```python
-arc2_centr.aggregate_data(POLY_PATH, "ADM2_PCODE")
+arc2_centr.aggregate_data()
 arc2_centr.calculate_rolling_sum()
 arc2_centr.identify_dry_spells()
 
-arc2_touch.aggregate_data(POLY_PATH, "ADM2_PCODE")
+arc2_touch.aggregate_data()
 arc2_touch.calculate_rolling_sum()
 arc2_touch.identify_dry_spells()
 
-arc2_approx.aggregate_data(POLY_PATH, "ADM2_PCODE")
+arc2_approx.aggregate_data()
 arc2_approx.calculate_rolling_sum()
 arc2_approx.identify_dry_spells()
 ```
@@ -146,9 +152,11 @@ da_cum = da_cum.where(da_cum.values >= 0, np.NaN)
 da_cum.plot(ax = ax,
             cmap='Greys')
 gdf_adm3.plot(ax=ax, facecolor="none", alpha=0.5)
-plt.title(f"Cumulative rainfall from {arc2_centr.monitoring_start}")
+plt.title(f"Cumulative rainfall from {arc2_centr.date_min}")
 ```
 
-```python
+And lastly, how many days total in each admin 2, over our monitoring period, have had cumulative sums under our threshold. Let's just look at the centroid method for easier visualization.
 
+```python
+arc2_centr.find_longest_runs()
 ```

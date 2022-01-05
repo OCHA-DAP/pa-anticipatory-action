@@ -25,7 +25,7 @@ cod_dir <- file.path(Sys.getenv("AA_DATA_DIR"), "public", "raw", "mwi", "cod_ab"
 methods <- c("approximate_mask", "centroid", "touching")
 
 df_list <- map(methods, ~read_csv(
-  file.path(arc2_dir, glue("arc2_{.x}_mwi_dry_spells_14_days_32E_36E_20S_5S_master.csv"))
+  file.path(arc2_dir, glue("arc2_{.x}_mwi_dry_spells_14_days_32E_36E_20S_5S_main.csv"))
 ) %>% filter((month(ds_confirmation) <= 2) | (month(ds_confirmation) == 3 & day(ds_confirmation) <= 7),
              str_detect(ADM2_PCODE, "MW3")) %>%
   mutate(year = year(ds_confirmation))) %>%
@@ -34,7 +34,7 @@ df_list <- map(methods, ~read_csv(
 # get rolling sum precip data
 
 df_prec_list <- map(methods, ~read_csv(
-  file.path(arc2_dir, glue("arc2_{.x}_long_mwi_rolling_sum_14_days_32E_36E_20S_5S_master.csv"))
+  file.path(arc2_dir, glue("arc2_{.x}_long_mwi_rolling_sum_14_days_32E_36E_20S_5S_main.csv"))
 ) %>% filter((month(T) <= 2) | (month(T) == 3 & day(T) <= 7),
              str_detect(ADM2_PCODE, "MW3")) %>%
   mutate(year = year(T))) %>%

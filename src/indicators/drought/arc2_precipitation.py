@@ -90,6 +90,15 @@ class ARC2:
         self.range_x = range_x
         self.range_y = range_y
 
+        # store the dates for latest and earliest
+        # available data
+        raw_fp = self._get_raw_filepath(True)
+        if raw_fp.exists():
+            self._update_available_dates()
+        else:
+            self.latest_available_date = None
+            self.earliest_available_date = None
+
     def _download_date_ranges(
         self, date_min_dl: date, date_max_dl: date, main: bool = False
     ):
@@ -163,22 +172,19 @@ class ARC2:
                 f"into main file: {main_filepath.name}."
             )
 
-            with xr.open_dataarray(main_filepath) as da:
-                main = da.load()
-            with xr.open_dataarray(raw_filepath) as da:
-                raw = da.load()
+            main = xr.open_dataarray(main_filepath)
+            raw = xr.open_dataarray(raw_filepath)
 
-            main_merge = xr.concat([main, raw], dim="T")
+            main_merge = xr.concat([main, raw], dim=T_COL)
 
             # TODO: use these as temporary files rather
-            #  than download then delete
+            # than download then delete
             raw_filepath.unlink()
             main_filepath.unlink()
 
             # Ensuring fill value encoding is properly set in new
             # merged dataset
-            if "_FillValue" in main_merge.encoding:
-                main_merge.encoding["_FillValue"] = -999
+            main_merge.encoding["_FillValue"] = -999
 
             main_merge.to_netcdf(main_filepath)
 
@@ -234,9 +240,8 @@ class ARC2:
                 "Main file does not exist. " "First run `download(main=True)`."
             )
 
-    def load(
-        self,
-        raw_filepath: Union[Path, None] = None,
+    def load_raw_data(
+        self, raw_filepath: Union[Path, None] = None, convert_date: bool = True
     ) -> pd.DataFrame:
         """
         Convenience function to load raw raster data, squeeze
@@ -245,6 +250,9 @@ class ARC2:
 
         :param raw_filepath: Path to raw file to load. If `None`,
             loads main file.
+        :param convert_date: Convert date into datetime index.
+            If planning to save the raw data later, don't convert
+            because xarray doesn't know how to parse the date.
         """
         if raw_filepath is None:
             raw_filepath = self._get_raw_filepath(main=True)
@@ -265,7 +273,11 @@ class ARC2:
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
         # convert to standard date
-        da["T"] = da.indexes["T"].to_datetimeindex().date
+        if convert_date:
+            t_index = da.indexes[T_COL]
+            if not isinstance(t_index, pd.DatetimeIndex):
+                t_index = t_index.to_datetimeindex()
+            da[T_COL] = t_index.date
 
         return da
 
@@ -309,7 +321,7 @@ class ARC2:
             self._check_main_exists()
             # load main data and find all dates covered
             # compare to min/max and then download missing
-            da_main = self.load()
+            da_main = self.load_raw_data()
 
             # drop missing data if requested
             if replace_missing:
@@ -320,7 +332,7 @@ class ARC2:
                         self.date_min, datetime.min.time()
                     )
 
-                t_subset = da_main.indexes["T"] < replace_date
+                t_subset = da_main.indexes[T_COL] < replace_date
                 val_subset = np.max(
                     np.max(np.isnan(da_main.values), array=1), array=1
                 )
@@ -331,7 +343,7 @@ class ARC2:
 
             # subtracting 12 hours to ensure they match with dates
             # generated from pd.date_range()
-            loaded_dates = da_main.indexes["T"] - pd.to_timedelta("12:00:00")
+            loaded_dates = da_main.indexes[T_COL] - pd.to_timedelta("12:00:00")
             full_dates = pd.date_range(self.date_min, self.date_max)
             needed_dates = full_dates.difference(loaded_dates)
 
@@ -347,6 +359,7 @@ class ARC2:
                 self._sort_raw_data()
             else:
                 logger.info("No additional data needs downloading.")
+        self._update_available_dates()
 
     def _group_date_ranges(self, dates) -> list:
         """
@@ -380,7 +393,16 @@ class ARC2:
         with xr.open_dataarray(main_filepath) as ds:
             main = ds.load()
 
-        main.sortby("T").to_netcdf(main_filepath)
+        main.sortby(T_COL).to_netcdf(main_filepath)
+
+    def _update_available_dates(self):
+        """
+        Update available dates, earliest and latest,
+        based on dates in the raw data NetCDF file.
+        """
+        da = self.load_raw_data()
+        self.latest_available_date = max(da.indexes[T_COL])
+        self.earliest_available_date = min(da.indexes[T_COL])
 
 
 class DrySpells(ARC2):
@@ -404,11 +426,16 @@ class DrySpells(ARC2):
     :param rolling_window: Number of days for rolling sum of precipitation.
     :param rainfall_mm: Maximum cumulative precipitation during window to
         classify as dry spell.
+    :param polygon_path: Path to polygon file for clipping and aggregating
+        raster data.
+    :param bound_col: Column in polygon file to aggregate raster to.
     """
 
     def __init__(
         self,
         country_iso3: str,
+        polygon_path: Union[Path, str],
+        bound_col: str,
         monitoring_start: Union[str, date],
         monitoring_end: Union[str, date],
         range_x: Tuple[str, str],
@@ -428,6 +455,8 @@ class DrySpells(ARC2):
         self.agg_method = agg_method
         self.rolling_window = rolling_window
         self.rainfall_mm = rainfall_mm
+        self.polygon_path = polygon_path
+        self.bound_col = bound_col
 
         super().__init__(
             country_iso3=country_iso3,
@@ -444,11 +473,7 @@ class DrySpells(ARC2):
     # are available.
 
     def aggregate_data(
-        self,
-        polygon_path: Union[Path, str] = None,
-        bound_col: str = None,
-        reprocess: bool = False,
-        redownload: bool = False,
+        self, reprocess: bool = False, redownload: bool = False
     ) -> pd.DataFrame:
         """
         Get mean aggregation by admin boundary for the downloaded ARC2 data.
@@ -463,9 +488,6 @@ class DrySpells(ARC2):
         data for interpolation is typically available on previous and following
         days but often unavailable across large areas on the same day.
 
-        :param polygon_path: Path to polygon file for clipping and aggregating
-            raster data.
-        :param bound_col: Column in polygon file to aggregate raster to.
         :param reprocess: Boolean, if `True` reprocesses all raster data.
             Otherwise, only processes dates that have not already been
             aggregated.
@@ -481,14 +503,14 @@ class DrySpells(ARC2):
         aggregated_filepath = self._get_aggregated_filepath()
         aggregated_filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        da = self.load()
+        da = self.load_raw_data()
 
         # load polygon data
         try:
-            gdf = gpd.read_file(polygon_path)
+            gdf = gpd.read_file(self.polygon_path)
         except DriverError:
             raise OSError(
-                "Clip file %s does not exist.", Path(polygon_path).name
+                "Clip file %s does not exist.", Path(self.polygon_path).name
             )
 
         # only process data for dates that have not already been aggregated
@@ -496,12 +518,12 @@ class DrySpells(ARC2):
         if aggregated_filepath.exists() and not reprocess:
             exist_time = pd.read_csv(
                 aggregated_filepath,
-                parse_dates=["T"],
-                usecols=["T"],
-                index_col=["T"],
+                parse_dates=[T_COL],
+                usecols=[T_COL],
+                index_col=[T_COL],
             ).index.date
 
-            da = da.sel(T=~da["T"].isin(exist_time))
+            da = da.sel(T=~da[T_COL].isin(exist_time))
             exist_stats = self.load_aggregated_data()
 
             if da.shape[0] == 0:
@@ -520,7 +542,7 @@ class DrySpells(ARC2):
 
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,
-            bound_col=bound_col,
+            bound_col=self.bound_col,
             raster_array=da,
             all_touched=all_touched,
             stats_list=["mean"],
@@ -530,14 +552,14 @@ class DrySpells(ARC2):
         if exist_stats is not None:
             # explicitly convert to datetime64 series before joining
             # and add infilled to ensure what's happening
-            df_zonal_stats["T"] = pd.to_datetime(df_zonal_stats["T"])
+            df_zonal_stats[T_COL] = pd.to_datetime(df_zonal_stats[T_COL])
             df_zonal_stats = df_zonal_stats.append(
                 exist_stats, ignore_index=True
             )
-            df_zonal_stats.sort_values(by=["T"], inplace=True)
+            df_zonal_stats.sort_values(by=[T_COL], inplace=True)
 
         # infill missing data with interpolation
-        data_col = f"mean_{bound_col}"
+        data_col = f"mean_{self.bound_col}"
 
         df_zonal_stats["infilled"] = np.where(
             df_zonal_stats[data_col].isna(), True, False
@@ -545,7 +567,7 @@ class DrySpells(ARC2):
 
         # TODO: look into limiting NA infilling only if there's
         # enough data value
-        df_zonal_stats[data_col] = df_zonal_stats.groupby(bound_col)[
+        df_zonal_stats[data_col] = df_zonal_stats.groupby(self.bound_col)[
             data_col
         ].transform(lambda x: x.interpolate())
 
@@ -573,7 +595,7 @@ class DrySpells(ARC2):
         just `filter` the data frame to the period for monitoring.
         """
         aggregated_fp = self._get_aggregated_filepath()
-        df = pd.read_csv(aggregated_fp, parse_dates=["T"])
+        df = pd.read_csv(aggregated_fp, parse_dates=[T_COL])
 
         if filter:
             df = df[
@@ -582,42 +604,16 @@ class DrySpells(ARC2):
             ]
         return df
 
-    def calculate_rolling_sum(self, reprocess: bool = False) -> pd.DataFrame:
+    # TODO: look into whether we want to include the reprocess code
+    # when bringing into the toolbox
+    def calculate_rolling_sum(self) -> pd.DataFrame:
         """
         Calculates rolling sum from the latest aggregated
         data, based on the DrySpell objects window of
         observations and aggregation method.
         """
         df = self.load_aggregated_data()
-
-        # only re-calculate rolling sum where necessary
-        if not reprocess and self._get_rolling_sum_filepath().exists():
-            prev_rollsum_df = self.load_rolling_sum_data()
-            # first we look at data before our previous roll sum
-            # and recalculate if sufficient data available
-            if min(prev_rollsum_df[T_COL]) - min(df[T_COL]) >= pd.Timedelta(
-                self.rolling_window, unit="days"
-            ):
-                before_df = df[df[T_COL] < min(prev_rollsum_df[T_COL])]
-                before_rs = self._calculate_rolling_sum(before_df)
-                prev_rollsum_df = pd.concat(before_rs, prev_rollsum_df)
-            # now we look at data after our previous roll sum
-            # and calculate for any new data after
-            if max(df[T_COL]) > max(prev_rollsum_df[T_COL]):
-                after_df = df[
-                    df[T_COL]
-                    > (
-                        max(prev_rollsum_df[T_COL])
-                        - pd.Timedelta(self.rolling_window, unit="days")
-                    )
-                ]
-                after_rs = self._calculate_rolling_sum(after_df)
-                prev_rollsum_df = pd.concat(prev_rollsum_df, after_rs)
-            rollsum_df = prev_rollsum_df
-        # otherwise, just calculate across entire dataframe
-        else:
-            rollsum_df = self._calculate_rolling_sum(df)
-
+        rollsum_df = self._calculate_rolling_sum(df)
         rollsum_fp = self._get_rolling_sum_filepath()
         rollsum_df.to_csv(rollsum_fp, index=False)
         return rollsum_df
@@ -626,15 +622,29 @@ class DrySpells(ARC2):
         """
         Calculates rolling sum on specific data frame.
         """
-        precip_col = df.columns[1]
-        adm_col = df.columns[2]
+        precip_col = f"mean_{self.bound_col}"
+        adm_col = self.bound_col
 
-        rollsum_col = "rolling_sum_" + str(self.rolling_window) + "_days"
-        df[rollsum_col] = df.groupby(adm_col)[precip_col].transform(
-            lambda x: x.rolling(window=self.rolling_window).sum()
+        rollsum_col = f"rolling_sum_{self.rolling_window}_days"
+
+        rollsum = (
+            df.groupby(adm_col)
+            .apply(
+                lambda x: x.set_index(T_COL)
+                .rolling(
+                    f"{self.rolling_window}D", min_periods=self.rolling_window
+                )
+                .sum()
+            )[precip_col]
+            .rename(rollsum_col)
         )
+
+        df = df.join(rollsum, on=[adm_col, T_COL])
+
         df.dropna(subset=[rollsum_col], inplace=True)
-        df = df[[T_COL, adm_col, rollsum_col]]
+
+        df = df[[T_COL, adm_col, rollsum_col]].reset_index(drop=True)
+
         return df
 
     def _get_rolling_sum_filepath(self) -> Path:
@@ -651,12 +661,13 @@ class DrySpells(ARC2):
         )
         return directory / filename
 
-    def load_rolling_sum_data(self, filter: bool = False) -> pd.DataFrame:
+    def load_rolling_sum_data(
+        self, filter_dates: bool = False
+    ) -> pd.DataFrame:
         """Load rolling sum data"""
         rollsum_fp = self._get_rolling_sum_filepath()
-        df = pd.read_csv(rollsum_fp, parse_dates=["T"])
-        if filter:
-            T_COL = df.columns[0]
+        df = pd.read_csv(rollsum_fp, parse_dates=[T_COL])
+        if filter_dates:
             df = df[
                 (df[T_COL].dt.date >= self.date_min)
                 & (df[T_COL].dt.date <= self.date_max)
@@ -675,10 +686,10 @@ class DrySpells(ARC2):
             self.calculate_rolling_sum()
 
         rollsum_fp = self._get_rolling_sum_filepath()
-        df = pd.read_csv(rollsum_fp, parse_dates=["T"])
+        df = pd.read_csv(rollsum_fp, parse_dates=[T_COL])
 
-        adm_col = df.columns[1]
-        rs_col = df.columns[2]
+        adm_col = self.bound_col
+        rs_col = f"rolling_sum_{self.rolling_window}_days"
 
         # Identify all dry spells and unique consecutive groups
         df["ds"] = df[rs_col] <= self.rainfall_mm
@@ -708,7 +719,7 @@ class DrySpells(ARC2):
 
         # Calculate rainfall within each dry spell
         precip_df = self.load_aggregated_data()
-        precip_col = precip_df.columns[1]
+        precip_col = f"mean_{self.bound_col}"
 
         total_df = pd.merge(
             left=ds_df, right=precip_df, on=adm_col, how="outer"
@@ -780,26 +791,29 @@ class DrySpells(ARC2):
             ]
         return df
 
-    def _write_to_monitoring_file(self, dry_spells: Union[None, int] = None):
-        monitoring_file = self._get_monitoring_filepath(
-            self.country_iso3, self.date_max
-        )
-        """
-        Write a simple output of the number
-        of dry spells observed in the last 14 days.
-        """
-        result = ""
-        with open(monitoring_file, "w") as f:
-            if dry_spells is not None:
-                result += "No dry spells identified in the last 14 days."
-                f.write(result)
-            else:
-                f.write(
-                    f"Dry spells identified in \
-                    {len(dry_spells)} admin regions:\n{dry_spells}"
-                )
-        f.close()
-        return
+    # TODO: Unused functionality from Hannah's very first original code.
+    # to be removed or used during refactor
+    #
+    # def _write_to_monitoring_file(self, dry_spells: Union[None, int] = None):
+    #     monitoring_file = self._get_monitoring_filepath(
+    #         self.country_iso3, self.date_max
+    #     )
+    #     """
+    #     Write a simple output of the number
+    #     of dry spells observed in the last 14 days.
+    #     """
+    #     result = ""
+    #     with open(monitoring_file, "w") as f:
+    #         if dry_spells is not None:
+    #             result += "No dry spells identified in the last 14 days."
+    #             f.write(result)
+    #         else:
+    #             f.write(
+    #                 f"Dry spells identified in \
+    #                 {len(dry_spells)} admin regions:\n{dry_spells}"
+    #             )
+    #     f.close()
+    #     return
 
     def find_longest_runs(self, filter: bool = True):
         """Find longest runs under mm of rainfall
@@ -811,8 +825,8 @@ class DrySpells(ARC2):
         """
         df = self.load_aggregated_data(filter=filter)
 
-        precip_col = df.columns[1]
-        adm_col = df.columns[2]
+        precip_col = f"mean_{self.bound_col}"
+        adm_col = self.bound_col
 
         def _find_longest_run(x, threshold):
             for i in range(len(x)):
@@ -855,20 +869,22 @@ class DrySpells(ARC2):
         boundaries.
         """
         if raster:
-            da = self.load()
-            da_date = da.indexes["T"].to_datetimeindex().date
+            da = self.load_raw_data()
             da = da[
-                (da_date >= self.date_min) & (da_date <= self.date_max), :, :
+                (da.indexes[T_COL] >= self.date_min)
+                & (da.indexes[T_COL] <= self.date_max),
+                :,
+                :,
             ]
-            da = da.reindex(T=list(reversed(da.indexes["T"])))
+            da = da.reindex(T=list(reversed(da.indexes[T_COL])))
             return xr.where(
-                da.cumsum(dim="T") <= self.rainfall_mm, 0, 1
-            ).argmax(dim="T")
+                da.cumsum(dim=T_COL) <= self.rainfall_mm, 0, 1
+            ).argmax(dim=T_COL)
 
         else:
             df = self.load_aggregated_data(filter=True)
-            precip_col = df.columns[1]
-            adm_col = df.columns[2]
+            precip_col = f"mean_{self.bound_col}"
+            adm_col = self.bound_col
             df = (
                 df.iloc[::-1]
                 .groupby(adm_col)
@@ -897,7 +913,7 @@ class DrySpells(ARC2):
 
     def cumulative_rainfall(self) -> xr.DataArray:
         """Calculate cumulative rainfall across monitoring period"""
-        da = self.load()
-        da_date = da.indexes["T"].to_datetimeindex().date
+        da = self.load_raw_data()
+        da_date = da.indexes[T_COL]
         da = da[(da_date >= self.date_min) & (da_date <= self.date_max), :, :]
-        return da.sum(dim="T")
+        return da.sum(dim=T_COL)

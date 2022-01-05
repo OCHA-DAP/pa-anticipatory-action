@@ -1,9 +1,8 @@
-import os
 import sys
 from datetime import timedelta
 from pathlib import Path
 
-path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[1]}/"
+path_mod = f"{Path(__file__).parents[3]}/"
 sys.path.append(path_mod)
 
 from src.indicators.drought import arc2_precipitation
