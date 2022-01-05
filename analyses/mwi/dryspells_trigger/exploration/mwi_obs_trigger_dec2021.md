@@ -13,7 +13,7 @@ import pandas as pd
 import altair as alt
 from datetime import date
 
-path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
+path_mod = f"{Path.cwd().parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.arc2_precipitation import DrySpells
 
@@ -29,7 +29,7 @@ We look at the data over all of the December month, as well as from the start of
 ```python
 ## Global variables for all monitoring
 
-POLY_PATH = os.path.join(
+POLY_PATH = Path(
     os.getenv('AA_DATA_DIR'),
     'public',
     'processed',
@@ -215,11 +215,77 @@ gdf_adm2_south.plot(ax=g.axes, facecolor="none", alpha=0.5)
 plt.title(f"Cumulative rainfall from {date_min} to {date_max}");
 ```
 
-### Fun coding bug present
-The below code is indicating 1 during the monitoring period but I believe it should be 0 as we haven't seen any 14-day dry spell yet?
+
+And for the email to the Malawi team, here's a faceted graph of cumulative rainfall across the administrative areas that clearly highlight the spread of rainfall in the latter parts of December and early January relative to early to mid December.
 
 ```python
-print(
-    f"Centroid method: {arc2_centr_mon.count_dry_spells()}\n"
+# save path for figure and table
+save_path = Path(
+    os.getenv('AA_DATA_DIR'),
+    'public',
+    'processed',
+    'mwi',
+    'dry_spells',
+    'v1'
 )
+
+def cum_plot_data(date_min, date_max):
+    da_cum = arc2_centr_dec.cumulative_rainfall(date_min=date_min,date_max=date_max)
+    da_cum = da_cum.rio.clip(gdf_adm2_south.geometry)
+    da_cum = da_cum.where(da_cum.values >= 0, np.NaN)
+    da_cum=da_cum.drop("spatial_ref")
+    return da_cum
+
+
+dates_list = [[date(2021,12,1),date(2021,12,7)],
+              [date(2021,12,8),date(2021,12,14)],
+              [date(2021,12,14),date(2021,12,21)],
+              [date(2021,12,22),date(2021,12,28)],
+              [date(2021,12,29),date(2022,1,4)]]
+             
+f,ax = plt.subplots(2, 3, figsize=(10,15))
+
+for i in range(5):
+    da_cum = cum_plot_data(dates_list[i][0], dates_list[i][1])
+    da_cum.plot(
+        cmap='Blues',
+        vmin=0,
+        vmax=120,
+        cbar_kwargs={"label":"Cumulative rainfall (mm)"},
+        ax=ax[i // 3, i % 3]
+    )
+    gdf_adm2_south.plot(ax=ax[i // 3, i % 3], facecolor="none", alpha=0.5)
+    ax[i // 3, i % 3].title.set_text(f"{dates_list[i][0].strftime('%b %d')} - {dates_list[i][1].strftime('%b %d')}")
+
+ax[1,2].set_visible(False)
+f.suptitle(f"Cumulative rainfall from December 1 until January 4", size=20)
+f.savefig(save_path / "mwi_december_cum_rainfall.png")
+```
+
+Lastly, let's look at the number of dry days and lengths across December and January.
+
+```python
+# December to January 2022 dry spells
+arc2_centr_check = DrySpells(
+    country_iso3 = "mwi",
+    polygon_path = POLY_PATH,
+    bound_col = "ADM2_PCODE",
+    monitoring_start = "2021-12-14",
+    monitoring_end = MONITORING_END,
+    range_x = RANGE_X,
+    range_y = RANGE_Y
+)
+
+dry_days = arc2_centr_check.count_dry_days()
+long_run = arc2_centr_check.find_longest_runs()
+admin_en_df = gdf_adm2_south[["ADM2_EN", "ADM2_PCODE"]].set_index("ADM2_PCODE")
+
+df = pd.merge(dry_days, long_run, left_index=True, right_index=True).merge(admin_en_df, left_index=True, right_index=True).reset_index(drop=True)
+df = df[df.columns[::-1]]
+df.columns = ["admin_area", "cumulative_days_under_2mm", "days_without_rainfall"]
+df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
+```
+
+```python
+
 ```
