@@ -1,5 +1,5 @@
 ---
-title: '<img src="ocha_logo.png" style="height:40px;float:left; margin:10px" /><img src="centre_logo.png" style="height:50px;float:left; margin:10px" />'
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
 pagetitle: 'Analyse du risque pour le Tchad'
 output:
   html_document:
@@ -13,6 +13,10 @@ output:
 editor_options:
   chunk_output_type: inline
 ---
+```{r wd-setup, include=FALSE}
+wd <- getwd()
+knitr::opts_knit$set(root.dir = wd)
+```
 
 ```{css style settings, echo = FALSE}
 
@@ -36,7 +40,11 @@ Dernière mise à jour `r Sys.Date()`
 <br>
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE, error=FALSE}
-source("tcd_risk_data_summary.R")
+library(here)
+source(here("notebooks/tcd_risk_data_summary.R"))
+
+data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
+plot_dir <-paste0(data_dir,'/public/processed/tcd/plots/')
 
 library(kableExtra)
 library(knitr)
@@ -62,7 +70,7 @@ Certaines données sont offertes au niveau Admin 2 (Départements). Dans certain
 ***
 ### Carte géographique du pays
 
-![](`r "admins.png"`){width=600px}
+![](`r paste0(plot_dir,"tcd_admin1_boundaries.png")`){width=600px}
 
 ### Sommaire de l'AIC
 
@@ -72,8 +80,8 @@ L'analyse de risques de chocs naturels (sécheresses et inondations) fit partie 
 
 #par(mar = c(4, 4, .1, .1))
 #include_graphics(aic_areas_map_path)
-aic_areas_map_path <- "aic-areas-map.png"
-aic_areas_table_path <- "aic-areas-table.png"
+aic_areas_map_path <- paste0(plot_dir,"aic-areas-map.png")
+aic_areas_table_path <- paste0(plot_dir,"aic-areas-table.png")
 
 ```
 
@@ -124,11 +132,7 @@ df_sum_display %>%
 
 Les prévisions de l'[IRI](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/) les plus récentes projettent une saison des pluies avec un cumul de précipitations au-delà de la normale pour la majeure partie du pays, et une saison en-deçà de la normale dans le sud est.
 
-```{r iri, echo = FALSE, include=T, fig.align='center', out.width='75%', eval=F}
-
-include_graphics(paste0(tcd_dir, 'IRI_JJA21_Afr_pcp.gif'))
-
-```
+<img src="https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/apr2021/images/JJA21_Afr_pcp.gif" alt="drawing" width="400"/>
 
 
 ### Annexe

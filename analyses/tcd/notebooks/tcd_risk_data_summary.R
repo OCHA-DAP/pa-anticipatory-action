@@ -6,9 +6,9 @@ library(readxl)
 library(stringr)
 library(tidyverse)
 library(ztable)
+library(here)
 
 data_dir <- Sys.getenv("AA_DATA_DIR")
-tcd_dir <- paste0(data_dir, '/raw/chad/risk/')
 
 # UNIT OF ANALYSIS = ADM1. 23 adm1 regions. Note some datasets only available at adm2.
 
@@ -16,7 +16,7 @@ tcd_dir <- paste0(data_dir, '/raw/chad/risk/')
 #### 1. Load in and clean the data
 ###############
 
-source("data_import_cleaning.R")
+source(here("notebooks/tcd_risk_data_cleaning.R"))
 
 ###############
 ##### 2. Combine the variables 
