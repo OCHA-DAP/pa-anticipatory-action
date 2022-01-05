@@ -252,7 +252,7 @@ dates_list = [[date(2021,12,1),date(2021,12,7)],
               [date(2021,12,22),date(2021,12,28)],
               [date(2021,12,29),date(2022,1,4)]]
              
-f,ax = plt.subplots(2, 3, figsize=(10,15))
+f,ax = plt.subplots(2, 3, figsize=(12,15))
 
 for i in range(5):
     da_cum = cum_plot_data(dates_list[i][0], dates_list[i][1])
@@ -265,10 +265,12 @@ for i in range(5):
     )
     gdf_adm2_south.plot(ax=ax[i // 3, i % 3], facecolor="none", alpha=0.5)
     ax[i // 3, i % 3].title.set_text(f"{dates_list[i][0].strftime('%b %d')} - {dates_list[i][1].strftime('%b %d')}")
+    if i not in [0, 3]:    
+        ax[i // 3, i % 3].get_yaxis().set_visible(False)
 
 ax[1,2].set_visible(False)
 f.suptitle(f"Cumulative rainfall from December 1 until January 4", size=20)
-# f.savefig(save_path / "mwi_december_cum_rainfall.png")
+# f.savefig(save_path / "mwi_december_cum_rainfall.jpeg", transparent=False)
 ```
 
 Lastly, let's look at the number of dry days and lengths across December and January.
