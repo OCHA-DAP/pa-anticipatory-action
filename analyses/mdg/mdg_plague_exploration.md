@@ -106,7 +106,7 @@ def plague_group_by_date(df, sel_start_date=None, sel_end_date=None):
 ```python
 #define period of current interest
 sel_start_date = "2021-08-02"
-sel_end_date = "2021-12-06"
+sel_end_date = "2021-01-03"
 sel_start_week = 31
 sel_end_week = 38
 ```
@@ -136,7 +136,7 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
 ```python
-plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-12-06.csv"
+plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2022-01-03.csv"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
 plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
@@ -144,7 +144,7 @@ plague_path_old = plague_dir / plague_data_filename_old
 ```
 
 ```python
-df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class,delimiter=";")
+df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class, delimiter=",")
 ```
 
 ```python
@@ -313,7 +313,7 @@ df_urb = df_urb[df_urb.urban_area_weighted_13.notnull()]
 df_urb = df_urb.loc[df_urb.urban_area_weighted_13 & (df_urb.clinical_form == "PP")]
 
 #group by date
-df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date="2021-11-08")
+df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date=sel_end_date)
 ```
 
 ```python
