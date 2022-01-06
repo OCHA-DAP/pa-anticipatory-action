@@ -119,7 +119,8 @@ We take the union of the different sources. With the exception of 2012 as we ass
 
 [We could further dive into the FN reports.. basically now we only checked the years for which there were CERF allocations]
 [what to do with the drought declarations? I am not convinced by the 2005 year.. might be caused by 2004? So far we have left it out, but not sure how to handle it ]
-[Make a table with the different sources? ]
+[from [the 2015 multi risk plan](https://reliefweb.int/sites/reliefweb.int/files/resources/tchad_-_plan_de_contingence_inter_agences_-1.pdf): Les plus grandes sécheresses des dernières années ont été enregistrées dans les années1968-1969, 1972-1974, 1983-1984, 2008-2009, et
+2011-2012. Why is this not consistent with the 2017 one :cry:]
 
 ### Indicator data sources
 
@@ -144,7 +145,7 @@ From these graphs, we can conclude several things:
 - In the 80s there was a particularly dry period. This is also confirmed by other sources. 
 - Since 2000 the 5 years with the largest percentage of below average rainfall were 2000, 2004, 2008, 2013, and 2015.
 - Since 2017 we haven't seen any significant percentage of below average rainfall. 
-- There is a limited correlation between below average precipitation and the list of socio-economic droughts. It is important to note here that the list of historical droughts is not fully validated and thus not too many conclusions should be drawn to it. For example the 2001 drought might refer to the 2000 rainy season. Nevertheless, for example in 2017 we know there was localized meteorological drought that are clearly not reflected in the below average seasonal precipitation. 
+- There is a limited correlation between below average precipitation and the list of socio-economic droughts. It is important to note here that the list of historical droughts is not fully validated and thus not too many conclusions should be drawn from it. For example the 2001 drought might refer to the 2000 rainy season. Nevertheless, for example in 2017 we know there was localized meteorological drought that is clearly not reflected in the below average seasonal precipitation over the area of interest. 
 
 
 ### Biomasse
@@ -195,7 +196,10 @@ plt_ndvi_anom_80
 
 Now that we have analyzed the 4 indicators individually, we can see how they correlate. If two or more indicators show a same pattern, then we prefer to simplify the trigger by not including all of them. 
 
-We can firstly do a very simple comparison by looking at the 5 worst years for each indicator since 2000, see below. 
+We can firstly do a very simple comparison by looking at the 5 worst years for each indicator since 2000, see below. We can see that none of the indicators match perfectly with the list of drought years. However, 3 out of 5 years were picked up by Biomasse as well as NDVI (2004, 2009,2011). The other two drought years (2001 and 2017) weren't the worst years for any of the indicators. For 2017 this might be explained by the notion of very localized drought. For 2001 we don't know the cause of the drought and whether it was caused by the rainy season of 2001 or 2000, so it is hard to pinpoint why this is not identified as meteorological drought by the different indicators. 
+
+We can see that especially below average rainfall shows little similarity to the list of drought years and also less to the other indicators. 
+[Is there a better way to visualize this correspondence? E.g. a gigantic confusion matrix? ]
 
 
 
@@ -212,7 +216,40 @@ It is not only about the match of years, but also about the separability between
 Note: naming it forecast is bit misleading
 
 ### Below average precipitation
-In the previous section we saw that the observed below average precipitation in JJA and JAS doesn't correspond very well with our list of historical socio-economic droughts. Nevertheless, it was decided to inspect the use of forecast of below average precipitation as this is the only widely-used product that is available well-ahead of time. Several seasonal forecast providers exist and the proposed provider was IRI. This data is only available since 2017. Since we didn't see any observed below average precipitation since 2017
+In the previous section we saw that the observed below average precipitation in JJA and JAS doesn't correspond very well with our list of historical socio-economic droughts. Nevertheless, it was decided to inspect the use of forecast of below average precipitation as this is the only widely-used product that is available well-ahead of time. Several seasonal forecast providers exist and the proposed provider was IRI. This data is only available since 2017. 
+
+Since 2017 these forecast didn't predict any high probability of below average precipitation during JJA and JAS. This is in line with our observations, which didn't see any observed below average precipitation since 2017. However, due to this limited data we don't have any events we would have wanted to activate. Therefore, it is hard to judge the quality of the forecast for our specific use case and even harder to set an appropriate threshold. 
+
+We therefore move to literature to base our findings on. One thing we can look at is a measure of skill, the GROC, which is provided by IRI as a map. See below this GROC for JJA and JAS with a leadtime of 2 months. 
+
+We would like a GROC of at least 0.5, so none-grey. We can see that in both cases a part of Chad has a GROC that is larger than 0.5, but also some parts that are grey. Especially during JJA this area is larger. These scores also differ per leadtime, where the shown leadtime of 3 months is one of the leadtimes having a relatively high GROC. Purely looking at these GROC's we can conclude that the forecasts can be used, but they should be used with caution, especially the one for JJA. 
+
+<img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jja_Ld3.gif" alt="drawing" width="400"/>
+
+<img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jas_Ld3.gif" alt="drawing" width="400"/>
+
+One disadvantage of the GROC is that it groups all three tercile categories: below normal, normal, and above normal. We are only interested in the below normal category and thus it would be good to know more about the skill for only that category. IRI only provides this across all seasons, for which the skill for below normal is even worse. However, there can be a large difference in predictability between seasons. 
+
+Another source we can retrieve information from is a paper by the UK Met Office titled [Assessing the Skill and Reliability of Seasonal Climate Forecasts in Sahelian West Africa](https://journals.ametsoc.org/view/journals/wefo/35/3/waf-d-19-0168.1.xml). 
+They assess the skill of several seasonal forecasts covering Chad. They only look at the JAS season with a leadtime of 2 or 3 months. In this paper the IRI model is not included, but one model that is a part of the IRI model is included. After discussion with both the UK Met Office and IRI not large differences are expected between the models and we can thus transfer these results with caution. 
+
+The paper shows that the ROC of the below  normal tercile is higher than that of the normal tercile, which is positive for our purpose. 
+
+```{r fig-roc-ncep, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
+
+knitr::include_graphics(paste0(plot_dir,'ukmet_roc_ncep.png'))
+
+```
+
+Lastly, it should be noted that there is a general notion that the forecast skill might be influenced by ENSO and Sea Surface Temperatures (SST) in other areas. There is a general notion that  during El Nino / La Nina states the forecast is more reliable than during Neutral states. This was noted by several climate scientists, while we didn't find a paper stating this clearly. For this trigger we left it out of the scope as it would complicate things too much, but it is an important notion and should be investigated further. 
+
+TODO: write about PRESASS
+
+Decisions to be made: 
+- Do we include PRESASS? 
+- Do we include JJA and/or JAS?
+- Do we evaluate the trigger at several points in time?
+- How much money do we attach? 
 
 
 
