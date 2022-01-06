@@ -312,5 +312,5 @@ df.columns = ["admin_area",
               "days_without_rainfall",
               "days_with_rainfall_lt_4mm",
               "days_with_rainfall_gte_4mm"]
-df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
+# df.to_csv(save_path / "mwi_december_2021_table.csv", index=False)
 ```
