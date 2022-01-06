@@ -152,7 +152,20 @@ def compute_raster_statistics(
 
         da_clip = raster_array.rio.set_spatial_dims(
             x_dim=lon_coord, y_dim=lat_coord
-        ).rio.clip(gdf_adm[geom_col], all_touched=all_touched)
+        )
+
+        # clip returns error if no overlapping raster cells for geometry
+        # so catching this and skipping rest of iteration so no stats computed
+        # TODO: investigate to specifically except this case
+        try:
+            da_clip = da_clip.rio.clip(
+                gdf_adm[geom_col], all_touched=all_touched
+            )
+        except Exception:
+            logger.warning(
+                "No overlapping raster cells for %s so skipping.", bound_id
+            )
+            continue
 
         grid_stat_all = []
         for stat in stats_list:
