@@ -99,6 +99,127 @@ class ARC2:
             self.latest_available_date = None
             self.earliest_available_date = None
 
+    def load_raw_data(
+        self, raw_filepath: Union[Path, None] = None, convert_date: bool = True
+    ) -> pd.DataFrame:
+        """
+        Convenience function to load raw raster data, squeeze
+        it and write its CRS. The function always accesses
+        the main file if a filepath is not provided.
+
+        :param raw_filepath: Path to raw file to load. If `None`,
+            loads main file.
+        :param convert_date: Convert date into datetime index.
+            If planning to save the raw data later, don't convert
+            because xarray doesn't know how to parse the date.
+        """
+        if raw_filepath is None:
+            raw_filepath = self._get_raw_filepath(main=True)
+
+        # load raw main data
+        try:
+            with rioxarray.open_rasterio(raw_filepath, masked=True) as ds:
+                da = ds.load()
+                da = da.squeeze().rio.write_crs(ARC2_CRS)
+
+        except RasterioIOError:
+            raise OSError(
+                "Raw raster file %s does not exist, "
+                "first download using `download()`.",
+                raw_filepath.name,
+            )
+
+        # explicitly remove missing values
+        da.values[da.values == -999] = np.NaN
+        # convert to standard date
+        if convert_date:
+            t_index = da.indexes[T_COL]
+            if not isinstance(t_index, pd.DatetimeIndex):
+                t_index = t_index.to_datetimeindex()
+            da[T_COL] = t_index.date
+
+        return da
+
+    # TODO: redownload option for toolbox in case data gets
+    # updated.
+
+    # TODO: check for dates first for clarity
+
+    # TODO: reconsider replace_missing during refactor as part
+    # of shift to using clobber like the rest
+
+    def download(
+        self,
+        main: bool = False,
+        replace_missing: bool = False,
+        start_replace_date: Optional[str] = None,
+    ):
+        """
+        Download ARC2 data for all dates between `self.date_min`
+        and `self.date_max`. If `main`, then all data
+        is downloaded directly from the servers and set as the
+        main file. If not `main`, then data
+        is only downloaded for dates not already
+        available in the main file, and then merged
+        into the main file.
+
+        :param main: Boolean on whether to set download as
+            main if `True`, or only download missing data
+            and merge to main if `False`.
+        :param replace_missing: Only relevant if not `main`.
+            If `True`, looks for missing values through entire
+            dataset and ensures they are re-downloaded.
+        :param start_replace_date: Only relevant if
+            ``replace_missing``. If an ISO 8601 string is
+            passed, then missing values are only looked for on
+            or after that date.
+        """
+        if main:
+            self._download_date_ranges(self.date_min, self.date_max, main)
+        else:
+            self._check_main_exists()
+            # load main data and find all dates covered
+            # compare to min/max and then download missing
+            da_main = self.load_raw_data()
+
+            # drop missing data if requested
+            if replace_missing:
+                if start_replace_date:
+                    replace_date = datetime.fromisoformat(start_replace_date)
+                else:
+                    replace_date = datetime.combine(
+                        self.date_min, datetime.min.time()
+                    )
+
+                t_subset = da_main.indexes[T_COL] < replace_date
+                val_subset = np.max(
+                    np.max(np.isnan(da_main.values), array=1), array=1
+                )
+
+                # keeps rows if date is less than specified or
+                # value is different than -999 (missing)
+                da_main = da_main.loc[t_subset | val_subset, :, :]
+
+            # subtracting 12 hours to ensure they match with dates
+            # generated from pd.date_range()
+            loaded_dates = da_main.indexes[T_COL] - pd.to_timedelta("12:00:00")
+            full_dates = pd.date_range(self.date_min, self.date_max)
+            needed_dates = full_dates.difference(loaded_dates)
+
+            if len(needed_dates) > 0:
+                date_ranges = self._group_date_ranges(needed_dates)
+                for dates in date_ranges:
+                    self._download_date_ranges(
+                        date_min_dl=dates[0],
+                        date_max_dl=dates[1],
+                        main=False,
+                    )
+
+                self._sort_raw_data()
+            else:
+                logger.info("No additional data needs downloading.")
+        self._update_available_dates()
+
     def _download_date_ranges(
         self, date_min_dl: date, date_max_dl: date, main: bool = False
     ):
@@ -239,127 +360,6 @@ class ARC2:
             raise OSError(
                 "Main file does not exist. " "First run `download(main=True)`."
             )
-
-    def load_raw_data(
-        self, raw_filepath: Union[Path, None] = None, convert_date: bool = True
-    ) -> pd.DataFrame:
-        """
-        Convenience function to load raw raster data, squeeze
-        it and write its CRS. The function always accesses
-        the main file if a filepath is not provided.
-
-        :param raw_filepath: Path to raw file to load. If `None`,
-            loads main file.
-        :param convert_date: Convert date into datetime index.
-            If planning to save the raw data later, don't convert
-            because xarray doesn't know how to parse the date.
-        """
-        if raw_filepath is None:
-            raw_filepath = self._get_raw_filepath(main=True)
-
-        # load raw main data
-        try:
-            with rioxarray.open_rasterio(raw_filepath, masked=True) as ds:
-                da = ds.load()
-                da = da.squeeze().rio.write_crs(ARC2_CRS)
-
-        except RasterioIOError:
-            raise OSError(
-                "Raw raster file %s does not exist, "
-                "first download using `download()`.",
-                raw_filepath.name,
-            )
-
-        # explicitly remove missing values
-        da.values[da.values == -999] = np.NaN
-        # convert to standard date
-        if convert_date:
-            t_index = da.indexes[T_COL]
-            if not isinstance(t_index, pd.DatetimeIndex):
-                t_index = t_index.to_datetimeindex()
-            da[T_COL] = t_index.date
-
-        return da
-
-    # TODO: redownload option for toolbox in case data gets
-    # updated.
-
-    # TODO: check for dates first for clarity
-
-    # TODO: reconsider replace_missing during refactor as part
-    # of shift to using clobber like the rest
-
-    def download(
-        self,
-        main: bool = False,
-        replace_missing: bool = False,
-        start_replace_date: Optional[str] = None,
-    ):
-        """
-        Download ARC2 data for all dates between `self.date_min`
-        and `self.date_max`. If `main`, then all data
-        is downloaded directly from the servers and set as the
-        main file. If not `main`, then data
-        is only downloaded for dates not already
-        available in the main file, and then merged
-        into the main file.
-
-        :param main: Boolean on whether to set download as
-            main if `True`, or only download missing data
-            and merge to main if `False`.
-        :param replace_missing: Only relevant if not `main`.
-            If `True`, looks for missing values through entire
-            dataset and ensures they are re-downloaded.
-        :param start_replace_date: Only relevant if
-            ``replace_missing``. If an ISO 8601 string is
-            passed, then missing values are only looked for on
-            or after that date.
-        """
-        if main:
-            self._download_date_ranges(self.date_min, self.date_max, main)
-        else:
-            self._check_main_exists()
-            # load main data and find all dates covered
-            # compare to min/max and then download missing
-            da_main = self.load_raw_data()
-
-            # drop missing data if requested
-            if replace_missing:
-                if start_replace_date:
-                    replace_date = datetime.fromisoformat(start_replace_date)
-                else:
-                    replace_date = datetime.combine(
-                        self.date_min, datetime.min.time()
-                    )
-
-                t_subset = da_main.indexes[T_COL] < replace_date
-                val_subset = np.max(
-                    np.max(np.isnan(da_main.values), array=1), array=1
-                )
-
-                # keeps rows if date is less than specified or
-                # value is different than -999 (missing)
-                da_main = da_main.loc[t_subset | val_subset, :, :]
-
-            # subtracting 12 hours to ensure they match with dates
-            # generated from pd.date_range()
-            loaded_dates = da_main.indexes[T_COL] - pd.to_timedelta("12:00:00")
-            full_dates = pd.date_range(self.date_min, self.date_max)
-            needed_dates = full_dates.difference(loaded_dates)
-
-            if len(needed_dates) > 0:
-                date_ranges = self._group_date_ranges(needed_dates)
-                for dates in date_ranges:
-                    self._download_date_ranges(
-                        date_min_dl=dates[0],
-                        date_max_dl=dates[1],
-                        main=False,
-                    )
-
-                self._sort_raw_data()
-            else:
-                logger.info("No additional data needs downloading.")
-        self._update_available_dates()
 
     def _group_date_ranges(self, dates) -> list:
         """
@@ -574,21 +574,6 @@ class DrySpells(ARC2):
         df_zonal_stats.to_csv(aggregated_filepath, index=False)
         return df_zonal_stats
 
-    def _get_aggregated_filepath(self) -> Path:
-        """
-        Return filepath to aggregated ARC2 data aggregated to ADM2 level
-        using arithmetic mean. All data stored within a single main file
-        for unique ISO3, aggregation method, and geographic range.
-        """
-        directory = self._get_directory(PROCESSED_DATA_DIR)
-        filename = (
-            f"arc2_{self.agg_method}_long_{self.country_iso3}_"
-            f"{self.range_x[0]}_{self.range_x[1]}_"
-            f"{self.range_y[0]}_{self.range_y[1]}_"
-            f"main.csv"
-        )
-        return directory / filename
-
     def load_aggregated_data(self, filter: bool = False) -> pd.DataFrame:
         """
         Load admin aggregated data. If `filter`, then
@@ -617,49 +602,6 @@ class DrySpells(ARC2):
         rollsum_fp = self._get_rolling_sum_filepath()
         rollsum_df.to_csv(rollsum_fp, index=False)
         return rollsum_df
-
-    def _calculate_rolling_sum(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Calculates rolling sum on specific data frame.
-        """
-        precip_col = f"mean_{self.bound_col}"
-        adm_col = self.bound_col
-
-        rollsum_col = f"rolling_sum_{self.rolling_window}_days"
-
-        rollsum = (
-            df.groupby(adm_col)
-            .apply(
-                lambda x: x.set_index(T_COL)
-                .rolling(
-                    f"{self.rolling_window}D", min_periods=self.rolling_window
-                )
-                .sum()
-            )[precip_col]
-            .rename(rollsum_col)
-        )
-
-        df = df.join(rollsum, on=[adm_col, T_COL])
-
-        df.dropna(subset=[rollsum_col], inplace=True)
-
-        df = df[[T_COL, adm_col, rollsum_col]].reset_index(drop=True)
-
-        return df
-
-    def _get_rolling_sum_filepath(self) -> Path:
-        """
-        Return filepath to ARC2 rolling sum values.
-        """
-        directory = self._get_directory(PROCESSED_DATA_DIR)
-        filename = (
-            f"arc2_{self.agg_method}_long_{self.country_iso3}_"
-            f"rolling_sum_{self.rolling_window}_days_"
-            f"{self.range_x[0]}_{self.range_x[1]}_"
-            f"{self.range_y[0]}_{self.range_y[1]}_"
-            f"main.csv"
-        )
-        return directory / filename
 
     def load_rolling_sum_data(
         self, filter_dates: bool = False
@@ -760,20 +702,6 @@ class DrySpells(ARC2):
 
         return ds_df
 
-    def _get_dry_spell_filepath(self) -> Path:
-        """
-        Return filepath to ARC2 rolling sum values.
-        """
-        directory = self._get_directory(PROCESSED_DATA_DIR)
-        filename = (
-            f"arc2_{self.agg_method}_{self.country_iso3}_"
-            f"dry_spells_{self.rolling_window}_days_"
-            f"{self.range_x[0]}_{self.range_x[1]}_"
-            f"{self.range_y[0]}_{self.range_y[1]}_"
-            f"main.csv"
-        )
-        return directory / filename
-
     def load_dry_spell_data(self, filter: bool = True) -> pd.DataFrame:
         """
         Load dry spells classified through method.
@@ -839,6 +767,46 @@ class DrySpells(ARC2):
             longest_run=(
                 precip_col,
                 lambda x: _find_longest_run(x, self.rainfall_mm),
+            )
+        )
+
+        return df_agg
+
+    def count_dry_days(self, filter: bool = True):
+        """Find number of days with no rainfall in period
+
+        Defaults to only finding the days with no rainfall
+        across the dates of interest.
+        """
+        df = self.load_aggregated_data(filter=filter)
+
+        precip_col = f"mean_{self.bound_col}"
+        adm_col = self.bound_col
+
+        df_agg = df.groupby(adm_col).agg(
+            dry_days=(
+                precip_col,
+                lambda x: sum(x == 0),
+            )
+        )
+
+        return df_agg
+
+    def count_rainy_days(self, filter: bool = True):
+        """Find number of days with >= 4mm rainfall in period
+
+        Defaults to only finding the days with no rainfall
+        across the dates of interest.
+        """
+        df = self.load_aggregated_data(filter=filter)
+
+        precip_col = f"mean_{self.bound_col}"
+        adm_col = self.bound_col
+
+        df_agg = df.groupby(adm_col).agg(
+            rainy_days=(
+                precip_col,
+                lambda x: sum(x >= 4),
             )
         )
 
@@ -911,9 +879,87 @@ class DrySpells(ARC2):
         df = self.days_under_threshold(raster=False)
         return sum(df.iloc[:, 1] >= number_days)
 
-    def cumulative_rainfall(self) -> xr.DataArray:
+    def cumulative_rainfall(
+        self, date_min: date = None, date_max: date = None
+    ) -> xr.DataArray:
         """Calculate cumulative rainfall across monitoring period"""
         da = self.load_raw_data()
         da_date = da.indexes[T_COL]
-        da = da[(da_date >= self.date_min) & (da_date <= self.date_max), :, :]
+        if date_min is None:
+            date_min = self.date_min
+        if date_max is None:
+            date_max = self.date_max
+        da = da[(da_date >= date_min) & (da_date <= date_max), :, :]
         return da.sum(dim=T_COL)
+
+    def _get_aggregated_filepath(self) -> Path:
+        """
+        Return filepath to aggregated ARC2 data aggregated to ADM2 level
+        using arithmetic mean. All data stored within a single main file
+        for unique ISO3, aggregation method, and geographic range.
+        """
+        directory = self._get_directory(PROCESSED_DATA_DIR)
+        filename = (
+            f"arc2_{self.agg_method}_long_{self.country_iso3}_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"main.csv"
+        )
+        return directory / filename
+
+    def _calculate_rolling_sum(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculates rolling sum on specific data frame.
+        """
+        precip_col = f"mean_{self.bound_col}"
+        adm_col = self.bound_col
+
+        rollsum_col = f"rolling_sum_{self.rolling_window}_days"
+
+        rollsum = (
+            df.groupby(adm_col)
+            .apply(
+                lambda x: x.set_index(T_COL)
+                .rolling(
+                    f"{self.rolling_window}D", min_periods=self.rolling_window
+                )
+                .sum()
+            )[precip_col]
+            .rename(rollsum_col)
+        )
+
+        df = df.join(rollsum, on=[adm_col, T_COL])
+
+        df.dropna(subset=[rollsum_col], inplace=True)
+
+        df = df[[T_COL, adm_col, rollsum_col]].reset_index(drop=True)
+
+        return df
+
+    def _get_rolling_sum_filepath(self) -> Path:
+        """
+        Return filepath to ARC2 rolling sum values.
+        """
+        directory = self._get_directory(PROCESSED_DATA_DIR)
+        filename = (
+            f"arc2_{self.agg_method}_long_{self.country_iso3}_"
+            f"rolling_sum_{self.rolling_window}_days_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"main.csv"
+        )
+        return directory / filename
+
+    def _get_dry_spell_filepath(self) -> Path:
+        """
+        Return filepath to ARC2 rolling sum values.
+        """
+        directory = self._get_directory(PROCESSED_DATA_DIR)
+        filename = (
+            f"arc2_{self.agg_method}_{self.country_iso3}_"
+            f"dry_spells_{self.rolling_window}_days_"
+            f"{self.range_x[0]}_{self.range_x[1]}_"
+            f"{self.range_y[0]}_{self.range_y[1]}_"
+            f"main.csv"
+        )
+        return directory / filename
