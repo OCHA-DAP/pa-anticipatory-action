@@ -540,8 +540,10 @@ df_rank=df_stats_reg_selm[df_stats_reg_selm.year>=1993].sort_values("perc_bavg",
 ```
 
 ```python
+#remains questionable what are the actual drought years 
+#but this is a list compiled from several sources
 # drought_years=[1993,1997,2001,2004,2009,2011,2017]
-drought_years=[1968,1969,1970,1971,1972,1973, 1983, 1984, 1993, 1997, 2001, 2004, 2005, 2009, 2011, 2017]
+drought_years=[1968,1969,1970,1971,1972,1973, 1983, 1984, 1993, 1997, 2001, 2004, 2009, 2011, 2017]
 ```
 
 #### CERF allocations
@@ -643,11 +645,19 @@ df_stats_drought=df_stats_reg_selm.copy()#[df_stats_reg_selm.year>=1993]
 df_stats_drought["drought"]=np.where(df_stats_drought.year.isin(drought_years),True,False)
 df_stats_drought["rp3"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[3,"rp_round"],True,False)
 df_stats_drought["rp5"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[5,"rp_round"],True,False)
+df_stats_drought["bavg_20"]=np.where(df_stats_drought.perc_bavg>=20,True,False)
 ```
 
 ```python
 #sel years since 1993 for cm as those are the years we have impact drought data for
 df_stats_drought_sely=df_stats_drought[df_stats_drought.year>=1993]
+```
+
+```python
+fig=compute_confusionmatrix_column(df_stats_drought,"season","drought","bavg_20","drought year in framework",
+                               f">=20% of area below average",
+                              title=f"Correspondence of >=20% area observed below average precipitation and reported drought years",
+                                  adjust_top=1.2)
 ```
 
 ```python
@@ -657,6 +667,31 @@ for rp in rp_cm:
                                    f"percentage bavg above {rp} year return period (>={int(df_rps_empirical_selm.loc[rp,'rp_round'])}%)",
                                   title=f"Correspondence of 1 in {rp} year observed below average precipitation and reported drought years",
                                       adjust_top=1.2)
+```
+
+```python
+def compute_performance_metrics(df,subgroup_col,target_col,predict_col,num_dec=2):
+    df_perf=pd.DataFrame(index=df[subgroup_col].unique(),columns=["valid_act_rate","fa_rate","det_rate","miss_rate","acc"],dtype=float)
+    for i, m in enumerate(df.sort_values(by=subgroup_col)[subgroup_col].unique()):
+        ax = fig.add_subplot(rows,colp_num,i+1)
+        y_target =    df.loc[df[subgroup_col]==m,target_col]
+        y_predicted = df.loc[df[subgroup_col]==m,predict_col]
+        cm = confusion_matrix(y_target=y_target, 
+                              y_predicted=y_predicted)
+        tn,fp,fn,tp=cm.flatten()
+        valid_act_rate=tp/(tp+fp)
+        fa_rate=1-valid_act_rate
+        det_rate=tp/(tp+fn)
+        miss_rate=1-det_rate
+        acc=(tp+tn) / (tp+tn+fp+fn)
+        df_perf.loc[m,["valid_act_rate","fa_rate","det_rate","miss_rate","acc"]]=[valid_act_rate,fa_rate,det_rate,miss_rate,acc]
+    #multiply by 100 to get percentage
+    df_perf=df_perf*100
+    return df_perf.round(decimals=num_dec)
+```
+
+```python
+compute_performance_metrics(df_stats_drought,"season","drought","rp5")
 ```
 
 ```python
