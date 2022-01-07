@@ -135,6 +135,7 @@ def _retrieve_forecast(
     pcode_col: str,
     leadtimes: List[int],
     use_unrounded_area_coords: bool,
+    source_cds: bool,
     resolution: str = None,
     all_touched: bool = False,
     add_col: List[str] = None,
@@ -156,33 +157,36 @@ def _retrieve_forecast(
     :param add_col: additional columns in gdf_bound that should be added to the
     output of compute_stats_admin
     """
-    ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
-        use_unrounded_area_coords=use_unrounded_area_coords
-    )
-    # add buffer
-    # not in correct crs for it to do properly
-    # but not important in this case as we just want some extra area
-    area = AreaFromShape(gdf_bound.buffer(3))
+    #downloading is only implemented if source_cds
+    #downloading for source_cds=False is implemented in aa-toolbox
+    if source_cds:
+        ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
+            use_unrounded_area_coords=use_unrounded_area_coords
+        )
+        # add buffer
+        # not in correct crs for it to do properly
+        # but not important in this case as we just want some extra area
+        area = AreaFromShape(gdf_bound.buffer(3))
 
-    year_start = (target_date - relativedelta(months=6)).year
+        year_start = (target_date - relativedelta(months=6)).year
 
-    months = [
-        (target_date - relativedelta(months=lt)).month for lt in leadtimes
-    ]
+        months = [
+            (target_date - relativedelta(months=lt)).month for lt in leadtimes
+        ]
 
-    # this will download the months for year_start and target_date.year
-    # so some of that data might not be needed, but that is okay
-    new_data = ecmwf_forecast.download(
-        country_iso3=iso3,
-        area=area,
-        year_min=year_start,
-        year_max=target_date.year,
-        months=months,
-    )
-    if new_data:
-        # this takes a few minutes, so only recompute
-        # if new data has been downloaded
-        ecmwf_forecast.process(country_iso3=iso3)
+        # this will download the months for year_start and target_date.year
+        # so some of that data might not be needed, but that is okay
+        new_data = ecmwf_forecast.download(
+            country_iso3=iso3,
+            area=area,
+            year_min=year_start,
+            year_max=target_date.year,
+            months=months,
+        )
+        if new_data:
+            # this takes a few minutes, so only recompute
+            # if new data has been downloaded
+            ecmwf_forecast.process(country_iso3=iso3)
     compute_stats_per_admin(
         iso3=iso3,
         resolution=resolution,
@@ -192,6 +196,7 @@ def _retrieve_forecast(
         pcode_col=pcode_col,
         add_col=add_col,
         use_unrounded_area_coords=use_unrounded_area_coords,
+        source_cds=source_cds,
         # do not use cache as new leadtimes can be added
         use_cache=False,
     )
@@ -402,6 +407,7 @@ def compute_trigger(
             pcode_col=pcode_col,
             leadtimes=range(0, 7) if leadtimes is None else leadtimes,
             use_unrounded_area_coords=use_unrounded_area_coords,
+            source_cds=source_cds,
             add_col=[adm_name_col],
             resolution=resolution,
             all_touched=all_touched,

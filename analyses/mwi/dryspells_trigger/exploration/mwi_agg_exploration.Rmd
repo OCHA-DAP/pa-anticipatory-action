@@ -1,0 +1,382 @@
+---
+title: "Comparison of MWI Observational Aggregation Methods"
+author: "Seth Caldwell"
+date: "15/12/2021"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(ggthemes)
+library(sf)
+library(stars)
+library(rasterVis)
+
+# set filepaths
+arc2_dir <- file.path(Sys.getenv("AA_DATA_DIR"), "public", "processed", "mwi", "arc2")
+cod_dir <- file.path(Sys.getenv("AA_DATA_DIR"), "public", "raw", "mwi", "cod_ab", "mwi_adm_nso_20181016_shp")
+
+# get methods dry spells data
+
+methods <- c("approximate_mask", "centroid", "touching")
+
+df_list <- map(methods, ~read_csv(
+  file.path(arc2_dir, glue("arc2_{.x}_mwi_dry_spells_14_days_32E_36E_20S_5S_main.csv"))
+) %>% filter((month(ds_confirmation) <= 2) | (month(ds_confirmation) == 3 & day(ds_confirmation) <= 7),
+             str_detect(ADM2_PCODE, "MW3")) %>%
+  mutate(year = year(ds_confirmation))) %>%
+  setNames(methods)
+
+# get rolling sum precip data
+
+df_prec_list <- map(methods, ~read_csv(
+  file.path(arc2_dir, glue("arc2_{.x}_long_mwi_rolling_sum_14_days_32E_36E_20S_5S_main.csv"))
+) %>% filter((month(T) <= 2) | (month(T) == 3 & day(T) <= 7),
+             str_detect(ADM2_PCODE, "MW3")) %>%
+  mutate(year = year(T))) %>%
+  setNames(methods)
+
+# get MWI admin data
+mwi_sf <- read_sf(
+  file.path(cod_dir, "mwi_admbnda_adm2_nso_20181016.shp")
+)
+
+# check dry spells as % of raster cells
+df_pct <- read_csv(
+  file.path(arc2_dir, "arc2_pct_area_dry_spells.csv"),
+  col_types = "_Td"
+) %>%
+  filter((month(time) < 3 & (!((month(time) == 1) & day(time) < 7)) | (month(time) == 3 & day(time) < 8)))
+
+# check dry spells as % of raster cells
+df_pct_cum <- read_csv(
+  file.path(arc2_dir, "arc2_pct_area_dry_spells_cumulative.csv"),
+  col_types = "_dd"
+)
+
+# raster file to map out dry spells per year
+ds <- read_ncdf(
+  file.path(arc2_dir, "arc2_raster_dry_spells_cum.nc")
+)
+
+ds_2016 <- filter(ds, year == 2015.5) %>% mutate(est_prcp = ifelse(est_prcp < 1, NA, 1))
+ds_2018 <- filter(ds, year == 2017.5) %>% mutate(est_prcp = ifelse(est_prcp < 1, NA, 1))
+
+# raster file of rollsum precip
+ds_rs <- read_ncdf(
+  file.path(arc2_dir, "arc2_raster_dry_spells.nc")
+)
+```
+
+## Aggregation method testing, ARC2 observation
+
+For the Malawi trigger, we want to confirm that the method of aggregation we are using for the observational trigger for ARC2 is optimal. For this, we need to compare the following three methods:
+
+- Centroid method, original 0.1º
+- Touching method, original 0.1º
+- Centroid method, upsampled 0.025º (approximate mask)
+
+## Years with dry spells
+
+<div class="columns-2">
+
+First, let's just look at the numbers of dry spells per year across the various methods.
+
+```{r years, echo = FALSE, fig.height=4.5, fig.width=6}
+years_df <- map2_dfr(
+  df_list,
+  names(df_list),
+  ~ .x %>%
+    mutate(year = year(ds_confirmation)) %>%
+    group_by(year) %>%
+    summarize(dry_spells = n(),
+              method = .y,
+              .groups = "drop")) %>%
+  right_join(expand_grid(year = 2000:2021, method = methods),
+             by = c("year", "method")) %>%
+  mutate(dry_spells = ifelse(is.na(dry_spells), 0, dry_spells),
+         activate = ifelse(dry_spells >= 3, "Activated", "Not activated")) 
+
+years_df %>%
+  ggplot(aes(x = method, y = year, fill = dry_spells, color = activate)) +
+  geom_tile(width = 0.7, height = 0.7,
+            size = 1) +
+  geom_text(aes(label=dry_spells),
+            color = "black",
+            size = 2) +
+  theme_minimal() +
+  scale_fill_continuous_tableau() +
+  scale_color_manual(values = c("red", NA)) +
+  labs( 
+    title = "Number of dry spells by method",
+    subtitle = "Malawi, January and February",
+    x = "Method",
+    y = "Year",
+    fill = "Number of dry spells"
+  )
+```
+
+
+
+
+We can see that our years of activation are the same in all methods, except that we wouldn't activate in 2018 unless we are using the centroid method.
+
+</div>
+
+## Areas with different dry spells
+
+<div class="columns-2">
+
+Most of the differences come from Zomba City, except in 2018.
+
+```{r diff_adms, echo = FALSE, warning=FALSE, message=FALSE, fig.height=4.5, fig.width=5}
+diff_df <- map2_dfr(
+  df_list,
+  names(df_list),
+   ~ .x %>%
+    filter(year %in% c(2005, 2008, 2010, 2011, 2018)) %>%
+    mutate(method = .y)) %>%
+  group_by(ADM2_PCODE, year) %>%
+  summarize(n = n(),
+            method = paste(method, collapse = ", "),
+            .groups = "drop_last") 
+
+map_df <- diff_df %>%
+  filter(n < 3) %>%
+  summarize(n = n(),
+            .groups = "drop") %>%
+  right_join(
+    mwi_sf,
+    by = "ADM2_PCODE"
+  ) %>%
+  filter(str_detect(ADM2_PCODE, "MW3")) %>%
+  st_as_sf()
+
+map_df %>%
+  ggplot(aes(fill = n)) +
+  geom_sf() +
+  theme_minimal() +
+  scale_fill_continuous_tableau() +
+  geom_sf_text(
+    data = filter(map_df, n > 0) %>%
+      st_as_sf(),
+    aes(label = ADM2_EN)
+  ) +
+  labs(
+    title = "Areas with different dry spells",
+    fill = "Years different"
+  )
+```
+
+```{r diff_table, fig.height=4, fig.width=3}
+diff_df %>%
+  filter(n < 3) %>%
+  ungroup() %>%
+  left_join(mwi_sf, by = "ADM2_PCODE") %>%
+  select(ADM2_EN, year, method) %>%
+  knitr::kable()
+```
+
+</div>
+
+## Raster-based dry spells
+```{r raster-analysis, fig.height = 5.5, fig.width = 8}
+df_pct %>%
+  mutate(year = year(time)) %>%
+  ggplot(aes(x = time, y = percent_area)) +
+  geom_area(fill = "#F07470") +
+  facet_wrap(~year, scales = "free_x") +
+  scale_x_datetime(date_breaks = "1 month",
+                   date_labels = "%b") +
+  labs(
+    x = "Time",
+    y = "% of area",
+    title = "Dry spells in Malawi's southern region",
+    subtitle = "% of raster cells in dry spell"
+  ) +
+  theme_minimal()
+```
+
+## Raster-based dry spells vs. admin
+```{r raster-compare, fig.height = 5.5, fig.width = 8}
+df_pct %>%
+  mutate(year = year(time)) %>%
+  group_by(year) %>%
+  summarize(percent_area = max(percent_area),
+            .groups = "drop") %>%
+  right_join(years_df, by = "year") %>%
+  ggplot(aes(x = dry_spells, y = percent_area, fill = method)) +
+  geom_point(shape = 21,
+             position =  position_dodge(0.5),
+             size = 2) +
+  scale_x_continuous(breaks = seq(0, 12, 3),
+                     minor_breaks = 1:12) +
+  scale_fill_brewer() +
+  theme_minimal() +
+  labs(
+    y = "% of area in dry spell",
+    x = "# of districts in dry spell (dodged to prevent overlap)",
+    fill = "Method",
+    title = "Comparing admin methods vs. % total area for dry spell identification",
+    subtitle = "Malawi, Southern Region, 2000 - 2021"
+  )
+```
+
+## Raster-based dry spells vs. admin
+```{r raster-compare-cum, fig.height = 5.5, fig.width = 8}
+cum_p <- df_pct_cum %>%
+  right_join(years_df, by = "year") %>%
+  ggplot(aes(x = dry_spells, y = percent_area, fill = method)) +
+  geom_point(shape = 21,
+             position =  position_dodge(0.5),
+             size = 2) +
+  scale_x_continuous(breaks = seq(0, 12, 3),
+                     minor_breaks = 1:12) +
+  scale_fill_brewer() +
+  theme_minimal() +
+  labs(
+    y = "% of area in dry spell (cumulative across entire season)",
+    x = "# of districts in dry spell (dodged to prevent overlap)",
+    fill = "Method",
+    title = "Comparing admin methods vs. % total area for dry spell identification",
+    subtitle = "Malawi, Southern Region, 2000 - 2021, cumulative % across season"
+  )
+
+cum_p
+```
+
+## Raster-based dry spells vs. admin
+
+```{r cum-p-years, fig.height = 5.5, fig.width = 8}
+cum_p +
+  annotate("rect",
+           xmin = 0.6,
+           xmax = 2.2,
+           ymin = 15.7,
+           ymax = 16.5,
+           alpha = 0.2,
+           fill = NA,
+           color = "black") +
+  annotate("text",
+           x = 2.8,
+           y = 16.1,
+           label = "2016") +
+  annotate("rect",
+           xmin = 1,
+           xmax= 3.2,
+           ymin = 10.7,
+           ymax = 11.5,
+           alpha = 0.2,
+           fill = NA,
+           color = "black") +
+  annotate("text",
+           x = 3.8,
+           y = 11.1,
+           label = "2018")
+```
+
+## Compare years
+
+<div class="columns-2">
+
+```{r raster-map-2016, fig.height = 5, fig.width = 3.5, warning = FALSE}
+mwi_adm3 <- mwi_sf %>%
+  filter(str_detect(ADM2_PCODE, "MW3")) %>%
+  st_as_sf()
+
+ggplot() +
+  geom_stars(data = ds_2016,
+             alpha = 0.5) +
+  scale_fill_continuous(na.value = NA) +
+  geom_sf(data = mwi_adm3,
+          fill = NA) +
+  geom_sf_text(data = mwi_adm3,
+               aes(label = ADM2_EN),
+               size = 2) + 
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.line = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.minor=element_blank(),
+        axis.text = element_blank()) +
+  labs(title = "2016 cumulative, 16% total area")
+```
+
+```{r raster-map-2018, fig.height = 5, fig.width = 3.5, warning = FALSE}
+ggplot() +
+  geom_stars(data = ds_2018,
+             alpha = 0.5) +
+  scale_fill_continuous(na.value = NA) +
+  geom_sf(data = mwi_adm3,
+          fill = NA) +
+  geom_sf_text(data = mwi_adm3,
+               aes(label = ADM2_EN),
+               size = 2) + 
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.line = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.minor=element_blank(),
+        axis.text = element_blank()) +
+  labs(title = "2018 cumulative, 11% total area")
+```
+
+</div>
+
+## Precipitation comparisons
+
+<div class="columns-2">
+
+```{r prec-comp, fig.height = 5.5, fig.width = 4, warning = FALSE}
+map2_dfr(
+  df_prec_list,
+  names(df_prec_list),
+   ~ .x %>%
+    mutate(method = .y)) %>%
+  pivot_wider(names_from = method,
+              values_from = rolling_sum_14_days) %>%
+  mutate(centroid_touching = centroid - touching) %>%
+  arrange(centroid_touching) %>%
+  mutate(n = row_number()) %>%
+  ggplot(aes(x = n, y = centroid_touching)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_minimal() +
+  theme(axis.title = element_blank()) + 
+  labs(title = "Centroid - touching")
+```
+
+```{r prec-comp2, fig.height = 5.5, fig.width = 4, warning = FALSE}
+map2_dfr(
+  df_prec_list,
+  names(df_prec_list),
+   ~ .x %>%
+    mutate(method = .y)) %>%
+  pivot_wider(names_from = method,
+              values_from = rolling_sum_14_days) %>%
+  mutate(centroid_mask = centroid - approximate_mask) %>%
+  arrange(centroid_mask) %>%
+  mutate(n = row_number()) %>%
+  ggplot(aes(x = n, y = centroid_mask)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_minimal() +
+  theme(axis.title = element_blank()) + 
+  labs(title = "Centroid - approximate mask")
+```
+
+</div>
+
+## Conclusions
+
+Our choice of aggregation method doesn't matter when we have extremely high geographic spread of of dry spells across the region. However, at lower prevalence of geographic spread, the choice has a large (and often random) impact on number of districts with dry spells observed.
+
+- Smaller areas like Blantyre City and Zomba City very sensitive to selection of method
+- There are not systematic differences between each method, so likely random the differences and chance for triggering
+- How do we select a method?
