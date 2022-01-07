@@ -1,9 +1,9 @@
 # IRI forecast as a trigger for drought in Chad
-This notebook explores the option of using IRI's seasonal forecast as part of drought-related trigger in Burkina Faso. 
+This notebook explores the option of using IRI's seasonal forecast as part of drought-related trigger in Chad. 
 From the country team the proposed trigger is:
 - Trigger #1 in March covering June-July-August or July-August-September. Threshold desired: 60%.
 - Trigger #2 in May covering June-July-August or July-August-September. Threshold desired: 60%. 
-- Targeted Admin1s: Barh el Gazel, Batha, Kanem, Lac (une partie), Ouaddaï (une partie), Sila (une partie), Wadi Fira
+- Targeted Admin1s: Lac, Kanem, Barh-El-Gazel, Batha, and Wadi Fira
 - 20% of those admin1s meeting the threshold
 
 This notebook explores if and when these triggers would be reached. As part of this exploration methods for aggregation from raster level to the percentage of the area are discussed. 
@@ -35,7 +35,6 @@ import pandas as pd
 import rioxarray
 import numpy as np
 import xarray as xr
-import seaborn as sns
 import cftime
 import calendar
 from dateutil.relativedelta import relativedelta
@@ -70,14 +69,18 @@ iso3="tcd"
 config=Config()
 parameters = config.parameters(iso3)
 country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
+data_processed_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.PROCESSED_DIR
 adm1_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin1_shp"]
+adm2_path=data_processed_dir/iso3/config.SHAPEFILE_DIR / "tcd_adm2_area_of_interest.gpkg"
 ```
 
 #### Set variables
 
 ```python
-#TODO: some admins only part should be included, check with team
-adm_sel=['Barh-El-Gazel','Batha','Kanem','Lac','Ouaddaï','Sila','Wadi Fira']
+gdf_adm1=gpd.read_file(adm1_bound_path)
+gdf_adm2=gpd.read_file(adm2_path)
+incl_adm_col="area_of_interest"
+gdf_aoi = gdf_adm2[gdf_adm2[incl_adm_col] == True]
 ```
 
 ```python
@@ -95,11 +98,6 @@ We plot the forecast raster data for the periods and leadtimes of interest. The 
 These figures are is similair to [the figure on the IRI Maproom](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html), except that the bins are defined slightly differently
 
 ```python
-gdf_adm1=gpd.read_file(adm1_bound_path)
-gdf_reg=gdf_adm1[gdf_adm1.admin1Name.isin(adm_sel)]
-```
-
-```python
 #F indicates the publication month, and L the leadtime. 
 #A leadtime of 1 means a forecast published in May is forecasting JJA
 ds_iri_dom=get_iri_data_dominant(config,download=False)
@@ -109,6 +107,7 @@ da_iri_dom_clip=da_iri_dom.rio.clip(gdf_adm1["geometry"], all_touched=True)
 ```
 
 ```python
+#facet plot of raster forecast data
 #not very neat function but does the job for now
 def plt_raster_iri(da_iri_dom_clip,
                    pub_mon,
@@ -133,7 +132,7 @@ def plt_raster_iri(da_iri_dom_clip,
     )
     for ax in g.axes.flat:
         gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
-        gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
+        gdf_aoi.boundary.plot(linewidth=1, ax=ax, color="red")
         ax.axis("off")
 
     g.fig.suptitle(f"Forecasts published in {calendar.month_abbr[pub_mon]} predicting {for_seas} (lt={lt}) \n The subtitles indicate the publishing date",y=1.1);
@@ -189,7 +188,7 @@ g=da_iri_dom_clip.where(da_iri_dom_clip.F.isin([cftime.Datetime360Day(2021, 2, 1
 )
 for ax in g.axes.flat:
     gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
-    gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
+    gdf_aoi.boundary.plot(linewidth=1, ax=ax, color="red")
     ax.axis("off")
 ```
 
@@ -206,20 +205,20 @@ da_iri_dom_blue=da_iri_dom.sel(F="2020-05-16",L=1).squeeze()
 ```
 
 ```python
-da_iri_dom_blue_centre=da_iri_dom_blue.rio.clip(gdf_reg["geometry"], all_touched=False)
+da_iri_dom_blue_centre=da_iri_dom_blue.rio.clip(gdf_aoi["geometry"], all_touched=False)
 g=da_iri_dom_blue_centre.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 g.axes.set_title(f"Included area with cell centres: {da_iri_dom_blue_centre.count().values} cells included")
-gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+gdf_aoi.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
 ```python
-da_iri_dom_blue_touched=da_iri_dom_blue.rio.clip(gdf_reg["geometry"], all_touched=True)
+da_iri_dom_blue_touched=da_iri_dom_blue.rio.clip(gdf_aoi["geometry"], all_touched=True)
 g=da_iri_dom_blue_touched.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 g.axes.set_title(f"Included area with all cells touching: {da_iri_dom_blue_touched.count().values} cells included")
-gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+gdf_aoi.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
@@ -233,14 +232,14 @@ da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
     #into smaller pieces
     resampling=Resampling.nearest,
     nodata=np.nan,
-).rio.clip(gdf_reg["geometry"], all_touched=False)
+).rio.clip(gdf_aoi["geometry"], all_touched=False)
 ```
 
 ```python
 g=da_iri_dom_blue_res.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 g.axes.set_title(f"Included area with approx weighted average")
-gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
+gdf_aoi.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
@@ -266,7 +265,7 @@ ds_iri = get_iri_data(config, download=False)
 ds_iri=ds_iri.rio.write_crs("EPSG:4326",inplace=True)
 da_iri=ds_iri.prob
 #select all cells touching the region
-da_iri_allt=da_iri.rio.clip(gdf_reg["geometry"], all_touched=True)
+da_iri_allt=da_iri.rio.clip(gdf_aoi["geometry"], all_touched=True)
 #C=0 indicates the below average tercile
 da_iri_allt_bavg=da_iri_allt.sel(C=0)
 ```
@@ -305,7 +304,7 @@ For now we set the minimum percentage of the area that should reach the threshol
 
 ```python
 #% probability of bavg
-threshold=40
+threshold=42.5
 #min percentage of the area that needs to reach the threshold
 perc_area=20
 ```
@@ -318,11 +317,11 @@ pcode0_col="admin0Pcod"
 ```python
 #compute stats
 #dissolve the region to one polygon
-gdf_reg_dissolved=gdf_reg.dissolve(by=adm0_col)
-gdf_reg_dissolved=gdf_reg_dissolved[[pcode0_col,"geometry"]]
+gdf_aoi_dissolved=gdf_aoi.dissolve(by=adm0_col)
+gdf_aoi_dissolved=gdf_aoi_dissolved[[pcode0_col,"geometry"]]
 
 df_stats_reg_bavg=compute_raster_statistics(
-        gdf=gdf_reg_dissolved,
+        gdf=gdf_aoi_dissolved,
         bound_col=pcode0_col,
         raster_array=da_iri_allt_bavg,
         lon_coord="longitude",
@@ -333,7 +332,7 @@ df_stats_reg_bavg=compute_raster_statistics(
         all_touched=True,
     )
 da_iri_allt_thresh=da_iri_allt_bavg.where(da_iri_allt_bavg>=threshold)
-df_stats_reg_bavg_thresh=compute_raster_statistics(gdf=gdf_reg_dissolved,bound_col=pcode0_col,raster_array=da_iri_allt_thresh,
+df_stats_reg_bavg_thresh=compute_raster_statistics(gdf=gdf_aoi_dissolved,bound_col=pcode0_col,raster_array=da_iri_allt_thresh,
                                                    lon_coord="longitude",lat_coord="latitude",stats_list=["count"],
                                                   all_touched=True)
 
@@ -364,6 +363,10 @@ df_stats_reg_bavg=df_stats_reg_bavg[(~df_stats_reg_bavg.perc_thresh.isnull())]
 df_stats_reg_bavg=df_stats_reg_bavg.sort_values("perc_thresh",ascending=False)
 ```
 
+```python
+df_stats_reg_bavg[df_stats_reg_bavg.perc_thresh>=20]
+```
+
 ## Analyze statistics probability below average
 
 
@@ -377,15 +380,24 @@ print(f"{round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area
 ```
 
 ```python
+#trig_mom includes the forecasts released in march and may
+#here we also add the forecasts of April and June for testing
+#the second parameter of the tuple is the leadtime
+trig_mom_all=trig_mom+[(4,2),(4,3),(6,1)]
+```
+
+```python
 #select the months and leadtimes included in the trigger
-df_stats_reg_bavg_trig_mom=df_stats_reg_bavg[df_stats_reg_bavg[['month', 'L']].apply(tuple, axis=1).isin(trig_mom)]
+df_stats_reg_bavg_trig_mom=df_stats_reg_bavg[df_stats_reg_bavg[['month', 'L']].apply(tuple, axis=1).isin(trig_mom_all)]
 ```
 
 ```python
 histo=alt.Chart(df_stats_reg_bavg).mark_bar().encode(
     alt.X("perc_thresh:Q", bin=alt.Bin(step=1),title=f"% of region with >={threshold} probability of bavg"),
     y='count()',
-).properties(title=[f"Occurence of the percentage of the region with >={threshold} probability of bavg","Red line indicates the threshold on the % of the area"])
+).properties(title=[f"Occurence of the percentage of the region with >={threshold} probability of bavg",
+                    "Across all seasons and leadtimes",
+                    "Red line indicates the threshold on the % of the area"])
 line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode(x='x')
 histo+line
 ```
@@ -399,6 +411,14 @@ histo=alt.Chart(df_stats_reg_bavg_trig_mom).mark_bar().encode(
                     "Red line indicates the threshold on the % of the area"])
 line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode(x='x')
 histo+line
+```
+
+```python
+df_stats_reg_bavg_trig_mom["pred_month"]=df_stats_reg_bavg_trig_mom.apply(lambda x: x["F"]+relativedelta(months=int(x["L"])),axis=1)
+```
+
+```python
+df_stats_reg_bavg_trig_mom.sort_values(["pred_month","L"])
 ```
 
 #### Dominant tercile
