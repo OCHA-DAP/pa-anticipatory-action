@@ -157,6 +157,8 @@ def _retrieve_forecast(
     :param add_col: additional columns in gdf_bound that should be added to the
     output of compute_stats_admin
     """
+    #downloading is only implemented if source_cds
+    #downloading for source_cds=False is implemented in aa-toolbox
     if source_cds:
         ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
             use_unrounded_area_coords=use_unrounded_area_coords
