@@ -202,7 +202,7 @@ p_ndvi_bm_fy_80 +
 point_year_df <- df %>%
   filter(anomaly_thresholds == 80, dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
-  filter(biomasse_anomaly <= 80 | ndvi_percent_area >= 12)
+  filter(biomasse_anomaly <= 80 | ndvi_percent_area >= 12 | year == 2017)
 
 p_ndvi_bm_year_comp <- p_ndvi_bm_fy_80 +
   ggrepel::geom_text_repel(
@@ -214,10 +214,21 @@ p_ndvi_bm_year_comp <- p_ndvi_bm_fy_80 +
              color = "white") +
   geom_hline(yintercept = 80,
              color = "white") +
-  geom_label(x = 7.5,
-            y = 120,
-            label = "Question is, how do we consider\nyears 2008 & 2013 captured by NDVI\nvs 2006 captured by Biomasse?\nDo we trust our list of years?",
-            hjust = 0)
+  geom_text(x = 2.2,
+            y = 75,
+            color = "white",
+            label = "Biomasse threshold",
+            fontface = "bold",
+            check_overlap = T) +
+  geom_text(x = 12.5,
+            y = 118,
+            color = "white",
+            label = "NDVI threshold",
+            fontface = "bold",
+            check_overlap = T,
+            angle = -90)
+
+p_ndvi_bm_year_comp
 
 ##########################
 #### NDVI PERFORMANCE ####
