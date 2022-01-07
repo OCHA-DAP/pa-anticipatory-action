@@ -28,9 +28,10 @@ Analysis last updated 2022-01-03
 <br>
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
-source("../notebooks/forecasts/biomasse_exploration.R")
-source("../notebooks/forecasts/wrsi_exploration.R")
-source("../notebooks/forecasts/ndvi_exploration.R")
+source("../notebooks/observations/biomasse_exploration.R")
+source("../notebooks/observations/wrsi_exploration.R")
+source("../notebooks/observations/ndvi_exploration.R")
+source("../notebooks/observations/biomasse_comms_analysis.R")
 library(kableExtra)
 library(knitr)
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
@@ -149,15 +150,10 @@ From these graphs, we can conclude several things:
 
 
 ### Biomasse
-Biomasse is based on a productivity measure of dry matter production (DMP) over 36 dekads in the year, measuring average daily production in each dekad (from VEGETATION sensor of PROBA-V). We use the biomasse anomaly which is the biomasse divided by the mean biomasse. 
-Biomasse is specifically designed with pastoralist areas in mind and measures more specifically the impact to vegetation than rainfall does. 
-The Biomasse data is made available near the end of the following dekad at ADMIN2 level. We download this data and aggregate it to the area of interest by taking the sum across the admins.  
 
-The graph below shows the Biomasse anomaly per year from June to November. We can see that 
+Biomasse is based on a productivity measure of dry matter production (DMP) over 36 dekads in the year, measuring average daily production in each dekad (from VEGETATION sensor of PROBA-V). We use the biomasse anomaly which is the cumulative biomasse until that dekad for that season, divided by the mean cumulative biomasse up until that dekad across all years. Seasons are defined as starting in the first dekad of April.
 
-- The anomaly significantly differs per year
-- In several seasons we see a dip earlier in the season but this recovers later, i.e. begin of season values are not always representative for the end of season state. 
-- An anomaly of <= 40 as proposed by the working group is never reached
+Biomasse is specifically designed with pastoralist areas in mind and measures more specifically the impact to vegetation than rainfall does.  The Biomasse data is made available near the end of the following dekad at ADMIN2 level, meaning a publication delay of about 20 days. We download this data and aggregate it to the area of interest by taking the sum across the administrative areas of interest.  
 
 ```{r fig-bm-jjason, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
 
@@ -165,17 +161,25 @@ plt_bm_anom_jjason
 
 ```
 
+As we can see from the graph above:
+
+- The anomaly significantly differs per year;
+- In several seasons we see a dip earlier in the season but this recovers later, i.e. begin of season values are not always representative for the end of season state;
+- An anomaly of <= 40 as proposed by the working group is never reached
+
 We can also compare the Biomasse values in November to the list of socio-economic droughts. Since the anomaly of 40 is never seen, we changed it to 80 as this gave the best correspondence with the historical socio-economic droughts. The confusion matrix is shown below. From this we can see that there is a decent correlation. 
 
-```{r cm-bm-80-nov, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
+```{r cm-bm-80-nov, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '60%'}
 
 bm_cm_80_nov
 
 ```
 
 ### WRSI
-The WRSI is based on the use of precipitation and potential evaporanspiration (PET) data. Currently, these are sourced from NOAA CPC rainfall estimates (RFE) and Global  Data Assimilation System (GDAS) PET data. 
-The data is made available near the beginning of the following dekad. They generate separate data for cropland and rangeland. 
+
+The WRSI is based on the use of precipitation and potential evaporanspiration (PET) data. Previously, these were sourced from NOAA CPC rainfall estimates (RFE) and Global Data Assimilation System (GDAS) PET data, however now precipitation data is sourced from CHIRPS and NOAA reference evapotranspiration (ETO) data.
+
+The data is made available near the beginning of the following dekad, with only a 1 or 2 day delay. Data is generated separate for cropland and rangeland, with both parts overlapping. For the purposes of comparison, we use the WRSI anomaly, which is the % of the extended WRSI in the current dekad relative to the median in all other years.
 
 ```{r wrsi-crop-anom-80, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
 
@@ -183,14 +187,15 @@ plt_crop_anom_80
 
 ```
 
-
 ### NDVI
+
+The normalized difference vegetation index (NDVI) is a simple measure of vegetation using the difference between near-infrared and red light. We use the temporally smoothed NDVI anomaly published by USGS, with anomaly calculated as the percent of the median in the current dekad compared to all other years.
+
 ```{r ndvi-anom-80, dpi=300, include=T, message= FALSE, warning=FALSE,out.width = '100%'}
 
 plt_ndvi_anom_80
 
 ```
-[the y labels of this graph cannot be correct..]
 
 ### Comparison of the data sources
 
@@ -208,6 +213,10 @@ We can see that especially below average rainfall shows little similarity to the
 knitr::include_graphics(paste0(plot_dir,'tcd_table_worst_5years.png'))
 
 ```
+
+
+Other observational data sources were compared to Biomasse, the Water Requirement Satisfaction Index (WRSI) and Normalized Difference Vegetation Index (NDVI). The WRSI is based on the use of precipitation and potential evaporanspiration (PET) data, sourced from CHIRPS precipitation and NOAA reference evapotranspiration data respectively. The normalized difference vegetation index (NDVI) is a simple measure of vegetation using the difference between near-infrared and red light. We use the temporally smoothed NDVI sourced from eMODIS and published by USGS. For both NDVI and WRSI, anomaly values were used in the comparison.
+
 
 It is not only about the match of years, but also about the separability between drought and non-drought years that shows the quality of the indicator [add some of Seth's green/red graphs? ]
 
@@ -241,7 +250,7 @@ knitr::include_graphics(paste0(plot_dir,'ukmet_roc_ncep.png'))
 
 ```
 
-Lastly, it should be noted that there is a general notion that the forecast skill might be influenced by ENSO and Sea Surface Temperatures (SST) in other areas. There is a general notion that  during El Nino / La Nina states the forecast is more reliable than during Neutral states. This was noted by several climate scientists, while we didn't find a paper stating this clearly. For this trigger we left it out of the scope as it would complicate things too much, but it is an important notion and should be investigated further. 
+Lastly, it should be noted that there is a general notion that the forecast skill might be influenced by ENSO and Sea Surface Temperatures (SST) in other areas. There is a general notion that during El Nino / La Nina states the forecast is more reliable than during Neutral states. This was noted by several climate scientists, while we didn't find a paper stating this clearly. For this trigger we left it out of the scope as it would complicate things too much, but it is an important notion and should be investigated further. 
 
 TODO: write about PRESASS
 
