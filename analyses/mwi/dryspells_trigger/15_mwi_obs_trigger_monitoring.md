@@ -46,8 +46,8 @@ gdf_adm3 = gpd.read_file(Path(
 
 gdf_adm3 = gdf_adm3[gdf_adm3.ADM1_PCODE == "MW3"]
 
-MONITORING_START = "2000-01-01"
-MONITORING_END = "2022-01-05"
+MONITORING_START = "2022-01-07"
+MONITORING_END = date.today()
 RANGE_X = ("32E", "36E")
 RANGE_Y = ("20S", "5S")
 
@@ -115,7 +115,7 @@ print(
 )
 ```
 
-And are we getting close to triggering? This is useful during monitoring. Let's check the number of areas that have gotten 12 days or more cumulative sum below 2mm rainfall.
+And are we getting close to triggering? This is useful during monitoring. Let's check the number of areas that have gotten 12 days or more cumulative sum below 2mm rainfall. We can also check the current cumulative sum
 
 ```python
 DAYS = 12
@@ -125,6 +125,10 @@ print(
     f"Touching method: {arc2_touch.count_days_under_threshold(DAYS)}\n"
     f"Approx m method: {arc2_approx.count_days_under_threshold(DAYS)}"
 )
+```
+
+```python
+arc2_centr.days_under_threshold(raster=False)
 ```
 
 So, if we have triggered, we also want to plot the cumulative rainfall across our area of interest and monitoring period, as well as numbers of days without rain above 2mm. We can plot with any of the methods of aggregation, but chose to use centroid for below.
@@ -159,4 +163,12 @@ And lastly, how many days total in each admin 2, over our monitoring period, hav
 
 ```python
 arc2_centr.find_longest_runs()
+```
+
+```python
+
+```
+
+```python
+
 ```

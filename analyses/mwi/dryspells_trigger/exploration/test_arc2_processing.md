@@ -47,7 +47,7 @@ arc2_test = DrySpells(
 
 arc2_test.download(main=True)
 
-ds = arc2_test.load()
+ds = arc2_test.load_raw_data()
 ds.indexes['T']
 ```
 
@@ -58,15 +58,15 @@ arc2_test = DrySpells(
     country_iso3 = "mwi",
     polygon_path = poly_path,
     bound_col = "ADM2_PCODE",
-    monitoring_start = "2000-01-01",
-    monitoring_end = "2022-01-04",
+    monitoring_start = "2021-09-01",
+    monitoring_end = "2021-09-04",
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S"),
 )
 
 arc2_test.download()
 
-ds2 = arc2_test.load()
+ds2 = arc2_test.load_raw_data()
 ds2.indexes['T']
 ```
 
@@ -75,30 +75,28 @@ In fact, now we can see that the data for the 2 extra days, on either side of th
 We can also see that if we process the data that we can calculate rolling sums across monitoring and potentially capture dry spells.
 
 ```python
-# arc2_test.aggregate_data(reprocess=True)
+arc2_test.aggregate_data(reprocess=True)
 arc2_test.calculate_rolling_sum()
 arc2_test.identify_dry_spells()
 ```
 
-Of course, we're in the middle of the dry season so in fact everywhere identifies a dry spell! Now, let's say we are again wanting to re-run the system. We can do data from the beginning of the year until today, since `monitoring_end` (and `monitoring_start`) accepts strings *or* dates. We can also use just 2 simple functions to redownload, reprocess, and identify all dry spells.
+Of course, we're in the middle of the dry season so in fact everywhere identifies a dry spell! Now, let's say we are again wanting to re-run the system. What happens if we add additional data for times that aren't contiguous with the previous times?
 
-```python
-arc2_test.load_aggregated_data()
-```
+
+What happens if we add in additional data.
 
 ```python
 arc2_test = DrySpells(
     country_iso3 = "mwi",
+    polygon_path = poly_path,
+    bound_col = "ADM2_PCODE",
     monitoring_start = "2021-01-01",
     monitoring_end = date.today(),
     range_x = ("32E", "36E"),
     range_y = ("20S", "5S")
 )
 
-arc2_test.aggregate_data(poly_path, "ADM2_PCODE", redownload=True)
-arc2_test.identify_dry_spells(reprocess=True)
-```
-
-```python
-
+arc2_test.download()
+arc2_test.aggregate_data(poly_path, "ADM2_PCODE")
+arc2_test.identify_dry_spells()
 ```

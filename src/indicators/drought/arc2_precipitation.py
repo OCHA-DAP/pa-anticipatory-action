@@ -10,7 +10,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
-import rioxarray
+import rioxarray  # noqa: F401
 import xarray as xr
 from fiona.errors import DriverError
 from rasterio.errors import RasterioIOError
@@ -118,7 +118,7 @@ class ARC2:
 
         # load raw main data
         try:
-            with rioxarray.open_rasterio(raw_filepath, masked=True) as ds:
+            with xr.open_dataarray(raw_filepath) as ds:
                 da = ds.load()
                 da = da.squeeze().rio.write_crs(ARC2_CRS)
 
@@ -128,7 +128,7 @@ class ARC2:
                 "first download using `download()`.",
                 raw_filepath.name,
             )
-
+        return da
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
         # convert to standard date
@@ -393,6 +393,7 @@ class ARC2:
         with xr.open_dataarray(main_filepath) as ds:
             main = ds.load()
 
+        main.encoding["_FillValue"] = -999
         main.sortby(T_COL).to_netcdf(main_filepath)
 
     def _update_available_dates(self):
@@ -543,6 +544,8 @@ class DrySpells(ARC2):
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,
             bound_col=self.bound_col,
+            lon_coord="X",
+            lat_coord="Y",
             raster_array=da,
             all_touched=all_touched,
             stats_list=["mean"],
