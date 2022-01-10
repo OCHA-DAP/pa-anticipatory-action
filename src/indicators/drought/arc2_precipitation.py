@@ -10,7 +10,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
-import rioxarray
+import rioxarray  # noqa: F401
 import xarray as xr
 from fiona.errors import DriverError
 from rasterio.errors import RasterioIOError
@@ -118,7 +118,7 @@ class ARC2:
 
         # load raw main data
         try:
-            with rioxarray.open_rasterio(raw_filepath, masked=True) as ds:
+            with xr.open_dataarray(raw_filepath) as ds:
                 da = ds.load()
                 da = da.squeeze().rio.write_crs(ARC2_CRS)
 
