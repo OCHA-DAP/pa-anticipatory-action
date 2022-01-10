@@ -72,7 +72,7 @@ bm_end_season_p <- end_season_metrics %>%
   filter(name %in% c("Valid activation rate", "False alarm rate", "Miss rate")) %>%
   ggplot(aes(x = month_pub, y = name)) +
   geom_tile(aes(alpha = value, fill = name), color = "white") +
-  geom_text_repel(aes(label = scales::percent(value, accuracy = 1)),
+  geom_text_repel(aes(label = scales::percent(value, accuracy = 1, suffix = "")),
                   color = "#111111",
                   fontface = "bold",
                   size = 3.5,
@@ -99,7 +99,7 @@ bm_drought_list_p <- list_metrics %>%
   filter(name %in% c("Valid activation rate", "False alarm rate", "Miss rate")) %>%
   ggplot(aes(x = month_pub, y = name)) +
   geom_tile(aes(alpha = value, fill = name), color = "white") +
-  geom_text_repel(aes(label = scales::percent(value, accuracy = 1)),
+  geom_text_repel(aes(label = scales::percent(value, accuracy = 1, suffix = "")),
                   color = "#111111",
                   fontface = "bold",
                   size = 3.5,
@@ -128,7 +128,7 @@ pred_sep_df <- pred_jul_dec_df %>%
 
 bootstrapped_metrics <- map_dfr(
   1:10000,
-  ~ pred_sep_df[sample(1:nrow(pred_sep_df), 100, replace = T),] %>%
+  ~ pred_sep_df[sample(1:nrow(pred_sep_df), nrow(pred_sep_df), replace = T),] %>%
     calc_metrics(biomasse_pred, drought_list)
     )
 
@@ -136,19 +136,21 @@ bootstrapped_metrics %>%
   summarize(
     across(
       everything(),
-      ~quantile(.x, probs = c(0.025, 0.975))
+      ~quantile(.x, probs = c(0.025, 0.975), na.rm = T)
     )
   )
 
 # Historical events graph
 
-pred_sep_df %>%
+plot_df <- pred_sep_df %>%
   summarize(`False activations` = sum(biomasse_pred == TRUE & drought_list == FALSE),
             `Valid activations` = sum(biomasse_pred == TRUE & drought_list == TRUE),
             `Missed events` = sum(biomasse_pred == FALSE & drought_list == TRUE)) %>%
   pivot_longer(everything()) %>%
   mutate(dummy = 1,
-         name = factor(name, levels = c("False activations", "Valid activations", "Missed events"))) %>%
+         name = factor(name, levels = c("False activations", "Valid activations", "Missed events")))
+
+plot_df %>%
   ggplot(aes(fill = name, y = value, x = dummy)) +
   geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 1) +
   scale_fill_manual(values = c("#f07470", "#1bb580", "#f07470")) +
@@ -156,22 +158,45 @@ pred_sep_df %>%
   geom_segment(y = 0, yend = 5, x = 1.6, xend = 1.6,
              color = "#444444",
              arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
-  geom_text(y = 2.5, x = 1.7, label = "Drought events", size = 5, fontface = "bold") +
+  geom_text(y = 2.5,
+            x = 1.7,
+            label = paste(sum(plot_df[2:3, 2]), "drought events"),
+            size = 5,
+            fontface = "bold") +
   geom_segment(y = 2, yend = 7, x = 0.4, xend = 0.4,
              color = "#444444",
              arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
-  geom_text(y = 4.5, x = 0.3, label = "Activations", size = 5, fontface = "bold") +
+  geom_text(y = 4.5,
+            x = 0.3,
+            label = paste(sum(plot_df[1:2, 2]), "activations"),
+            size = 5,
+            fontface = "bold") +
   scale_x_continuous(limits = c(0.2, 1.8)) +
   scale_y_continuous(breaks = 0:7) +
-  geom_text(x = 1, y = 1, label = "Missed\nevents", color = "white", size = 5) +
-  geom_text(x = 1, y = 3.5, label = "Valid\nactivations", color = "white", size = 5) +
-  geom_text(x = 1, y = 6, label = "False\nactivations", color = "white", size = 5) +
+  geom_text(x = 1,
+            y = 1,
+            label = paste0("atop(bold('", unlist(plot_df[3,2]), "'),'missed events')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 3.5,
+            label = paste0("atop(bold('", unlist(plot_df[2,2]), "'),'valid activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 6,
+            label = paste0("atop(bold('", unlist(plot_df[1,2]), "'),'false activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
   theme_classic() +
-  theme(axis.line.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.text.y = element_blank(),
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
         legend.position = "none") +
-  labs(x = "",
-       y = "Total events and activations",
+  labs(x = NULL,
+       y = NULL,
        title = "Historical drought trigger activations and events",
        subtitle = "Threshold of 80% Biomasse anomaly published in September")
