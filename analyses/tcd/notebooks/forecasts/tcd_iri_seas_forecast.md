@@ -1,12 +1,18 @@
 # IRI forecast as a trigger for drought in Chad
-This notebook explores the option of using IRI's seasonal forecast as part of drought-related trigger in Chad. 
-From the country team the proposed trigger is:
+This notebook entails the analysis that was done for analyzing the IRI seasonal forecast as part of drought-related trigger in Chad. 
+An initial proposal from in-country partners was:
 - Trigger #1 in March covering June-July-August or July-August-September. Threshold desired: 60%.
 - Trigger #2 in May covering June-July-August or July-August-September. Threshold desired: 60%. 
 - Targeted Admin1s: Lac, Kanem, Barh-El-Gazel, Batha, and Wadi Fira
 - 20% of those admin1s meeting the threshold
 
 This notebook explores if and when these triggers would be reached. As part of this exploration methods for aggregation from raster level to the percentage of the area are discussed. 
+
+There are four main conclusions:
+1) Due to the limited data availability it is almost impossible to set an educated threshold. There is only data since 2017 and no drought events caused by large-scale lack of precipitation occurred during this period
+2) The general skill (GROC) over TCD is mediocre. It is therefore advised to use the forecasts but with caution
+3) A threshold of 60% is too high, as this has barely been reached at global level per raster cell, let alone over a larger area.
+4) We instead recommend a threshold of4 42.5% over 20% of the area as this is expected to be reached from time to time but not too often. The 42.5% is specifically set to match with the bins of [IRI's graphics](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/). 
 
 
 #### Skill
@@ -92,7 +98,7 @@ trig_mom=[(3,3),(3,4),(5,1),(5,2)]
 ## Inspect forecasts
 
 
-We load the iri data indicating the dominant tercile. The negative values indicate forecasted below average rainfall, and the positive values above average. We use the IRI website bins, where values between -37.5 and 37.5 are assigned to the normal tercile. It is open for discussion if we want to stick to these bins, or change to rounded bins (e.g. -40 to 40). 
+We load the iri data indicating the dominant tercile. The negative values indicate forecasted below average rainfall, and the positive values above average. We use the IRI website bins, where values between -37.5 and 37.5 are assigned to the normal tercile. We could also choose to use rounded bins instead(e.g. -40 to 40). 
 
 We plot the forecast raster data for the periods and leadtimes of interest. The red areas are the admin1's we are focussing on. 
 These figures are the same as [the figure on the IRI Maproom](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html).
@@ -195,9 +201,9 @@ for ax in g.axes.flat:
 
 ### Which cells to include for aggregation?
 For the trigger we have to aggregate a selection of raster cells to one number. Before we can do this, we have to decide which cells to include for the aggregation. 
-We inspect 3 different methods: including all cells with their centre in the region, all cells touching the region, and an approximate weighted average. 
+We inspect 3 different methods: including all cells with their centre in the region, all cells touching the region, and an approximate mask. 
 
-After discussion we concluded that the approximate weighted average is a valid method and thus use this further on. 
+After discussion we concluded that the approximate mask is a valid method and thus use this further on. 
 
 ```python
 #sel random values to enable plotting of included cells (so values are irrelevant)
@@ -223,7 +229,7 @@ g.axes.axis("off");
 ```
 
 ```python
-#approximate of a weighted average
+#approximate of a mask
 da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
     da_iri_dom_blue.rio.crs,
     #resolution it will be changed to, original is 1
@@ -238,7 +244,7 @@ da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
 ```python
 g=da_iri_dom_blue_res.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
-g.axes.set_title(f"Included area with approx weighted average")
+g.axes.set_title(f"Included area with approx mask")
 gdf_aoi.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
@@ -247,7 +253,7 @@ g.axes.axis("off");
 While before we looked at the dominant tercile, we now load the data containing the probability for each individual tercile. We focus on the below-average tercile.
 
 The proposed threshold by FAO was 60%. As can be seen in the image below, this is very high. 
-The first plot shows all values across all raster cells in the world and all seasons. We can see that the median is around 35. Values above 60 are very very rare and above 50 are already exreme. 
+The first plot shows all values across all raster cells in the world, across all seasons and leadtimes. We can see that the median is around 35. Values above 60 are very very rare and above 50 are already exreme. 
 The second plot shows the values of only the raster cells that touch the region but across all seasons. We can see that the median is again around 35 and that the distribution doesn't differ much across leadtimes. Values higher than 50 are very rare. We should be aware though that we only have 5 years of data.  
 
 Moreover, the pattern might be very different depending on the season. The third plot show the distribution when we only select the seasons and leadtimes that might be part of the trigger. We can again see a similair pattern, though the median is slighlty lower. However, we didn't observe below average precipitation the past 5 years so it is hard to say what the distribution might look like during a drought. 
@@ -272,25 +278,60 @@ da_iri_allt_bavg=da_iri_allt.sel(C=0)
 ```
 
 ```python
-da_iri.sel(C=0).hvplot.kde('prob',alpha=0.5).opts(ylabel="Probability below average",
+#check that all touching is done correctly
+g=da_iri_allt.sel(F="2021-03-16",L=2,C=0).plot()
+gdf_adm1.boundary.plot(ax=g.axes)
+```
+
+```python
+#upsample the resolution in order to create a mask of our aoi
+resolution = 0.05
+mask_list=[]
+for terc in da_iri_allt.C.values:
+    for lt in da_iri_allt.L.values:
+        da_terc_lt = da_iri_allt.sel(C=terc,L=lt)
+        da_terc_lt_mask = da_terc_lt.rio.reproject(
+            da_terc_lt.rio.crs,
+            resolution=resolution,
+            resampling=Resampling.nearest,
+            nodata=np.nan,
+        )
+        mask_list.append(da_terc_lt_mask.expand_dims({"C":[terc],"L":[lt]}))
+da_iri_mask=xr.combine_by_coords(mask_list).rio.clip(gdf_aoi["geometry"],all_touched=False).prob 
+# reproject changes longitude and latitude name to x and y
+# so change back here
+da_iri_mask = da_iri_mask.rename(
+    {"x": "longitude", "y": "latitude"}
+)
+da_iri_mask_bavg=da_iri_mask.sel(C=0)
+```
+
+```python
+#check that masking is done correctly
+g=da_iri_mask.sel(F="2021-03-16",L=2,C=0).plot()#squeeze().plot()
+gdf_adm1.boundary.plot(ax=g.axes)
+```
+
+```python
+da_iri.sel(C=0).hvplot.hist('prob',alpha=0.5).opts(ylabel="Probability below average",
 title="Forecasted probabilities of below average \n at raster level in the whole world across all seasons and leadtimes, 2017-2021")
 ```
 
 ```python
-da_iri_allt_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average",xlabel="leadtime",
+da_iri_mask_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average",xlabel="leadtime",
 title="Observed probabilities of bavg at raster level in the region of interest")
 ```
 
 ```python
 #transform data such that we can select by combination of publication month (F) and leadtime (L)
-da_plt=da_iri_allt_bavg.assign_coords(F=da_iri_allt_bavg.F.dt.month)
+da_plt=da_iri_mask_bavg.assign_coords(F=da_iri_mask_bavg.F.dt.month)
 da_plt=da_plt.stack(comb=["F","L"])
 #only select data that is selected for trigger
-da_iri_allt_trig_mom=xr.concat([da_plt.sel(comb=m) for m in trig_mom],dim="comb")
+da_iri_mask_trig_mom=xr.concat([da_plt.sel(comb=m) for m in trig_mom],dim="comb")
 ```
 
 ```python
-da_iri_allt_trig_mom.hvplot.violin('prob').opts(ylabel="Probability below average",
+da_iri_mask_trig_mom.hvplot.violin('prob').opts(ylabel="Probability below average",
                                                 title="observed probabilities of bavg for the month and leadtime combinations \n included in the triger")
 ```
 
@@ -316,141 +357,30 @@ pcode0_col="admin0Pcod"
 ```
 
 ```python
-resolution=0.05
+#compute stats
+#dissolve the region to one polygon
 gdf_aoi_dissolved=gdf_aoi.dissolve(by=adm0_col)
 gdf_aoi_dissolved=gdf_aoi_dissolved[[pcode0_col,"geometry"]]
-df_terc_lt_list = []
-for terc in da_iri_allt.C.values: 
-    for lt in da_iri_allt.L.values:
-        da_terc_lt = da_iri_allt.sel(C=terc,L=lt)
-        da_terc_lt_mask = da_terc_lt.rio.reproject(
-            da_terc_lt.rio.crs,
-            resolution=resolution,
-            resampling=Resampling.nearest,
-            nodata=np.nan,
-        )
-        # reproject changes longitude and latitude name to x and y
-        # so change back here
-        da_terc_lt_mask = da_terc_lt_mask.rename(
-            {"x": "longitude", "y": "latitude"}
-        )
-        df_terc_lt=compute_raster_statistics(
-                gdf=gdf_aoi_dissolved,
-                bound_col=pcode0_col,
-                raster_array=da_terc_lt_mask,
-                lon_coord="longitude",
-                lat_coord="latitude",
-                stats_list=["min","mean","max","std","count"],
-                #computes value where 20% of the area is above that value
-                percentile_list=[80],
-                all_touched=False,
-            )
-        da_terc_lt_mask_thresh=da_terc_lt_mask.where(da_terc_lt_mask>=threshold)
-        df_terc_lt_thresh=compute_raster_statistics(
-            gdf=gdf_aoi_dissolved,
-            bound_col=pcode0_col,
-            raster_array=da_terc_lt_mask_thresh,
-            lon_coord="longitude",
-            lat_coord="latitude",
-            stats_list=["count"],
-            all_touched=False
-        )
 
-        df_terc_lt["perc_thresh"] = df_terc_lt_thresh[f"count_admin0Pcod"]/df_terc_lt[f"count_admin0Pcod"]*100
-        df_terc_lt["F"]=pd.to_datetime(df_terc_lt["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
-        df_terc_lt["C"]=terc
-        df_terc_lt["month"]=df_terc_lt.F.dt.month
-        df_terc_lt_list.append(df_terc_lt)
-df_stats_reg = pd.concat(df_terc_lt_list)
-df_stats_reg.sort_values(["F","L","C"],inplace=True)
-```
-
-```python
-raster_diff_bel_abv=raster_clip.sel(C=0)-raster_clip.sel(C=2)
-    grid_dom = raster_clip.sel(C=0).where((raster_clip.sel(C=0).prob >=40) & (raster_diff_bel_abv>=5)).count(dim=[lon_coord,lat_coord])/raster_clip.count(dim=[lon_coord,lat_coord])*100
-    grid_dom = grid_dom.rename({var_name: "40th_bavg_cell"})
-```
-
-```python
-mask_list=[]
-for terc in da_iri_allt.C.values:
-    for lt in da_iri_allt.L.values:
-        da_terc_lt = da_iri_allt.sel(C=terc,L=lt)
-        da_terc_lt_mask = da_terc_lt.rio.reproject(
-            da_terc_lt.rio.crs,
-            resolution=resolution,
-            resampling=Resampling.nearest,
-            nodata=np.nan,
-        )
-        mask_list.append(da_terc_lt_mask.expand_dims({"C":[terc],"L":[lt]}))
-da_iri_mask=xr.combine_by_coords(mask_list)     
-```
-
-```python
-resolution=0.05
-gdf_aoi_dissolved=gdf_aoi.dissolve(by=adm0_col)
-gdf_aoi_dissolved=gdf_aoi_dissolved[[pcode0_col,"geometry"]]
-df_terc_lt_list = []
-
-for lt in da_iri_allt.L.values:
-    da_terc_lt = da_iri_allt.sel(L=lt)
-    da_terc_lt_bavg = da_terc_lt.sel(C=0)
-    da_terc_lt_bavg_mask = da_terc_lt_bavg.rio.reproject(
-        da_terc_lt.rio.crs,
-        resolution=resolution,
-        resampling=Resampling.nearest,
-        nodata=np.nan,
-    )
-    da_terc_lt_aavg_mask = da_terc_lt.sel(C=2).rio.reproject(
-        da_terc_lt.rio.crs,
-        resolution=resolution,
-        resampling=Resampling.nearest,
-        nodata=np.nan,
-    )
-    # reproject changes longitude and latitude name to x and y
-    # so change back here
-    da_terc_lt_mask = da_terc_lt_mask.rename(
-        {"x": "longitude", "y": "latitude"}
-    )
-    df_terc_lt=compute_raster_statistics(
-            gdf=gdf_aoi_dissolved,
-            bound_col=pcode0_col,
-            raster_array=da_terc_lt_mask,
-            lon_coord="longitude",
-            lat_coord="latitude",
-            stats_list=["min","mean","max","std","count"],
-            #computes value where 20% of the area is above that value
-            percentile_list=[80],
-            all_touched=False,
-        )
-    da_terc_lt_mask_thresh=da_terc_lt_mask.where(da_terc_lt_mask>=threshold)
-    df_terc_lt_thresh=compute_raster_statistics(
+df_stats_reg_bavg=compute_raster_statistics(
         gdf=gdf_aoi_dissolved,
         bound_col=pcode0_col,
-        raster_array=da_terc_lt_mask_thresh,
+        raster_array=da_iri_mask_bavg,
         lon_coord="longitude",
         lat_coord="latitude",
-        stats_list=["count"],
-        all_touched=False
+        stats_list=["min","mean","max","std","count"],
+        #computes value where 20% of the area is above that value
+        percentile_list=[80],
+        all_touched=True,
     )
+da_iri_mask_thresh=da_iri_mask_bavg.where(da_iri_mask_bavg>=threshold)
+df_stats_reg_bavg_thresh=compute_raster_statistics(gdf=gdf_aoi_dissolved,bound_col=pcode0_col,raster_array=da_iri_mask_thresh,
+                                                   lon_coord="longitude",lat_coord="latitude",stats_list=["count"],
+                                                  all_touched=True)
 
-    df_terc_lt["perc_thresh"] = df_terc_lt_thresh[f"count_admin0Pcod"]/df_terc_lt[f"count_admin0Pcod"]*100
-    
-    raster_diff_bel_abv=da_terc_lt_bavg-da_terc_lt.sel(C=2)
-    grid_dom = raster_clip.sel(C=0).where((raster_clip.sel(C=0).prob >=40) & (raster_diff_bel_abv>=5)).count(dim=[lon_coord,lat_coord])/raster_clip.count(dim=[lon_coord,lat_coord])*100
-    grid_dom = grid_dom.rename({var_name: "40th_bavg_cell"})
-    
-    df_terc_lt["F"]=pd.to_datetime(df_terc_lt["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
-    df_terc_lt["C"]=terc
-    df_terc_lt["month"]=df_terc_lt.F.dt.month
-    df_terc_lt_list.append(df_terc_lt)
-df_stats_reg = pd.concat(df_terc_lt_list)
-df_stats_reg.sort_values(["F","L","C"],inplace=True)
-```
-
-```python
-#only select the stats for the below normal tercile
-df_stats_reg_bavg=df_stats_reg[df_stats_reg.C==0]
+df_stats_reg_bavg["perc_thresh"] = df_stats_reg_bavg_thresh[f"count_admin0Pcod"]/df_stats_reg_bavg[f"count_admin0Pcod"]*100
+df_stats_reg_bavg["F"]=pd.to_datetime(df_stats_reg_bavg["F"].apply(lambda x: x.strftime('%Y-%m-%d')))
+df_stats_reg_bavg["month"]=df_stats_reg_bavg.F.dt.month
 ```
 
 NaN values indicate that the whole region is covered by a dry mask at that point. See [here](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/) for more information
@@ -518,9 +448,13 @@ df_stats_reg_bavg_trig_mom["pred_month"]=df_stats_reg_bavg_trig_mom.apply(lambda
 ```
 
 ```python
-df_stats_reg_bavg_trig_mom.sort_values(["pred_month","L"])
+df_stats_reg_bavg_trig_mom.sort_values(["pred_month","L"]).head()
 ```
 
 #### Dominant tercile
 Just like with BFA we might also want to examine if the below average tercile is the dominant tercile. For BFA we required at the pixel level that 
 probability below average >= (probability above average + 5%)
+
+```python
+da_iri.where((da_iri.sel(C=0)>=40)&(da_iri.sel(C=0)-da_iri.sel(C=2)<=5),drop=True).sel(C=0).hvplot.hist('prob',alpha=0.5)
+```
