@@ -207,8 +207,9 @@ plot_df %>%
 
 plot_df %>%
   ggplot(aes(fill = name, y = value, x = dummy)) +
-  geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 1) +
+  geom_bar(aes(alpha = name), position = "stack", stat = "identity", width = 1) +
   scale_fill_manual(values = c("#c2bea7", "#6a8a93", "#81a9b5")) +
+  scale_alpha_manual(values = c(0.8, 0.95, 0.8)) +
   coord_flip() +
   geom_segment(y = 0, yend = 5, x = 1.6, xend = 1.6,
                color = "#b1ae9d",
