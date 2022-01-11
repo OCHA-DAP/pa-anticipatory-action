@@ -128,9 +128,10 @@ class ARC2:
                 "first download using `download()`.",
                 raw_filepath.name,
             )
-        return da
+
         # explicitly remove missing values
         da.values[da.values == -999] = np.NaN
+
         # convert to standard date
         if convert_date:
             t_index = da.indexes[T_COL]
