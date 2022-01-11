@@ -200,3 +200,74 @@ plot_df %>%
        y = NULL,
        title = "Historical drought trigger activations and events",
        subtitle = "Threshold of 80% Biomasse anomaly published in September")
+
+
+# trying the new color scheme
+
+
+plot_df %>%
+  ggplot(aes(fill = name, y = value, x = dummy)) +
+  geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 1) +
+  scale_fill_manual(values = c("#c2bea7", "#6a8a93", "#81a9b5")) +
+  coord_flip() +
+  geom_segment(y = 0, yend = 5, x = 1.6, xend = 1.6,
+               color = "#b1ae9d",
+               arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
+  geom_text(y = 2.5,
+            x = 1.7,
+            label = paste(sum(plot_df[2:3, 2]), "SHOCKS"),
+            size = 5,
+            fontface = "bold",
+            color = "#b1ae9d") +
+  geom_segment(y = 2, yend = 7, x = 0.4, xend = 0.4,
+               color = "#b1ae9d",
+               arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
+  geom_text(y = 4.5,
+            x = 0.3,
+            label = paste(sum(plot_df[1:2, 2]), "ACTIVATIONS"),
+            size = 5,
+            fontface = "bold",
+            color = "#b1ae9d") +
+  scale_x_continuous(limits = c(0.2, 1.8)) +
+  scale_y_continuous(breaks = 0:7) +
+  geom_text(x = 1,
+            y = 1,
+            label = paste0("atop(bold('", unlist(plot_df[3,2]), "'),'Missed Events')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 3.5,
+            label = paste0("atop(bold('", unlist(plot_df[2,2]), "'),'Valid Activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 6,
+            label = paste0("atop(bold('", unlist(plot_df[1,2]), "'),'False Activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_segment(y = 2,
+               yend = 2,
+               x = 0.5,
+               xend = 1.5,
+               color = "white",
+               lwd = 1,
+               linetype = "dashed") +
+  geom_segment(y = 5,
+               yend = 5,
+               x = 0.5,
+               xend = 1.5,
+               color = "white",
+               lwd = 1,
+               linetype = "dashed") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        legend.position = "none") +
+  labs(x = NULL,
+       y = NULL,
+       title = "Historical drought trigger activations and events",
+       subtitle = "Threshold of 80% Biomasse anomaly published in September")
