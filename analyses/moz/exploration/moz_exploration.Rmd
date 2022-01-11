@@ -178,7 +178,7 @@ cholera_sf %>%
 
 <div style="float: left; width: 40%">
 ```{r hotspots_image}
-knitr::include_graphics("images/hotspots.png")
+knitr::include_graphics(file.path(Sys.getenv("AA_DATA_DIR"), "public", "raw", "moz", "images", "hotspots.png"))
 ```
 </div>
 
