@@ -3,15 +3,11 @@ This notebook explores the NDVI at the end of 2021 and beginning of 2022 in Ethi
 
 As measure we use the percentage of the median NDVI. We use this instead of the absolute NDVI as drought conditions should be seen as relative to a standard. 
 
-We explore how this measure of NDVI differs during three dekads: 21-30 Nov 2021, 1-10 Dec 2021, and 1-10 Jan 2022. The last one is the most current data at the point of writing. However, we are not in the rainy season anymore, so the comparison to the other two is done to see if the NDVI changed since then. They did and thus to me it depends on the goal of the visualiztion which we should choose. Is it about the conditions now or e.g. the drought during rainy seasons in some parts of the country (see [here](https://fews.net/file/113527) for the seasonal calendar of Ethiopia). 
-The NDVI's of [21-30 Nov](https://fews.net/east-africa/seasonal-monitor/november-2021) and [1-10 Dec](https://fews.net/east-africa/alert/december-29-2021) have been used in the linked FN reports. 
+We explore how this measure of NDVI differs during three dekads. Namely the first dekads of Nov 2021, Dec 2021, and Jan 2022. The last one is the most current data at the point of writing. We include these 3 months since the patterns of rain differ within the country during these months, so we can see if the NDVI changed. There is many uncertainties on how we should interpret the NDVI, e.g. how we should take into account the [seasonal calendar](https://fews.net/file/113527). This is thus solely a statement of the NDVI at the given moments and not directly of drought. 
+
+NDVI is commonly used by FewsNet, the most recent ones including NDVI of [21-30 Nov](https://fews.net/east-africa/seasonal-monitor/november-2021) and [1-10 Dec](https://fews.net/east-africa/alert/december-29-2021).
 
 We first inspect the raster data but thereafter aggregate to admin3. As aggregation method the median is chosen but there is the classic problem of differences in admin sizes. 
-
-Three open questions: 
-- Do we think the map at admin3 level will have added value for the HNO? 
-- Should we use the NDVI of 1-10 Dec 2021 or 1-10 Jan 2022? 
-- Is the median the most appropiate method of aggregation? Discussed with Seth and we think it is
 
 ```python
 %load_ext autoreload
@@ -28,6 +24,7 @@ import numpy as np
 from matplotlib.colors import ListedColormap
 import pandas as pd
 import matplotlib.pyplot as plt
+from dateutil.relativedelta import relativedelta
 
 path_mod = f"{Path.cwd().parents[2]}/"
 sys.path.append(path_mod)
@@ -43,6 +40,7 @@ iso3="eth"
 config=Config()
 parameters = config.parameters(iso3)
 country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
+country_data_exploration_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "exploration" / iso3
 adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin2_shp"]
 adm3_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin3_shp"]
 ```
@@ -59,7 +57,12 @@ pcode3_col="ADM3_PCODE"
 
 ```python
 ndvi_colors=["#724c04","#d86f27","#f0a00f","#f7c90a","#fffc8b","#e0e0e0","#86cb69","#3ca358","#39a458","#197d71","#146888","#092c7d"]
-ndvi_bins=[0,60,70,80,90,95,105,110,120,130,140,200]
+ndvi_bins=[0,60,70,80,90,95,105,110,120,130,140]
+ndvi_labels=["<60","60-70","70-80","90-95","95-105","105-110","110-120","120-130","130-140",">140"]
+```
+
+```python
+download_ndvi("east",start_date=[2021,30])
 ```
 
 ### NDVI rasters
@@ -73,7 +76,7 @@ From the plots we can conclude two main points:
 2) The pattern is different for the dekads in 2021 than the latest dekad. Where for the first two the worst NDVI conditions are seen in the south and East, while in the latest dekad the worst conditions are in the South but also more up north in the middle of the country. 
 
 ```python
-dekad_list=[[2021,33],[2021,34],[2022,1]]
+dekad_list=[[2021,31],[2021,34],[2022,1]]
 ```
 
 ```python
@@ -164,7 +167,7 @@ def aggregate_admin(da,gdf,pcode_col,bins=None):
 ```
 
 ```python
-def plt_ndvi_dates(gdf_stats,data_col,colp_num=3):
+def plt_ndvi_dates(gdf_stats,data_col,colp_num=3,caption=None):
     num_plots = len(gdf_stats.date.unique())
     if num_plots==1:
         colp_num=1
@@ -174,16 +177,23 @@ def plt_ndvi_dates(gdf_stats,data_col,colp_num=3):
     for i,d in enumerate(gdf_stats.date.unique()):
         ax = fig.add_subplot(rows,colp_num,i+1)
         gdf_stats[gdf_stats.date==d].plot(ax=ax, column=data_col,
-                             legend=True,# if i==num_plots-1 else False,
-                cmap=ListedColormap(ndvi_colors)#,levels=ndvi_bins
+                             legend=True,#if i==num_plots-1 else False,
+                            categorical=True,
+                cmap=ListedColormap(ndvi_colors)
          )
-        ax.set_title(f"{data_col} of % NDVI of median for {pd.to_datetime(str(d)).strftime('%Y-%m-%d')}")
+        ax.set_title(f"{pd.to_datetime(str(d)).strftime('%d-%m-%Y')} till "
+                     f"{(pd.to_datetime(str(d))+relativedelta(days=9)).strftime('%d-%m-%Y')}")
         ax.axis("off")
+    if caption:
+        plt.figtext(0.7, 0.2,caption)
+    plt.suptitle("Percent of median NDVI",size=24,y=0.85)
+    return fig
+
 ```
 
 #### Aggregated to admin3
 Below the values per admin3 are shown. We use the same bins as [those used by USGS/FewsNet](https://earlywarning.usgs.gov/fews/product/448). 
-We can see the same pattern as we saw with the raw data, which is a good sign. The dissimilarity between the pattern beginning of December and beginning of January is even more clear from these plots. It remains an open question which we should use, it really depends on the focus of the message. Should it be now or during/end of rainy season. Also the rainy season differs per area
+We can see the same pattern as we saw with the raw data, which is a good sign. The dissimilarity between the pattern beginning of December and beginning of January is even more clear from these plots. However, these plots should only be seen as the NDVI and not perse drought conditions as this e.g. depends on the rainy seasons. 
 
 ```python
 #this takes a couple of minutes to compute
@@ -191,7 +201,12 @@ gdf_stats_adm3=aggregate_admin(da,gdf_adm3,pcode3_col,bins=ndvi_bins)
 ```
 
 ```python
-plt_ndvi_dates(gdf_stats_adm3,"median_binned")
+gdf_stats_adm3["median_binned_str"]=pd.cut(gdf_stats_adm3[f"median_{pcode3_col}"],ndvi_bins,labels=ndvi_labels)
+```
+
+```python
+fig=plt_ndvi_dates(gdf_stats_adm3,"median_binned_str",caption="Data is aggregated from raster to admin3 by taking the median")
+# fig.savefig(country_data_exploration_dir / "plots" / "eth_ndvi_adm3_20212022.png", facecolor="white", bbox_inches="tight")
 ```
 
 To check, we do the same computations for the adm2 to see if the general patterns are the same. As we can see they indeed generally match though as expected the values at admin2 are more smoothed
