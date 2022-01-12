@@ -233,7 +233,7 @@ plot_df %>%
   scale_y_continuous(breaks = 0:7) +
   geom_text(x = 1,
             y = 1,
-            label = paste0("atop(bold('", unlist(plot_df[3,2]), "'),'Missed Events')"),
+            label = paste0("atop(bold('", unlist(plot_df[3,2]), "'),'Missed Shocks')"),
             color = "white",
             size = 5,
             parse = TRUE) +
@@ -270,5 +270,5 @@ plot_df %>%
         legend.position = "none") +
   labs(x = NULL,
        y = NULL,
-       title = "Historical drought trigger activations and events",
+       title = "Historical drought trigger activations and shocks",
        subtitle = "Threshold of 80% Biomasse anomaly published in September")
