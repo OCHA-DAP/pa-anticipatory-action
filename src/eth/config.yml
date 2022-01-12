@@ -3,6 +3,7 @@ iso2_code: "et"
 path_admin0_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm0_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
 path_admin1_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm1_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
 path_admin2_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm2_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+path_admin3_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm3_csa_bofed_20201027.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
 shp_adm0c: "ADM0_EN"
 shp_adm1c: "ADM1_EN"
 shp_adm2c: "ADM2_EN"

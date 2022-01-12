@@ -40,23 +40,28 @@ logger = logging.getLogger(__name__)
 
 _BASE_URL = (
     "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/"
-    "web/africa/west/dekadal/emodis/ndvi_c6/percentofmedian/downloads/dekadal/"
-    "{base_file_name}.zip"
+    "web/africa/{region}/dekadal/emodis/ndvi_c6/percentofmedian/"
+    "downloads/dekadal/{base_file_name}.zip"
 )
 
-_BASE_FILENAME = "wa{year:02}{dekad:02}pct"
+_BASE_FILENAME = "{region_code}{year:02}{dekad:02}pct"
 
 _RAW_DIR = Path(os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "ndvi")
 
+_REGION_MAPPING = {"west": "wa", "east": "ea"}
+
 
 def download_ndvi(
+    region: str = "west",
     start_date: Union[date, str, List[int], None] = None,
     end_date: Union[date, str, List[int], None] = None,
     clobber: bool = False,
 ) -> None:
     """Download NDVI data
 
-    Downlaods NDVI data from the start to the end date.
+    Downlaods NDVI data from the start to the end date for the given
+    region in Africa. Region "west" and "east" have been tested
+
 
     Parameters
     ----------
@@ -93,7 +98,14 @@ def download_ndvi(
         if year == end_year and dekad > end_dekad:
             continue
         if clobber or [year, dekad] not in dts:
-            _download_ndvi_dekad(year=year, dekad=dekad)
+            _download_ndvi_dekad(region=region, year=year, dekad=dekad)
+
+
+def load_dekad_ndvi(region: str, year: int, dekad: int):
+    _, file_name = _get_paths(region=region, year=year, dekad=dekad)
+    file_path = Path(_RAW_DIR, file_name)
+    ds = xr.load_dataset(file_path)
+    return ds.squeeze().drop("band").band_data
 
 
 def process_ndvi(
@@ -125,7 +137,7 @@ def process_ndvi(
     processed_path = _get_processed_path(iso3)
 
     data = []
-
+    # TODO: add region
     for filename in _RAW_DIR.glob("*.tif"):
         da = xr.open_rasterio(_RAW_DIR / filename)
         da = da.rio.clip(geometries, drop=True, from_disk=True)
@@ -168,15 +180,17 @@ def load_processed_ndvi(iso3: str) -> pd.DataFrame:
     return pd.read_csv(processed_path)
 
 
-def _get_paths(year: int, dekad: int):
-    base_file_name = _BASE_FILENAME.format(year=year % 100, dekad=dekad)
-    url_path = _BASE_URL.format(base_file_name=base_file_name)
+def _get_paths(region: str, year: int, dekad: int):
+    base_file_name = _BASE_FILENAME.format(
+        region_code=_REGION_MAPPING[region], year=year % 100, dekad=dekad
+    )
+    url_path = _BASE_URL.format(region=region, base_file_name=base_file_name)
     return url_path, f"{base_file_name}.tif"
 
 
-def _download_ndvi_dekad(year: int, dekad: int):
+def _download_ndvi_dekad(region: str, year: int, dekad: int):
     """Download NDVI for specific dekad"""
-    url, file_name = _get_paths(year, dekad)
+    url, file_name = _get_paths(region=region, year=year, dekad=dekad)
     try:
         resp = urlopen(url)
     except HTTPError:
