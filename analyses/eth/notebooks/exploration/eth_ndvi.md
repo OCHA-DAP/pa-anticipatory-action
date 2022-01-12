@@ -3,7 +3,7 @@ This notebook explores the NDVI at the end of 2021 and beginning of 2022 in Ethi
 
 As measure we use the percentage of the median NDVI. We use this instead of the absolute NDVI as drought conditions should be seen as relative to a standard. 
 
-We explore how this measure of NDVI differs during three dekads: 21-30 Nov 2021, 1-10 Dec 2021, and 1-10 Jan 2022. The last one is the most current data at the point of writing. However, we are not in the rainy season anymore, so the comparison to the other two is done to see if the NDVI changed since then. They did and thus it is unclear to me which of them best captures the actual drought conditions. 
+We explore how this measure of NDVI differs during three dekads: 21-30 Nov 2021, 1-10 Dec 2021, and 1-10 Jan 2022. The last one is the most current data at the point of writing. However, we are not in the rainy season anymore, so the comparison to the other two is done to see if the NDVI changed since then. They did and thus to me it depends on the goal of the visualiztion which we should choose. Is it about the conditions now or e.g. the drought during rainy seasons in some parts of the country (see [here](https://fews.net/file/113527) for the seasonal calendar of Ethiopia). 
 The NDVI's of [21-30 Nov](https://fews.net/east-africa/seasonal-monitor/november-2021) and [1-10 Dec](https://fews.net/east-africa/alert/december-29-2021) have been used in the linked FN reports. 
 
 We first inspect the raster data but thereafter aggregate to admin3. As aggregation method the median is chosen but there is the classic problem of differences in admin sizes. 
@@ -11,7 +11,7 @@ We first inspect the raster data but thereafter aggregate to admin3. As aggregat
 Three open questions: 
 - Do we think the map at admin3 level will have added value for the HNO? 
 - Should we use the NDVI of 1-10 Dec 2021 or 1-10 Jan 2022? 
-- Is the median the most appropiate method of aggregation? 
+- Is the median the most appropiate method of aggregation? Discussed with Seth and we think it is
 
 ```python
 %load_ext autoreload
@@ -29,12 +29,12 @@ from matplotlib.colors import ListedColormap
 import pandas as pd
 import matplotlib.pyplot as plt
 
-path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
+path_mod = f"{Path.cwd().parents[2]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
 from src.indicators.drought.ndvi import (download_ndvi, process_ndvi, load_processed_ndvi, 
-load_dekad_ndvi,_date_to_dekad,_dekad_to_date)
+load_raw_dekad_ndvi,_date_to_dekad,_dekad_to_date)
 from src.utils_general.raster_manipulation import compute_raster_statistics
 ```
 
@@ -183,7 +183,7 @@ def plt_ndvi_dates(gdf_stats,data_col,colp_num=3):
 
 #### Aggregated to admin3
 Below the values per admin3 are shown. We use the same bins as [those used by USGS/FewsNet](https://earlywarning.usgs.gov/fews/product/448). 
-We can see the same pattern as we saw with the raw data, which is a good sign. The dissimilarity between the pattern beginning of December and beginning of January is even more clear from these plots. It remains an open question which we should use.. 
+We can see the same pattern as we saw with the raw data, which is a good sign. The dissimilarity between the pattern beginning of December and beginning of January is even more clear from these plots. It remains an open question which we should use, it really depends on the focus of the message. Should it be now or during/end of rainy season. Also the rainy season differs per area
 
 ```python
 #this takes a couple of minutes to compute
