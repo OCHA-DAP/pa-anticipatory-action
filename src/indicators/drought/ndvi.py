@@ -2,22 +2,23 @@
 
 USGS processed and smoothed NDVI data is downloadable
 and available through the USGS webiste
-with methods described at
-https://earlywarning.usgs.gov/fews/product/451 and the
-actual data from the USGS file explorer:
+with methods described for west-africa at
+https://earlywarning.usgs.gov/fews/product/451 and for east-africa
+at https://earlywarning.usgs.gov/fews/product/448
+An example of the actual data from the USGS file explorer for west-africa:
 https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/web/africa/west/dekadal/emodis/ndvi_c6/temporallysmoothedndvi/downloads/monthly/
 
 The products include temporally smoothed NDVI, median anomaly,
 difference from the previous year, and median anomaly
-presented as a percentile. For the current exploration,
-will just use percent of median because it's similar
-to the % anomaly products we are comparing to for Biomasse
-and WRSI in Chad. However, can expand this code more easily in
+presented as a percentile. Currently the code only has the implementation
+of the percent of median because it was developed for Chad,
+where it's similar to the % anomaly products we were comparing to
+for Biomasse and WRSI. However, this code can be extended easily in
 the future to download and process other NDVI data.
 
-Data by USGS is published with about 1 month delay from
-the end of the dekad. This is to allow for temporal
-smoothing and error correction for cloud cover.
+Data by USGS is published quickly after the dekad.
+After about 1 month this data is updated with temporal smoothing
+ and error correction for cloud cover.
 """
 
 # TODO: add progress bar
@@ -66,6 +67,9 @@ def download_ndvi(
 
     Parameters
     ----------
+    region: str
+        The region in Africa to download the data for.
+        Currently tested with "west" and "east"
     start_date: Union[date, str, List[int], None]
         Start date for download.
     end_date: Union[date, str, List[int], None]
@@ -91,15 +95,19 @@ def download_ndvi(
             end_date = date.today()
         end_year, end_dekad = _date_to_dekad(end_date)
 
-    dts = [_fp_date(filename.stem) for filename in _RAW_DIR.glob("*.tif")]
-
-    for year, dekad in zip(range(start_year, end_year), range(1, 37)):
-        if year == start_year and dekad < start_dekad:
-            continue
-        if year == end_year and dekad > end_dekad:
-            continue
-        if clobber or [year, dekad] not in dts:
-            _download_ndvi_dekad(region=region, year=year, dekad=dekad)
+    dts = [
+        _fp_date(filename.stem)
+        for filename in _RAW_DIR.glob(f"{_REGION_ABBR_MAPPING[region]}*.tif")
+    ]
+    for year in range(start_year, end_year):
+        for dekad in range(1, 37):
+            if year == start_year and dekad < start_dekad:
+                continue
+            if year == end_year and dekad > end_dekad:
+                continue
+            if clobber or [year, dekad] not in dts:
+                print(year)
+                _download_ndvi_dekad(region=region, year=year, dekad=dekad)
 
 
 def load_raw_dekad_ndvi(region: str, year: int, dekad: int):
@@ -132,6 +140,9 @@ def process_ndvi(
     thresholds: List[int]
         List of thresholds to calculate percent
         of area below.
+    region: str
+        The region in Africa to download the data for.
+        Currently tested with "west" and "east"
 
     Returns
     -------
