@@ -48,10 +48,11 @@ _BASE_FILENAME = "{region_code}{year:02}{dekad:02}pct"
 
 _RAW_DIR = Path(os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "ndvi")
 
-_REGION_MAPPING = {"west": "wa", "east": "ea"}
+_REGION_ABBR_MAPPING = {"west": "wa", "east": "ea"}
 
 
 def download_ndvi(
+    # TODO: in toolbox have region as mandatory argument or included in config
     region: str = "west",
     start_date: Union[date, str, List[int], None] = None,
     end_date: Union[date, str, List[int], None] = None,
@@ -101,7 +102,7 @@ def download_ndvi(
             _download_ndvi_dekad(region=region, year=year, dekad=dekad)
 
 
-def load_dekad_ndvi(region: str, year: int, dekad: int):
+def load_raw_dekad_ndvi(region: str, year: int, dekad: int):
     _, file_name = _get_paths(region=region, year=year, dekad=dekad)
     file_path = Path(_RAW_DIR, file_name)
     ds = xr.load_dataset(file_path)
@@ -109,7 +110,10 @@ def load_dekad_ndvi(region: str, year: int, dekad: int):
 
 
 def process_ndvi(
-    iso3: str, geometries: geopandas.geoseries.GeoSeries, thresholds: List[int]
+    iso3: str,
+    geometries: geopandas.geoseries.GeoSeries,
+    thresholds: List[int],
+    region: str = "west",
 ) -> pd.DataFrame:
     """Process NDVI data for specific area
 
@@ -137,8 +141,7 @@ def process_ndvi(
     processed_path = _get_processed_path(iso3)
 
     data = []
-    # TODO: add region
-    for filename in _RAW_DIR.glob("*.tif"):
+    for filename in _RAW_DIR.glob(f"{_REGION_ABBR_MAPPING[region]}*.tif"):
         da = xr.open_rasterio(_RAW_DIR / filename)
         da = da.rio.clip(geometries, drop=True, from_disk=True)
         da_date = _fp_date(filename.stem)
@@ -182,7 +185,7 @@ def load_processed_ndvi(iso3: str) -> pd.DataFrame:
 
 def _get_paths(region: str, year: int, dekad: int):
     base_file_name = _BASE_FILENAME.format(
-        region_code=_REGION_MAPPING[region], year=year % 100, dekad=dekad
+        region_code=_REGION_ABBR_MAPPING[region], year=year % 100, dekad=dekad
     )
     url_path = _BASE_URL.format(region=region, base_file_name=base_file_name)
     return url_path, f"{base_file_name}.tif"
