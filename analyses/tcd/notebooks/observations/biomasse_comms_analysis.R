@@ -136,7 +136,7 @@ bootstrapped_metrics %>%
   summarize(
     across(
       everything(),
-      ~quantile(.x, probs = c(0.025, 0.975), na.rm = T)
+      ~quantile(.x, probs = c(0.125, 0.875), na.rm = T)
     )
   )
 
@@ -272,3 +272,23 @@ plot_df %>%
        y = NULL,
        title = "Historical drought trigger activations and shocks",
        subtitle = "Threshold of 80% Biomasse anomaly published in September")
+
+# are results due to random chance?
+
+bootstrapped_jumble_metrics <- map_dfr(
+  1:10000,
+  ~ pred_sep_df %>%
+    mutate(
+      biomasse_pred = sample(biomasse_pred, n()),
+      drought_list = sample(drought_list, n())
+    ) %>%
+    calc_metrics(biomasse_pred, drought_list)
+)           
+
+bootstrapped_jumble_metrics %>%
+  summarize(
+    `Valid activation rate` = 100 * sum(`Valid activation rate` >= 0.6, na.rm = T) / n(),
+    `Miss rate` = 100 * sum(`Miss rate` <= 0.4, na.rm = T) / n(),
+    `False alarm rate` = 100 * sum(`False alarm rate` <= 0.4, na.rm = T) / n(),
+    `Detection rate` = 100 * sum(`Detection rate` >= 0.6, na.rm = T) / n(),
+  )
