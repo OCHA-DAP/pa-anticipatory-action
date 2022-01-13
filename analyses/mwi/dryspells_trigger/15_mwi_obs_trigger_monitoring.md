@@ -168,7 +168,3 @@ arc2_centr.find_longest_runs()
 ```python
 
 ```
-
-```python
-
-```
