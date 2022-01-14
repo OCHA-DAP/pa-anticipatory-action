@@ -1,49 +1,55 @@
 ---
-title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
-pagetitle: '<ISO3 Title> - AA Trigger Card' 
+title: "Document Title To Update"
+pagetitle: 'AA Trigger Report'
 output:
   html_notebook:
     css: style.css
     includes:
-      in_header: header.html 
-    df_print: paged
+      in_header: header.html
     toc: yes
     toc_float: yes
-    toc_depth: 4
-  pdf_document:
-    toc: yes
     toc_depth: '4'
+    df_print: paged
+  html_document:
+    css: style.css
+    includes:
+      in_header: header.html
+    toc: yes
+    toc_float: yes
+    toc_depth: '4'
+    df_print: paged
 editor_options:
   chunk_output_type: inline
 ---
-```{r hard-coded values}
+
+```{r hard-coded values, include = FALSE, message = FALSE, warning = FALSE}
+country_name <- "Country Name"
+
 
 ```
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = TRUE) # include chunk output by default
+knitr::opts_chunk$set(message = FALSE) # do not print messages by default
+knitr::opts_chunk$set(warning = TRUE) # do not print warnings by default
+
 options(scipen = 999) # turn off scientific notation
 options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
-```{r libraries}
+```{r libraries, include = FALSE}
 packages <- c('tidyverse', 'kableExtra', 'knitr')
 
-# install missing packages if needed
-new.pkg <- packages[!(packages %in% installed.packages())] 
+# install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
 
-if(length(new.pkg)){
-  install.packages(new.pkg)
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
 }
 
-# load all required libraries
-for(n in 1:n_packages){
-  cat("Loading Library #", n, " of ", n_packages, "... Currently Loading: ", packages[n], "\n", sep = "")
-  lib_load <- paste("library(\"",packages[n],"\")", sep = "") # create string of text for loading each library
-  eval(parse(text = lib_load)) # evaluate the string to load the library
-}
-
+# load libraries 
+lapply(packages, library, character.only = TRUE)
 
 ```
 
@@ -59,14 +65,14 @@ for(n in 1:n_packages){
 <br>
 <br>
 
-# Trigger Documentation
-Last updated <SET DATE>
+# Trigger Report for country_name
+
+Last updated `r Sys.Date()`
 
 <br>
 
 
 
-
 ```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
-# Put a figure in here, for example 
+
 ```
