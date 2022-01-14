@@ -16,6 +16,45 @@ output:
 editor_options:
   chunk_output_type: inline
 ---
+```{r hard-coded values}
+
+```
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = TRUE) # include chunk output by default
+options(scipen = 999) # turn off scientific notation
+options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
+```
+
+```{r libraries}
+packages <- c('tidyverse', 'kableExtra', 'knitr')
+
+# install missing packages if needed
+new.pkg <- packages[!(packages %in% installed.packages())] 
+
+if(length(new.pkg)){
+  install.packages(new.pkg)
+}
+
+# load all required libraries
+for(n in 1:n_packages){
+  cat("Loading Library #", n, " of ", n_packages, "... Currently Loading: ", packages[n], "\n", sep = "")
+  lib_load <- paste("library(\"",packages[n],"\")", sep = "") # create string of text for loading each library
+  eval(parse(text = lib_load)) # evaluate the string to load the library
+}
+
+
+```
+
+```{r functions}
+
+```
+
+```{r data loading}
+
+```
+
 <br> 
 <br>
 <br>
