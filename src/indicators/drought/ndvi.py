@@ -34,6 +34,7 @@ from zipfile import ZipFile
 
 import geopandas.geoseries
 import pandas as pd
+import regex as re
 import rioxarray  # noqa: F401
 import xarray as xr
 
@@ -106,15 +107,21 @@ def download_ndvi(
             if year == end_year and dekad > end_dekad:
                 continue
             if clobber or [year, dekad] not in dts:
-                print(year)
                 _download_ndvi_dekad(region=region, year=year, dekad=dekad)
 
 
 def load_raw_dekad_ndvi(region: str, year: int, dekad: int):
-    _, file_name = _get_paths(region=region, year=year, dekad=dekad)
-    file_path = Path(_RAW_DIR, file_name)
-    ds = xr.load_dataset(file_path)
-    return ds.squeeze().drop("band").band_data
+    _, file_name_regex = _get_paths(region=region, year=year, dekad=dekad)
+    file_name_list = [
+        file_name
+        for file_name in os.listdir(_RAW_DIR)
+        if re.match(file_name_regex, file_name)
+    ]
+    if len(file_name_list) == 1:
+        ds = xr.load_dataset(Path(_RAW_DIR) / file_name_list[0])
+        return ds.squeeze().drop("band").band_data
+    else:
+        raise ValueError(f"No file found with regex {file_name_regex}")
 
 
 def process_ndvi(
@@ -199,12 +206,17 @@ def _get_paths(region: str, year: int, dekad: int):
         region_code=_REGION_ABBR_MAPPING[region], year=year % 100, dekad=dekad
     )
     url_path = _BASE_URL.format(region=region, base_file_name=base_file_name)
-    return url_path, f"{base_file_name}.tif"
+    # They started using pctm instead of pct for the filename
+    # since last dekads 2021. The folder is still ending with pct
+    # chosen solution was to use a regex to look for both options
+    # and keep the original filenames
+    file_name_regex = f"{base_file_name}m?.tif"
+    return url_path, file_name_regex
 
 
 def _download_ndvi_dekad(region: str, year: int, dekad: int):
     """Download NDVI for specific dekad"""
-    url, file_name = _get_paths(region=region, year=year, dekad=dekad)
+    url, file_name_regex = _get_paths(region=region, year=year, dekad=dekad)
     try:
         resp = urlopen(url)
     except HTTPError:
@@ -215,10 +227,12 @@ def _download_ndvi_dekad(region: str, year: int, dekad: int):
         return
 
     zf = ZipFile(BytesIO(resp.read()))
-    save_path = Path(_RAW_DIR, file_name)
-    save_path.unlink(missing_ok=True)
 
-    zf.extract(file_name, _RAW_DIR)
+    for file_name in zf.namelist():
+        if re.match(file_name_regex, file_name):
+            save_path = Path(_RAW_DIR, file_name)
+            save_path.unlink(missing_ok=True)
+            zf.extract(file_name, _RAW_DIR)
 
 
 def _date_to_dekad(date_obj: Union[date, str]):
