@@ -9,7 +9,7 @@ NDVI, and the percentage of median as we use it, is commonly reported by FewsNet
 
 We first inspect the raster data but thereafter aggregate to admin3. As aggregation method the median is chosen but there is the classic problem of differences in admin sizes. 
 
-While we first inspect the data per dekad, it was requested to create a graph of cumulative NDVI over the Oct-Dec season. While we are not NDVI experts, it didn't seem sensible to take a sum or median. We therefore instead look at the percentage of dekads where the NDVI is below 80% of the median. 
+While we first inspect the data per dekad, it was requested to create a graph of cumulative NDVI over the Oct-Dec season. While we are not NDVI experts, it didn't seem sensible to take a sum or median. We therefore instead look at the percentage of dekads where the NDVI is below x% of the median. 
 
 ```python
 %load_ext autoreload
@@ -229,19 +229,23 @@ fig=plt_ndvi_dates(gdf_stats_adm3,"median_binned_str",
 ```
 
 ### "Cumulative" NDVI
-We were asked to combine the data from Oct-Dec to one graph. This can be slightly tricky as NDVI can be seen as a cumulative indicator by itself. We chose to report the percentage of dekads that thad a NDVI that was below 80% of the median. We think this is a sensible metric, but in the future we would advise to get an opinion on this from expert, e.g. at FAO or USGS
+We were asked to combine the data from Oct-Dec to one graph. This can be slightly tricky as NDVI can be seen as a cumulative indicator by itself. We chose to report the percentage of dekads that thad a NDVI that was below x% of the median. We think this is a sensible metric, but in the future we would advise to get an opinion on this from expert, e.g. at FAO or USGS
+
+```python
+thresh=80
+```
 
 ```python
 #only select the 2021 dates
 gdf_2021_adm3=gdf_stats_adm3[gdf_stats_adm3.year==2021]
-#count the number of dekads with median below 80
-df_medb_count=gdf_2021_adm3.loc[gdf_2021_adm3.median_ADM3_PCODE<=80,
+#count the number of dekads with median below thresh
+df_medb_count=gdf_2021_adm3.loc[gdf_2021_adm3.median_ADM3_PCODE<=thresh,
                       [pcode3_col,"median_ADM3_PCODE","date"]].groupby(pcode3_col,as_index=False).count()
 #compute percent
 df_medb_count["percent"]=df_medb_count.median_ADM3_PCODE/len(gdf_2021_adm3.date.unique())*100
 #create gdf again
 gdf_medb_count=gdf_adm3[[pcode3_col,"geometry"]].merge(df_medb_count,on=pcode3_col,how="outer")
-#nan value means none of the dekads were below 80 so fill them with 0
+#nan value means none of the dekads were below thresh so fill them with 0
 gdf_medb_count=gdf_medb_count.fillna(0)
 ```
 
@@ -267,7 +271,7 @@ g=gdf_medb_count.plot(
     legend=True,
     cmap=ListedColormap(perc_colors)
 )
-g.set_title("Percentage of dekads Oct-Dec 2021 NDVI \n was <=80% of median NDVI");
+g.set_title(f"Percentage of dekads Oct-Dec 2021 NDVI \n was <={thresh}% of median NDVI");
 g.axis("off");
 ```
 
@@ -314,6 +318,6 @@ g=gdf_stats_mask.plot(
     missing_kwds={"color": "lightgrey",
                   "label": "non-pastoralist area"}
 )
-g.set_title("Percentage of dekads Oct-Dec 2021 NDVI \n was <=80% of median NDVI");
+g.set_title(f"Percentage of dekads Oct-Dec 2021 NDVI \n was <={thresh}% of median NDVI");
 g.axis("off");
 ```
