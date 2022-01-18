@@ -1,8 +1,9 @@
 iso3_code: "eth"
 iso2_code: "et"
-path_admin0_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm0_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
-path_admin1_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm1_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
-path_admin2_shp: "ET_Admin_OCHA_2020/eth_admbnda_adm2_csa_bofed_20201008.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+path_admin0_shp: "eth_adm_csa_bofedb_2021_shp/eth_admbnda_adm0_csa_bofedb_itos_2021.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+path_admin1_shp: "eth_adm_csa_bofedb_2021_shp/eth_admbnda_adm1_csa_bofedb_2021" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+path_admin2_shp: "eth_adm_csa_bofedb_2021_shp/eth_admbnda_adm2_csa_bofedb_2021.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
+path_admin3_shp: "eth_adm_csa_bofedb_2021_shp/eth_admbnda_adm3_csa_bofedb_2021.shp" #downloaded from https://data.humdata.org/dataset/ethiopia-cod-ab
 shp_adm0c: "ADM0_EN"
 shp_adm1c: "ADM1_EN"
 shp_adm2c: "ADM2_EN"

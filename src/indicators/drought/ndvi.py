@@ -2,22 +2,23 @@
 
 USGS processed and smoothed NDVI data is downloadable
 and available through the USGS webiste
-with methods described at
-https://earlywarning.usgs.gov/fews/product/451 and the
-actual data from the USGS file explorer:
+with methods described for west-africa at
+https://earlywarning.usgs.gov/fews/product/451 and for east-africa
+at https://earlywarning.usgs.gov/fews/product/448
+An example of the actual data from the USGS file explorer for west-africa:
 https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/web/africa/west/dekadal/emodis/ndvi_c6/temporallysmoothedndvi/downloads/monthly/
 
 The products include temporally smoothed NDVI, median anomaly,
 difference from the previous year, and median anomaly
-presented as a percentile. For the current exploration,
-will just use percent of median because it's similar
-to the % anomaly products we are comparing to for Biomasse
-and WRSI in Chad. However, can expand this code more easily in
+presented as a percentile. Currently the code only has the implementation
+of the percent of median because it was developed for Chad,
+where it's similar to the % anomaly products we were comparing to
+for Biomasse and WRSI. However, this code can be extended easily in
 the future to download and process other NDVI data.
 
-Data by USGS is published with about 1 month delay from
-the end of the dekad. This is to allow for temporal
-smoothing and error correction for cloud cover.
+Data by USGS is published quickly after the dekad.
+After about 1 month this data is updated with temporal smoothing
+ and error correction for cloud cover.
 """
 
 # TODO: add progress bar
@@ -33,6 +34,7 @@ from zipfile import ZipFile
 
 import geopandas.geoseries
 import pandas as pd
+import regex as re
 import rioxarray  # noqa: F401
 import xarray as xr
 
@@ -40,26 +42,35 @@ logger = logging.getLogger(__name__)
 
 _BASE_URL = (
     "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/fews/"
-    "web/africa/west/dekadal/emodis/ndvi_c6/percentofmedian/downloads/dekadal/"
-    "{base_file_name}.zip"
+    "web/africa/{region}/dekadal/emodis/ndvi_c6/percentofmedian/"
+    "downloads/dekadal/{base_file_name}.zip"
 )
 
-_BASE_FILENAME = "wa{year:02}{dekad:02}pct"
+_BASE_FILENAME = "{region_code}{year:02}{dekad:02}pct"
 
 _RAW_DIR = Path(os.getenv("AA_DATA_DIR"), "public", "raw", "glb", "ndvi")
 
+_REGION_ABBR_MAPPING = {"west": "wa", "east": "ea"}
+
 
 def download_ndvi(
+    # TODO: in toolbox have region as mandatory argument or included in config
+    region: str = "west",
     start_date: Union[date, str, List[int], None] = None,
     end_date: Union[date, str, List[int], None] = None,
     clobber: bool = False,
 ) -> None:
     """Download NDVI data
 
-    Downlaods NDVI data from the start to the end date.
+    Downlaods NDVI data from the start to the end date for the given
+    region in Africa. Region "west" and "east" have been tested
+
 
     Parameters
     ----------
+    region: str
+        The region in Africa to download the data for.
+        Currently tested with "west" and "east"
     start_date: Union[date, str, List[int], None]
         Start date for download.
     end_date: Union[date, str, List[int], None]
@@ -85,19 +96,39 @@ def download_ndvi(
             end_date = date.today()
         end_year, end_dekad = _date_to_dekad(end_date)
 
-    dts = [_fp_date(filename.stem) for filename in _RAW_DIR.glob("*.tif")]
+    dts = [
+        _fp_date(filename.stem)
+        for filename in _RAW_DIR.glob(f"{_REGION_ABBR_MAPPING[region]}*.tif")
+    ]
+    for year in range(start_year, end_year):
+        for dekad in range(1, 37):
+            if year == start_year and dekad < start_dekad:
+                continue
+            if year == end_year and dekad > end_dekad:
+                continue
+            if clobber or [year, dekad] not in dts:
+                _download_ndvi_dekad(region=region, year=year, dekad=dekad)
 
-    for year, dekad in zip(range(start_year, end_year), range(1, 37)):
-        if year == start_year and dekad < start_dekad:
-            continue
-        if year == end_year and dekad > end_dekad:
-            continue
-        if clobber or [year, dekad] not in dts:
-            _download_ndvi_dekad(year=year, dekad=dekad)
+
+def load_raw_dekad_ndvi(region: str, year: int, dekad: int):
+    _, file_name_regex = _get_paths(region=region, year=year, dekad=dekad)
+    file_name_list = [
+        file_name
+        for file_name in os.listdir(_RAW_DIR)
+        if re.match(file_name_regex, file_name)
+    ]
+    if len(file_name_list) == 1:
+        ds = xr.load_dataset(Path(_RAW_DIR) / file_name_list[0])
+        return ds.squeeze().drop("band").band_data
+    else:
+        raise ValueError(f"No file found with regex {file_name_regex}")
 
 
 def process_ndvi(
-    iso3: str, geometries: geopandas.geoseries.GeoSeries, thresholds: List[int]
+    iso3: str,
+    geometries: geopandas.geoseries.GeoSeries,
+    thresholds: List[int],
+    region: str = "west",
 ) -> pd.DataFrame:
     """Process NDVI data for specific area
 
@@ -116,6 +147,9 @@ def process_ndvi(
     thresholds: List[int]
         List of thresholds to calculate percent
         of area below.
+    region: str
+        The region in Africa to download the data for.
+        Currently tested with "west" and "east"
 
     Returns
     -------
@@ -125,8 +159,7 @@ def process_ndvi(
     processed_path = _get_processed_path(iso3)
 
     data = []
-
-    for filename in _RAW_DIR.glob("*.tif"):
+    for filename in _RAW_DIR.glob(f"{_REGION_ABBR_MAPPING[region]}*.tif"):
         da = xr.open_rasterio(_RAW_DIR / filename)
         da = da.rio.clip(geometries, drop=True, from_disk=True)
         da_date = _fp_date(filename.stem)
@@ -168,15 +201,22 @@ def load_processed_ndvi(iso3: str) -> pd.DataFrame:
     return pd.read_csv(processed_path)
 
 
-def _get_paths(year: int, dekad: int):
-    base_file_name = _BASE_FILENAME.format(year=year % 100, dekad=dekad)
-    url_path = _BASE_URL.format(base_file_name=base_file_name)
-    return url_path, f"{base_file_name}.tif"
+def _get_paths(region: str, year: int, dekad: int):
+    base_file_name = _BASE_FILENAME.format(
+        region_code=_REGION_ABBR_MAPPING[region], year=year % 100, dekad=dekad
+    )
+    url_path = _BASE_URL.format(region=region, base_file_name=base_file_name)
+    # They started using pctm instead of pct for the filename
+    # since last dekads 2021. The folder is still ending with pct
+    # chosen solution was to use a regex to look for both options
+    # and keep the original filenames
+    file_name_regex = f"{base_file_name}m?.tif"
+    return url_path, file_name_regex
 
 
-def _download_ndvi_dekad(year: int, dekad: int):
+def _download_ndvi_dekad(region: str, year: int, dekad: int):
     """Download NDVI for specific dekad"""
-    url, file_name = _get_paths(year, dekad)
+    url, file_name_regex = _get_paths(region=region, year=year, dekad=dekad)
     try:
         resp = urlopen(url)
     except HTTPError:
@@ -187,10 +227,12 @@ def _download_ndvi_dekad(year: int, dekad: int):
         return
 
     zf = ZipFile(BytesIO(resp.read()))
-    save_path = Path(_RAW_DIR, file_name)
-    save_path.unlink(missing_ok=True)
 
-    zf.extract(file_name, _RAW_DIR)
+    for file_name in zf.namelist():
+        if re.match(file_name_regex, file_name):
+            save_path = Path(_RAW_DIR, file_name)
+            save_path.unlink(missing_ok=True)
+            zf.extract(file_name, _RAW_DIR)
 
 
 def _date_to_dekad(date_obj: Union[date, str]):
