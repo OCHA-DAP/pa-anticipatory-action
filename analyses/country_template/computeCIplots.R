@@ -1,30 +1,30 @@
 plotCI <- function(dataframe, metric) {
 
 ci_df <- dataframe %>%
-  mutate(status = factor(status, levels = c('below_ci', 'ci', 'above_ci')),
+  mutate(point = factor(point, levels = c('below_ci', 'ci', 'above_ci')),
          value = round(value, 0))
 
 # compute width of segments
 below_width <- ci_df %>%
-  filter(status == 'below_ci') %>%
+  filter(point == 'below_ci') %>%
   select(value) %>%
   as.numeric()
 
 ci_width <- ci_df %>%
-  filter(status == 'ci') %>%
+  filter(point == 'ci') %>%
   select(value) %>%
   as.numeric()
 
 # compute position of value labels (low end, central estimate, high end)
 central.x <- ci_df %>% # estimate (midpoint of CI)
-  filter(status == 'ci') %>%
+  filter(point == 'ci') %>%
   mutate(ci_midpoint = value / 2,
          x_position = below_width + ci_midpoint) %>%
   select(x_position) %>%
   as.numeric()
 
 low.x <- ci_df %>% # position of CI's low end
-  filter(status == 'below_ci') %>%
+  filter(point == 'below_ci') %>%
   select(value) %>%
   as.numeric()
 
@@ -34,7 +34,7 @@ high.x <- below_width + ci_width # position of CI's high end
 ci_color <- ifelse(metric %in% c('var_ci', 'det_ci', 'acc_ci'), "#1bb580", "#FF3333") # select green for detection and valid activation rates, red for the others
 
 metric_plot <- ci_df %>%
-  ggplot(aes(fill = status, y = value, x = dummy, labels = "low", "central", "high")) +
+  ggplot(aes(fill = point, y = value, x = dummy, labels = "low", "central", "high")) +
   geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 1) +
   scale_fill_manual(values = c("azure2", ci_color, "azure2")) +
   scale_x_continuous(limits = c(0, 5)) +
