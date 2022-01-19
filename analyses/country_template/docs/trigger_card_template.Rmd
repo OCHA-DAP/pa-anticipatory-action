@@ -2,7 +2,7 @@
 title: "Document Title To Update"
 pagetitle: 'AA Trigger Report'
 output:
-  html_notebook:
+  html_document:
     css: style.css
     includes:
       in_header: header.html
@@ -10,7 +10,7 @@ output:
     toc_float: yes
     toc_depth: '4'
     df_print: paged
-  html_document:
+  html_notebook:
     css: style.css
     includes:
       in_header: header.html
@@ -22,7 +22,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r hard-coded values, message = FALSE, warning = FALSE}
+```{r hard-coded values, echo = FALSE, message = FALSE, warning = FALSE}
 country_name <- "Country Name"
 shock <- "Shock"
 plots_path <- ""
@@ -33,14 +33,14 @@ plots_path <- ""
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = TRUE) # include chunk output by default
 knitr::opts_chunk$set(message = FALSE) # do not print messages by default
-knitr::opts_chunk$set(warning = TRUE) # do not print warnings by default
+knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
 
 options(scipen = 999) # turn off scientific notation
 options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
 ```{r libraries, include = FALSE}
-packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr')
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
 
 # install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -55,10 +55,10 @@ lapply(packages, library, character.only = TRUE)
 ```
 
 ```{r functions}
-computeCIwidths <- function(dataframe, metric_name) { 
-  df %>% 
+computeCIwidths <- function(metric_name) { 
+  df %>%
   filter(metric == metric_name) %>%
-  pivot_wider(names_from = status, values_from = value) %>%
+  pivot_wider(names_from = point, values_from = value) %>%
   mutate(below_ci = low_end,  # width between zero and low end of CI
          ci = high_end - low_end,# width of CI
          above_ci = 100 - high_end) %>% # width between high_end of CI and 100
@@ -67,20 +67,21 @@ computeCIwidths <- function(dataframe, metric_name) {
 ```
 
 ```{r data loading and processing}
-
-df <- data.frame(metric = c('var','var','var','far','far','far'),
-                  point = c('low_end', 'central', 'high_end','low_end', 'central', 'high_end'), 
-                   value = c(85, 91, 97, 20, 32, 42),
-                   dummy = c(1, 1, 1, 1, 1, 1))
+# read in performance metrics file
+df <- data.frame(metric = c('var','var','var','far','far','far', 'det', 'det', 'det', 'mis', 'mis', 'mis', 'acc', 'acc', 'acc'),
+                  point = c('low_end', 'central', 'high_end','low_end', 'central', 'high_end', 'low_end', 'central', 'high_end', 'low_end', 'central', 'high_end', 'low_end', 'central', 'high_end'), 
+                   value = c(85, 91, 97, 20, 32, 42, 83, 89, 95, 16, 28, 38, 45, 50, 55),
+                   dummy = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1)
+                 )
 
 # compute width and position of CI 
-df_var <- computeCIwidths(dataframe = df, metric_name = 'var') # valid activation rate 
-df_det <- computeCIwidths(dataframe = df, metric_name = 'det') # detection rate
-df_far <- computeCIwidths(dataframe = df, metric_name = 'far') # false alarm rate
-df_mis <- computeCIwidths(dataframe = df, metric_name = 'mis') # miss rate
-df_acc <- computeCIwidths(dataframe = df, metric_name = 'acc') # accuracy rate
+df_var <- computeCIwidths(metric_name = 'var') # valid activation rate 
+df_det <- computeCIwidths(metric_name = 'det') # detection rate
+df_far <- computeCIwidths(metric_name = 'far') # false alarm rate
+df_mis <- computeCIwidths(metric_name = 'mis') # miss rate
+df_acc <- computeCIwidths(metric_name = 'acc') # accuracy rate
 
-# TO REMOVE df dummy data
+# TO REMOVE df dummy data above
 # TO ADD read in data from analysis output file (csv)
 # TO ADD data validation: values between 0 and 100, rounded to 0 1 decimal, low_end < central < high_end
 # TO ADD filter df by metric if all values in 1 file 
@@ -91,7 +92,7 @@ source("computeCIplots.R")
 
 plotCI(dataframe = df_var, metric = 'var_ci') 
 plotCI(dataframe = df_det, metric = 'det_ci') 
-plotCI(dataframe = df_far, metric = 'fa_ci') 
+plotCI(dataframe = df_far, metric = 'far_ci') 
 plotCI(dataframe = df_mis, metric = 'mis_ci') 
 plotCI(dataframe = df_acc, metric = 'acc_ci') 
 ```
@@ -110,14 +111,27 @@ plotCI(dataframe = df_acc, metric = 'acc_ci')
 
 <br>
 
+
 ``` {r performance table}
 
-flextable(tennis_players) %>%
-  colformat_image(j = "head", width = .5, height = 0.5) 
+perf_df <- data.frame(metric = c('Valid Activation Rate', 'Detection Rate', 'False Alarm Rate', 'Miss Rate'),
+                   ci_path = c(paste0(plots_path, "trimmed_var_ci.png"), paste0(plots_path, "trimmed_det_ci.png"), paste0(plots_path, "trimmed_far_ci.png"), paste0(plots_path, "trimmed_mis_ci.png"))
+           )
+# 
+# perf_df <- data.frame(metric = c('Valid Activation Rate', 'Detection Rate', 'False Alarm Rate', 'Miss Rate'),
+#                        ci_path = c(paste0(plots_path, "docs/trimmed_var_ci.png"), paste0(plots_path, "docs/trimmed_det_ci.png"), paste0(plots_path, "docs/trimmed_far_ci.png"), paste0(plots_path, "docs/trimmed_mis_ci.png")))
+
+perf_df %>%
+  flextable() %>%
+  colformat_image(j = "ci_path", width = 4, height = 1) %>% # display confidence interval images
+  align(j = 'metric', align = "right", part = "all") %>%
+  align(j = 'ci_path', align = "left", part = "header") %>%
+  fontsize(j = 'metric', size = 9, part = "body") %>%
+  bold(j = c('metric', 'ci_path'), bold = TRUE, part = "header") %>%
+  set_header_labels(metric = "Metric", ci_path = "Estimate (%)")
+  
+
 
 ```
 
-
-
-```
 

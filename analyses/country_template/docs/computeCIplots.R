@@ -45,8 +45,8 @@ metric_plot <- ci_df %>%
   geom_label(aes(x = 2,
                  y = central.x,
                  label = central.x,
-                 vjust = 1,
-                 size = 1), # size refers to font size
+                 vjust = 1),
+             size = 5, # font size
              nudge_x = -0.1, # bring label closer to graph
              color = "black",
              fill = "white",
@@ -55,8 +55,8 @@ metric_plot <- ci_df %>%
   geom_label(aes(x = 2,
                  y = low.x,
                  label = low.x,
-                 vjust = 1,
-                 size = 1),
+                 vjust = 1),
+             size = 4,
              nudge_x = -0.1,
              color = "black",
              fill = "white",
@@ -64,8 +64,8 @@ metric_plot <- ci_df %>%
   geom_label(aes(x = 2,
                  y = high.x,
                  label = high.x,
-                 vjust = 1,
-                 size = 1),
+                 vjust = 1),
+             size = 4,
              nudge_x = -0.1,
              color = "black",
              fill = "white",
@@ -86,7 +86,7 @@ metric_plot <- ci_df %>%
 
 # Save original as png
 filename <- paste0(metric, ".png")
-png(paste0(plots_path, filename))
+png(filename = paste0(plots_path, filename))
 print(metric_plot)
 dev.off()
 
