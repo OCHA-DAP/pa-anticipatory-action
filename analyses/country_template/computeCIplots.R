@@ -35,7 +35,7 @@ low.x <- ci_df %>% # position of CI's low end
 high.x <- below_width + ci_width # position of CI's high end
 
 # plot
-ci_color <- ifelse(metric %in% c('var_ci', 'det_ci'), "#1bb580", "#FF3333") # select green for detection and valid activation rates, red for the others
+ci_color <- ifelse(metric %in% c('var_ci', 'det_ci', 'acc_ci'), "#1bb580", "#FF3333") # select green for detection and valid activation rates, red for the others
 
 metric_plot <- ci_df %>%
   ggplot(aes(fill = status, y = value, x = dummy, labels = "low", "central", "high")) +
