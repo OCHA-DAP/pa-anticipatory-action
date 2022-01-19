@@ -119,29 +119,53 @@ high.x <- below_width + ci_width # position of CI's high end
 
 # plot
 ci_df %>%
-  ggplot(aes(fill = status, y = value, x = dummy)) +
+  ggplot(aes(fill = status, y = value, x = dummy, labels = "low", "central", "high")) +
   geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 1) +
   scale_fill_manual(values = c("azure2", "#1bb580", "azure2")) +
   scale_x_continuous(limits = c(0, 5)) +
   #coord_cartesian(xlim=c(0, 2))
   coord_flip() +
-  geom_segment(y = central.x, yend = central.x, x = 0.5, xend = 1.8, color = "#444444") + # central estimate label
-  geom_segment(y = low.x, yend = low.x, x = 0.5, xend = 1.8, color = "#444444") + # low ci end label
-  geom_segment(y = high.x, yend = high.x, x = 0.5, xend = 1.8, color = "#444444") + # high ci end label
+  geom_segment(y = central.x, yend = central.x, x = 0.5, xend = 1.6, color = "#444444", size = 0.75) + # central estimate line. Size refers to line thickness
+  geom_segment(y = low.x, yend = low.x, x = 0.5, xend = 1.6, color = "#444444", size = 0.5) + # low ci end line
+  geom_segment(y = high.x, yend = high.x, x = 0.5, xend = 1.6, color = "#444444", size = 0.5) + # high ci end line
+  geom_label(aes(x = 2, 
+                 y = central.x,  
+                 label = central.x, 
+                 vjust = 1, 
+                 size = 1), # size refers to font size
+             color = "black", 
+             fill = "white", 
+             fontface = 'bold', 
+             label.size = NA) + # removes border
+    geom_label(aes(x = 2,
+                 y = low.x,
+                 label = low.x,
+                 vjust = 1,
+                 size = 1),
+             color = "black",
+             fill = "white",
+             label.size = NA) + # removes border
+    geom_label(aes(x = 2,
+                 y = high.x,
+                 label = high.x,
+                 vjust = 1,
+                 size = 1),
+             color = "black",
+             fill = "white",
+             label.size = NA) + # removes border
   theme_economist_white(base_size = 11, 
                         base_family = "sans",
                         gray_bg = F, 
-                        horizontal = F)
-  # theme(
-  #   legend.position = "none",
-  #   plot.title = element_blank(),
-  #   axis.line = element_blank(),
-  #   axis.title = element_blank(),
-  #   axis.ticks = element_blank(),
-  #   axis.text = element_blank(),
-  #   panel.grid.major = element_blank(),
-  #   panel.grid.minor = element_blank()) +
-  # scale_x_discrete(labels = NULL, breaks = NULL) + labs(x = "") 
+                        horizontal = F) +
+  theme(
+    legend.position = "none",
+    plot.title = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
 
 
 ```
