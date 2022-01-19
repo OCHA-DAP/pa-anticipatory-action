@@ -55,14 +55,30 @@ lapply(packages, library, character.only = TRUE)
 ```
 
 ```{r functions}
-
+computeCIwidths <- function(dataframe, metric_name) { 
+  df %>% 
+  filter(metric == metric_name) %>%
+  pivot_wider(names_from = status, values_from = value) %>%
+  mutate(below_ci = low_end,  # width between zero and low end of CI
+         ci = high_end - low_end,# width of CI
+         above_ci = 100 - high_end) %>% # width between high_end of CI and 100
+  pivot_longer(!c('metric','dummy'), names_to = 'point', values_to = 'value')
+}
 ```
 
-```{r data loading}
+```{r data loading and processing}
 
-df <- data.frame(status = c('below_ci', 'ci', 'above_ci'), 
-                   value = c(2, 3, 2),
-                   dummy = c(1, 1, 1))
+df <- data.frame(metric = c('var','var','var','far','far','far'),
+                  point = c('low_end', 'central', 'high_end','low_end', 'central', 'high_end'), 
+                   value = c(85, 91, 97, 20, 32, 42),
+                   dummy = c(1, 1, 1, 1, 1, 1))
+
+# compute width and position of CI 
+df_var <- computeCIwidths(dataframe = df, metric_name = 'var') # valid activation rate 
+df_det <- computeCIwidths(dataframe = df, metric_name = 'det') # detection rate
+df_far <- computeCIwidths(dataframe = df, metric_name = 'far') # false alarm rate
+df_mis <- computeCIwidths(dataframe = df, metric_name = 'mis') # miss rate
+df_acc <- computeCIwidths(dataframe = df, metric_name = 'acc') # accuracy rate
 
 # TO REMOVE df dummy data
 # TO ADD read in data from analysis output file (csv)
@@ -73,11 +89,11 @@ df <- data.frame(status = c('below_ci', 'ci', 'above_ci'),
 ```{r data plotting}
 source("computeCIplots.R")
 
-plotCI(dataframe = df, metric = 'var_ci') # valid activation rate 
-plotCI(dataframe = df, metric = 'det_ci') # detection rate
-plotCI(dataframe = df, metric = 'fa_ci') # false alarm rate
-plotCI(dataframe = df, metric = 'ms_ci') # miss rate
-plotCI(dataframe = df, metric = 'acc_ci') # accuracy rate
+plotCI(dataframe = df_var, metric = 'var_ci') 
+plotCI(dataframe = df_det, metric = 'det_ci') 
+plotCI(dataframe = df_far, metric = 'fa_ci') 
+plotCI(dataframe = df_mis, metric = 'mis_ci') 
+plotCI(dataframe = df_acc, metric = 'acc_ci') 
 ```
 
 <br> 
@@ -96,6 +112,8 @@ plotCI(dataframe = df, metric = 'acc_ci') # accuracy rate
 
 ``` {r performance table}
 
+flextable(tennis_players) %>%
+  colformat_image(j = "head", width = .5, height = 0.5) 
 
 ```
 

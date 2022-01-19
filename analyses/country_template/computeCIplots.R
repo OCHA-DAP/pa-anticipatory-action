@@ -1,9 +1,5 @@
 plotCI <- function(dataframe, metric) {
 
-dataframe <- data.frame(status = c('below_ci', 'ci', 'above_ci'), ## REMOVE ME dummy data for now
-                   value = c(2, 3, 2),
-                   dummy = c(1, 1, 1))
-
 ci_df <- dataframe %>%
   mutate(status = factor(status, levels = c('below_ci', 'ci', 'above_ci')),
          value = round(value, 0))
