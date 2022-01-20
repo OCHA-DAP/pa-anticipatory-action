@@ -46,7 +46,7 @@ metric_plot <- ci_df %>%
                  y = central.x,
                  label = central.x,
                  vjust = 1),
-             size = 5, # font size
+             size = 6, # font size
              nudge_x = -0.1, # bring label closer to graph
              color = "black",
              fill = "white",
@@ -56,7 +56,7 @@ metric_plot <- ci_df %>%
                  y = low.x,
                  label = low.x,
                  vjust = 1),
-             size = 4,
+             size = 5,
              nudge_x = -0.1,
              color = "black",
              fill = "white",
@@ -65,7 +65,7 @@ metric_plot <- ci_df %>%
                  y = high.x,
                  label = high.x,
                  vjust = 1),
-             size = 4,
+             size = 5,
              nudge_x = -0.1,
              color = "black",
              fill = "white",
@@ -86,7 +86,7 @@ metric_plot <- ci_df %>%
 
 # Save original as png
 filename <- paste0(metric, ".png")
-png(filename = paste0(plots_path, filename))
+png(filename = paste0(plots_path, filename), width = 815, height = 410, units = "px")
 print(metric_plot)
 dev.off()
 
