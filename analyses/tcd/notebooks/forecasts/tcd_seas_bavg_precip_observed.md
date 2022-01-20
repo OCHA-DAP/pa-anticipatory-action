@@ -339,10 +339,6 @@ Now that we have analyzed the data on pixel level, we aggregate to the area of i
 We compute the percentage of the area having experienced below average rainfall for each season.
 
 ```python
-da_season_below#_bavg#.sel(time="1984-08-01").plot()
-```
-
-```python
 #since we are only selecting below avg values, only the count stat makes sense
 #e.g. the mean doesn't reflect the actual situation, for that da_country would need to be used
 gdf_aoi_dissolved=gdf_aoi.dissolve(by="admin0Name")
@@ -363,16 +359,6 @@ df_stats_reg_all=compute_raster_statistics(gdf=gdf_aoi_dissolved,bound_col="admi
 
 df_stats_reg["perc_bavg"] = df_stats_reg[f"count_admin0Pcod"]/df_stats_reg_all[f"count_admin0Pcod"]*100
 df_stats_reg.time=pd.to_datetime(df_stats_reg.time.apply(lambda x: x.strftime("%Y-%m-%d")))
-df_stats_reg["end_time"]=pd.to_datetime(df_stats_reg["time"].apply(lambda x: x.strftime('%Y-%m-%d')))
-df_stats_reg["end_month"]=df_stats_reg.end_time.dt.to_period("M")
-df_stats_reg["start_time"]=df_stats_reg.end_time.apply(lambda x: x+relativedelta(months=-2))
-df_stats_reg["start_month"]=df_stats_reg.start_time.dt.to_period("M")
-df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
-df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
-df_stats_reg["seas_trig"]=np.where(df_stats_reg.end_month.dt.month.isin(end_months_sel),True,False)
-df_stats_reg=df_stats_reg.sort_values("start_month")
-df_stats_reg["seas_trig_str"]=df_stats_reg["seas_trig"].replace({True:"season included in trigger",False:"season not included in trigger"})
-df_stats_reg["year"]=df_stats_reg.end_month.dt.year
 ```
 
 ```python
