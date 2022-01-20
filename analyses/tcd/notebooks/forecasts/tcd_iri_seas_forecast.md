@@ -1,17 +1,3 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,md
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.11.1
-  kernelspec:
-    display_name: ''
-    name: ''
----
-
 # IRI forecast as a trigger for drought in Chad
 This notebook entails the analysis that was done for analyzing the IRI seasonal forecast as part of drought-related trigger in Chad. 
 An initial proposal from in-country partners was:
