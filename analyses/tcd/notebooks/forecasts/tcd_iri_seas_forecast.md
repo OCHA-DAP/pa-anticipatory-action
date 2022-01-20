@@ -1,17 +1,3 @@
----
-jupytext:
-  cell_metadata_filter: -all
-  formats: ipynb,md:myst
-  text_representation:
-    extension: .md
-    format_name: myst
-    format_version: 0.13
-    jupytext_version: 1.11.1
-kernelspec:
-  display_name: c3sdl
-  language: python
-  name: c3sdl
----
 
 # IRI forecast as a trigger for drought in Chad
 This notebook entails the analysis that was done for analyzing the IRI seasonal forecast as part of drought-related trigger in Chad. 
