@@ -94,6 +94,7 @@ col_ind="rp5"
 ```
 
 ```python
+#JAS=July-August-September season, JJA=June-July-August
 fig=compute_confusionmatrix_column(df_stats_drought,"season",col_drought,col_ind,"drought year in framework",
                                f"percentage bavg above 5 year return period ",
                               title=f"Correspondence of 1 in 5 year observed below average precipitation and reported drought years",
@@ -149,6 +150,10 @@ df_results.quantile(1 - 0.95)
 ```
 
 ```python
+#check how many of the samples have higher performance metrics than the original
+#goal is to test if the correlation we see in the data is by chance
+#as rule of thumb, if 2.5% of the bootstrapped samples has a higher performance,
+#there is a high chance the correlation is due to chance
 perc_better_prec=df_results.loc[
     df_results.precision > precision,'precision'].count()/df_results[
     'precision'].count()*100
@@ -157,8 +162,4 @@ perc_better_rec=df_results.loc[
     'recall'].count()*100
 print(f"{perc_better_prec}% of the bootstrapped samples has better precision than the original")
 print(f"{perc_better_rec}% of the bootstrapped samples has better recall than the original")
-```
-
-```python
-df_results.sort_values('precision',ascending=False)
 ```
