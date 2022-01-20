@@ -1,3 +1,18 @@
+---
+jupytext:
+  cell_metadata_filter: -all
+  formats: ipynb,md:myst
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.11.1
+kernelspec:
+  display_name: c3sdl
+  language: python
+  name: c3sdl
+---
+
 # IRI forecast as a trigger for drought in Chad
 This notebook entails the analysis that was done for analyzing the IRI seasonal forecast as part of drought-related trigger in Chad. 
 An initial proposal from in-country partners was:
@@ -12,29 +27,32 @@ There are four main conclusions:
 1) Due to the limited data availability it is almost impossible to set an educated threshold. There is only data since 2017 and no drought events caused by large-scale lack of precipitation occurred during this period
 2) The general skill (GROC) over TCD is mediocre. It is therefore advised to use the forecasts but with caution
 3) A threshold of 60% is too high, as this has barely been reached at global level per raster cell, let alone over a larger area.
-4) We instead recommend a threshold of4 42.5% over 20% of the area as this is expected to be reached from time to time but not too often. The 42.5% is specifically set to match with the bins of [IRI's graphics](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/). 
+4) We instead recommend a threshold of4 42.5% over 20% of the area as this is expected to be reached from time to time but not too often. The 42.5% is specifically set to match with the bins of [IRI's graphics](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/). However 40% could also be a reasonable threshold
 
++++
 
 #### Skill
 Before diving into any code, lets analyze the skill as produced by IRI. The GROC is shown below where grey indicates no skill, and white a dry mask. As can be seen from the images, over significant parts of Chad the forecasts don't show any skill.  
 
 It also seems the skill becomes lower with a lower leadtime which is the opposite from the expected pattern. However the differences between leadtimes are small and thus should be interpreted with caution.
 
++++
 
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jja_Ld3.gif" alt="drawing" width="700"/>
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jja_Ld1.gif" alt="drawing" width="700"/>
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jas_Ld4.gif" alt="drawing" width="700"/>
 <img src="https://iri.columbia.edu/climate/verification/images/NAskillmaps/pcp/PR1_groc_jas_Ld2.gif" alt="drawing" width="700"/>
 
++++
 
 #### Load libraries and set global constants
 
-```python
+```{code-cell} ipython3
 %load_ext autoreload
 %autoreload 2
 ```
 
-```python
+```{code-cell} ipython3
 import geopandas as gpd
 from shapely.geometry import mapping
 import pandas as pd
@@ -61,16 +79,16 @@ from src.indicators.drought.iri_rainfallforecast import get_iri_data,get_iri_dat
 from src.utils_general.raster_manipulation import compute_raster_statistics
 ```
 
-```python
+```{code-cell} ipython3
 hdx_blue="#007ce0"
 ```
 
-```python
+```{code-cell} ipython3
 #month number refers to the last month of the season
 month_season_mapping={1:"NDJ",2:"DJF",3:"JFM",4:"FMA",5:"MAM",6:"AMJ",7:"MJJ",8:"JJA",9:"JAS",10:"ASO",11:"SON",12:"OND"}
 ```
 
-```python
+```{code-cell} ipython3
 iso3="tcd"
 config=Config()
 parameters = config.parameters(iso3)
@@ -82,14 +100,14 @@ adm2_path=data_processed_dir/iso3/config.SHAPEFILE_DIR / "tcd_adm2_area_of_inter
 
 #### Set variables
 
-```python
+```{code-cell} ipython3
 gdf_adm1=gpd.read_file(adm1_bound_path)
 gdf_adm2=gpd.read_file(adm2_path)
 incl_adm_col="area_of_interest"
 gdf_aoi = gdf_adm2[gdf_adm2[incl_adm_col] == True]
 ```
 
-```python
+```{code-cell} ipython3
 #list of months and leadtimes that could be part of the trigger
 #first entry refers to the publication month, second to the leadtime
 trig_mom=[(3,3),(3,4),(5,1),(5,2)]
@@ -97,13 +115,14 @@ trig_mom=[(3,3),(3,4),(5,1),(5,2)]
 
 ## Inspect forecasts
 
++++
 
 We load the iri data indicating the dominant tercile. The negative values indicate forecasted below average rainfall, and the positive values above average. We use the IRI website bins, where values between -37.5 and 37.5 are assigned to the normal tercile. We could also choose to use rounded bins instead(e.g. -40 to 40). 
 
 We plot the forecast raster data for the periods and leadtimes of interest. The red areas are the admin1's we are focussing on. 
 These figures are the same as [the figure on the IRI Maproom](https://iridl.ldeo.columbia.edu/maproom/Global/Forecasts/NMME_Seasonal_Forecasts/Precipitation_ELR.html).
 
-```python
+```{code-cell} ipython3
 #F indicates the publication month, and L the leadtime. 
 #A leadtime of 1 means a forecast published in May is forecasting JJA
 ds_iri_dom=get_iri_data_dominant(config,download=False)
@@ -112,7 +131,7 @@ da_iri_dom=ds_iri_dom.dominant
 da_iri_dom_clip=da_iri_dom.rio.clip(gdf_adm1["geometry"], all_touched=True)
 ```
 
-```python
+```{code-cell} ipython3
 #facet plot of raster forecast data
 #not very neat function but does the job for now
 def plt_raster_iri(da_iri_dom_clip,
@@ -144,7 +163,7 @@ def plt_raster_iri(da_iri_dom_clip,
     g.fig.suptitle(f"Forecasts published in {calendar.month_abbr[pub_mon]} predicting {for_seas} (lt={lt}) \n The subtitles indicate the publishing date",y=1.1);
 ```
 
-```python
+```{code-cell} ipython3
 #iri website bins
 plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
 #rounded bins for easier interpretability
@@ -152,19 +171,19 @@ plt_levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
 plt_colors=['#783200','#ab461e','#d18132','#e8b832','#fafa02','#ffffff','#d1f8cc','#acf8a0','#73bb6e','#3a82b3','#0e3bf4']
 ```
 
-```python
+```{code-cell} ipython3
 plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=3,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
-```python
+```{code-cell} ipython3
 plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=1,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
-```python
+```{code-cell} ipython3
 plt_raster_iri(da_iri_dom_clip,pub_mon=3,lt=4,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
-```python
+```{code-cell} ipython3
 plt_raster_iri(da_iri_dom_clip,pub_mon=5,lt=2,plt_levels=plt_levels,plt_colors=plt_colors)
 ```
 
@@ -173,12 +192,13 @@ From the above plots we can conclude a couple of things:
 - The patterns in the region can differ, for example in 2021-03 where we see mainly above average, but with some below average areas in the eastern-south
 - The forecasted patterns can change heavily with changing leadtime. For example for the JAS season with 4 and 2 months leadtime. 
 
++++
 
 Below we plot a few examples of "tricky" forecasts. For the left two: say the threshold would be at 40%, would the trigger be reached for the red region? For the right two plots we see a combination of below and above average across the region. What should we do with that? 
 
 These figures are to guide the discussion on which forecasts we would have wanted to trigger and for which we wouldn't
 
-```python
+```{code-cell} ipython3
 g=da_iri_dom_clip.where(da_iri_dom_clip.F.isin([cftime.Datetime360Day(2021, 2, 16, 0, 0, 0, 0),cftime.Datetime360Day(2021, 3, 16, 0, 0, 0, 0),cftime.Datetime360Day(2018, 7, 16, 0, 0, 0, 0),cftime.Datetime360Day(2019, 7, 16, 0, 0, 0, 0)]),drop=True).sel(L=3).plot(
     col="F",
     col_wrap=4,
@@ -205,12 +225,12 @@ We inspect 3 different methods: including all cells with their centre in the reg
 
 After discussion we concluded that the approximate mask is a valid method and thus use this further on. 
 
-```python
+```{code-cell} ipython3
 #sel random values to enable plotting of included cells (so values are irrelevant)
 da_iri_dom_blue=da_iri_dom.sel(F="2020-05-16",L=1).squeeze()
 ```
 
-```python
+```{code-cell} ipython3
 da_iri_dom_blue_centre=da_iri_dom_blue.rio.clip(gdf_aoi["geometry"], all_touched=False)
 g=da_iri_dom_blue_centre.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
@@ -219,7 +239,7 @@ gdf_aoi.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
-```python
+```{code-cell} ipython3
 da_iri_dom_blue_touched=da_iri_dom_blue.rio.clip(gdf_aoi["geometry"], all_touched=True)
 g=da_iri_dom_blue_touched.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
@@ -228,7 +248,7 @@ gdf_aoi.boundary.plot(linewidth=1, ax=g.axes, color="red")
 g.axes.axis("off");
 ```
 
-```python
+```{code-cell} ipython3
 #approximate of a mask
 da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
     da_iri_dom_blue.rio.crs,
@@ -241,7 +261,7 @@ da_iri_dom_blue_res = da_iri_dom_blue.rio.reproject(
 ).rio.clip(gdf_aoi["geometry"], all_touched=False)
 ```
 
-```python
+```{code-cell} ipython3
 g=da_iri_dom_blue_res.plot.imshow(cmap=ListedColormap([hdx_blue]),figsize=(6,10),add_colorbar=False)
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
 g.axes.set_title(f"Included area with approx mask")
@@ -260,12 +280,13 @@ Moreover, the pattern might be very different depending on the season. The third
 
 We should also be aware that these plots show the values at raster cell level. If we thereafter require 20% of the area meeting the probability threshold, this is even less likely to occur. 
 
++++
 
 Due to the limited data availability it is very hard to determine the threshold objectively. We do advise against the 60% threshold since even globally this phenomenon that seems too rare for our purpose. 
 
 However a threshold anywhere between 40 and 50 could be reasonable. We experimented with these different thresholds. For now we propose a threshold of 42.5%. This because we estimate it to be already quite rare, in combination with the 20% of the area requirement, but at the same time we estimate it to be possible to occur. The reason we set it to 42.5 specifically is because this matches the IRI bins. Thus people can easily inspect the forecasts themselves on the maproom. 
 
-```python
+```{code-cell} ipython3
 #C indicates the tercile (below-average, normal, or above-average).  
 #F indicates the publication month, and L the leadtime
 ds_iri = get_iri_data(config, download=False)
@@ -277,13 +298,13 @@ da_iri_allt=da_iri.rio.clip(gdf_aoi["geometry"], all_touched=True)
 da_iri_allt_bavg=da_iri_allt.sel(C=0)
 ```
 
-```python
+```{code-cell} ipython3
 #check that all touching is done correctly
 g=da_iri_allt.sel(F="2021-03-16",L=2,C=0).plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
-```python
+```{code-cell} ipython3
 #upsample the resolution in order to create a mask of our aoi
 resolution = 0.05
 mask_list=[]
@@ -306,23 +327,23 @@ da_iri_mask = da_iri_mask.rename(
 da_iri_mask_bavg=da_iri_mask.sel(C=0)
 ```
 
-```python
+```{code-cell} ipython3
 #check that masking is done correctly
 g=da_iri_mask.sel(F="2021-03-16",L=2,C=0).plot()#squeeze().plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
-```python
+```{code-cell} ipython3
 da_iri.sel(C=0).hvplot.hist('prob',alpha=0.5).opts(ylabel="Probability below average",
 title="Forecasted probabilities of below average \n at raster level in the whole world across all seasons and leadtimes, 2017-2021")
 ```
 
-```python
+```{code-cell} ipython3
 da_iri_mask_bavg.hvplot.violin('prob',by='L', color='L', cmap='Category20').opts(ylabel="Probability below average",xlabel="leadtime",
 title="Observed probabilities of bavg at raster level in the region of interest")
 ```
 
-```python
+```{code-cell} ipython3
 #transform data such that we can select by combination of publication month (F) and leadtime (L)
 da_plt=da_iri_mask_bavg.assign_coords(F=da_iri_mask_bavg.F.dt.month)
 da_plt=da_plt.stack(comb=["F","L"])
@@ -330,7 +351,7 @@ da_plt=da_plt.stack(comb=["F","L"])
 da_iri_mask_trig_mom=xr.concat([da_plt.sel(comb=m) for m in trig_mom],dim="comb")
 ```
 
-```python
+```{code-cell} ipython3
 da_iri_mask_trig_mom.hvplot.violin('prob').opts(ylabel="Probability below average",
                                                 title="observed probabilities of bavg for the month and leadtime combinations \n included in the triger")
 ```
@@ -344,19 +365,19 @@ As discussed above we set the probability of below average to 42.5% (but experim
 
 For now we set the minimum percentage of the area that should reach the threshold to 20% as that was proposed by the Atelier. This seems reasonable to us as it is a substantial area thus possibly indicating widespread drought. At the same time requiring a larger percentage significantly lowers the chances of meeting the trigger, as we often see that extreme values are only forecasted in a smaller area. 
 
-```python
+```{code-cell} ipython3
 #% probability of bavg
 threshold=42.5
 #min percentage of the area that needs to reach the threshold
 perc_area=20
 ```
 
-```python
+```{code-cell} ipython3
 adm0_col="admin0Name"
 pcode0_col="admin0Pcod"
 ```
 
-```python
+```{code-cell} ipython3
 #compute stats
 #dissolve the region to one polygon
 gdf_aoi_dissolved=gdf_aoi.dissolve(by=adm0_col)
@@ -385,43 +406,44 @@ df_stats_reg_bavg["month"]=df_stats_reg_bavg.F.dt.month
 
 NaN values indicate that the whole region is covered by a dry mask at that point. See [here](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/methodology/) for more information
 
-```python
+```{code-cell} ipython3
 df_stats_reg_bavg=df_stats_reg_bavg[(~df_stats_reg_bavg.perc_thresh.isnull())]
 ```
 
-```python
+```{code-cell} ipython3
 df_stats_reg_bavg=df_stats_reg_bavg.sort_values("perc_thresh",ascending=False)
 ```
 
-```python
+```{code-cell} ipython3
 df_stats_reg_bavg[df_stats_reg_bavg.perc_thresh>=20]
 ```
 
 ## Analyze statistics probability below average
 
++++
 
 We plot the occurrences of the probability of below average being above the given threshold and given minimum percentage of the area. This so far is a preliminary analysis which can be improved once we have made some decisions. 
 
-```python
+```{code-cell} ipython3
 print(f"{round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area])/len(df_stats_reg_bavg)*100)}%"
       f"({round(len(df_stats_reg_bavg[df_stats_reg_bavg['perc_thresh']>=perc_area]))}/{len(df_stats_reg_bavg)}) "
       "of forecasts across all seasons and leadtimes"
       f" predicted >={perc_area}% of the area >={threshold}% prob of below average")
 ```
 
-```python
+```{code-cell} ipython3
 #trig_mom includes the forecasts released in march and may
 #here we also add the forecasts of April and June for testing
 #the second parameter of the tuple is the leadtime
 trig_mom_all=trig_mom+[(4,2),(4,3),(6,1)]
 ```
 
-```python
+```{code-cell} ipython3
 #select the months and leadtimes included in the trigger
 df_stats_reg_bavg_trig_mom=df_stats_reg_bavg[df_stats_reg_bavg[['month', 'L']].apply(tuple, axis=1).isin(trig_mom_all)]
 ```
 
-```python
+```{code-cell} ipython3
 histo=alt.Chart(df_stats_reg_bavg).mark_bar().encode(
     alt.X("perc_thresh:Q", bin=alt.Bin(step=1),title=f"% of region with >={threshold} probability of bavg"),
     y='count()',
@@ -432,7 +454,7 @@ line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode
 histo+line
 ```
 
-```python
+```{code-cell} ipython3
 histo=alt.Chart(df_stats_reg_bavg_trig_mom).mark_bar().encode(
     alt.X("perc_thresh:Q", bin=alt.Bin(step=1),title=f"% of region with >={threshold} probability of bavg"),
     y='count()',
@@ -443,11 +465,11 @@ line = alt.Chart(pd.DataFrame({'x': [perc_area]})).mark_rule(color="red").encode
 histo+line
 ```
 
-```python
+```{code-cell} ipython3
 df_stats_reg_bavg_trig_mom["pred_month"]=df_stats_reg_bavg_trig_mom.apply(lambda x: x["F"]+relativedelta(months=int(x["L"])),axis=1)
 ```
 
-```python
+```{code-cell} ipython3
 df_stats_reg_bavg_trig_mom.sort_values(["pred_month","L"]).head()
 ```
 
@@ -455,6 +477,6 @@ df_stats_reg_bavg_trig_mom.sort_values(["pred_month","L"]).head()
 Just like with BFA we might also want to examine if the below average tercile is the dominant tercile. For BFA we required at the pixel level that 
 probability below average >= (probability above average + 5%)
 
-```python
+```{code-cell} ipython3
 da_iri.where((da_iri.sel(C=0)>=40)&(da_iri.sel(C=0)-da_iri.sel(C=2)<=5),drop=True).sel(C=0).hvplot.hist('prob',alpha=0.5)
 ```
