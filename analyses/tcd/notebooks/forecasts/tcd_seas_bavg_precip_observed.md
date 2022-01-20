@@ -63,6 +63,7 @@ data_raw_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.RAW_DIR
 data_processed_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.PROCESSED_DIR
 country_data_raw_dir = data_raw_dir/iso3
 chirps_country_processed_dir = data_processed_dir/iso3/"chirps"
+country_data_exploration_dir = Path(config.DATA_DIR)/config.PUBLIC_DIR/"exploration"/iso3
 
 chirps_country_processed_path = chirps_country_processed_dir/"monthly"/f"{iso3}_chirps_monthly.nc"
 chirps_seasonal_lower_tercile_processed_path = chirps_country_processed_dir/"seasonal"/f"{iso3}_chirps_seasonal_lowertercile.nc"
@@ -359,6 +360,16 @@ df_stats_reg_all=compute_raster_statistics(gdf=gdf_aoi_dissolved,bound_col="admi
 
 df_stats_reg["perc_bavg"] = df_stats_reg[f"count_admin0Pcod"]/df_stats_reg_all[f"count_admin0Pcod"]*100
 df_stats_reg.time=pd.to_datetime(df_stats_reg.time.apply(lambda x: x.strftime("%Y-%m-%d")))
+df_stats_reg["end_time"]=pd.to_datetime(df_stats_reg["time"].apply(lambda x: x.strftime('%Y-%m-%d')))
+df_stats_reg["end_month"]=df_stats_reg.end_time.dt.to_period("M")
+df_stats_reg["start_time"]=df_stats_reg.end_time.apply(lambda x: x+relativedelta(months=-2))
+df_stats_reg["start_month"]=df_stats_reg.start_time.dt.to_period("M")
+df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
+df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
+df_stats_reg["seas_trig"]=np.where(df_stats_reg.end_month.dt.month.isin(end_months_sel),True,False)
+df_stats_reg=df_stats_reg.sort_values("start_month")
+df_stats_reg["seas_trig_str"]=df_stats_reg["seas_trig"].replace({True:"season included in trigger",False:"season not included in trigger"})
+df_stats_reg["year"]=df_stats_reg.end_month.dt.year
 ```
 
 ```python
@@ -434,15 +445,6 @@ To get a better historical overview, we plot the percentage of below average rai
 
 From here we can see that 1982,1983,1984,1987,1989, 1990,1993,1996, and 2004 saw a percentage of the area receiving below average rain that reaches above the 1 in 5 year return period.    
 1986, 2000, 2007, 2008, 2011, 2013,2015 saw 1 in 3 year return period percentages.
-
-```python
-df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
-df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
-df_stats_reg["seas_trig"]=np.where(df_stats_reg.end_month.dt.month.isin(end_months_sel),True,False)
-df_stats_reg=df_stats_reg.sort_values("start_month")
-df_stats_reg["seas_trig_str"]=df_stats_reg["seas_trig"].replace({True:"season included in trigger",False:"season not included in trigger"})
-df_stats_reg["year"]=df_stats_reg.end_month.dt.year
-```
 
 ```python
 g = sns.catplot(data=df_stats_reg, x="season",y="perc_bavg",col="year", hue="seas_trig_str", col_wrap=3, kind="bar",
@@ -579,6 +581,11 @@ df_stats_drought["drought"]=np.where(df_stats_drought.year.isin(drought_years),T
 df_stats_drought["rp3"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[3,"rp_round"],True,False)
 df_stats_drought["rp5"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[5,"rp_round"],True,False)
 df_stats_drought["bavg_20"]=np.where(df_stats_drought.perc_bavg>=20,True,False)
+```
+
+```python
+# #save for using for bootstrap
+# df_stats_drought.to_csv(country_data_exploration_dir/"chirps"/"tcd_perc_aoi_bavg.csv",index=False)
 ```
 
 ```python
