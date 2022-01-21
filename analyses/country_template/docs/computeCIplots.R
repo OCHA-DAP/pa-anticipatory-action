@@ -46,8 +46,8 @@ metric_plot <- ci_df %>%
                  y = central.x,
                  label = central.x,
                  vjust = 1),
-             size = 6, # font size
-             nudge_x = -0.1, # bring label closer to graph
+             size = 8, # font size
+             nudge_x = 0.1, # bring label closer to graph
              color = "black",
              fill = "white",
              fontface = 'bold',
@@ -56,8 +56,8 @@ metric_plot <- ci_df %>%
                  y = low.x,
                  label = low.x,
                  vjust = 1),
-             size = 5,
-             nudge_x = -0.1,
+             size = 7,
+             nudge_x = 0,
              color = "black",
              fill = "white",
              label.size = NA) + # removes border
@@ -65,8 +65,8 @@ metric_plot <- ci_df %>%
                  y = high.x,
                  label = high.x,
                  vjust = 1),
-             size = 5,
-             nudge_x = -0.1,
+             size = 7,
+             nudge_x = 0,
              color = "black",
              fill = "white",
              label.size = NA) + # removes border
