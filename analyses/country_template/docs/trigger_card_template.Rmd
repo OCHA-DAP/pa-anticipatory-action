@@ -1,5 +1,5 @@
 ---
-title: "Document Title To Update"
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
 pagetitle: 'AA Trigger Report'
 output:
   html_document:
@@ -28,6 +28,7 @@ editor_options:
   margin-right: auto;
 }
 </style>
+
 
 ```{r hard-coded values, echo = FALSE, message = FALSE, warning = FALSE}
 country_name <- "Country Name"
@@ -127,7 +128,7 @@ funding_c <- paste0('$',funding_c,'m')
 
 # TO REMOVE df dummy data above
 # TO ADD read in data from analysis output file (csv)
-# TO ADD data validation: values between 0 and 100, rounded to 0 1 decimal, low_end < central < high_end
+# TO ADD data validation: values between 0 and 100, rounded to 1 decimal, low_end < central < high_end
 # TO ADD filter df by metric if all values in 1 file 
 ```
 
@@ -139,7 +140,9 @@ df_det <- computeCIwidths(metric_name = 'det') # detection rate
 df_far <- computeCIwidths(metric_name = 'far') # false alarm rate
 df_mis <- computeCIwidths(metric_name = 'mis') # miss rate
 df_acc <- computeCIwidths(metric_name = 'acc') # accuracy rate
-
+#df_act <- computeCIwidths(metric_name = 'act') # prob trigger activation
+#df_min <- computeCIwidths(metric_name = 'min') # prob minimum framework activation 
+#df_ful <- computeCIwidths(metric_name = 'ful') # prob full framework activation 
 
 ```
 
@@ -150,20 +153,22 @@ plotCI(dataframe = df_var, metric = 'var_ci')
 plotCI(dataframe = df_det, metric = 'det_ci') 
 plotCI(dataframe = df_far, metric = 'far_ci') 
 plotCI(dataframe = df_mis, metric = 'mis_ci') 
-plotCI(dataframe = df_acc, metric = 'acc_ci') 
+#plotCI(dataframe = df_acc, metric = 'acc_ci') 
+#plotCI(dataframe = df_min, metric = 'min_ci') 
+#plotCI(dataframe = df_ful, metric = 'ful_ci') 
 ```
 
 <br> 
 <br>
 <br>
 
-# Trigger Report
+# Anticipatory Action Trigger Report
 <br>
-**Country:** `r country_name`
+## **Country:** `r country_name`
 <br>
-**Shock:** `r shock`
+## **Shock:** `r shock`
 <br>
-**Last updated:** `r Sys.Date()`
+## **Last updated:** `r Sys.Date()`
 
 <br>
 
@@ -183,8 +188,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Activity Package', 
                                        'Funding Package', 
                                        'Prob. Trigger Activation', 
-                                       'Prob. Min. Framework Activation', 
-                                       'Prob. Full Framework Activation'),
+                                       'Prob. Min. Frwk Activ.', 
+                                       'Prob. Full Frwk Activ.'),
                        trigger_a = c(type_a, 
                                      timepoints_a, 
                                      predicted_window_a, 
@@ -199,8 +204,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_a, 
                                      funding_a, 
                                      paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR TRIGGER A
-                                     "",  
-                                     ""),
+                                     "Across all triggers",  
+                                     "Across all triggers"),
                        trigger_b = c(type_b, 
                                      timepoints_b, 
                                      predicted_window_b, 
@@ -231,8 +236,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_c, 
                                      funding_c, 
                                      paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot for trigger-C
-                                     "",
-                                     ""))
+                                     "Across all triggers",
+                                     "Across all triggers"))
 
 ## TO DO: MAKE TABLE CONDITIONAL ON NUMBER OF TRIGGERS
 ## TO DO: ADD PLOT PATH TO SRC IN DF
@@ -252,33 +257,8 @@ kbl(snapshot_df,
   pack_rows("Performance", start_row = 5, end_row = 8, color = '#1bb580') %>%
   pack_rows("Shock", start_row = 9, end_row = 11, color = '#1bb580') %>%
   pack_rows("Activation", start_row = 12, end_row = 13, color = '#1bb580') %>%
-  pack_rows("Framework Activation", 15, 16, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
-  kableExtra::footnote(general = "", symbol = c("Each trigger can meet its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
+  pack_rows("Framework Activation", start_row = 15, end_row = 16, colnum = 1, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
+  kableExtra::footnote(general = "", general_title = "___", symbol = c("Each trigger can reach its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
 
 
 ```
-
-``` {r performance table}
-
-perf_df <- data.frame(metric = c('Valid Activation Rate', 'Detection Rate', 'False Alarm Rate', 'Miss Rate'),
-                   ci_path = c(paste0(plots_path, "trimmed_var_ci.png"), paste0(plots_path, "trimmed_det_ci.png"), paste0(plots_path, "trimmed_far_ci.png"), paste0(plots_path, "trimmed_mis_ci.png"))
-           )
-# 
-# perf_df <- data.frame(metric = c('Valid Activation Rate', 'Detection Rate', 'False Alarm Rate', 'Miss Rate'),
-#                        ci_path = c(paste0(plots_path, "docs/trimmed_var_ci.png"), paste0(plots_path, "docs/trimmed_det_ci.png"), paste0(plots_path, "docs/trimmed_far_ci.png"), paste0(plots_path, "docs/trimmed_mis_ci.png")))
-
-perf_df %>%
-  flextable() %>%
-  colformat_image(j = "ci_path", width = 3.8, height = 0.5) %>% # display confidence interval images
-  align(j = 'metric', align = "right", part = "all") %>%
-  valign(j = 'metric', valign = "center", part = "body") %>% # vertical alignment
-  align(j = 'ci_path', align = "left", part = "header") %>%
-  fontsize(j = 'metric', size = 7, part = "body") %>%
-  bold(j = c('metric', 'ci_path'), bold = TRUE, part = "header") %>%
-  set_header_labels(metric = "Metric", ci_path = "Estimate (%)")
-  
-
-
-```
-
-
