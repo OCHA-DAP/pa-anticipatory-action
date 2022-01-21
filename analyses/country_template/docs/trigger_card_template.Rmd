@@ -6,7 +6,7 @@ output:
     css: style.css
     includes:
       in_header: header.html
-    toc: yes
+    toc: no
     toc_float: yes
     toc_depth: '4'
     df_print: paged
@@ -14,18 +14,57 @@ output:
     css: style.css
     includes:
       in_header: header.html
-    toc: yes
+    toc: no
     toc_float: yes
     toc_depth: '4'
     df_print: paged
 editor_options:
   chunk_output_type: console
 ---
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
 
 ```{r hard-coded values, echo = FALSE, message = FALSE, warning = FALSE}
 country_name <- "Country Name"
 shock <- "Shock"
 plots_path <- ""
+shock_return_period <- "1 in X years"
+nbr_hist_shocks <-"X shocks"
+hist_period <- "XXXX - XXXX" # eg: 1980 - 2021
+prob_min_frmwk_activation <- 0.79 # input number only, in decimal format
+prob_full_frmwk_activation <- 0.13 # input number only, in decimal format
+
+# trigger A info  **** DEFAULTS TO CHANGE **** 
+type_a <- 'eg: Predictive' 
+timepoints_a<- 'eg: Jan, Feb, Mar'
+package_a <- 'TBC' # input number only, no $ sign or 'm' for million
+funding_a <- 'X'
+predicted_window_a <- 'eg: JAS' 
+lead_time_a <- 'eg: 7-5 months' # change units as needed. Include all lead times if multiple activation timepoints
+prob_trigger_activation_a <- 0.42 #  input number only, in decimal format
+
+# trigger B info  **** DEFAULTS TO CHANGE IF THERE IS A TRIGGER B **** 
+type_b <- 'eg: Predictive'
+timepoints_b <- 'eg: Apr, May, Jun'
+package_b <- 'TBC'
+funding_b <- 'X' 
+predicted_window_b <- 'eg: ASO'
+lead_time_b <- 'eg: 4-1 months'
+prob_trigger_activation_b <- 0.23 
+
+# trigger C info  **** DEFAULTS TO CHANGE IF THERE IS A TRIGGER C **** 
+type_c <- 'eg: Observational'
+timepoints_c <- 'eg: Jul'
+package_c <- 'TBC'
+funding_c <- 'X'
+predicted_window_c <- 'N/A'
+lead_time_c <- 'N/A'
+prob_trigger_activation_c <- 0.78
 
 ```
 
@@ -66,13 +105,33 @@ computeCIwidths <- function(metric_name) {
 }
 ```
 
-```{r data loading and processing}
+```{r data loading and formatting}
 # read in performance metrics file
 df <- data.frame(metric = c('var','var','var','far','far','far', 'det', 'det', 'det', 'mis', 'mis', 'mis', 'acc', 'acc', 'acc'),
                   point = c('low_end', 'central', 'high_end','low_end', 'central', 'high_end', 'low_end', 'central', 'high_end', 'low_end', 'central', 'high_end', 'low_end', 'central', 'high_end'), 
                    value = c(85, 91, 97, 20, 32, 42, 83, 89, 95, 16, 28, 38, 45, 50, 55),
                    dummy = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1, 1, 1)
                  )
+
+# format probabilities
+prob_trigger_activation_a <- paste0(round(prob_trigger_activation_a * 100, 1), '%')
+prob_trigger_activation_b <- paste0(round(prob_trigger_activation_b * 100, 1), '%')
+prob_trigger_activation_c <- paste0(round(prob_trigger_activation_c * 100, 1), '%')
+prob_min_frmwk_activation <- paste0(round(prob_min_frmwk_activation * 100, 1), '%')
+prob_full_frmwk_activation <- paste0(round(prob_full_frmwk_activation * 100, 1), '%')
+
+# format funding amounts
+funding_a <- paste0('$',funding_a,'m')
+funding_b <- paste0('$',funding_b,'m')
+funding_c <- paste0('$',funding_c,'m')
+
+# TO REMOVE df dummy data above
+# TO ADD read in data from analysis output file (csv)
+# TO ADD data validation: values between 0 and 100, rounded to 0 1 decimal, low_end < central < high_end
+# TO ADD filter df by metric if all values in 1 file 
+```
+
+```{r compute CI measurements}
 
 # compute width and position of CI 
 df_var <- computeCIwidths(metric_name = 'var') # valid activation rate 
@@ -81,10 +140,7 @@ df_far <- computeCIwidths(metric_name = 'far') # false alarm rate
 df_mis <- computeCIwidths(metric_name = 'mis') # miss rate
 df_acc <- computeCIwidths(metric_name = 'acc') # accuracy rate
 
-# TO REMOVE df dummy data above
-# TO ADD read in data from analysis output file (csv)
-# TO ADD data validation: values between 0 and 100, rounded to 0 1 decimal, low_end < central < high_end
-# TO ADD filter df by metric if all values in 1 file 
+
 ```
 
 ```{r data plotting}
@@ -111,6 +167,31 @@ plotCI(dataframe = df_acc, metric = 'acc_ci')
 
 <br>
 
+```{r mechanism snapshot, include = TRUE}
+
+snapshot_df <- data.frame(row_name = c('Type', 'Activation Timepoints', 'Predicted Window', 'Lead Time', 'Valid Activation Rate', 'Detection Rate', 'False Alarm Rate', 'Miss Rate' , 'Shock Return Period', 'Nbr of Historical Shocks', 'Historical Period', 'Activity Package', 'Funding Package', 'Prob. Min. Framework Activation', 'Prob. Full Framework Activation'),
+                       trigger_a = c(type_a, timepoints_a, predicted_window_a, lead_time_a, paste0("<img src=trimmed_var_ci.png"), paste0("<","img src=","trimmed_det_ci",".png",">"), paste0("<","img src=","trimmed_far_ci",".png",">"), paste0("<","img src=","trimmed_mis_ci",".png",">"), shock_return_period, nbr_hist_shocks, hist_period, package_a, funding_a, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_var_ci",".png",">")),
+                       trigger_b = c(type_b, timepoints_b, predicted_window_b, lead_time_b, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_det_ci",".png",">"), paste0("<","img src=","trimmed_far_ci",".png",">"), paste0("<","img src=","trimmed_mis_ci",".png",">"), shock_return_period, nbr_hist_shocks, hist_period, package_b, funding_b, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_var_ci",".png",">")),
+                       trigger_c = c(type_c, timepoints_c, predicted_window_c, lead_time_c, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_det_ci",".png",">"), paste0("<","img src=","trimmed_far_ci",".png",">"), paste0("<","img src=","trimmed_mis_ci",".png",">"), shock_return_period, nbr_hist_shocks, hist_period,package_c, funding_c, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_var_ci",".png",">")))
+
+## TO DO: MAKE TABLE CONDITIONAL ON NUMBER OF TRIGGERS
+kbl(snapshot_df,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, # omit row numbers
+    col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
+    align = "rccc") %>%
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:4,9:15), extra_css = "line-height: 25px;") %>%
+  row_spec(5:8, extra_css = "line-height: 45px;") %>%
+  column_spec(1, width = "16em", bold = T, extra_css = "vertical-align: bottom;") %>%
+  column_spec(2:4, width = "22em") %>%
+  pack_rows("Description", 1, 8, label_row_css = "background-color: #c0e2f0; color: #000000;") %>%
+  pack_rows("Shock", 9, 11, label_row_css = "background-color: #c0e2f0; color: #000000;") %>%
+  pack_rows("Activation", 12, 15, label_row_css = "background-color: #c0e2f0; color: #000000;") %>%
+kableExtra::footnote(symbol = c("Each trigger can be met independently from the others. Only 1 activation can occur per trigger in a given year."))
+
+```
 
 ``` {r performance table}
 
@@ -123,10 +204,11 @@ perf_df <- data.frame(metric = c('Valid Activation Rate', 'Detection Rate', 'Fal
 
 perf_df %>%
   flextable() %>%
-  colformat_image(j = "ci_path", width = 4, height = 1) %>% # display confidence interval images
+  colformat_image(j = "ci_path", width = 3.8, height = 0.5) %>% # display confidence interval images
   align(j = 'metric', align = "right", part = "all") %>%
+  valign(j = 'metric', valign = "center", part = "body") %>% # vertical alignment
   align(j = 'ci_path', align = "left", part = "header") %>%
-  fontsize(j = 'metric', size = 9, part = "body") %>%
+  fontsize(j = 'metric', size = 7, part = "body") %>%
   bold(j = c('metric', 'ci_path'), bold = TRUE, part = "header") %>%
   set_header_labels(metric = "Metric", ci_path = "Estimate (%)")
   
