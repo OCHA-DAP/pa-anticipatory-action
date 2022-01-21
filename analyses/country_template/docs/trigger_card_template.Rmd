@@ -169,12 +169,73 @@ plotCI(dataframe = df_acc, metric = 'acc_ci')
 
 ```{r mechanism snapshot, include = TRUE}
 
-snapshot_df <- data.frame(row_name = c('Type', 'Activation Timepoints', 'Predicted Window', 'Lead Time', 'Prob. Trigger Activ.', 'Valid Activation Rate', 'Detection Rate', 'False Alarm Rate', 'Miss Rate' , 'Shock Return Period', 'Nbr of Historical Shocks', 'Historical Period', 'Activity Package', 'Funding Package', 'Prob. Min. Framework Activation', 'Prob. Full Framework Activation'),
-                       trigger_a = c(type_a, timepoints_a, predicted_window_a, lead_time_a, paste0("<img src=trimmed_var_ci.png"), paste0("<img src=trimmed_var_ci.png"), paste0("<","img src=","trimmed_det_ci",".png",">"), paste0("<","img src=","trimmed_far_ci",".png",">"), paste0("<","img src=","trimmed_mis_ci",".png",">"), shock_return_period, nbr_hist_shocks, hist_period, package_a, funding_a, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_var_ci",".png",">")),
-                       trigger_b = c(type_b, timepoints_b, predicted_window_b, lead_time_b, paste0("<img src=trimmed_var_ci.png"), paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_det_ci",".png",">"), paste0("<","img src=","trimmed_far_ci",".png",">"), paste0("<","img src=","trimmed_mis_ci",".png",">"), shock_return_period, nbr_hist_shocks, hist_period, package_b, funding_b, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_var_ci",".png",">")),
-                       trigger_c = c(type_c, timepoints_c, predicted_window_c, lead_time_c, paste0("<img src=trimmed_var_ci.png"), paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_det_ci",".png",">"), paste0("<","img src=","trimmed_far_ci",".png",">"), paste0("<","img src=","trimmed_mis_ci",".png",">"), shock_return_period, nbr_hist_shocks, hist_period,package_c, funding_c, paste0("<","img src=","trimmed_var_ci",".png",">"), paste0("<","img src=","trimmed_var_ci",".png",">")))
+snapshot_df <- data.frame(row_name = c('Type', 
+                                       'Activation Timepoints', 
+                                       'Predicted Window', 
+                                       'Lead Time', 
+                                       'Valid Activation Rate', 
+                                       'Detection Rate', 
+                                       'False Alarm Rate', 
+                                       'Miss Rate' , 
+                                       'Shock Return Period', 
+                                       'Nbr of Historical Shocks', 
+                                       'Historical Period', 
+                                       'Activity Package', 
+                                       'Funding Package', 
+                                       'Prob. Trigger Activation', 
+                                       'Prob. Min. Framework Activation', 
+                                       'Prob. Full Framework Activation'),
+                       trigger_a = c(type_a, 
+                                     timepoints_a, 
+                                     predicted_window_a, 
+                                     lead_time_a, 
+                                     paste0("<img src=trimmed_var_ci.png"), 
+                                     paste0("<img src=trimmed_det_ci.png"), 
+                                     paste0("<img src=trimmed_far_ci.png"), 
+                                     paste0("<img src=trimmed_mis_ci.png"), 
+                                     shock_return_period, 
+                                     nbr_hist_shocks, 
+                                     hist_period, 
+                                     package_a, 
+                                     funding_a, 
+                                     paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR TRIGGER A
+                                     "",  
+                                     ""),
+                       trigger_b = c(type_b, 
+                                     timepoints_b, 
+                                     predicted_window_b, 
+                                     lead_time_b, 
+                                     paste0("<img src=trimmed_var_ci.png"),
+                                     paste0("<img src=trimmed_det_ci.png"),  
+                                     paste0("<img src=trimmed_far_ci.png"), 
+                                     paste0("<img src=trimmed_mis_ci.png"), 
+                                     shock_return_period,
+                                     nbr_hist_shocks, 
+                                     hist_period, 
+                                     package_b, 
+                                     funding_b, 
+                                     paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR EACH TRIGGER
+                                     paste0("<","img src=","trimmed_var_ci",".png",">"), # TO CHANGE TO PROB OF MIN/FULL FRAMEWORK ACTIVATION PLOTS
+                                     paste0("<","img src=","trimmed_var_ci",".png",">")), # TO CHANGE TO PROB OF MIN/FULL FRAMEWORK ACTIVATION PLOTS 
+                       trigger_c = c(type_c, 
+                                     timepoints_c, 
+                                     predicted_window_c, 
+                                     lead_time_c, 
+                                     paste0("<img src=trimmed_var_ci.png"),
+                                     paste0("<img src=trimmed_det_ci.png"), 
+                                     paste0("<img src=trimmed_far_ci.png"), 
+                                     paste0("<img src=trimmed_mis_ci.png"), 
+                                     shock_return_period, 
+                                     nbr_hist_shocks, 
+                                     hist_period, 
+                                     package_c, 
+                                     funding_c, 
+                                     paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot for trigger-C
+                                     "",
+                                     ""))
 
 ## TO DO: MAKE TABLE CONDITIONAL ON NUMBER OF TRIGGERS
+## TO DO: ADD PLOT PATH TO SRC IN DF
 
 kbl(snapshot_df,
     format = 'html',
@@ -183,15 +244,17 @@ kbl(snapshot_df,
     col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
-  row_spec(c(1:4,10:16), extra_css = "line-height: 25px;") %>%
-  row_spec(5:9, extra_css = "line-height: 45px;") %>%
-  column_spec(1, width = "16em", extra_css = "vertical-align: bottom;") %>%
-  column_spec(2:4, width = "22em") %>%
-  pack_rows("Description", start_row = 1, end_row = 5, color = '#1bb580') %>%
-  pack_rows("Performance", start_row = 6, end_row = 9, color = '#1bb580') %>%
-  pack_rows("Shock", start_row = 10, end_row = 12, color = '#1bb580') %>%
-  pack_rows("Activation", start_row = 13, end_row = 16, color = '#1bb580') %>%
-kableExtra::footnote(general = "", symbol = c("Each trigger can be met independently from the others. Only 1 activation can occur per trigger in a given year."))
+  row_spec(c(1:4, 9:13), extra_css = "line-height: 25px;") %>%
+  row_spec(c(5:8, 14:16), extra_css = "line-height: 45px;") %>%
+  column_spec(column = 1, width = "16em", extra_css = "vertical-align: bottom;") %>%
+  column_spec(column = c(2:4), width = "22em") %>%
+  pack_rows("Description", start_row = 1, end_row = 4, color = '#1bb580') %>%
+  pack_rows("Performance", start_row = 5, end_row = 8, color = '#1bb580') %>%
+  pack_rows("Shock", start_row = 9, end_row = 11, color = '#1bb580') %>%
+  pack_rows("Activation", start_row = 12, end_row = 13, color = '#1bb580') %>%
+  pack_rows("Framework Activation", 15, 16, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
+  kableExtra::footnote(general = "", symbol = c("Each trigger can meet its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
+
 
 ```
 
