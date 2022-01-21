@@ -11,16 +11,26 @@ As can be seen according to our methodology, there is a high chance of the relat
 ```python
 import pandas as pd
 import numpy as np
+import math
+from mlxtend.evaluate import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
 
 from pathlib import Path
+import os 
+import sys
 
 from statsmodels.stats.proportion import proportion_confint
 import matplotlib.pyplot as plt
 
 rng = np.random.default_rng(12345)
+
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
+sys.path.append(path_mod)
+from src.indicators.drought.config import Config
 ```
 
 ```python
+config=Config()
 iso3="tcd"
 country_data_exploration_dir = Path(config.DATA_DIR)/config.PUBLIC_DIR/"exploration"/iso3
 ```
@@ -95,7 +105,7 @@ col_ind="rp5"
 
 ```python
 #JAS=July-August-September season, JJA=June-July-August
-fig=compute_confusionmatrix_column(df_stats_drought,"season",col_drought,col_ind,"drought year in framework",
+fig=compute_confusionmatrix_column(df_all,"season",col_drought,col_ind,"drought year in framework",
                                f"percentage bavg above 5 year return period ",
                               title=f"Correspondence of 1 in 5 year observed below average precipitation and reported drought years",
                                   adjust_top=1.2)
