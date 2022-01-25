@@ -1,32 +1,36 @@
-body{
+body {
   font-family: 'Source Sans Pro';
 }
 /* Headers */
-h1{
+h1 {
     font-family: Arvo;
     font-weight: bold;
     color: #1bb580;
     font-size: 18px;
 }
-h2{
+
+h2 {
     font-family: Arvo;
     font-weight:
     color: #1bb580;
     font-size: 18px;
 }
-h3{
+
+h3 {
     font-family: Arvo;
     font-weight:
     color: #007ce1;
     font-size: 14px;
 }
-h4{
+
+h4 {
     font-family: Arvo;
     font-weight:
     font-style: italic;
     color: #1bb580;
     font-size: 14px;
 }
+
 blockquote {
     padding: 10px 20px;
     margin: 0 0 20px;
