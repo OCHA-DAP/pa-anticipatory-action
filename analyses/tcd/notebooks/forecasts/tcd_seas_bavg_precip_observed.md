@@ -63,6 +63,7 @@ data_raw_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.RAW_DIR
 data_processed_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.PROCESSED_DIR
 country_data_raw_dir = data_raw_dir/iso3
 chirps_country_processed_dir = data_processed_dir/iso3/"chirps"
+country_data_exploration_dir = Path(config.DATA_DIR)/config.PUBLIC_DIR/"exploration"/iso3
 
 chirps_country_processed_path = chirps_country_processed_dir/"monthly"/f"{iso3}_chirps_monthly.nc"
 chirps_seasonal_lower_tercile_processed_path = chirps_country_processed_dir/"seasonal"/f"{iso3}_chirps_seasonal_lowertercile.nc"
@@ -580,6 +581,11 @@ df_stats_drought["drought"]=np.where(df_stats_drought.year.isin(drought_years),T
 df_stats_drought["rp3"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[3,"rp_round"],True,False)
 df_stats_drought["rp5"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[5,"rp_round"],True,False)
 df_stats_drought["bavg_20"]=np.where(df_stats_drought.perc_bavg>=20,True,False)
+```
+
+```python
+# #save for using for bootstrap
+# df_stats_drought.to_csv(country_data_exploration_dir/"chirps"/"tcd_perc_aoi_bavg.csv",index=False)
 ```
 
 ```python
