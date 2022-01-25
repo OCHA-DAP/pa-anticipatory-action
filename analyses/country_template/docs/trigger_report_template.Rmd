@@ -163,15 +163,37 @@ plotCI(dataframe = df_mis, metric = 'mis_ci')
 <br>
 
 # Anticipatory Action Trigger Report
-<br>
-## **Country:** `r country_name`
-<br>
-## **Shock:** `r shock`
-<br>
-## **Last updated:** `r Sys.Date()`
 
-<br>
+&nbsp;
 
+### Country: `r country_name`
+### Shock: `r shock`
+### Last updated: `r Sys.Date()`
+
+&nbsp;
+
+---
+
+## Data sources
+
+### Historical shocks 
+* Compiled by X [Link to dataset on HDX]
+
+### Forecasts
+* Product 1 Name [Link to provider’s data portal]. Published [frequency, schedule].
+* Product 2 Name [Link to provider’s data portal]. Published [frequency, schedule].
+
+### Other data
+* [Specify] [Link to dataset on HDX]
+
+&nbsp;
+
+## Analysis
+Performed by the Centre for Humanitarian Data. Publicly available here [link to Github repo].
+
+&nbsp;
+
+## Trigger Mechanism Snapshot
 ```{r mechanism snapshot, include = TRUE}
 
 snapshot_df <- data.frame(row_name = c('Type', 
@@ -204,8 +226,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_a, 
                                      funding_a, 
                                      paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR TRIGGER A
-                                     "Across all triggers",  
-                                     "Across all triggers"),
+                                     "Covers all triggers",  
+                                     "Covers all triggers"),
                        trigger_b = c(type_b, 
                                      timepoints_b, 
                                      predicted_window_b, 
@@ -236,8 +258,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_c, 
                                      funding_c, 
                                      paste0("<img src=trimmed_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot for trigger-C
-                                     "Across all triggers",
-                                     "Across all triggers"))
+                                     "Covers all triggers",
+                                     "Covers all triggers"))
 
 ## TO DO: MAKE TABLE CONDITIONAL ON NUMBER OF TRIGGERS
 ## TO DO: ADD PLOT PATH TO SRC IN DF
@@ -258,7 +280,36 @@ kbl(snapshot_df,
   pack_rows("Shock", start_row = 9, end_row = 11, color = '#1bb580') %>%
   pack_rows("Activation", start_row = 12, end_row = 13, color = '#1bb580') %>%
   pack_rows("Framework Activation", start_row = 15, end_row = 16, colnum = 1, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
-  kableExtra::footnote(general = "", general_title = "___", symbol = c("Each trigger can reach its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
+  kableExtra::footnote(general = "", general_title = "___", symbol = c("Every trigger can reach its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
 
 
 ```
+
+&nbsp;
+
+## Monitoring & Governance
+[Actor] will monitor the trigger(s). If a trigger is met, [Actor] will notify [Recipients] by email within [time delay]. Draft emails can be found here [link].
+
+&nbsp;
+
+## Assumptions & Open questions
+
+```{r learning table}
+learning_table <- data.frame(decision = c('Eg: Added a requirement for above average being 5 percentage points above', 'some text'),
+                             rationale = c('Eg: A false alarm is costlier when the rains are above average than at normal levels', 'some text'),
+                             assumption = c('Eg: A larger delta in probabilities between the two terciles reduces the risk of above average occurring', 'some text'),
+                             questions = c('Eg: Does it help reduce false alarms in the face of above average rains? Is it a useful / needed condition?', 'some text'))
+
+## TO REMOVE: mock dataframe above
+## TO ADD: read in a csv
+
+kbl(learning_table,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, # omit row numbers
+    col.names = c("Decision","Rationale", "Assumption", "Open Question"), 
+    align = "llll") %>%
+  kable_minimal(c("hover", "striped"))
+
+```
+
