@@ -1,0 +1,507 @@
+---
+title: "Mozambique Exploration"
+author: "Seth Caldwell"
+date: "10/01/2022"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(gt)
+library(sf)
+library(rmapshaper)
+library(fuzzyjoin)
+
+#################
+#### LOADING ####
+#################
+
+file_dir <- file.path(
+  Sys.getenv("AA_DATA_DIR"),
+    "private",
+    "raw",
+    "moz",
+    "AA data Nampula Cabo delgado"
+)
+
+df_list <- map(
+  list.files(file_dir),
+  ~ readxl::read_excel(file.path(file_dir, .x), skip = 1)
+)
+
+df <- reduce(
+  df_list,
+  full_join,
+  by = "organisationunitname"
+)
+
+sf_dir <- file.path(
+    Sys.getenv("AA_DATA_DIR"),
+    "public",
+    "raw",
+    "moz",
+    "cod_ab"
+)
+
+adm1_sf <- read_sf(
+  file.path(
+    sf_dir,
+    "moz_admbnda_adm1_ine_20190607.shp"
+  )
+)
+
+adm2_sf <- read_sf(
+  file.path(
+    sf_dir,
+    "moz_admbnda_adm2_ine_20190607.shp"
+  )
+)
+
+adm3_sf <- read_sf(
+  file.path(
+    sf_dir,
+    "moz_admbnda_adm3_ine_20190607.shp"
+  )
+)
+
+###################
+#### WRANGLING ####
+###################
+
+
+long_df <- df %>%
+  pivot_longer(
+    -organisationunitname,
+    names_to = c("date", "epi_type"),
+    names_sep = " - ",
+    values_to = "cases"
+  ) %>%
+  mutate(
+    year = as.numeric(str_extract(date, "[0-9]{4}")),
+    epiweek = as.numeric(str_extract(date, "(?<=W)[0-9]+")),
+    date = paste(year, epiweek, sep = ", "),
+    year_week = (51 * (year - 2017)) + epiweek,
+    organisationunitname = case_when( # repairing names for later joining to geodataframe as necessary
+      organisationunitname == "CHIÚRE" ~ "Chiure",
+      organisationunitname == "MOCÍMBOA DA PRAIA" ~ "Mocimboa Da Praia",
+      organisationunitname == "DISTRITO DE NAMPULA" ~ "Cidade De Nampula",
+      organisationunitname == "LIUPO" ~ "Liúpo",
+      organisationunitname == "NACALA-PORTO" ~ "Nacala",
+      TRUE ~ str_to_title(organisationunitname)
+    ),
+    epi_type = case_when( # changing names for easy manipulation
+      epi_type == "CÓLERA CASOS" ~ "cholera_all",
+      epi_type == "DIARREIA 0-4 anos, CASOS" ~ "diarrhea_04",
+      epi_type == "DIARREIA 15+ anos, CASOS" ~ "diarrhea_15plus",
+      epi_type == "DIARREIA 5-14 anos, CASOS" ~ "diarrhea_514",
+      epi_type == "DISENTERIA CASOS" ~ "dysentery_all"
+    ),
+    cases = replace_na(cases, 0)
+  ) %>%
+  pivot_wider(names_from = "epi_type", values_from = "cases") %>%
+  rowwise() %>%
+  mutate(diarrhea_all = sum(c_across(starts_with("diarrhea")))) %>%
+  pivot_longer(-c(organisationunitname, date, year, epiweek, year_week),
+               names_to = c("epi_type", "age_group"),
+               names_sep = "_",
+               values_to = "cases") %>%
+  mutate(
+    age_group = case_when(
+      age_group == "04" ~ "0 - 4",
+      age_group == "514" ~ "5 - 14",
+      age_group == "15plus" ~ "15+",
+      TRUE ~ age_group
+    )
+  ) %>%
+  bind_rows(.,
+            filter(., organisationunitname %in% c("Cabo Delgado", "Nampula")) %>%
+              group_by(date, year, epiweek, year_week, epi_type, age_group) %>%
+              summarize(cases = sum(cases),
+                        organisationunitname = "Mozambique",
+                        .groups = "drop")
+              ) %>%
+  group_by(organisationunitname, epi_type, age_group) %>%
+  mutate(
+    cases_2_weeks = zoo::rollsum(cases, 2, na.pad = T, align = "right"),
+    cases_3_weeks = zoo::rollsum(cases, 3, na.pad = T, align = "right"),
+    cases_4_weeks = zoo::rollsum(cases, 4, na.pad = T, align = "right")
+  ) %>%
+  ungroup()
+
+# separate out aggregated province data from district data
+district_df <- long_df %>%
+  mutate(
+    province = ifelse(
+      organisationunitname %in% c("Cabo Delgado", "Nampula"),
+      organisationunitname,
+      NA)
+  ) %>%
+  fill(province) %>%
+  filter(!(organisationunitname %in% c("Nampula", "Cabo Delgado", "Mozambique"))) %>%
+  rename(district = organisationunitname)
+
+province_df <- filter(long_df, organisationunitname %in% c("Nampula", "Cabo Delgado")) %>%
+  rename(province = organisationunitname)
+
+overall_df <- filter(long_df, organisationunitname == "Mozambique") %>%
+  select(-organisationunitname)
+
+# simplify the polygons because plotting is taking up to 10 - 15 minutes
+adm1_sf <- rmapshaper::ms_simplify(input = as(adm1_sf, "Spatial")) %>%
+  st_as_sf()
+
+adm2_sf <- rmapshaper::ms_simplify(input = as(adm2_sf, "Spatial")) %>%
+  st_as_sf()
+
+adm3_sf <- rmapshaper::ms_simplify(input = as(adm3_sf, "Spatial")) %>%
+  st_as_sf()
+
+adm1_cdn_sf <- adm1_sf %>%
+  filter(ADM1_PCODE %in% c("MZ01", "MZ07")) %>%
+  st_as_sf()
+```
+
+## General situation
+
+Overall, cholera cases peaked at the beginning of 2021 across the two provinces of Nampula and Cabo Delgado. Sharp rises in cases looks difficult to autoregress, as they are seen often but don't reach the scale seen in 2021.
+
+```{r, echo = F, fig.width=8, fig.height=4}
+overall_df %>%
+  filter(epi_type == "cholera") %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases in Cabo Delgado and Nampula",
+       subtitle = "2017 - 2021")
+```
+
+## Breakdown by province
+
+The large spike in cases is being primarily driven by a rise in cases in Cabo Delgado.We can also see a near endemic presence of cholera since 2020 within the province.
+
+```{r}
+province_df %>%
+  filter(epi_type == "cholera") %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  facet_wrap(~province, nrow = 2) +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases in Cabo Delgado and Nampula",
+       subtitle = "2017 - 2021")
+```
+
+## District level, Cabo Delgado
+
+And here we can see that the vast majority of cases are coming from 2 districts in Cabo Delgado in 2021, Chiure and Metuge.
+
+```{r}
+district_df %>%
+  filter(epi_type == "cholera", province == "Cabo Delgado") %>%
+  group_by(district, year) %>%
+  summarize(cases = sum(cases), .groups = "drop") %>%
+  ggplot(aes(y = fct_rev(reorder(district, district)), x = year, fill = cases)) + 
+  geom_tile() +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases in Cabo Delgado, district level",
+       subtitle = "2017 - 2021") +
+  scale_fill_gradient(low = "white", high = "#f28080")
+```
+
+## District level, Cabo Delgado
+
+Spatially, we can see that these cases are typically clustered in the districts to the southeast of the province, or along the coast.
+
+```{r}
+district_df %>%
+  filter(epi_type == "cholera", province == "Cabo Delgado") %>%
+  group_by(district, year) %>%
+  summarize(cases = sum(cases), .groups = "drop") %>%
+  left_join(adm2_sf, by = c("district" = "ADM2_PT")) %>%
+  st_as_sf() %>%
+  ggplot(aes(fill = cases)) + 
+  geom_sf(lwd = .3) +
+  theme_void() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  facet_wrap(~year) +
+  labs(y = "",
+       x = "",
+       title = "Cholera cases in Cabo Delgado, district level",
+       subtitle = "2017 - 2021") +
+  scale_fill_gradient(low = "white", high = "#f28080")
+```
+
+## District level, both provinces
+
+Although districts in Nampula see years with the most cholera in same general area bordering Cabo Delgado, not in the latest outbreak.
+
+```{r}
+df_map <- district_df %>%
+  filter(epi_type == "cholera") %>%
+  group_by(district, year) %>%
+  summarize(cases = sum(cases), .groups = "drop") %>%
+  left_join(adm2_sf, by = c("district" = "ADM2_PT")) %>%
+  st_as_sf() 
+
+df_lbl <- data.frame(
+  province = c("Cabo Delgado", "Nampula"),
+  year = 2019,
+  cases = 0
+) %>%
+  left_join(adm1_cdn_sf, by = c("province" = "ADM1_PT")) %>%
+  st_as_sf()
+
+df_map %>%
+  ggplot(aes(fill = cases)) + 
+  geom_sf(lwd = 0.3) +
+  geom_sf(data = adm1_cdn_sf,
+          fill = NA,
+          lwd = 0.5) +
+  theme_void() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold")) +
+  facet_wrap(~year) +
+  geom_sf_label(data = df_lbl,
+               aes(label = province),
+               size = 2.9) +
+  labs(y = "",
+       x = "",
+       title = "Cholera cases in Cabo Delgado and Nampula, district level",
+       subtitle = "2017 - 2021") +
+  scale_fill_gradient(low = "white", high = "#f28080")
+```
+
+## Provinces: useful signals
+
+At the provincial level, isn't immediately clear that we will get useful signals from diarrhea or dysentery case data.
+
+```{r, echo = F, fig.width=8, fig.height=4}
+province_df %>%
+  filter(age_group == "all") %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  facet_grid(cols = vars(province),
+             rows = vars(epi_type),
+             scales = "free_y") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  geom_text(data = data.frame(
+    year_week = 120,
+    epi_type = "dysentery",
+    cases = 3000,
+    province = "Cabo Delgado",
+    label = "Error in the data?"),
+    aes(label = label),
+    size = 3) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases in Cabo Delgado and Nampula",
+       subtitle = "2017 - 2021")
+```
+
+## Districts: useful signals
+
+At the provincial level, isn't immediately clear that we will get useful signals from diarrhea or dysentery case data.
+
+```{r, echo = F, fig.width=8, fig.height=4}
+district_df %>%
+  filter(age_group == "all", district %in% c("Chiure", "Metuge")) %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  facet_grid(cols = vars(district),
+             rows = vars(epi_type),
+             scales = "free_y") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  geom_text(data = data.frame(
+    year_week = 120,
+    epi_type = "dysentery",
+    cases = 3000,
+    district = "Chiure",
+    label = "Error in the data?"),
+    aes(label = label),
+    size = 3) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Epidemiological cases in Cabo Delgado and Nampula",
+       subtitle = "2017 - 2021")
+```
+
+
+## Province: rolling sums
+
+At the provincial level, isn't immediately clear that a rolling sum threshold would work, although possibly separate thresholds per province could work.
+
+```{r, echo = F, fig.width=8, fig.height=4}
+province_df %>%
+  filter(epi_type == "cholera") %>%
+  pivot_longer(starts_with("cases"),
+               names_to = "case_type",
+               values_to = "cases") %>%
+  mutate(case_type = case_when(
+    case_type == "cases" ~ "1 week",
+    case_type == "cases_2_weeks" ~ "2 weeks",
+    case_type == "cases_3_weeks" ~ "3 weeks",
+    case_type == "cases_4_weeks" ~ "4 weeks"
+  )) %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  facet_grid(cols = vars(province),
+             rows = vars(case_type),
+             scales = "free_y") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases and rolling sums, Cabo Delgado and Nampula",
+       subtitle = "2017 - 2021")
+```
+
+## Overall: rolling sums
+
+At the overall level, however, a rolling sum over 4 weeks could potentially work.
+
+```{r, echo = F, fig.width=8, fig.height=4}
+overall_df %>%
+  filter(epi_type == "cholera") %>%
+  pivot_longer(starts_with("cases"),
+               names_to = "case_type",
+               values_to = "cases") %>%
+  mutate(case_type = case_when(
+    case_type == "cases" ~ "1 week",
+    case_type == "cases_2_weeks" ~ "2 weeks",
+    case_type == "cases_3_weeks" ~ "3 weeks",
+    case_type == "cases_4_weeks" ~ "4 weeks"
+  )) %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  facet_grid(cols = NULL,
+             rows = vars(case_type),
+             scales = "free_y") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases and rolling sums, overall",
+       subtitle = "2017 - 2021")
+```
+
+## Overall: rolling sums
+
+With a threshold of 1,000, could trigger prior to the peak of the outbreak in 2021.
+
+```{r, echo = F, fig.width=8, fig.height=4}
+overall_df %>%
+  filter(epi_type == "cholera") %>%
+  pivot_longer(starts_with("cases"),
+               names_to = "case_type",
+               values_to = "cases") %>%
+  mutate(case_type = case_when(
+    case_type == "cases" ~ "1 week",
+    case_type == "cases_2_weeks" ~ "2 weeks",
+    case_type == "cases_3_weeks" ~ "3 weeks",
+    case_type == "cases_4_weeks" ~ "4 weeks"
+  )) %>%
+  filter(case_type %in% c("1 week", "4 weeks")) %>%
+  ggplot(aes(y = cases, x = year_week)) + 
+  geom_area(fill = "#f28080") +
+  facet_grid(cols = NULL,
+             rows = vars(case_type),
+             scales = "free_y") +
+  geom_hline(data = data.frame(
+    case_type = "4 weeks"
+  ), aes(yintercept = 1000),
+  alpha = 0.5) +
+  geom_vline(data = data.frame(
+    case_type = "1 week"
+  ), aes(xintercept = 205),
+  alpha = 0.5) +
+  geom_segment(data = data.frame(case_type = "4 weeks"),
+               aes(x = 185, y = 1200, xend = 205, yend = 1049),
+               arrow = arrow(length = unit(4, "pt")),
+               alpha = 0.5) +
+  geom_text(data = data.frame(case_type = "4 weeks"),
+            aes(x = 183, y = 1200, label = "1,064 cases"),
+            hjust = 1,
+            size = 3) +
+  geom_text(data = data.frame(case_type = "4 weeks"),
+            aes(x = 40, y = 1120, label = "Trigger at 1,000 cases in past 4 weeks"),
+            hjust = 0.5,
+            size = 3.5,
+            fontface = "bold") +
+  geom_text(data = data.frame(case_type = "1 week"),
+            aes(x = 201.5, y = 400, label = "Trigger point"),
+            hjust = 0.5,
+            size = 3,
+            fontface = "bold",
+            angle = 90) +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title = element_text(face = "bold"),
+        axis.text.y = element_text(face = "bold")) +
+  scale_x_continuous(breaks = seq(1, 51*5, by = 51),
+                     labels = ~ 2017 + (.x %/% 51)) +
+  labs(y = "Cases",
+       x = "Date",
+       title = "Cholera cases and rolling sums, overall",
+       subtitle = "2017 - 2021")
+```
+
+## Next steps:
+
+### Questions:
+
+- Are there particular areas in the provinces we want to focus on?
+- Would ADMIN3 data allow us to focus more on urban areas and improve signaling?
+
+### Further work:
+
+- Explore with rigor the potential for using dysentery or diarrhea as a signal.
+- Check case patterns across all districts and epidemiological data

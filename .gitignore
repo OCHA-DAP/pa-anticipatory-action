@@ -10,7 +10,7 @@ chirps/
 analyses/bangladesh/data/*
 analyses/bangladesh/results/*/archive/*
 analyses/bangladesh/trigger_development/processed_data/*
-analyses/moz/exploration/moz_exploration.html
+analyses/moz/exploration/*.html
 
 #Local experiments
 Experiments
