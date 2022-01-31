@@ -162,7 +162,7 @@ plotCI(dataframe = df_mis, metric = 'mis_ci')
 <br>
 <br>
 
-# Anticipatory Action Trigger Report
+# Anticipatory Action Trigger Mechanism Report
 
 &nbsp;
 
