@@ -8,159 +8,7 @@ output: ioslides_presentation
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
-library(tidyverse)
-library(gt)
-library(sf)
-library(rmapshaper)
-library(fuzzyjoin)
-
-#################
-#### LOADING ####
-#################
-
-file_dir <- file.path(
-  Sys.getenv("AA_DATA_DIR"),
-    "private",
-    "raw",
-    "moz",
-    "AA data Nampula Cabo delgado"
-)
-
-df_list <- map(
-  list.files(file_dir),
-  ~ readxl::read_excel(file.path(file_dir, .x), skip = 1)
-)
-
-df <- reduce(
-  df_list,
-  full_join,
-  by = "organisationunitname"
-)
-
-sf_dir <- file.path(
-    Sys.getenv("AA_DATA_DIR"),
-    "public",
-    "raw",
-    "moz",
-    "cod_ab"
-)
-
-adm1_sf <- read_sf(
-  file.path(
-    sf_dir,
-    "moz_admbnda_adm1_ine_20190607.shp"
-  )
-)
-
-adm2_sf <- read_sf(
-  file.path(
-    sf_dir,
-    "moz_admbnda_adm2_ine_20190607.shp"
-  )
-)
-
-adm3_sf <- read_sf(
-  file.path(
-    sf_dir,
-    "moz_admbnda_adm3_ine_20190607.shp"
-  )
-)
-
-###################
-#### WRANGLING ####
-###################
-
-
-long_df <- df %>%
-  pivot_longer(
-    -organisationunitname,
-    names_to = c("date", "epi_type"),
-    names_sep = " - ",
-    values_to = "cases"
-  ) %>%
-  mutate(
-    year = as.numeric(str_extract(date, "[0-9]{4}")),
-    epiweek = as.numeric(str_extract(date, "(?<=W)[0-9]+")),
-    date = paste(year, epiweek, sep = ", "),
-    year_week = (51 * (year - 2017)) + epiweek,
-    organisationunitname = case_when( # repairing names for later joining to geodataframe as necessary
-      organisationunitname == "CHIÚRE" ~ "Chiure",
-      organisationunitname == "MOCÍMBOA DA PRAIA" ~ "Mocimboa Da Praia",
-      organisationunitname == "DISTRITO DE NAMPULA" ~ "Cidade De Nampula",
-      organisationunitname == "LIUPO" ~ "Liúpo",
-      organisationunitname == "NACALA-PORTO" ~ "Nacala",
-      TRUE ~ str_to_title(organisationunitname)
-    ),
-    epi_type = case_when( # changing names for easy manipulation
-      epi_type == "CÓLERA CASOS" ~ "cholera_all",
-      epi_type == "DIARREIA 0-4 anos, CASOS" ~ "diarrhea_04",
-      epi_type == "DIARREIA 15+ anos, CASOS" ~ "diarrhea_15plus",
-      epi_type == "DIARREIA 5-14 anos, CASOS" ~ "diarrhea_514",
-      epi_type == "DISENTERIA CASOS" ~ "dysentery_all"
-    ),
-    cases = replace_na(cases, 0)
-  ) %>%
-  pivot_wider(names_from = "epi_type", values_from = "cases") %>%
-  rowwise() %>%
-  mutate(diarrhea_all = sum(c_across(starts_with("diarrhea")))) %>%
-  pivot_longer(-c(organisationunitname, date, year, epiweek, year_week),
-               names_to = c("epi_type", "age_group"),
-               names_sep = "_",
-               values_to = "cases") %>%
-  mutate(
-    age_group = case_when(
-      age_group == "04" ~ "0 - 4",
-      age_group == "514" ~ "5 - 14",
-      age_group == "15plus" ~ "15+",
-      TRUE ~ age_group
-    )
-  ) %>%
-  bind_rows(.,
-            filter(., organisationunitname %in% c("Cabo Delgado", "Nampula")) %>%
-              group_by(date, year, epiweek, year_week, epi_type, age_group) %>%
-              summarize(cases = sum(cases),
-                        organisationunitname = "Mozambique",
-                        .groups = "drop")
-              ) %>%
-  group_by(organisationunitname, epi_type, age_group) %>%
-  mutate(
-    cases_2_weeks = zoo::rollsum(cases, 2, na.pad = T, align = "right"),
-    cases_3_weeks = zoo::rollsum(cases, 3, na.pad = T, align = "right"),
-    cases_4_weeks = zoo::rollsum(cases, 4, na.pad = T, align = "right")
-  ) %>%
-  ungroup()
-
-# separate out aggregated province data from district data
-district_df <- long_df %>%
-  mutate(
-    province = ifelse(
-      organisationunitname %in% c("Cabo Delgado", "Nampula"),
-      organisationunitname,
-      NA)
-  ) %>%
-  fill(province) %>%
-  filter(!(organisationunitname %in% c("Nampula", "Cabo Delgado", "Mozambique"))) %>%
-  rename(district = organisationunitname)
-
-province_df <- filter(long_df, organisationunitname %in% c("Nampula", "Cabo Delgado")) %>%
-  rename(province = organisationunitname)
-
-overall_df <- filter(long_df, organisationunitname == "Mozambique") %>%
-  select(-organisationunitname)
-
-# simplify the polygons because plotting is taking up to 10 - 15 minutes
-adm1_sf <- rmapshaper::ms_simplify(input = as(adm1_sf, "Spatial")) %>%
-  st_as_sf()
-
-adm2_sf <- rmapshaper::ms_simplify(input = as(adm2_sf, "Spatial")) %>%
-  st_as_sf()
-
-adm3_sf <- rmapshaper::ms_simplify(input = as(adm3_sf, "Spatial")) %>%
-  st_as_sf()
-
-adm1_cdn_sf <- adm1_sf %>%
-  filter(ADM1_PCODE %in% c("MZ01", "MZ07")) %>%
-  st_as_sf()
+source(here::here("exploration", "moz_data_prep.R"))
 ```
 
 ## General situation
@@ -400,7 +248,7 @@ province_df %>%
 
 ## Overall: rolling sums
 
-At the overall level, however, a rolling sum over 4 weeks could potentially work.
+At the overall level, it's also difficult to identify when a rolling sum would work best.
 
 ```{r, echo = F, fig.width=8, fig.height=4}
 overall_df %>%
@@ -434,7 +282,7 @@ overall_df %>%
 
 ## Overall: rolling sums
 
-With a threshold of 1,000, could trigger prior to the peak of the outbreak in 2021.
+With a threshold of 600, could potentially trigger earlier in the outbreak in 2021. 
 
 ```{r, echo = F, fig.width=8, fig.height=4}
 overall_df %>%
@@ -448,30 +296,30 @@ overall_df %>%
     case_type == "cases_3_weeks" ~ "3 weeks",
     case_type == "cases_4_weeks" ~ "4 weeks"
   )) %>%
-  filter(case_type %in% c("1 week", "4 weeks")) %>%
+  filter(case_type %in% c("1 week", "2 weeks")) %>%
   ggplot(aes(y = cases, x = year_week)) + 
   geom_area(fill = "#f28080") +
   facet_grid(cols = NULL,
              rows = vars(case_type),
              scales = "free_y") +
   geom_hline(data = data.frame(
-    case_type = "4 weeks"
-  ), aes(yintercept = 1000),
+    case_type = "2 weeks"
+  ), aes(yintercept = 600),
   alpha = 0.5) +
   geom_vline(data = data.frame(
     case_type = "1 week"
-  ), aes(xintercept = 205),
+  ), aes(xintercept = 207),
   alpha = 0.5) +
-  geom_segment(data = data.frame(case_type = "4 weeks"),
-               aes(x = 185, y = 1200, xend = 205, yend = 1049),
+  geom_segment(data = data.frame(case_type = "2 weeks"),
+               aes(x = 185, y = 700, xend = 207, yend = 647),
                arrow = arrow(length = unit(4, "pt")),
                alpha = 0.5) +
-  geom_text(data = data.frame(case_type = "4 weeks"),
-            aes(x = 183, y = 1200, label = "1,064 cases"),
+  geom_text(data = data.frame(case_type = "2 weeks"),
+            aes(x = 183, y = 720, label = "637 cases"),
             hjust = 1,
             size = 3) +
-  geom_text(data = data.frame(case_type = "4 weeks"),
-            aes(x = 40, y = 1120, label = "Trigger at 1,000 cases in past 4 weeks"),
+  geom_text(data = data.frame(case_type = "2 weeks"),
+            aes(x = 40, y = 680, label = "Trigger at 600 cases in past 2 weeks"),
             hjust = 0.5,
             size = 3.5,
             fontface = "bold") +
