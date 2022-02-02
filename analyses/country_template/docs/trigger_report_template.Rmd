@@ -1,5 +1,5 @@
 ---
-title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left;margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left;margin:10px" />'
 pagetitle: 'AA Trigger Report'
 output:
   html_document:
@@ -162,38 +162,40 @@ plotCI(dataframe = df_mis, metric = 'mis_ci')
 <br>
 <br>
 
-# Anticipatory Action Trigger Mechanism Report
+# Anticipatory Action Trigger 
+# Mechanism Report
 
-&nbsp;
+<p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
 
-### Country: `r country_name`
-### Shock: `r shock`
-### Last updated: `r Sys.Date()`
+***
 
-&nbsp;
+## Shock
 
----
+<span style="color:#007ce1"> Country: </span> `r paste0("   ", country_name)`
+<br>
+<span style="color:#007ce1"> Hazard: </span> `r shock`
 
 ## Data sources
 
 ### Historical shocks 
-* Compiled by X [Link to dataset on HDX]
+* Compiled by X. Available on HDX [here](link to HDX dataset in URL format eg: https://data.humdata.org/).
 
 ### Forecasts
-* Product 1 Name [Link to provider’s data portal]. Published [frequency, schedule].
-* Product 2 Name [Link to provider’s data portal]. Published [frequency, schedule].
+* Product 1. The forecast is published (frequency, schedule). Data provider website [here](Link to provider’s data portal).
+* Product 2. The forecast is published (frequency, schedule). Data provider website [here](Link to provider’s data portal).
 
 ### Other data
-* [Specify] [Link to dataset on HDX]
-
-&nbsp;
+* Some other dataset. Data available [here](Link to dataset on HDX)
 
 ## Analysis
-Performed by the Centre for Humanitarian Data. Publicly available here [link to Github repo].
+Performed by the Centre for Humanitarian Data. Publicly available [here](link to Github repo's project folder).
+
+<br>
+
+# Trigger Mechanism Snapshot
 
 &nbsp;
 
-## Trigger Mechanism Snapshot
 ```{r mechanism snapshot, include = TRUE}
 
 snapshot_df <- data.frame(row_name = c('Type', 
@@ -288,7 +290,7 @@ kbl(snapshot_df,
 &nbsp;
 
 ## Monitoring & Governance
-[Actor] will monitor the trigger(s). If a trigger is met, [Actor] will notify [Recipients] by email within [time delay]. Draft emails can be found here [link].
+(Actor) will monitor the trigger(s). If a trigger is met, (Actor) will notify (Recipients) by email within (time delay). Draft emails can be found [here](link to draft emails).
 
 &nbsp;
 
