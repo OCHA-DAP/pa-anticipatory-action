@@ -1,6 +1,8 @@
-plotCI <- function(dataframe, metric) {
+plotCI <- function(trigger_id, metric, ci_widths_df) {
 
-ci_df <- dataframe %>%
+ci_widths_df <- get(ci_widths_df)
+
+ci_df <- ci_widths_df %>%
   filter(point %in% c('below_ci', 'ci', 'above_ci')) %>%
   mutate(point = factor(point, levels = c('above_ci', 'ci', 'below_ci'), ordered = TRUE))
 
@@ -85,7 +87,7 @@ metric_plot <- ci_df %>%
     panel.grid.minor = element_blank())
 
 # Save original as png
-filename <- paste0(metric, ".png")
+filename <- paste0('trigger_', trigger_id, "_", metric, "_ci.png")
 png(filename = paste0(plots_path, filename), width = 815, height = 410, units = "px")
 print(metric_plot)
 dev.off()
@@ -93,6 +95,6 @@ dev.off()
 # crop plot
 metric_magick <- magick::image_read(paste0(plots_path, filename))
 trimmed_metric <- magick::image_trim(metric_magick)
-magick::image_write(trimmed_metric, path = paste0(plots_path, "trimmed_", metric, ".png"), format = "png")
+magick::image_write(trimmed_metric, path = paste0(plots_path, "trimmed_", 'trigger_', trigger_id, "_", metric, "_ci.png"), format = "png")
 
 }
