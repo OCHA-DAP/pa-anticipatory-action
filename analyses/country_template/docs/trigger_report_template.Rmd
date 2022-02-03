@@ -46,7 +46,6 @@ package_a <- 'TBC' # input number only, no $ sign or 'm' for million
 funding_a <- 'X'
 predicted_window_a <- 'eg: JAS' 
 lead_time_a <- 'eg: 7-5 months' # change units as needed. Include all lead times if multiple activation timepoints
-prob_trigger_activation_a <- 0.42 #  input number only, in decimal format
 
 # trigger B info  **** DEFAULTS TO CHANGE IF THERE IS A TRIGGER B **** 
 type_b <- 'eg: Predictive'
@@ -55,7 +54,6 @@ package_b <- 'TBC'
 funding_b <- 'X' 
 predicted_window_b <- 'eg: ASO'
 lead_time_b <- 'eg: 4-1 months'
-prob_trigger_activation_b <- 0.23 
 
 # trigger C info  **** DEFAULTS TO CHANGE IF THERE IS A TRIGGER C **** 
 type_c <- 'eg: Observational'
@@ -64,7 +62,6 @@ package_c <- 'TBC'
 funding_c <- 'X'
 predicted_window_c <- 'N/A'
 lead_time_c <- 'N/A'
-prob_trigger_activation_c <- 0.78
 
 ```
 
@@ -121,11 +118,6 @@ df_trigger_a <- perf_metrics_data %>% filter(trigger == 'a')
 df_trigger_b <- perf_metrics_data %>% filter(trigger == 'b')
 df_trigger_c <- perf_metrics_data %>% filter(trigger == 'c')
 
-# format probabilities 
-prob_trigger_activation_a <- paste0(round(prob_trigger_activation_a * 100, 1), '%')
-prob_trigger_activation_b <- paste0(round(prob_trigger_activation_b * 100, 1), '%')
-prob_trigger_activation_c <- paste0(round(prob_trigger_activation_c * 100, 1), '%')
-
 # format funding amounts
 funding_a <- paste0('$',funding_a,'m')
 funding_b <- paste0('$',funding_b,'m')
@@ -145,19 +137,21 @@ df_a_det <- computeCIwidths(metric_name = 'det', trigger_id = 'a') # detection r
 df_a_far <- computeCIwidths(metric_name = 'far', trigger_id = 'a') # false alarm rate
 df_a_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'a') # miss rate
 df_a_acc <- computeCIwidths(metric_name = 'acc', trigger_id = 'a') # accuracy rate
-#df_act <- computeCIwidths(metric_name = 'act') # prob trigger activation
+df_a_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
 
 df_b_var <- computeCIwidths(metric_name = 'var', trigger_id = 'b') # valid activation rate 
 df_b_det <- computeCIwidths(metric_name = 'det', trigger_id = 'b') # detection rate
 df_b_far <- computeCIwidths(metric_name = 'far', trigger_id = 'b') # false alarm rate
 df_b_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'b') # miss rate
 df_b_acc <- computeCIwidths(metric_name = 'acc', trigger_id = 'b') # accuracy rate
+df_b_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
 
 df_c_var <- computeCIwidths(metric_name = 'var', trigger_id = 'c') # valid activation rate 
 df_c_det <- computeCIwidths(metric_name = 'det', trigger_id = 'c') # detection rate
 df_c_far <- computeCIwidths(metric_name = 'far', trigger_id = 'c') # false alarm rate
 df_c_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'c') # miss rate
 df_c_acc <- computeCIwidths(metric_name = 'acc', trigger_id = 'c') # accuracy rate
+df_c_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
 
 df_fmwk_min <- computeCIwidths(metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
 df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
@@ -175,16 +169,19 @@ plotCI(trigger_id = 'a', metric = 'var', ci_widths_df = 'df_a_var')
 plotCI(trigger_id = 'a', metric = 'det', ci_widths_df = 'df_a_det')
 plotCI(trigger_id = 'a', metric = 'far', ci_widths_df = 'df_a_far')
 plotCI(trigger_id = 'a', metric = 'mis', ci_widths_df = 'df_a_mis')
+plotCI(trigger_id = 'a', metric = 'atv', ci_widths_df = 'df_a_atv')
 
 plotCI(trigger_id = 'b', metric = 'var', ci_widths_df = 'df_b_var') 
 plotCI(trigger_id = 'b', metric = 'det', ci_widths_df = 'df_b_det')
 plotCI(trigger_id = 'b', metric = 'far', ci_widths_df = 'df_b_far') 
 plotCI(trigger_id = 'b', metric = 'mis', ci_widths_df = 'df_b_mis')
+plotCI(trigger_id = 'b', metric = 'atv', ci_widths_df = 'df_b_atv')
 
 plotCI(trigger_id = 'c', metric = 'var', ci_widths_df = 'df_c_var') 
 plotCI(trigger_id = 'c', metric = 'det', ci_widths_df = 'df_c_det') 
 plotCI(trigger_id = 'c', metric = 'far', ci_widths_df = 'df_c_far') 
 plotCI(trigger_id = 'c', metric = 'mis', ci_widths_df = 'df_c_mis') 
+plotCI(trigger_id = 'c', metric = 'atv', ci_widths_df = 'df_c_atv')
 
 #plotCI(dataframe = df_acc, metric = 'acc') 
 
@@ -261,7 +258,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period, 
                                      package_a, 
                                      funding_a, 
-                                     paste0("<img src=trimmed_trigger_a_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR TRIGGER A
+                                     paste0("<img src=trimmed_trigger_a_atv_ci.png"), 
                                      "Covers entire framework",  
                                      "Covers entire framework"),
                        trigger_b = c(type_b, 
@@ -277,7 +274,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period, 
                                      package_b, 
                                      funding_b, 
-                                     paste0("<img src=trimmed_trigger_b_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot 
+                                     paste0("<img src=trimmed_trigger_b_atv_ci.png"), 
                                      paste0("<","img src=","trimmed_framework_min_ci",".png",">"),  
                                      paste0("<","img src=","trimmed_framework_ful_ci",".png",">")),  
                        trigger_c = c(type_c, 
@@ -293,7 +290,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period, 
                                      package_c, 
                                      funding_c, 
-                                     paste0("<img src=trimmed_trigger_c_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot for trigger-C
+                                     paste0("<img src=trimmed_trigger_c_atv_ci.png"), 
                                      "Covers entire framework",
                                      "Covers entire framework"))
 
