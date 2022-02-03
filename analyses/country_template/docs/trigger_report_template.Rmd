@@ -31,17 +31,20 @@ editor_options:
 
 
 ```{r hard-coded values, echo = FALSE, message = FALSE, warning = FALSE}
+### Make sure the performance metrics and learning table files are in the folder sister to the Rmd file
+### Create a "plots" folder sister to RMD file
 ### Update this code chunk before knitting
-### Adjust the Rmd to number of triggers 
-### Create "plots" folder sister to RMD file
+### Adjust the number of triggers throughout the Rmd, as needed
+### Manually enter the text in this Rmd under Data Sources, Analysis, and Monitoring & Governance sections
+
 
 country_name <- "Country Name"
 shock <- "Shock"
 shock_return_period <- "1 in X years"
 nbr_hist_shocks <-"X shocks"
 hist_period <- "XXXX - XXXX" # eg: 1980 - 2021
-perf_metrics_filename <- "dummy_perf_metrics_table_for_template.csv" # include path
-learning_table_filename <- "dummy_learning_table_for_template.csv" # include path
+perf_metrics_filename <- "dummy_perf_metrics_table_for_template.csv" # include path if not sister to Rmd
+learning_table_filename <- "dummy_learning_table_for_template.csv" # include path if not sister to Rmd
 
 # trigger A info  
 type_a <- 'eg: Predictive' 
@@ -121,30 +124,32 @@ funding_a <- paste0('$',funding_a,'m')
 funding_b <- paste0('$',funding_b,'m')
 funding_c <- paste0('$',funding_c,'m')
 
-# TO ADD data validation: values between 0 and 100, rounded to 1 decimal, low_end < central < high_end
 ```
 
 ```{r compute CI measurements}
 
-# compute width and position of CI 
+# compute width and position of CIs for trigger a
 df_a_var <- computeCIwidths(metric_name = 'var', trigger_id = 'a') # valid activation rate 
 df_a_det <- computeCIwidths(metric_name = 'det', trigger_id = 'a') # detection rate
 df_a_far <- computeCIwidths(metric_name = 'far', trigger_id = 'a') # false alarm rate
 df_a_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'a') # miss rate
 df_a_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
 
+# compute width and position of CIs for trigger b
 df_b_var <- computeCIwidths(metric_name = 'var', trigger_id = 'b') # valid activation rate 
 df_b_det <- computeCIwidths(metric_name = 'det', trigger_id = 'b') # detection rate
 df_b_far <- computeCIwidths(metric_name = 'far', trigger_id = 'b') # false alarm rate
 df_b_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'b') # miss rate
 df_b_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
 
+# compute width and position of CIs for trigger c
 df_c_var <- computeCIwidths(metric_name = 'var', trigger_id = 'c') # valid activation rate 
 df_c_det <- computeCIwidths(metric_name = 'det', trigger_id = 'c') # detection rate
 df_c_far <- computeCIwidths(metric_name = 'far', trigger_id = 'c') # false alarm rate
 df_c_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'c') # miss rate
 df_c_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
 
+# compute width and position of CIs for the framework
 df_fmwk_min <- computeCIwidths(metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
 df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
 
@@ -236,10 +241,10 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      timepoints_a, 
                                      predicted_window_a, 
                                      lead_time_a, 
-                                     paste0("<img src=trimmed_trigger_a_var_ci.png"), 
-                                     paste0("<img src=trimmed_trigger_a_det_ci.png"), 
-                                     paste0("<img src=trimmed_trigger_a_far_ci.png"), 
-                                     paste0("<img src=trimmed_trigger_a_mis_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
                                      shock_return_period, 
                                      nbr_hist_shocks, 
                                      hist_period, 
