@@ -180,7 +180,7 @@ province_df %>%
 
 ## Districts: useful signals
 
-At the provincial level, isn't immediately clear that we will get useful signals from diarrhea or dysentery case data.
+Although might be possible, usable signals from diarrhea or dysentery case data aren't immediately clear in all districts. 
 
 ```{r, echo = F, fig.width=8, fig.height=4}
 district_df %>%
@@ -214,7 +214,7 @@ district_df %>%
 
 ## Province: rolling sums
 
-At the provincial level, isn't immediately clear that a rolling sum threshold would work, although possibly separate thresholds per province could work.
+Rolling sum threshold might not work at the provincial level, although possibly separate thresholds per province could work.
 
 ```{r, echo = F, fig.width=8, fig.height=4}
 province_df %>%
