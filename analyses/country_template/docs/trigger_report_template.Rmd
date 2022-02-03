@@ -37,7 +37,8 @@ plots_path <- ""
 shock_return_period <- "1 in X years"
 nbr_hist_shocks <-"X shocks"
 hist_period <- "XXXX - XXXX" # eg: 1980 - 2021
-perf_metrics_filename <- "dummy_table_for_template.csv" # include path
+perf_metrics_filename <- "dummy_perf_metrics_table_for_template.csv" # include path
+learning_table_filename <- "dummy_learning_table_for_template.csv" # include path
 
 # trigger A info  **** DEFAULTS TO CHANGE **** 
 type_a <- 'eg: Predictive' 
@@ -328,13 +329,8 @@ kbl(snapshot_df,
 ## Assumptions & Open questions
 
 ```{r learning table}
-learning_table <- data.frame(decision = c('Eg: Added a requirement for above average being 5 percentage points above', 'some text'),
-                             rationale = c('Eg: A false alarm is costlier when the rains are above average than at normal levels', 'some text'),
-                             assumption = c('Eg: A larger delta in probabilities between the two terciles reduces the risk of above average occurring', 'some text'),
-                             questions = c('Eg: Does it help reduce false alarms in the face of above average rains? Is it a useful / needed condition?', 'some text'))
 
-## TO REMOVE: mock dataframe above
-## TO ADD: read in a csv
+learning_table <- read.csv(learning_table_filename)
 
 kbl(learning_table,
     format = 'html',
