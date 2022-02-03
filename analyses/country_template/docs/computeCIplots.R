@@ -87,7 +87,10 @@ metric_plot <- ci_df %>%
     panel.grid.minor = element_blank())
 
 # Save original as png
-filename <- paste0('trigger_', trigger_id, "_", metric, "_ci.png")
+
+trigger_label <- ifelse(trigger_id == 'framework', 'framework', paste0('trigger_', trigger_id))
+
+filename <- paste0(trigger_label, "_", metric, "_ci.png")
 png(filename = paste0(plots_path, filename), width = 815, height = 410, units = "px")
 print(metric_plot)
 dev.off()
@@ -95,6 +98,6 @@ dev.off()
 # crop plot
 metric_magick <- magick::image_read(paste0(plots_path, filename))
 trimmed_metric <- magick::image_trim(metric_magick)
-magick::image_write(trimmed_metric, path = paste0(plots_path, "trimmed_", 'trigger_', trigger_id, "_", metric, "_ci.png"), format = "png")
+magick::image_write(trimmed_metric, path = paste0(plots_path, "trimmed_", trigger_label, "_", metric, "_ci.png"), format = "png")
 
 }

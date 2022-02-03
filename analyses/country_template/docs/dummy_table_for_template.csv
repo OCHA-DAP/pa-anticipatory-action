@@ -44,3 +44,9 @@ c,mis,high_end,38,1
 c,acc,low_end,45,1
 c,acc,central,50,1
 c,acc,high_end,55,1
+framework,min,low_end,90,1
+framework,min,central,93,1
+framework,min,high_end,96,1
+framework,ful,low_end,13,1
+framework,ful,central,20,1
+framework,ful,high_end,27,1

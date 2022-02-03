@@ -37,8 +37,6 @@ plots_path <- ""
 shock_return_period <- "1 in X years"
 nbr_hist_shocks <-"X shocks"
 hist_period <- "XXXX - XXXX" # eg: 1980 - 2021
-prob_min_frmwk_activation <- 0.79 # input number only, in decimal format
-prob_full_frmwk_activation <- 0.13 # input number only, in decimal format
 perf_metrics_filename <- "dummy_table_for_template.csv" # include path
 
 # trigger A info  **** DEFAULTS TO CHANGE **** 
@@ -111,22 +109,22 @@ computeCIwidths <- function(metric_name, trigger_id) {
 ```
 
 ```{r data loading and formatting}
+
 # read in performance metrics file
+
 perf_metrics_data <- read.csv(perf_metrics_filename,
                               colClasses = c('character', 'character', 'character', 'integer', 'integer')
                               )
-## adjust to number of triggers
+## adjust to number of triggers 
 
 df_trigger_a <- perf_metrics_data %>% filter(trigger == 'a')
 df_trigger_b <- perf_metrics_data %>% filter(trigger == 'b')
 df_trigger_c <- perf_metrics_data %>% filter(trigger == 'c')
 
-# format probabilities
+# format probabilities 
 prob_trigger_activation_a <- paste0(round(prob_trigger_activation_a * 100, 1), '%')
 prob_trigger_activation_b <- paste0(round(prob_trigger_activation_b * 100, 1), '%')
 prob_trigger_activation_c <- paste0(round(prob_trigger_activation_c * 100, 1), '%')
-prob_min_frmwk_activation <- paste0(round(prob_min_frmwk_activation * 100, 1), '%')
-prob_full_frmwk_activation <- paste0(round(prob_full_frmwk_activation * 100, 1), '%')
 
 # format funding amounts
 funding_a <- paste0('$',funding_a,'m')
@@ -134,8 +132,7 @@ funding_b <- paste0('$',funding_b,'m')
 funding_c <- paste0('$',funding_c,'m')
 
 # TO ADD data validation: values between 0 and 100, rounded to 1 decimal, low_end < central < high_end
-# TO ADD filter df by metric if all values in 1 file 
-# TO CHECK df_trigger_a etc still used? if not remove
+# TO CHECK df_trigger_a etc still used? format probabilities section? if not remove
 ```
 
 ```{r compute CI measurements}
@@ -149,8 +146,6 @@ df_a_far <- computeCIwidths(metric_name = 'far', trigger_id = 'a') # false alarm
 df_a_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'a') # miss rate
 df_a_acc <- computeCIwidths(metric_name = 'acc', trigger_id = 'a') # accuracy rate
 #df_act <- computeCIwidths(metric_name = 'act') # prob trigger activation
-#df_min <- computeCIwidths(metric_name = 'min') # prob minimum framework activation 
-#df_ful <- computeCIwidths(metric_name = 'ful') # prob full framework activation 
 
 df_b_var <- computeCIwidths(metric_name = 'var', trigger_id = 'b') # valid activation rate 
 df_b_det <- computeCIwidths(metric_name = 'det', trigger_id = 'b') # detection rate
@@ -163,6 +158,11 @@ df_c_det <- computeCIwidths(metric_name = 'det', trigger_id = 'c') # detection r
 df_c_far <- computeCIwidths(metric_name = 'far', trigger_id = 'c') # false alarm rate
 df_c_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'c') # miss rate
 df_c_acc <- computeCIwidths(metric_name = 'acc', trigger_id = 'c') # accuracy rate
+
+df_fmwk_min <- computeCIwidths(metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
+df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
+
+# TO REMOVE: Accuracy rates
 ```
 
 ```{r data plotting}
@@ -187,8 +187,9 @@ plotCI(trigger_id = 'c', metric = 'far', ci_widths_df = 'df_c_far')
 plotCI(trigger_id = 'c', metric = 'mis', ci_widths_df = 'df_c_mis') 
 
 #plotCI(dataframe = df_acc, metric = 'acc') 
-#plotCI(dataframe = df_min, metric = 'min') 
-#plotCI(dataframe = df_ful, metric = 'ful') 
+
+plotCI(trigger_id = 'framework', metric = 'min', ci_widths_df = 'df_fmwk_min') 
+plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful') 
 ```
 
 <br> 
@@ -261,8 +262,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_a, 
                                      funding_a, 
                                      paste0("<img src=trimmed_trigger_a_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR TRIGGER A
-                                     "Covers all triggers",  
-                                     "Covers all triggers"),
+                                     "Covers entire framework",  
+                                     "Covers entire framework"),
                        trigger_b = c(type_b, 
                                      timepoints_b, 
                                      predicted_window_b, 
@@ -276,9 +277,9 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period, 
                                      package_b, 
                                      funding_b, 
-                                     paste0("<img src=trimmed_trigger_b_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot FOR EACH TRIGGER
-                                     paste0("<","img src=","trimmed_trigger_b_var_ci",".png",">"), # TO CHANGE TO PROB OF MIN/FULL FRAMEWORK ACTIVATION PLOTS
-                                     paste0("<","img src=","trimmed_trigger_b_var_ci",".png",">")), # TO CHANGE TO PROB OF MIN/FULL FRAMEWORK ACTIVATION PLOTS 
+                                     paste0("<img src=trimmed_trigger_b_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot 
+                                     paste0("<","img src=","trimmed_framework_min_ci",".png",">"),  
+                                     paste0("<","img src=","trimmed_framework_ful_ci",".png",">")),  
                        trigger_c = c(type_c, 
                                      timepoints_c, 
                                      predicted_window_c, 
@@ -293,10 +294,9 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_c, 
                                      funding_c, 
                                      paste0("<img src=trimmed_trigger_c_var_ci.png"), # TO CHANGE to prob of trigger activation CI plot for trigger-C
-                                     "Covers all triggers",
-                                     "Covers all triggers"))
+                                     "Covers entire framework",
+                                     "Covers entire framework"))
 
-## TO DO: MAKE TABLE CONDITIONAL ON NUMBER OF TRIGGERS
 ## TO DO: ADD PLOT PATH TO SRC IN DF
 
 kbl(snapshot_df,
@@ -323,6 +323,7 @@ kbl(snapshot_df,
 &nbsp;
 
 ## Monitoring & Governance
+
 (Actor) will monitor the trigger(s). If a trigger is met, (Actor) will notify (Recipients) by email within (time delay). Draft emails can be found [here](link to draft emails).
 
 &nbsp;
