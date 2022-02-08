@@ -1,3 +1,57 @@
+"""
+Process Floodscan data.
+
+From their user guide:
+FloodScan’s primary products are
+best at depicting large scale,
+inland river flooding when landscapes are unfrozen.
+Flooding in smaller floodplains and within 5–10 km of coastlines
+is usually not depicted unless it is part of a
+larger flood event.
+
+They have two products: the SFED and MFED.
+MFED is more sensitive than MFED but thereby also has a higher chance of
+false positives.
+We currently only have access to SFED which
+seems most applicable for our purposes.
+Standard flood extent depiction (SFED):
+SFED is designed to prioritize low false positive
+rates for large scale flooding with algorithmic consistency
+over long time scales and large
+regions. SFED processing includes dynamic 2- to 3-day weighted
+averaging along with
+other spatiotemporal methods that minimize false
+positives and noise. As a result, the
+SFED algorithm mode makes relatively conservative
+estimates of maximum flood extent,
+flood frequency, and flood duration.
+
+We also have a variation of the SFD,
+namely the no detection threshold SFED (NDT-SFED).
+Like SFED but produced without flooded
+fraction thresholding.
+The algorithm downscales flooded fraction to make its
+flood depiction products (e.g., 90-m scale).
+However, the algorithm applies a minimum
+detectable flooded fraction (MDFF) threshold prior to
+downscaling to create the SFED
+products. In the NDT-SFED this threshold is not applied,
+and thus it is more sensitive
+than the NDT-SFED but with the drawback of more false positives.
+
+Lastly there is the LWMASK_AREA which is used to mask areas
+FloodScan considers to be persistent
+open water. As far as I understand,
+this mask is already applied when computing the SFED values
+and thus doesn't have to be substracted anymore from the SFED data.
+
+The original data is binary. This data is at 3 arcseconds.
+We have the data at 300 arcseconds.
+It is unclear how the downsampling is done, but it seems as
+it is the fraction of the cells
+ that are flooded (i.e. are True in the original data). It is thus float data.
+"""
+
 import logging
 import os
 import sys
