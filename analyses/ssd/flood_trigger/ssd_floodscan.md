@@ -54,14 +54,11 @@ gdf_adm2=gpd.read_file(adm2_bound_path)
 ```
 
 ```python
-#read floodscan data
-fs = floodscan.Floodscan()
-fs_raw = fs.read_raw_dataset()
-```
-
-```python
 # #clip to country
 # #this takes long, so only do when not saved the file yet
+# #read floodscan data
+# fs = floodscan.Floodscan()
+# fs_raw = fs.read_raw_dataset()
 # fs_clip = (fs_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
 #            .rio.write_crs("EPSG:4326")
 #            .rio.clip(gdf_adm2["geometry"], all_touched=True))
@@ -77,6 +74,12 @@ fs_raw = fs.read_raw_dataset()
 
 ```python
 fs_clip=xr.load_dataset(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
+#I dont fully understand why, these grid mappings re-occur and what they mean
+#but if having them, later on getting
+fs_clip.SFED_AREA.attrs.pop('grid_mapping')
+fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
+fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
+fs_clip=fs_clip.rio.write_crs("EPSG:4326",inplace=True)
 ```
 
 We plot the data. We can see that the resolution is high (300 arcseconds = 0.083 degrees). We therefore decide that when analyzing the data at the admin2 level, it is fine to only look at the cells with their centre within the admin2. 
@@ -135,7 +138,7 @@ Now that we have analyzed the raster data, we can aggregate this to get the stat
 #         all_touched=False,
 #     )
 # df_floodscan=df_floodscan.merge(gdf_adm2[["ADM2_EN","ADM2_PCODE"]],on="ADM2_PCODE",how="left")
-# df_floodscan.to_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.nc',index=False)
+# # df_floodscan.to_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.nc',index=False)
 ```
 
 ```python
