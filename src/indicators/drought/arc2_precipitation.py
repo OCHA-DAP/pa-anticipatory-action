@@ -14,7 +14,6 @@ import rioxarray  # noqa: F401
 import xarray as xr
 from fiona.errors import DriverError
 from rasterio.errors import RasterioIOError
-from rasterio.enums import Resampling
 
 from src.utils_general.raster_manipulation import compute_raster_statistics
 
@@ -537,10 +536,9 @@ class DrySpells(ARC2):
 
         all_touched = self.agg_method == "touching"
         if self.agg_method == "approximate_mask":
-            width = da.rio.width * 4
-            height = da.rio.height * 4
+            x_res, y_res = da.rio.resolution()
             da = da.rio.reproject(
-                da.rio.crs, shape=(height, width), resampling=Resampling.mode
+                da.rio.crs, resolution=(x_res / 4, y_res / 4)
             ).rename({"x":"X", "y":"Y"})
 
         df_zonal_stats = compute_raster_statistics(
