@@ -98,25 +98,26 @@ da_clip=fs_clip.SFED_AREA
 
 We plot the values across the country. We focus on the rainy season, which is approximately from July till October with peak flooding months in August and September. 
 
-From the plot below we can see that the fraction of the area that is flooded (SFED_AREA) is generally very low, barely reacing above 0.2. I am not sure why this is the case. 
-Note that from the first graph you cannot see the higher values well. It does occur that there are values higher than 0.2 but much less often, see the second graph. 
+From the plot below we can see that the fraction of the area that is flooded (SFED_AREA) is generally very low. 
+Note that from the first graph you cannot see the higher values well. The second graphs only shows values larger than 0.01. From this we can see that a large number of values is <0.01 and higher values occur though significantly less often.
 
 ```python
 fs_clip_rainy=fs_clip.sel(time=fs_clip.time.dt.month.isin(range(7,11)))
 ```
 
-```python
+```python tags=[]
 fs_clip_rainy.hvplot.hist('SFED_AREA',alpha=0.5)
 ```
 
 ```python
-fs_clip_rainy.where(fs_clip_rainy>0.4).hvplot.hist('SFED_AREA',alpha=0.5)
+fs_clip_rainy.where(fs_clip_rainy>0.01).hvplot.hist('SFED_AREA',alpha=0.5)
 ```
 
 When only focusing on the states of Jonglei and Unity, we can see that on average they show slightly higher values, though the majority of the values is still below 0.2
 
 ```python
-(fs_clip_rainy.rio.write_crs("EPSG:4326").rio.clip(gdf_adm2.loc[gdf_adm2.ADM1_EN.isin(['Unity','Jonglei']),'geometry'])
+(fs_clip_rainy.where(fs_clip_rainy>0.01).rio.write_crs("EPSG:4326").rio.clip(
+    gdf_adm2.loc[gdf_adm2.ADM1_EN.isin(['Unity','Jonglei']),'geometry'])
 .hvplot.hist('SFED_AREA',alpha=0.5))
 ```
 
@@ -131,7 +132,7 @@ Now that we have analyzed the raster data, we can aggregate this to get the stat
 #         raster_array=da_clip,
 #         lon_coord="lon",
 #         lat_coord="lat",
-#         stats_list=["median","mean","max","count"], #std, count
+#         stats_list=["median","mean","max"],
 #         #computes value where 20% of the area is above that value
 #         percentile_list=[80],
 #         #Decided to only use centres, but can change that
@@ -151,11 +152,11 @@ We plot these for the mean as well as for the median. We can see very different 
 
 For both variables however, we can see that the patterns per county differ heavily. Both in absolute as in relative numbers. We do see clear peaks during some years, which is a good indication that this data and the aggregation methodology might at least be able to pick up fluctuations in the normal situation. 
 
-```python
-def plot_floodscan_timeseries(df,var_col,adm_list):
+```python tags=[]
+def plot_floodscan_timeseries(df,var_col,adm_list,adm_col="ADM2_EN"):
     for adm in adm_list:
         fig, ax = plt.subplots()
-        df_floodscan_sel = df[df['ADM2_EN']==adm].copy()
+        df_floodscan_sel = df[df[adm_col]==adm].copy()
         df_floodscan_sel.loc[:,'mean_cell_rolling'] = (df_floodscan_sel
                                                        .loc[:,var_col]
                                                        .transform(lambda x: x.rolling(5, 1).mean())
@@ -167,6 +168,10 @@ def plot_floodscan_timeseries(df,var_col,adm_list):
         ax.set_xlabel('Date')
         ax.set_title(f'Flooding in {adm}, 1998-2020, aggregation {var_col}')
         ax.legend()
+```
+
+```python tags=[]
+plot_floodscan_timeseries(df_floodscan,"mean_ADM2_PCODE",['Fangak'])
 ```
 
 ```python
@@ -238,10 +243,10 @@ def merge_events(df):
 ```
 
 ```python
-def compute_flood_events(df_rainy,var_col,adm_list,outlier_thresh=3,save_data=False):
+def compute_flood_events(df_rainy,var_col,adm_list,outlier_thresh=3,adm_col='ADM2_EN',save_data=False):
     list_floods_all=[]
     for adm in adm_list:
-        df_floodscan_sel = df_rainy[df_rainy['ADM2_EN']==adm].copy()
+        df_floodscan_sel = df_rainy[df_rainy[adm_col]==adm].copy()
         df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel[var_col].transform(lambda x: x.rolling(5, 1).mean())
         df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= outlier_thresh)]
         df_floods_summary = get_groups_consec_dates(df_floods_summary)
@@ -251,7 +256,7 @@ def compute_flood_events(df_rainy,var_col,adm_list,outlier_thresh=3,save_data=Fa
 
         if save_data: 
             df_summary_clean.to_csv(country_data_exploration_dir / f'{adm}_floodscan_event_summary.csv', index=False)   
-        df_summary_clean["ADM2_EN"]=adm
+        df_summary_clean[adm_col]=adm
         list_floods_all.append(df_summary_clean)
         df_floods_all=pd.concat(list_floods_all)
         df_floods_all['year']=df_floods_all.start_date.dt.year
@@ -296,6 +301,46 @@ alt.Chart(df_year).mark_rect().encode(
 ).properties(
     title="Flood detected per county"
 )
+```
+
+### Flooded fraction in the country
+As we can see there is a lot of fluctuation between the counties. Instead we can also look at the total flooded fraction in the country, as shown below. 
+We see a yearly pattern where some years the peak is higher than others (though a max of 1.75% of the country is flooded). 
+
+We see that some peaks have very high outliers, while others are wider. Which to classify as a flood, I am unsure about. With the method of std, we are now looking at the high outliers. 
+
+Using the same methodology as at the county level, 2014, 2017 and 2020 saw values above 3 std's. 
+
+```python
+df_floodscan_country=compute_raster_statistics(
+        gdf=gdf_adm2,
+        bound_col='ADM0_PCODE',
+        raster_array=da_clip,
+        lon_coord="lon",
+        lat_coord="lat",
+        stats_list=["median","mean","max","count","sum"], #std, count
+        #computes value where 20% of the area is above that value
+        percentile_list=[80],
+        #Decided to only use centres, but can change that
+        all_touched=False,
+    )
+```
+
+```python
+plot_floodscan_timeseries(df_floodscan_country,"mean_ADM0_PCODE",['SS'],adm_col="ADM0_PCODE")
+```
+
+```python
+df_floodscan_country['month'] = pd.DatetimeIndex(df_floodscan_country['time']).month
+df_floodscan_country_rainy = df_floodscan_country.loc[(df_floodscan_country['month'] >= 7) | (df_floodscan_country['month'] <= 10)]
+```
+
+```python
+df_floods_all_country_mean=compute_flood_events(df_floodscan_country_rainy,"mean_ADM0_PCODE",['SS'],adm_col='ADM0_PCODE')
+```
+
+```python
+df_floods_all_country_mean
 ```
 
 ### Bonus: Compare computation methods

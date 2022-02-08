@@ -1,7 +1,9 @@
 """
 Process Floodscan data.
 
-From their user guide:
+From their
+`user guide<https://www.aer.com/contentassets/
+22663ebfdb7c467599f363466b32770f/floodscan_data_users_guide_v05r01_r01.pdf>`_:
 FloodScan’s primary products are
 best at depicting large scale,
 inland river flooding when landscapes are unfrozen.
