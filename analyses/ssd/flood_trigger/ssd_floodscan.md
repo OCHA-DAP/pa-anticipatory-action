@@ -30,7 +30,7 @@ from src.indicators.flooding.floodscan import floodscan
 from src.utils_general.raster_manipulation import compute_raster_statistics
 
 
-mpl.rcParams['figure.dpi'] = 300
+# mpl.rcParams['figure.dpi'] = 300
 ```
 
 ```python
@@ -39,6 +39,7 @@ config=Config()
 parameters = config.parameters(iso3)
 country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
 country_data_exploration_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / "exploration" / iso3
+country_data_public_exploration_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "exploration" / iso3
 adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin2_shp"]
 ```
 
@@ -51,6 +52,16 @@ adm2_list=['Panyijiar', 'Leer', 'Mayendit', 'Koch', 'Guit',
 
 ```python
 gdf_adm2=gpd.read_file(adm2_bound_path)
+```
+
+```python
+gdf_adm2['include']=np.where(gdf_adm2["ADM2_EN"].isin(adm2_list),True,False)
+adms=alt.Chart(gdf_adm2).mark_geoshape(stroke="black").encode(
+    color=alt.Color("include",scale=alt.Scale(range=["grey","red"])),
+    tooltip=["ADM2_EN"]
+).properties(width=800,height=800,title="Admins of focus and SSD rivers")
+rivers=alt.Chart(bla).mark_geoshape(stroke="blue",filled=False).encode(tooltip=['CLASS'])
+adms+rivers
 ```
 
 ```python
@@ -75,7 +86,7 @@ gdf_adm2=gpd.read_file(adm2_bound_path)
 ```python
 fs_clip=xr.load_dataset(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
 #I dont fully understand why, these grid mappings re-occur and what they mean
-#but if having them, later on getting
+#but if having them, later on getting crs problems when computing stats
 fs_clip.SFED_AREA.attrs.pop('grid_mapping')
 fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
 fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
@@ -170,16 +181,12 @@ def plot_floodscan_timeseries(df,var_col,adm_list,adm_col="ADM2_EN"):
         ax.legend()
 ```
 
-```python tags=[]
-plot_floodscan_timeseries(df_floodscan,"mean_ADM2_PCODE",['Fangak'])
-```
-
 ```python
 plot_floodscan_timeseries(df_floodscan,"mean_ADM2_PCODE",adm2_list)
 ```
 
 ```python
-plot_floodscan_timeseries(df_floodscan,"median_ADM2_PCODE",adm2_list)
+# plot_floodscan_timeseries(df_floodscan,"median_ADM2_PCODE",adm2_list)
 ```
 
 Next we can identify consecutive dates of significantly above average (>3 standard deviations) surface water coverage. We'll consider these to be flood events. This threshold is set with the intent to capture events that are significant outliers, but could be refined/validated with future work.
@@ -264,7 +271,7 @@ def compute_flood_events(df_rainy,var_col,adm_list,outlier_thresh=3,adm_col='ADM
 ```
 
 ```python
-df_floods_all_median=compute_flood_events(df_floodscan_rainy,"median_ADM2_PCODE",adm2_list)
+# df_floods_all_median=compute_flood_events(df_floodscan_rainy,"median_ADM2_PCODE",adm2_list)
 ```
 
 ```python
@@ -276,7 +283,7 @@ From the table and plot below we can see very different numbers of "flood events
 We also see that the different counties see "flood events" during different years. Where 2020, 2014, and 1998 saw the most counties with a flood event
 
 ```python
-df_year=df_floods_all_median[['ADM2_EN','year']].drop_duplicates()
+df_year=df_floods_all_mean[['ADM2_EN','year']].drop_duplicates()
 ```
 
 ```python
@@ -301,6 +308,75 @@ alt.Chart(df_year).mark_rect().encode(
 ).properties(
     title="Flood detected per county"
 )
+```
+
+### Peaks per year
+We are interested to know whether flooding in certain counties always occurs earlier than in other counties. This could be interesting information to use for the trigger. A hypthosis is that counties South see flooding earlier since the Nile is flowing from South to North. 
+
+We look at the rank of peaking of flooding in each year for each admin, and only during the years that we identified as the flooding being exceptional
+
+```python
+#get one row per adm2-year combination that saw the highest mean value
+df_floodscan['year']=df_floodscan.time.dt.year
+df_floodscan_peak=df_floodscan.sort_values('mean_ADM2_PCODE', ascending=False).drop_duplicates(['year','ADM2_EN'])
+```
+
+```python
+df_floodscan_peak_sel=df_floodscan_peak[df_floodscan_peak.ADM2_EN.isin(adm2_list)]
+```
+
+It is a little hard to visualize but from the plots below we can see there is not a crystal clear pattern in which admins reach their peak first/last. 
+However, if you want to you can see a bit of pattern. E.g. Ayod is relatively often late while Bor South is relatively often early. 
+
+I am doubting if peak flooding is the best measure though.. 
+As we can see from the table below, they can heavily differ in time, i.e. not being part of the same possible flood. 
+
+```python
+alt.Chart(df_floodscan_peak_sel).mark_line(point=True).encode(
+    x="year:O", y="rank:O", color=alt.Color("ADM2_EN:N")
+).transform_window(
+    rank="rank()",
+    sort=[
+        alt.SortField("time", order="ascending"),
+    ],
+    groupby=["year"],
+).properties(title="Ranking of occurrence of peak flooding per county and year",
+            width=600,height=300)
+```
+
+```python
+alt.Chart(df_floodscan_peak_sel).mark_rect().encode(
+    x="year:O", y="ADM2_EN", color=alt.Color("rank:O",scale=alt.Scale(scheme="goldred"))
+).transform_window(
+    rank="rank()",
+    sort=[
+        alt.SortField("time", order="ascending"),
+    ],
+    groupby=["year"],
+).properties(title="Ranking of occurrence of peak flooding per county and year",
+            width=600)
+```
+
+```python
+#peak floodings differ by 5 months --> possibly not part of the same flood? 
+df_floodscan_peak_sel[df_floodscan_peak_sel.year==1998].sort_values('time')
+```
+
+We repeat the exercise but only including the years that we identified as exceptional flood levels, to filter out the noise. 
+From here we can still not see a super clear pattern. However, for example Panyijar reaches often relatively late, while Bor South is relatively early. But for example in Koch, there is no consistent pattern. 
+
+```python
+df_floods_all_mean_first=df_floods_all_mean.sort_values('start_date', ascending=False).drop_duplicates(['year','ADM2_EN'])
+alt.Chart(df_floods_all_mean_first).mark_rect().encode(
+    x="year:O", y="ADM2_EN", color=alt.Color("rank:O",scale=alt.Scale(scheme="goldred"))
+).transform_window(
+    rank="rank()",
+    sort=[
+        alt.SortField("start_date", order="ascending"),
+    ],
+    groupby=["year"],
+).properties(title="Ranking of occurrence of peak flooding per county and year",
+            width=600)
 ```
 
 ### Flooded fraction in the country
