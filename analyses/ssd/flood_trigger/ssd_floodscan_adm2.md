@@ -379,46 +379,6 @@ alt.Chart(df_floods_all_mean_first).mark_rect().encode(
             width=600)
 ```
 
-### Flooded fraction in the country
-As we can see there is a lot of fluctuation between the counties. Instead we can also look at the total flooded fraction in the country, as shown below. 
-We see a yearly pattern where some years the peak is higher than others (though a max of 1.75% of the country is flooded). 
-
-We see that some peaks have very high outliers, while others are wider. Which to classify as a flood, I am unsure about. With the method of std, we are now looking at the high outliers. 
-
-Using the same methodology as at the county level, 2014, 2017 and 2020 saw values above 3 std's. 
-
-```python
-df_floodscan_country=compute_raster_statistics(
-        gdf=gdf_adm2,
-        bound_col='ADM0_PCODE',
-        raster_array=da_clip,
-        lon_coord="lon",
-        lat_coord="lat",
-        stats_list=["median","mean","max","count","sum"], #std, count
-        #computes value where 20% of the area is above that value
-        percentile_list=[80],
-        #Decided to only use centres, but can change that
-        all_touched=False,
-    )
-```
-
-```python
-plot_floodscan_timeseries(df_floodscan_country,"mean_ADM0_PCODE",['SS'],adm_col="ADM0_PCODE")
-```
-
-```python
-df_floodscan_country['month'] = pd.DatetimeIndex(df_floodscan_country['time']).month
-df_floodscan_country_rainy = df_floodscan_country.loc[(df_floodscan_country['month'] >= 7) | (df_floodscan_country['month'] <= 10)]
-```
-
-```python
-df_floods_all_country_mean=compute_flood_events(df_floodscan_country_rainy,"mean_ADM0_PCODE",['SS'],adm_col='ADM0_PCODE')
-```
-
-```python
-df_floods_all_country_mean
-```
-
 ### Bonus: Compare computation methods
 We computed the statistics in this notebook with our newer `compute_raster_statistics` function. In the `floodscan.py` script we use an older method. We compare the results of the two methods and see they are equal. We thus prefer to use the newer method
 
@@ -445,4 +405,8 @@ df_floodscan_sel=(df_floodscan[['time','ADM2_PCODE','mean_ADM2_PCODE','max_ADM2_
 #use assert_frame_equal cause with df_floodscan_sel.equals(df_floodscan_old)
 #it is wrongly giving False
 assert_frame_equal(df_floodscan_sel,df_floodscan_old)
+```
+
+```python
+
 ```

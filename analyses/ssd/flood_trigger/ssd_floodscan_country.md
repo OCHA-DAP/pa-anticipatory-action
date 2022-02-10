@@ -1,0 +1,350 @@
+### Flooded fraction in the country
+As we can see in the notebook `ssd_floodscan_adm2`, there is a lot of fluctuation between the counties. Since the division of counties is pretty artificial, we can also look at the total flooded fraction in the country. With this we can get a general idea of the floods across the country, after which we can zoom in on the specific counties. 
+
+```python
+import os
+from pathlib import Path
+import sys
+from datetime import timedelta
+import xarray as xr
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+from pandas.util.testing import assert_frame_equal
+import geopandas as gpd
+import hvplot.xarray
+import matplotlib as mpl
+import numpy as np
+from scipy import stats
+from functools import reduce
+import altair as alt
+
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
+sys.path.append(path_mod)
+
+from src.indicators.drought.config import Config
+from src.indicators.flooding.floodscan import floodscan
+from src.utils_general.raster_manipulation import compute_raster_statistics
+
+
+# mpl.rcParams['figure.dpi'] = 300
+```
+
+```python
+%load_ext rpy2.ipython
+```
+
+```R tags=[]
+library(tidyverse)
+```
+
+#### define functions
+
+```python tags=[]
+def plot_floodscan_timeseries(df,var_col,adm_list,adm_col="ADM2_EN"):
+    for adm in adm_list:
+        fig, ax = plt.subplots()
+        df_floodscan_sel = df[df[adm_col]==adm].copy()
+        df_floodscan_sel.loc[:,'mean_cell_rolling'] = (df_floodscan_sel
+                                                       .loc[:,var_col]
+                                                       .transform(lambda x: x.rolling(5, 1).mean())
+                                                      )
+        sns.lineplot(data=df_floodscan_sel, x="time", y=var_col, lw=0.25, label='Original')
+        sns.lineplot(data=df_floodscan_sel, x="time", 
+                     y="mean_cell_rolling", lw=0.25, label='5-day moving\navg')   
+        ax.set_ylabel('Mean flooded fraction')
+        ax.set_xlabel('Date')
+        ax.set_title(f'Flooding in {adm}, 1998-2020, aggregation {var_col}')
+        ax.legend()
+```
+
+```python
+#this is copied from amazing Hannah's mwi flood work
+# Assign an eventID to each flood 
+# ie. consecutive dates in a dataframe filtered to keep only outliers in flood fraction
+def get_groups_consec_dates(df):
+    dt = df['time']
+    day = pd.Timedelta('1d')
+    breaks = dt.diff() != day
+    groups = breaks.cumsum()
+    groups = groups.reset_index()
+    groups.columns = ['index', 'eventID']
+    df_out = df.merge(groups, left_index=True, right_on='index')
+    return df_out
+
+# Get basic summary statistics for each flood event
+def get_flood_summary(df):
+    s1 = df.groupby('eventID')['time'].min().reset_index().rename(columns={'time': 'start_date'})
+    s2 = df.groupby('eventID')['time'].max().reset_index().rename(columns={'time': 'end_date'})
+    s3 = df.groupby('eventID')['time'].count().reset_index().rename(columns={'time': 'num_days'})
+    s4 = df.groupby('eventID')['mean_cell_rolling'].max().reset_index().rename(columns={'mean_cell_rolling': 'max_flood_frac'})
+    dfs = [s1, s2, s3, s4]
+    df_merged = reduce(lambda  left,right: pd.merge(left,right,on=['eventID'],
+                                            how='outer'), dfs)
+    return df_merged
+
+# Merge overlapping flood events
+# Each row in the input df should be an event
+# With start and end date columns: ['start_date'] and ['end_date']
+def merge_events(df):
+    df['flood_id'] = 0
+    f_id = 1
+    
+    # Loop through all of the events and tag the ones that are part of an overlap
+    for i in range(1, len(df.index)):        
+        start = df['start_date'].iloc[i,]
+        end = df['end_date'].iloc[i-1,]
+        if start < end:
+            df.loc[i, 'flood_id'] = f_id
+            df.loc[i-1, 'flood_id'] = f_id
+        else:           
+            df.loc[i-1, 'flood_id'] = f_id
+            f_id += 1
+    
+    # Now for each event, extract the min start data and max end date
+    df_start = df.groupby('flood_id')['start_date'].min().to_frame().reset_index()
+    df_end = df.groupby('flood_id')['end_date'].max().to_frame().reset_index()
+    
+    df_events = df_start.merge(df_end, on='flood_id').sort_values(by='start_date')
+    return df_events
+```
+
+```python
+def compute_flood_events(df_rainy,var_col,adm_list,outlier_thresh=3,adm_col='ADM2_EN',save_data=False):
+    list_floods_all=[]
+    for adm in adm_list:
+        df_floodscan_sel = df_rainy[df_rainy[adm_col]==adm].copy()
+        df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel[var_col].transform(lambda x: x.rolling(5, 1).mean())
+        df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= outlier_thresh)]
+        df_floods_summary = get_groups_consec_dates(df_floods_summary)
+        df_floods_summary = get_flood_summary(df_floods_summary)
+
+        df_summary_clean = merge_events(df_floods_summary)
+
+        if save_data: 
+            df_summary_clean.to_csv(country_data_exploration_dir / f'{adm}_floodscan_event_summary.csv', index=False)   
+        df_summary_clean[adm_col]=adm
+        list_floods_all.append(df_summary_clean)
+        df_floods_all=pd.concat(list_floods_all)
+        df_floods_all['year']=df_floods_all.start_date.dt.year
+    return df_floods_all
+```
+
+```R
+plotFloodedFraction <- function (df,y_col,facet_col){
+df %>%
+ggplot(
+aes_string(
+x = "time",
+y = y_col
+)
+) +
+stat_smooth(
+geom = "area",
+span = 1/4,
+fill = "#ef6666"
+) +
+scale_x_date(
+date_breaks = "3 months",
+date_labels = "%b"
+) +
+facet_wrap(
+as.formula(paste("~", facet_col)),
+scales="free_x",
+ncol=4
+) +
+ylab("Flooded fraction")+
+xlab("Month")+
+theme_minimal()
+}
+```
+
+```python
+iso3="ssd"
+config=Config()
+parameters = config.parameters(iso3)
+country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
+country_data_exploration_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / "exploration" / iso3
+country_data_public_exploration_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "exploration" / iso3
+adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin2_shp"]
+```
+
+```python
+cerf_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"cerf")
+cerf_path=os.path.join(cerf_dir,'CERF Allocations.csv')
+```
+
+```python
+gdf_adm2=gpd.read_file(adm2_bound_path)
+```
+
+```python
+fs_clip=xr.load_dataset(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
+#I dont fully understand why, these grid mappings re-occur and what they mean
+#but if having them, later on getting crs problems when computing stats
+fs_clip.SFED_AREA.attrs.pop('grid_mapping')
+fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
+fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
+fs_clip=fs_clip.rio.write_crs("EPSG:4326",inplace=True)
+```
+
+```python
+da_clip=fs_clip.SFED_AREA
+```
+
+```python
+df_floodscan_country=compute_raster_statistics(
+        gdf=gdf_adm2,
+        bound_col='ADM0_PCODE',
+        raster_array=da_clip,
+        lon_coord="lon",
+        lat_coord="lat",
+        stats_list=["median","mean","max","count","sum"], #std, count
+        #computes value where 20% of the area is above that value
+        percentile_list=[80],
+        #Decided to only use centres, but can change that
+        all_touched=False,
+    )
+df_floodscan_country['year']=df_floodscan_country.time.dt.year
+```
+
+```python
+# df_floodscan_country.to_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm0_stats.csv')
+```
+
+We can plot the data over all years. 
+We see a yearly pattern where some years the peak is higher than others (though a max of 1.75% of the country is flooded). 
+
+We see that some peaks have very high outliers, while others are wider. Which to classify as a flood, I am unsure about. With the method of std, we are now looking at the high outliers. 
+
+```python
+plot_floodscan_timeseries(df_floodscan_country,"mean_ADM0_PCODE",['SS'],adm_col="ADM0_PCODE")
+```
+
+```python
+df_floodscan_country['month'] = pd.DatetimeIndex(df_floodscan_country['time']).month
+df_floodscan_country_rainy = df_floodscan_country.loc[(df_floodscan_country['month'] >= 7) | (df_floodscan_country['month'] <= 10)]
+```
+
+```python
+df_floods_all_country_mean=compute_flood_events(df_floodscan_country_rainy,"mean_ADM0_PCODE",['SS'],adm_col='ADM0_PCODE')
+```
+
+Using the same methodology as at the county level, 2014, 2017 and 2020 saw values above 3 std's. 
+
+```python
+df_floods_all_country_mean
+```
+
+Next we plot the smoothed data per year (with ggplot cause it is awesome). 
+
+We can see that: 
+
+- 2014, 2017, and 2020 indeed had clearly the highest peak. 
+- The peak is generally between Sep and Dec, which is quite late in the rainy season. 
+- We can see several smaller peaks, such as in 2019. How to interpret these, I don't know
+
+```R magic_args="-i df_floodscan_country -w 30 -h 20 --units cm"
+df_plot <- df_floodscan_country %>%
+mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM0_PCODE = mean_ADM0_PCODE*100)
+plotFloodedFraction(df_plot,'mean_ADM0_PCODE','year')
+```
+
+### CERF allocations
+To compare if the years of 2014, 2017, and 2020 correspond with actual flooding, one source we can look at are the CERF allocations
+
+```python
+df_cerf=pd.read_csv(cerf_path,parse_dates=["dateUSGSignature"])
+df_cerf["date"]=df_cerf.dateUSGSignature.dt.to_period('M')
+df_country=df_cerf[df_cerf.countryCode==iso3.upper()]
+df_countryd=df_country[df_country.emergencyTypeName=="Flood"]
+#group year-month combinations together
+df_countrydgy=df_countryd[["date","totalAmountApproved"]].groupby("date").sum()
+```
+
+We can see that since 2006, allocations have occured in 2019, 2020, and 2021. 
+
+2021 is not in our current data set. 
+
+during 2020 we did see a large peak in the floodscan data. 
+
+2019 saw above average flood levels, but not as extreme as during 2014 and 2017 when there were no allocations. 
+
+
+```python
+ax = df_countrydgy.plot(figsize=(16, 8), color='#86bf91',legend=False,kind="bar")
+
+vals = ax.get_yticks()
+for tick in vals[1:]:
+    ax.axhline(y=tick, linestyle='dashed', alpha=0.4, color='#eeeeee', zorder=1)
+
+ax.set_xlabel("Month", labelpad=20, weight='bold', size=12)
+ax.set_ylabel("Total amount of funds released", labelpad=20, weight='bold', size=12)
+
+ax.get_yaxis().set_major_formatter(
+            mpl.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.spines['bottom'].set_visible(False)
+
+plt.title(f"Funds allocated by CERF for floods in {iso3} from 2006 till 2021");
+```
+
+```python
+#to get titles of the specific projects
+# pd.set_option('display.max_colwidth', None)
+# df_countryd[["date","projectTitle"]]
+```
+
+Possibly 2019 saw more local patterns. Looking at the [2019 flood allocation](https://cerf.un.org/sites/default/files/resources/19-RR-SSD-39576_South%20Sudan_CERF_Report.pdf), floods are explicity reported in the counties of Akobo, Mankien-Mayom, Rumbek North. We can thus evaluate the floodscan data for those counties
+
+```python
+df_floodscan_adm2=pd.read_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.nc',parse_dates=['time'])
+df_floodscan_adm2['year']=df_floodscan_adm2.time.dt.year
+```
+
+```python
+#sel data
+#need to remove some cols, else loading into R takes very long
+df_floodscan_adm2_sel=df_floodscan_adm2.loc[(df_floodscan_adm2.ADM2_EN.isin(['Akobo','Mayom','Rumbek North'])),['time','mean_ADM2_PCODE','year','ADM2_EN']]
+```
+
+From the plot above we can see that Mayom saw quite a significant percentage of flooding. Akobo to some extent as well. 
+However, it is important to look at the relativeness of these fraction compared to other years
+
+```R magic_args="-i df_floodscan_adm2_sel -w 30 -h 20 --units cm"
+df_plot_adm2 <- df_floodscan_adm2_sel %>%
+mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100) %>%
+filter(year==2019)
+
+plotFloodedFraction(df_plot_adm2,'mean_ADM2_PCODE','ADM2_EN')
+```
+
+From the plots below we can see that for Akobo and Mayom the flooding was definitely above average. Though we saw more substantial flooding in 2010 and 2014, when there was no allocation. For Rumbek North the flooding doesn't seem very exceptional though possibly slighlty more than normally. 
+
+What to do with these results, I don't know hahah. I don't know whether to trust FloodScan or CERF more, but at least they don't have perfect correspondence. 
+
+Also interesting to see that the counties mentioned in the report, are different than those we had in mind. Note that many of the CERF funding went to IDPs
+
+```R magic_args="-i df_floodscan_adm2_sel -w 30 -h 20 --units cm"
+df_plot_adm2 <- df_floodscan_adm2_sel %>%
+mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100) %>%
+filter(ADM2_EN=="Akobo")
+plotFloodedFraction(df_plot_adm2,'mean_ADM2_PCODE','year')
+```
+
+```R magic_args="-i df_floodscan_adm2_sel -w 30 -h 20 --units cm"
+df_plot_adm2 <- df_floodscan_adm2_sel %>%
+mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100) %>%
+filter(ADM2_EN=="Mayom")
+plotFloodedFraction(df_plot_adm2,'mean_ADM2_PCODE','year')
+```
+
+```R magic_args="-i df_floodscan_adm2_sel -w 30 -h 20 --units cm"
+df_plot_adm2 <- df_floodscan_adm2_sel %>%
+mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100) %>%
+filter(ADM2_EN=="Rumbek North")
+plotFloodedFraction(df_plot_adm2,'year')
+```
