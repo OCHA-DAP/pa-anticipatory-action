@@ -1,0 +1,333 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left;margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left;margin:10px" />'
+pagetitle: 'AA Trigger Report'
+output:
+  html_document:
+    css: style.css
+    includes:
+      in_header: header.html
+    toc: no
+    toc_float: yes
+    toc_depth: '4'
+    df_print: paged
+  html_notebook:
+    css: style.css
+    includes:
+      in_header: header.html
+    toc: no
+    toc_float: yes
+    toc_depth: '4'
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+
+```{r hard-coded values, echo = FALSE, message = FALSE, warning = FALSE}
+### Make sure the performance metrics and learning table files are in the folder sister to the Rmd file
+### Create a "plots" folder sister to RMD file
+### Update this code chunk before knitting
+### Adjust the number of triggers throughout the Rmd, as needed
+### Manually enter the text in this Rmd under Data Sources, Analysis, and Monitoring & Governance sections
+
+
+country_name <- "Country Name"
+shock <- "Shock"
+shock_return_period <- "1 in X years"
+nbr_hist_shocks <-"X shocks"
+hist_period <- "XXXX - XXXX" # eg: 1980 - 2021
+perf_metrics_filename <- "dummy_perf_metrics_table_for_template.csv" # include path if not sister to Rmd
+learning_table_filename <- "dummy_learning_table_for_template.csv" # include path if not sister to Rmd
+
+# trigger A info  
+type_a <- 'eg: Predictive' 
+timepoints_a<- 'eg: Jan, Feb, Mar'
+package_a <- 'TBC' # input number only, no $ sign or 'm' for million
+funding_a <- 'X'
+predicted_window_a <- 'eg: JAS' 
+lead_time_a <- 'eg: 7-5 months' # change units as needed. Include all lead times if multiple activation timepoints
+
+# trigger B info  
+type_b <- 'eg: Predictive'
+timepoints_b <- 'eg: Apr, May, Jun'
+package_b <- 'TBC'
+funding_b <- 'X' 
+predicted_window_b <- 'eg: ASO'
+lead_time_b <- 'eg: 4-1 months'
+
+# trigger C info  
+type_c <- 'eg: Observational'
+timepoints_c <- 'eg: Jul'
+package_c <- 'TBC'
+funding_c <- 'X'
+predicted_window_c <- 'N/A'
+lead_time_c <- 'N/A'
+
+```
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = TRUE) # include chunk output by default
+knitr::opts_chunk$set(message = FALSE) # do not print messages by default
+knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
+
+options(scipen = 999) # turn off scientific notation
+options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
+```
+
+```{r libraries, include = FALSE}
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
+
+# install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# load libraries 
+lapply(packages, library, character.only = TRUE)
+
+```
+
+```{r functions}
+computeCIwidths <- function(metric_name, trigger_id) { 
+
+  perf_metrics_data %>%
+  filter(trigger == trigger_id) %>%
+  select(-trigger) %>%
+  filter(metric == metric_name) %>%
+  pivot_wider(names_from = point, values_from = value) %>%
+  mutate(below_ci = low_end,  # width between zero and low end of CI
+         ci = high_end - low_end,# width of CI
+         above_ci = 100 - high_end) %>% # width between high_end of CI and 100
+  pivot_longer(!c('metric','dummy'), names_to = 'point', values_to = 'value')
+}
+```
+
+```{r data loading and formatting}
+
+# read in performance metrics file
+perf_metrics_data <- read.csv(perf_metrics_filename,
+                              colClasses = c('character', 'character', 'character', 'integer', 'integer')
+                              )
+
+# format funding amounts
+funding_a <- paste0('$',funding_a,'m')
+funding_b <- paste0('$',funding_b,'m')
+funding_c <- paste0('$',funding_c,'m')
+
+```
+
+```{r compute CI measurements}
+
+# compute width and position of CIs for trigger a
+df_a_var <- computeCIwidths(metric_name = 'var', trigger_id = 'a') # valid activation rate 
+df_a_det <- computeCIwidths(metric_name = 'det', trigger_id = 'a') # detection rate
+df_a_far <- computeCIwidths(metric_name = 'far', trigger_id = 'a') # false alarm rate
+df_a_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'a') # miss rate
+df_a_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
+
+# compute width and position of CIs for trigger b
+df_b_var <- computeCIwidths(metric_name = 'var', trigger_id = 'b') # valid activation rate 
+df_b_det <- computeCIwidths(metric_name = 'det', trigger_id = 'b') # detection rate
+df_b_far <- computeCIwidths(metric_name = 'far', trigger_id = 'b') # false alarm rate
+df_b_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'b') # miss rate
+df_b_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
+
+# compute width and position of CIs for trigger c
+df_c_var <- computeCIwidths(metric_name = 'var', trigger_id = 'c') # valid activation rate 
+df_c_det <- computeCIwidths(metric_name = 'det', trigger_id = 'c') # detection rate
+df_c_far <- computeCIwidths(metric_name = 'far', trigger_id = 'c') # false alarm rate
+df_c_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'c') # miss rate
+df_c_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
+
+# compute width and position of CIs for the framework
+df_fmwk_min <- computeCIwidths(metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
+df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
+
+```
+
+```{r data plotting}
+
+source("computeCIplots.R")
+
+plotCI(trigger_id = 'a', metric = 'var', ci_widths_df = 'df_a_var') 
+plotCI(trigger_id = 'a', metric = 'det', ci_widths_df = 'df_a_det')
+plotCI(trigger_id = 'a', metric = 'far', ci_widths_df = 'df_a_far')
+plotCI(trigger_id = 'a', metric = 'mis', ci_widths_df = 'df_a_mis')
+plotCI(trigger_id = 'a', metric = 'atv', ci_widths_df = 'df_a_atv')
+
+plotCI(trigger_id = 'b', metric = 'var', ci_widths_df = 'df_b_var') 
+plotCI(trigger_id = 'b', metric = 'det', ci_widths_df = 'df_b_det')
+plotCI(trigger_id = 'b', metric = 'far', ci_widths_df = 'df_b_far') 
+plotCI(trigger_id = 'b', metric = 'mis', ci_widths_df = 'df_b_mis')
+plotCI(trigger_id = 'b', metric = 'atv', ci_widths_df = 'df_b_atv')
+
+plotCI(trigger_id = 'c', metric = 'var', ci_widths_df = 'df_c_var') 
+plotCI(trigger_id = 'c', metric = 'det', ci_widths_df = 'df_c_det') 
+plotCI(trigger_id = 'c', metric = 'far', ci_widths_df = 'df_c_far') 
+plotCI(trigger_id = 'c', metric = 'mis', ci_widths_df = 'df_c_mis') 
+plotCI(trigger_id = 'c', metric = 'atv', ci_widths_df = 'df_c_atv')
+
+plotCI(trigger_id = 'framework', metric = 'min', ci_widths_df = 'df_fmwk_min') 
+plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful') 
+```
+
+<br> 
+<br>
+<br>
+
+# Anticipatory Action Trigger 
+# Mechanism Report
+
+<p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
+
+***
+
+## Shock
+
+<span style="color:#007ce1"> Country: </span> `r paste0("   ", country_name)`
+<br>
+<span style="color:#007ce1"> Hazard: </span> `r shock`
+
+## Data sources
+
+### Historical shocks 
+* Compiled by X. Available on HDX [here](link to HDX dataset in URL format eg: https://data.humdata.org/).
+
+### Forecasts
+* Product 1. The forecast is published (frequency, schedule). Data provider website [here](Link to provider’s data portal).
+* Product 2. The forecast is published (frequency, schedule). Data provider website [here](Link to provider’s data portal).
+
+### Other data
+* Some other dataset. Data available [here](Link to dataset on HDX)
+
+## Analysis
+Performed by the Centre for Humanitarian Data. Publicly available [here](link to Github repo's project folder).
+
+<br>
+
+# Trigger Mechanism Snapshot
+
+&nbsp;
+
+```{r mechanism snapshot, include = TRUE}
+
+snapshot_df <- data.frame(row_name = c('Type', 
+                                       'Activation Timepoints', 
+                                       'Predicted Window', 
+                                       'Lead Time', 
+                                       'Valid Activation Rate', 
+                                       'Detection Rate', 
+                                       'False Alarm Rate', 
+                                       'Miss Rate' , 
+                                       'Shock Return Period', 
+                                       'Nbr of Historical Shocks', 
+                                       'Historical Period', 
+                                       'Activity Package', 
+                                       'Funding Package', 
+                                       'Prob. Trigger Activation', 
+                                       'Prob. Min. Frwk Activ.', 
+                                       'Prob. Full Frwk Activ.'),
+                       trigger_a = c(type_a, 
+                                     timepoints_a, 
+                                     predicted_window_a, 
+                                     lead_time_a, 
+                                     paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
+                                     shock_return_period, 
+                                     nbr_hist_shocks, 
+                                     hist_period, 
+                                     package_a, 
+                                     funding_a, 
+                                     paste0("<img src=plots/trimmed_trigger_a_atv_ci.png"), 
+                                     "Covers entire framework",  
+                                     "Covers entire framework"),
+                       trigger_b = c(type_b, 
+                                     timepoints_b, 
+                                     predicted_window_b, 
+                                     lead_time_b, 
+                                     paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
+                                     paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
+                                     shock_return_period,
+                                     nbr_hist_shocks, 
+                                     hist_period, 
+                                     package_b, 
+                                     funding_b, 
+                                     paste0("<img src=plots/trimmed_trigger_b_atv_ci.png"), 
+                                     paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
+                                     paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">")),  
+                       trigger_c = c(type_c, 
+                                     timepoints_c, 
+                                     predicted_window_c, 
+                                     lead_time_c, 
+                                     paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
+                                     shock_return_period, 
+                                     nbr_hist_shocks, 
+                                     hist_period, 
+                                     package_c, 
+                                     funding_c, 
+                                     paste0("<img src=plots/trimmed_trigger_c_atv_ci.png"), 
+                                     "Covers entire framework",
+                                     "Covers entire framework"))
+
+kbl(snapshot_df,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, # omit row numbers
+    col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
+    align = "rccc") %>%
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:4, 9:13), extra_css = "line-height: 25px;") %>%
+  row_spec(c(5:8, 14:16), extra_css = "line-height: 45px;") %>%
+  column_spec(column = 1, width = "16em", extra_css = "vertical-align: bottom;") %>%
+  column_spec(column = c(2:4), width = "22em") %>%
+  pack_rows("Description", start_row = 1, end_row = 4, color = '#1bb580') %>%
+  pack_rows("Performance", start_row = 5, end_row = 8, color = '#1bb580') %>%
+  pack_rows("Shock", start_row = 9, end_row = 11, color = '#1bb580') %>%
+  pack_rows("Activation", start_row = 12, end_row = 13, color = '#1bb580') %>%
+  pack_rows("Framework Activation", start_row = 15, end_row = 16, colnum = 1, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
+  kableExtra::footnote(general = "", general_title = "___", symbol = c("Every trigger can reach its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
+
+
+```
+
+&nbsp;
+
+## Monitoring & Governance
+
+(Actor) will monitor the trigger(s). If a trigger is met, (Actor) will notify (Recipients) by email within (time delay). Draft emails can be found [here](link to draft emails).
+
+&nbsp;
+
+## Assumptions & Open questions
+
+```{r learning table}
+
+learning_table <- read.csv(learning_table_filename)
+
+kbl(learning_table,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, # omit row numbers
+    col.names = c("Decision","Rationale", "Assumption", "Open Question"), 
+    align = "llll") %>%
+  kable_minimal(c("hover", "striped"))
+
+```
+
