@@ -2,6 +2,11 @@
 As we can see in the notebook `ssd_floodscan_adm2`, there is a lot of fluctuation between the counties. Since the division of counties is pretty artificial, we can also look at the total flooded fraction in the country. With this we can get a general idea of the floods across the country, after which we can zoom in on the specific counties. 
 
 ```python
+%load_ext autoreload
+%autoreload 2
+```
+
+```python
 import os
 from pathlib import Path
 import sys
@@ -25,6 +30,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.indicators.flooding.floodscan import floodscan
 from src.utils_general.raster_manipulation import compute_raster_statistics
+from src.utils_general.statistics import get_return_periods_dataframe
 
 
 # mpl.rcParams['figure.dpi'] = 300
@@ -39,96 +45,6 @@ library(tidyverse)
 ```
 
 #### define functions
-
-```python tags=[]
-def plot_floodscan_timeseries(df,var_col,adm_list,adm_col="ADM2_EN"):
-    for adm in adm_list:
-        fig, ax = plt.subplots()
-        df_floodscan_sel = df[df[adm_col]==adm].copy()
-        df_floodscan_sel.loc[:,'mean_cell_rolling'] = (df_floodscan_sel
-                                                       .loc[:,var_col]
-                                                       .transform(lambda x: x.rolling(5, 1).mean())
-                                                      )
-        sns.lineplot(data=df_floodscan_sel, x="time", y=var_col, lw=0.25, label='Original')
-        sns.lineplot(data=df_floodscan_sel, x="time", 
-                     y="mean_cell_rolling", lw=0.25, label='5-day moving\navg')   
-        ax.set_ylabel('Mean flooded fraction')
-        ax.set_xlabel('Date')
-        ax.set_title(f'Flooding in {adm}, 1998-2020, aggregation {var_col}')
-        ax.legend()
-```
-
-```python
-#this is copied from amazing Hannah's mwi flood work
-# Assign an eventID to each flood 
-# ie. consecutive dates in a dataframe filtered to keep only outliers in flood fraction
-def get_groups_consec_dates(df):
-    dt = df['time']
-    day = pd.Timedelta('1d')
-    breaks = dt.diff() != day
-    groups = breaks.cumsum()
-    groups = groups.reset_index()
-    groups.columns = ['index', 'eventID']
-    df_out = df.merge(groups, left_index=True, right_on='index')
-    return df_out
-
-# Get basic summary statistics for each flood event
-def get_flood_summary(df):
-    s1 = df.groupby('eventID')['time'].min().reset_index().rename(columns={'time': 'start_date'})
-    s2 = df.groupby('eventID')['time'].max().reset_index().rename(columns={'time': 'end_date'})
-    s3 = df.groupby('eventID')['time'].count().reset_index().rename(columns={'time': 'num_days'})
-    s4 = df.groupby('eventID')['mean_cell_rolling'].max().reset_index().rename(columns={'mean_cell_rolling': 'max_flood_frac'})
-    dfs = [s1, s2, s3, s4]
-    df_merged = reduce(lambda  left,right: pd.merge(left,right,on=['eventID'],
-                                            how='outer'), dfs)
-    return df_merged
-
-# Merge overlapping flood events
-# Each row in the input df should be an event
-# With start and end date columns: ['start_date'] and ['end_date']
-def merge_events(df):
-    df['flood_id'] = 0
-    f_id = 1
-    
-    # Loop through all of the events and tag the ones that are part of an overlap
-    for i in range(1, len(df.index)):        
-        start = df['start_date'].iloc[i,]
-        end = df['end_date'].iloc[i-1,]
-        if start < end:
-            df.loc[i, 'flood_id'] = f_id
-            df.loc[i-1, 'flood_id'] = f_id
-        else:           
-            df.loc[i-1, 'flood_id'] = f_id
-            f_id += 1
-    
-    # Now for each event, extract the min start data and max end date
-    df_start = df.groupby('flood_id')['start_date'].min().to_frame().reset_index()
-    df_end = df.groupby('flood_id')['end_date'].max().to_frame().reset_index()
-    
-    df_events = df_start.merge(df_end, on='flood_id').sort_values(by='start_date')
-    return df_events
-```
-
-```python
-def compute_flood_events(df_rainy,var_col,adm_list,outlier_thresh=3,adm_col='ADM2_EN',save_data=False):
-    list_floods_all=[]
-    for adm in adm_list:
-        df_floodscan_sel = df_rainy[df_rainy[adm_col]==adm].copy()
-        df_floodscan_sel['mean_cell_rolling'] = df_floodscan_sel[var_col].transform(lambda x: x.rolling(5, 1).mean())
-        df_floods_summary = df_floodscan_sel[(np.abs(stats.zscore(df_floodscan_sel['mean_cell_rolling'])) >= outlier_thresh)]
-        df_floods_summary = get_groups_consec_dates(df_floods_summary)
-        df_floods_summary = get_flood_summary(df_floods_summary)
-
-        df_summary_clean = merge_events(df_floods_summary)
-
-        if save_data: 
-            df_summary_clean.to_csv(country_data_exploration_dir / f'{adm}_floodscan_event_summary.csv', index=False)   
-        df_summary_clean[adm_col]=adm
-        list_floods_all.append(df_summary_clean)
-        df_floods_all=pd.concat(list_floods_all)
-        df_floods_all['year']=df_floods_all.start_date.dt.year
-    return df_floods_all
-```
 
 ```R
 plotFloodedFraction <- function (df,y_col,facet_col){
@@ -218,7 +134,7 @@ We see a yearly pattern where some years the peak is higher than others (though 
 We see that some peaks have very high outliers, while others are wider. Which to classify as a flood, I am unsure about. With the method of std, we are now looking at the high outliers. 
 
 ```python
-plot_floodscan_timeseries(df_floodscan_country,"mean_ADM0_PCODE",['SS'],adm_col="ADM0_PCODE")
+df_floodscan_country['mean_rolling']=df_floodscan_country.sort_values('time').mean_ADM0_PCODE.rolling(10,min_periods=10).mean()
 ```
 
 ```python
@@ -227,13 +143,48 @@ df_floodscan_country_rainy = df_floodscan_country.loc[(df_floodscan_country['mon
 ```
 
 ```python
-df_floods_all_country_mean=compute_flood_events(df_floodscan_country_rainy,"mean_ADM0_PCODE",['SS'],adm_col='ADM0_PCODE')
+fig, ax = plt.subplots(figsize=(20,6))
+sns.lineplot(data=df_floodscan_country, x="time", y="mean_ADM0_PCODE", lw=0.25, label='Original')
+sns.lineplot(data=df_floodscan_country, x="time", 
+             y="mean_rolling", lw=0.25, label='10-day moving\navg')   
+ax.set_ylabel('Flooded fraction')
+ax.set_xlabel('Date')
+ax.set_title(f'Flooding in SSD, 1998-2020')
+ax.legend()
 ```
 
-Using the same methodology as at the county level, 2014, 2017 and 2020 saw values above 3 std's. 
+Next we compute the return period and check which years had a peak above the return period. 
+It is discussable whether only looking at the peak is the best method.. 
 
 ```python
-df_floods_all_country_mean
+#get one row per adm2-year combination that saw the highest mean value
+df_floodscan_peak=df_floodscan_country_rainy.sort_values('mean_rolling', ascending=False).drop_duplicates(['year'])
+```
+
+```python
+years = np.arange(1.5, 20.5, 0.5)
+```
+
+```python
+df_rps_ana=get_return_periods_dataframe(df_floodscan_peak, rp_var="mean_ADM0_PCODE",years=years, method="analytical",round_rp=False)
+df_rps_emp=get_return_periods_dataframe(df_floodscan_peak, rp_var="mean_ADM0_PCODE",years=years, method="empirical",round_rp=False)
+```
+
+```python
+fig, ax = plt.subplots()
+ax.plot(df_rps_ana.index, df_rps_ana["rp"], label='analytical')
+ax.plot(df_rps_emp.index, df_rps_emp["rp"], label='empirical')
+ax.legend()
+ax.set_xlabel('Return period [years]')
+ax.set_ylabel('Fraction flooded');
+```
+
+```python
+df_floodscan_peak[df_floodscan_peak.mean_ADM0_PCODE>=df_rps_ana.loc[3,'rp']].sort_values('year')
+```
+
+```python
+df_floodscan_peak[df_floodscan_peak.mean_ADM0_PCODE>=df_rps_ana.loc[5,'rp']].sort_values('year')
 ```
 
 Next we plot the smoothed data per year (with ggplot cause it is awesome). 
@@ -346,5 +297,5 @@ plotFloodedFraction(df_plot_adm2,'mean_ADM2_PCODE','year')
 df_plot_adm2 <- df_floodscan_adm2_sel %>%
 mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100) %>%
 filter(ADM2_EN=="Rumbek North")
-plotFloodedFraction(df_plot_adm2,'year')
+plotFloodedFraction(df_plot_adm2,'mean_ADM2_PCODE','year')
 ```
