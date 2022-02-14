@@ -21,6 +21,7 @@ import numpy as np
 from scipy import stats
 from functools import reduce
 import altair as alt
+import numpy as np
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -59,8 +60,9 @@ gdf_adm2['include']=np.where(gdf_adm2["ADM2_EN"].isin(adm2_list),True,False)
 adms=alt.Chart(gdf_adm2).mark_geoshape(stroke="black").encode(
     color=alt.Color("include",scale=alt.Scale(range=["grey","red"])),
     tooltip=["ADM2_EN"]
-).properties(width=800,height=800,title="Admins of focus and SSD rivers")
-rivers=alt.Chart(bla).mark_geoshape(stroke="blue",filled=False).encode(tooltip=['CLASS'])
+).properties(width=800,height=600,title="Admins of focus and SSD rivers")
+gdf_rivers=gpd.read_file(country_data_public_exploration_dir/"rivers"/"ssd_main_rivers_fao_250k"/"ssd_main_rivers_fao_250k.shp")
+rivers=alt.Chart(gdf_rivers).mark_geoshape(stroke="blue",filled=False).encode(tooltip=['CLASS'])
 adms+rivers
 ```
 
