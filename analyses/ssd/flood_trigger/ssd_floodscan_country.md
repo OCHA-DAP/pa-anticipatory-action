@@ -23,6 +23,7 @@ import numpy as np
 from scipy import stats
 from functools import reduce
 import altair as alt
+import panel.widgets as pnw
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
@@ -106,6 +107,30 @@ fs_clip=fs_clip.rio.write_crs("EPSG:4326",inplace=True)
 
 ```python
 da_clip=fs_clip.SFED_AREA
+```
+
+```python
+#plot raster data with time slider
+#can select subset of data to make it easier navigatible
+#with slider
+(da_clip
+#  .sel(time=da_clip.time.dt.year==2014)
+ .interactive.sel(time=pnw.DiscreteSlider).plot(
+vmin=0,vmax=1))
+
+```
+
+```python
+#gif of the timeseries
+#the first loop it is whacky but after that it is beautiful
+time = pnw.Player(name='time', start=0, end=364, 
+                  step=14,
+                  loop_policy='loop')
+
+#select a year else it takes ages
+da_clip.sel(time=da_clip.time.dt.year==2015).interactive(loc='bottom').isel(
+    time=time).plot(
+    vmin=0,vmax=1)
 ```
 
 ```python
