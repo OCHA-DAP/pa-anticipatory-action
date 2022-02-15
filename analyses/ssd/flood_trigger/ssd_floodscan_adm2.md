@@ -13,7 +13,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 import geopandas as gpd
 import hvplot.xarray
 import matplotlib as mpl
@@ -29,6 +29,7 @@ sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.indicators.flooding.floodscan import floodscan
 from src.utils_general.raster_manipulation import compute_raster_statistics
+from src.utils_general.statistics import get_return_periods_dataframe
 
 
 # mpl.rcParams['figure.dpi'] = 300
@@ -48,7 +49,9 @@ adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_a
 #admin2's of interest for now
 #all located in Unity and Jonglei
 adm2_list=['Panyijiar', 'Leer', 'Mayendit', 'Koch', 'Guit',
-           'Fangak', 'Ayod', 'Duk', 'Twic East', 'Bor South']
+           'Fangak', 'Ayod', 'Duk', 'Twic East', 'Bor South',
+          'Yirol East','Awerial'
+          ]
 ```
 
 ```python
@@ -60,7 +63,7 @@ gdf_adm2['include']=np.where(gdf_adm2["ADM2_EN"].isin(adm2_list),True,False)
 adms=alt.Chart(gdf_adm2).mark_geoshape(stroke="black").encode(
     color=alt.Color("include",scale=alt.Scale(range=["grey","red"])),
     tooltip=["ADM2_EN"]
-).properties(width=800,height=600,title="Admins of focus and SSD rivers")
+).properties(width=300,height=200,title="Admins of focus and SSD rivers")
 gdf_rivers=gpd.read_file(country_data_public_exploration_dir/"rivers"/"ssd_main_rivers_fao_250k"/"ssd_main_rivers_fao_250k.shp")
 rivers=alt.Chart(gdf_rivers).mark_geoshape(stroke="blue",filled=False).encode(tooltip=['CLASS'])
 adms+rivers
@@ -310,6 +313,59 @@ alt.Chart(df_year).mark_rect().encode(
 ).properties(
     title="Flood detected per county"
 )
+```
+
+### Return period
+Instead of looking at the standard deviation, we can also look at the return period. We do this by looking at the peak value for each year and county. We compute the return period separately per county. 
+
+```python
+df_floodscan_rolling=df_floodscan.sort_values('time').set_index('time').groupby('ADM2_PCODE',as_index=False).mean_ADM2_PCODE.rolling(10,min_periods=10).mean().reset_index().rename(columns={'mean_ADM2_PCODE':'mean_rolling'})
+```
+
+```python
+df_floodscan=df_floodscan.merge(df_floodscan_rolling,on=['time','ADM2_PCODE'])
+```
+
+```python
+df_floodscan['year']=df_floodscan.time.dt.year
+```
+
+```python
+#get one row per adm2-year combination that saw the highest mean value
+df_floodscan_peak=df_floodscan.sort_values('mean_rolling', ascending=False).drop_duplicates(['year','ADM2_PCODE'])
+```
+
+```python
+years = np.arange(1.5, 10, 0.5)
+```
+
+```python
+df_floodscan_rp=df_floodscan_peak.copy()
+```
+
+For now using the empirical return period, cause then it has the same number of identified years per county. But should possibly switch to analytical
+
+```python
+for adm in adm2_list:
+    df_adm=df_floodscan_peak[df_floodscan_peak.ADM2_EN==adm].copy()
+    df_rps_ana=get_return_periods_dataframe(df_adm, rp_var="mean_rolling",years=years, method="analytical",round_rp=False)
+    df_rps_emp=get_return_periods_dataframe(df_adm, rp_var="mean_rolling",years=years, method="empirical",round_rp=False)
+    df_floodscan_rp.loc[df_floodscan_rp.ADM2_EN==adm,'rp5']=np.where((df_adm.mean_rolling>=df_rps_emp.loc[5,'rp']),1,0)
+```
+
+```python
+#plot years with flood per county
+alt.Chart(df_floodscan_rp[df_floodscan_rp.ADM2_EN.isin(adm2_list)]).mark_rect().encode(
+    x="year:N",
+    y="ADM2_EN:N",
+     color=alt.Color('rp5:N',scale=alt.Scale(range=["#D3D3D3",'red']))
+).properties(
+    title="1 in 5 year return period peak"
+)
+```
+
+```python
+df_floodscan_peak[df_floodscan_peak.mean_ADM0_PCODE>=df_rps_ana.loc[5,'rp']].sort_values('year')
 ```
 
 ### Peaks per year

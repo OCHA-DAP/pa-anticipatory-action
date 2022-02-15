@@ -123,13 +123,14 @@ vmin=0,vmax=1))
 ```python
 #gif of the timeseries
 #the first loop it is whacky but after that it is beautiful
-time = pnw.Player(name='time', start=0, end=364, 
-                  step=14,
+time = pnw.Player(name='time', start=0, end=122, 
+                  step=7,
                   loop_policy='loop')
 
 #select a year else it takes ages
-da_clip.sel(time=da_clip.time.dt.year==2015).interactive(loc='bottom').isel(
+da_clip.sel(time=(da_clip.time.dt.year==2021)&(da_clip.time.dt.month.isin([7,8,9,10]))).interactive(loc='bottom').isel(
     time=time).plot(
+#     cmap="GnBu",
     vmin=0,vmax=1)
 ```
 
@@ -174,7 +175,7 @@ sns.lineplot(data=df_floodscan_country, x="time",
              y="mean_rolling", lw=0.25, label='10-day moving\navg')   
 ax.set_ylabel('Flooded fraction')
 ax.set_xlabel('Date')
-ax.set_title(f'Flooding in SSD, 1998-2020')
+ax.set_title(f'Flooding in SSD, 1998-2021')
 ax.legend()
 ```
 
@@ -191,8 +192,8 @@ years = np.arange(1.5, 20.5, 0.5)
 ```
 
 ```python
-df_rps_ana=get_return_periods_dataframe(df_floodscan_peak, rp_var="mean_ADM0_PCODE",years=years, method="analytical",round_rp=False)
-df_rps_emp=get_return_periods_dataframe(df_floodscan_peak, rp_var="mean_ADM0_PCODE",years=years, method="empirical",round_rp=False)
+df_rps_ana=get_return_periods_dataframe(df_floodscan_peak, rp_var="mean_rolling",years=years, method="analytical",round_rp=False)
+df_rps_emp=get_return_periods_dataframe(df_floodscan_peak, rp_var="mean_rolling",years=years, method="empirical",round_rp=False)
 ```
 
 ```python
@@ -205,11 +206,11 @@ ax.set_ylabel('Fraction flooded');
 ```
 
 ```python
-df_floodscan_peak[df_floodscan_peak.mean_ADM0_PCODE>=df_rps_ana.loc[3,'rp']].sort_values('year')
+df_floodscan_peak[df_floodscan_peak.mean_rolling>=df_rps_ana.loc[3,'rp']].sort_values('year')
 ```
 
 ```python
-df_floodscan_peak[df_floodscan_peak.mean_ADM0_PCODE>=df_rps_ana.loc[5,'rp']].sort_values('year')
+df_floodscan_peak[df_floodscan_peak.mean_rolling>=df_rps_ana.loc[5,'rp']].sort_values('year')
 ```
 
 Next we plot the smoothed data per year (with ggplot cause it is awesome). 
@@ -220,8 +221,12 @@ We can see that:
 - The peak is generally between Sep and Dec, which is quite late in the rainy season. 
 - We can see several smaller peaks, such as in 2019. How to interpret these, I don't know
 
-```R magic_args="-i df_floodscan_country -w 30 -h 20 --units cm"
-df_plot <- df_floodscan_country %>%
+```python
+df_floodscan_country_2021=df_floodscan_country[df_floodscan_country.year<=2021]
+```
+
+```R magic_args="-i df_floodscan_country_2021 -w 30 -h 20 --units cm"
+df_plot <- df_floodscan_country_2021 %>%
 mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM0_PCODE = mean_ADM0_PCODE*100)
 plotFloodedFraction(df_plot,'mean_ADM0_PCODE','year')
 ```
@@ -240,9 +245,7 @@ df_countrydgy=df_countryd[["date","totalAmountApproved"]].groupby("date").sum()
 
 We can see that since 2006, allocations have occured in 2019, 2020, and 2021. 
 
-2021 is not in our current data set. 
-
-during 2020 we did see a large peak in the floodscan data. 
+during 2020 and 2021 we did see a large peak in the floodscan data. 
 
 2019 saw above average flood levels, but not as extreme as during 2014 and 2017 when there were no allocations. 
 
@@ -289,6 +292,14 @@ df_floodscan_adm2_sel=df_floodscan_adm2.loc[(df_floodscan_adm2.ADM2_EN.isin(['Ak
 
 From the plot above we can see that Mayom saw quite a significant percentage of flooding. Akobo to some extent as well. 
 However, it is important to look at the relativeness of these fraction compared to other years
+
+```python
+gdf_adm2['cerf_2019']=np.where(gdf_adm2["ADM2_EN"].isin(['Akobo','Mayom','Rumbek North']),True,False)
+alt.Chart(gdf_adm2).mark_geoshape(stroke="black").encode(
+    color=alt.Color("cerf_2019",scale=alt.Scale(range=["grey","red"])),
+    tooltip=["ADM2_EN"]
+).properties(width=400,height=300,title="Counties specfically mentioned by CERF 2019 allocation")
+```
 
 ```R magic_args="-i df_floodscan_adm2_sel -w 30 -h 20 --units cm"
 df_plot_adm2 <- df_floodscan_adm2_sel %>%
