@@ -277,20 +277,14 @@ mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM0_PCODE = mean_ADM0_PCO
 plotFloodedFraction(df_plot,'mean_ADM0_PCODE','year',"Flooded fraction of ROI")
 ```
 
-```python
-#get one row per adm2-year-month combination that saw the highest mean value
-df_floodscan_peak_month=df_floodscan_reg.sort_values('mean_rolling', 
-                                                     ascending=False).drop_duplicates(['year','month'])
-```
-
-#TODO: check if assignment of month is correct..
-
-
 I am sorry, from here the code gets really ugly
 
 ```python
 # #method to compute if value of current month is above return period threshold
 # #but I think the next method is better
+# #get one row per adm2-year-month combination that saw the highest mean value
+# df_floodscan_peak_month=df_floodscan_reg.sort_values('mean_rolling', 
+#                                                      ascending=False).drop_duplicates(['year','month'])
 # df_floodscan_rp_month=df_floodscan_peak_month.copy().dropna()
 # for m in df_floodscan_reg.month.unique():
 #     df_month=df_floodscan_rp_month[df_floodscan_rp_month.month==m]#.dropna()
@@ -298,9 +292,6 @@ I am sorry, from here the code gets really ugly
 #     df_rps_emp=get_return_periods_dataframe(df_month, rp_var="mean_rolling",years=years, method="empirical",round_rp=False)
 #     df_floodscan_rp_month.loc[df_floodscan_rp_month.month==m,'rp5']=np.where((df_month.mean_rolling>=df_rps_emp.loc[5,'rp']),True,False)
 #     df_floodscan_rp_month.loc[df_floodscan_rp_month.month==m,'rp3']=np.where((df_month.mean_rolling>=df_rps_emp.loc[3,'rp']),True,False)
-```
-
-```python
 # df_floodscan_rp_month=df_floodscan_rp_month.merge(df_floodscan_peak[["year","rp3","rp5"]],on='year',suffixes=("","_year"))
 # df_floodscan_rp_month.rp3=df_floodscan_rp_month.rp3.astype(bool)
 ```
@@ -310,18 +301,18 @@ list_df_all=[]
 for m in df_floodscan_reg.month.unique():
     df_month=df_floodscan_reg[df_floodscan_reg.month<=m].dropna()
     df_month_peak=df_month.sort_values('mean_rolling', ascending=False).drop_duplicates(['year'])
-    df_rps_ana=get_return_periods_dataframe(df_month_peak, rp_var="mean_rolling",years=years, method="analytical",round_rp=False)
-    df_rps_emp=get_return_periods_dataframe(df_month_peak, rp_var="mean_rolling",years=years, method="empirical",round_rp=False)
+#     df_rps_ana=get_return_periods_dataframe(df_month_peak, 
+#                                             rp_var="mean_rolling",years=years, 
+#                                             method="analytical",round_rp=False)
+    df_rps_emp=get_return_periods_dataframe(df_month_peak, 
+                                            rp_var="mean_rolling",years=years, 
+                                            method="empirical",round_rp=False)
     df_month_peak['rp5']=np.where(df_month_peak.mean_rolling>=df_rps_emp.loc[5,'rp'],True,False)
     df_month_peak['rp3']=np.where(df_month_peak.mean_rolling>=df_rps_emp.loc[3,'rp'],True,False)
     df_month_peak['month']=m
     list_df_all.append(df_month_peak[['month','year','rp3','rp5']])
 df_floodscan_rp_month_peak=pd.concat(list_df_all)
-```
-
-```python
 df_floodscan_rp_month=df_floodscan_rp_month_peak.merge(df_floodscan_peak[["year","rp3","rp5"]],on='year',suffixes=("","_year"))
-df_floodscan_rp_month.rp3=df_floodscan_rp_month.rp3.astype(bool)
 ```
 
 ```python
@@ -345,19 +336,19 @@ df_floodscan_rp_month["FN"]=np.where((df_floodscan_rp_month[col_year])&(~df_floo
 ```
 
 ```python
-df_metr=pd.DataFrame(columns=['month','recall','precision'])
+df_metr=pd.DataFrame(columns=['month','precision','recall'])
 for m in df_floodscan_rp_month.month.unique():
     df_month=df_floodscan_rp_month[df_floodscan_rp_month.month==m]
     df_sum = df_month.sum()
     precision = calc_precision(df_sum.TP, df_sum.FP)
     recall = calc_recall(df_sum.TP, df_sum.FN)
-    df_metr.loc[m]=[int(m),precision,recall]
+    df_metr.loc[m,['month','precision','recall']]=[int(m),precision,recall]
 df_metr.month=df_metr.month.astype(int)
 df_metr=df_metr.sort_values("month")
 df_metr['month_abbr']=df_metr.month.apply(lambda x: calendar.month_abbr[x])
 ```
 
-TODO: I am pretty sure smth is icky here, I will look into it!
+I am surprised that precision and recall are always the same, but cannot find a mistake..
 
 ```python
 alt.Chart(df_metr).transform_fold(
@@ -368,5 +359,77 @@ alt.Chart(df_metr).transform_fold(
     y='value:Q',
     color='metric:N'
 ).properties(width=500,height=300,title="Performance peak flood till month against peak flood till end of year, 1 in 3 year return period")
+
+```
+
+Another method to use early available data is by setting an absolute threshold. 
+We experimented with thresholds, but don't see very good results. 3% of the area flooded is too sensitive, while 4% (1 in 3 year return period) is not sensitive enough. However, we could use it to catch some floods earlier and keep monitoring. 
+We could also experiment with setting a different threshold for each month
+
+Another idea could be to look at the increase during the last x days
+
+```python
+thresh=0.04
+list_df_all=[]
+for m in df_floodscan_reg.month.unique():
+    df_month=df_floodscan_reg[df_floodscan_reg.month<=m].dropna()
+    df_month_peak=df_month.sort_values('mean_rolling', ascending=False).drop_duplicates(['year'])
+    df_month_peak['reach_thresh']=np.where(df_month_peak.mean_rolling>=thresh,True,False)
+    df_month_peak['month']=m
+    list_df_all.append(df_month_peak[['month','year','reach_thresh']])
+df_floodscan_month_peak=pd.concat(list_df_all)
+df_floodscan_month_thresh=df_floodscan_month_peak.merge(df_floodscan_peak[["year","rp3","rp5"]],on='year',suffixes=("","_year"))
+```
+
+```python tags=[]
+col_year="rp3"
+col_month="reach_thresh"
+```
+
+```python
+df_floodscan_month_thresh["TP"]=np.where((df_floodscan_month_thresh[col_year])&(df_floodscan_month_thresh[col_month]),1,0)
+df_floodscan_month_thresh["FP"]=np.where((~df_floodscan_month_thresh[col_year])&(df_floodscan_month_thresh[col_month]),1,0)
+df_floodscan_month_thresh["TN"]=np.where((~df_floodscan_month_thresh[col_year])&(~df_floodscan_month_thresh[col_month]),1,0)
+df_floodscan_month_thresh["FN"]=np.where((df_floodscan_month_thresh[col_year])&(~df_floodscan_month_thresh[col_month]),1,0)
+```
+
+```python
+df_metr=pd.DataFrame(columns=['month','precision','recall'])
+for m in df_floodscan_month_thresh.month.unique():
+    df_month=df_floodscan_month_thresh[df_floodscan_month_thresh.month==m]
+    df_sum = df_month.sum()
+    precision = calc_precision(df_sum.TP, df_sum.FP)
+    recall = calc_recall(df_sum.TP, df_sum.FN)
+    df_metr.loc[m,['month','recall','precision']]=[int(m),recall,precision]
+df_metr.month=df_metr.month.astype(int)
+df_metr=df_metr.sort_values("month")
+df_metr['month_abbr']=df_metr.month.apply(lambda x: calendar.month_abbr[x])
+```
+
+```python
+alt.Chart(df_metr).transform_fold(
+    ['recall','precision'],
+    as_=['metric', 'value']
+).mark_line().encode(
+    x=alt.X('month_abbr:N',sort=['Jan', 'Feb', 'Mar', 'Apr', 'May','Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],axis=alt.Axis(grid=True),title="month"),
+    y='value:Q',
+    color='metric:N'
+).properties(width=500,height=300,title=f"Performance peak flood till month >= {thresh*100}% against peak flood till end of year is 1 in 3 year return period")
+
+```
+
+```python
+alt.Chart(df_floodscan_month_thresh).transform_fold(
+    ['TP','FP','FN','TN'],
+    as_=['metric', 'value']
+).mark_line().encode(
+    x=alt.X('month'),
+    y='sum(value):Q',
+    color='metric:N'
+).properties(width=500,height=300,title=f"TP,FP,FN,TN for peak flood till month >= {thresh*100}% against peak flood till end of year is 1 in 3 year return period")
+
+```
+
+```python
 
 ```
