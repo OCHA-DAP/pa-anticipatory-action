@@ -23,6 +23,94 @@ df <- read_csv(
 ) %>%
   select(-1)
 
+df_monthly <- df %>%
+  group_by(year, month) %>%
+  summarize(
+    flood_extent = mean(mean_ADM0_PCODE),
+    .groups = "drop"
+  )
+
+df_chirps <- read_csv(
+  file.path(
+    data_dir,
+    "public",
+    "processed",
+    "ssd",
+    "chirps",
+    "daily",
+    "ssd_chirps_roi_stats_p25.csv"
+  )
+) %>%
+  mutate(
+    month = lubridate::month(time)
+  ) %>%
+  group_by(
+    year, month
+  ) %>%
+  summarize(
+    precip = sum(mean),
+    .groups = "drop"
+  )
+
+#################
+#### COMPARE ####
+#################
+
+# compare CHIRPS and flood extents, just simple
+# monthly comparison
+inner_join(
+  df_chirps,
+  df_monthly,
+  by = c("year", "month")
+) %>%
+  group_by(
+    year
+  ) %>%
+  mutate(precip_year = sum(precip),
+         precip = scales::rescale(precip, to = c(0, 0.25))) %>%
+  ggplot(
+    aes(
+      x = month
+    )
+  ) +
+  geom_area(
+    aes(
+      y = precip,
+      alpha = precip_year
+    ),
+    fill = "#ed4d4d"
+  ) +
+  geom_line(
+    aes(
+      y = flood_extent,
+      linetype = "Flood extent"
+    )
+  ) +
+  theme_light() +
+  facet_wrap(~year) +
+  scale_x_continuous(
+    breaks = seq(3, 12, by = 3),
+    labels = c("Mar", "Jun", "Sep", "Dec")
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(1)
+  ) +
+  labs(
+    y = "Flooded extent",
+    x = "Month",
+    alpha = "Total\nyearly\nprecipitation",
+    title = "Rainfall and flood extents, South Sudan region of interest",
+    caption = paste0(
+      "Rainfall patterns rescaled to 0 to ",
+      "0.25 for purposes of comparison, do not ",
+      "represent meaningful units."),
+    linetype = "",
+  ) +
+  theme(
+    plot.caption = element_text(hjust = 0)
+  )
+  
+
 ###################
 #### FUNCTIONS ####
 ###################
@@ -30,7 +118,8 @@ df <- read_csv(
 generate_preds <- function(
   df,
   years = 2011:2021,
-  pred_month = 8
+  pred_month = 8,
+  last_month = 12
 ) {
   map_dfr(
     years,
@@ -41,14 +130,14 @@ generate_preds <- function(
         frequency = 12
       ) %>%
       hw(
-        h = 13 - pred_month,
+        h = 1 + last_month - pred_month,
         exponential = TRUE,
         seasonal = "multiplicative"
       ) %>%
       as.data.frame %>%
       mutate(
         year = .x,
-        month = {{ pred_month }}:12
+        month = {{ pred_month }}:{{ last_month }}
       )
   )
 }
@@ -62,13 +151,6 @@ generate_preds <- function(
 # years up to 2010, then for each year
 # following, train up to that year and then
 # predict 6 months into the future from June.
-
-df_monthly <- df %>%
-  group_by(year, month) %>%
-  summarize(
-    flood_extent = mean(mean_ADM0_PCODE),
-    .groups = "drop"
-  )
 
 # quick check
 
