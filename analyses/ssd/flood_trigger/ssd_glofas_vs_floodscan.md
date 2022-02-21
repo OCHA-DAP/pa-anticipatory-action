@@ -15,6 +15,8 @@ However, the peak years of the GloFas data don't fully correspond with the peak 
 This notebook is inspired by the Malawi glofas vs floodscan analysis
 <!-- #endregion -->
 
+![afbeelding.png](attachment:673c27fd-83fb-4679-aa6d-a7d53b1703ee.png)
+
 ```python
 import matplotlib.pyplot as plt
 import matplotlib as mpl
