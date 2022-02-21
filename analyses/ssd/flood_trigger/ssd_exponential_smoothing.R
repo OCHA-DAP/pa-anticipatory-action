@@ -4,6 +4,7 @@
 
 library(tidyverse)
 library(forecast)
+library(gganimate)
 
 #################
 #### LOADING ####
@@ -66,8 +67,9 @@ inner_join(
   group_by(
     year
   ) %>%
-  mutate(precip_year = sum(precip),
-         precip = scales::rescale(precip, to = c(0, 0.25))) %>%
+  mutate(precip_year = sum(precip)) %>%
+  ungroup() %>%
+  mutate(precip = scales::rescale(precip, to = c(0, 0.25))) %>%
   ggplot(
     aes(
       x = month
@@ -115,6 +117,10 @@ inner_join(
 #### FUNCTIONS ####
 ###################
 
+#' @param df Data frame
+#' @param years Years
+#' @param pred_month First month to predict
+#' @param last_month Last month to predict
 generate_preds <- function(
   df,
   years = 2011:2021,
@@ -132,11 +138,15 @@ generate_preds <- function(
       hw(
         h = 1 + last_month - pred_month,
         exponential = TRUE,
-        seasonal = "multiplicative"
+        seasonal = "multiplicative",
+        alpha = 0.8,
+        beta = 0.1,
+        gamma = 0.07
       ) %>%
       as.data.frame %>%
       mutate(
         year = .x,
+        month_pred = {{ pred_month }},
         month = {{ pred_month }}:{{ last_month }}
       )
   )
@@ -241,3 +251,72 @@ df_monthly %>%
     title = "Seasonal exponential smoothing, South Sudan flood extents",
     subtitle = "Forecasting 5 periods ahead from July, 2011 to 2021"
   )
+
+###################
+#### OVER TIME ####
+###################
+
+# look at exponential smoothing across all months and years
+# to visualize how the model would look like in practice
+df_all_preds <- map_dfr(
+  1:12,
+  ~ generate_preds(
+    df_monthly,
+    pred_month = .x,
+    last_month = .x + 2
+  )
+)
+
+p <- df_all_preds %>%
+  filter(year >= 2011) %>%
+  ggplot(
+    aes(
+      x = month,
+    )
+  ) +
+  geom_ribbon(
+    aes(
+      ymin = `Lo 80`,
+      ymax = `Hi 80`,
+      group = month_pred
+    ),
+    alpha = 0.5,
+    fill = "#ed4d4d"
+  ) +
+  geom_line(
+    data = filter(df_monthly, year >= 2011),
+    aes(
+      y = flood_extent
+    )
+  ) +
+  facet_wrap(~year) +
+  transition_reveal(month_pred) +
+  scale_x_continuous(
+    breaks = c(3, 6, 9, 12),
+    labels = c("Mar", "Jun", "Sep", "Dec")
+  ) +
+  scale_y_continuous(
+    labels = scales::label_percent(1)
+  ) +
+  labs(
+    x = "Month",
+    y = "Flood fraction",
+    title = "Predicted flood fraction using exponential smoothing",
+    subtitle = "Predictions 3 months into the future, at for all months of each year."
+  ) +
+  theme_light()
+
+animate(p, height = 400, width = 800)
+
+anim_save(
+  file.path(
+    data_dir,
+    "public",
+    "exploration",
+    "ssd",
+    "plots",
+    "floodscan",
+    "ssd_floodscan_es.gif"
+  )
+)  
+ 
