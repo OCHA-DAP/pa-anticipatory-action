@@ -4,6 +4,7 @@ import urllib
 from calendar import month_name
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Union
 
 import geopandas as gpd
 import rasterio
@@ -376,6 +377,97 @@ def get_chirps_data_daily(config, year, resolution="25", download=False):
         transform = src.transform
 
     return ds, transform
+
+
+def clip_chirps_daily(
+    iso3,
+    config,
+    resolution,
+) -> Path:
+    """
+    Combine the daily CHIRPS data.
+
+    Data is downloaded per dyear, combine to one file.
+
+    Returns
+    -------
+    Path to processed NetCDF file
+
+    """
+    parameters = config.parameters(iso3)
+    adm0_bound_path = (
+        Path(config.DATA_DIR)
+        / config.PUBLIC_DIR
+        / config.RAW_DIR
+        / iso3
+        / config.SHAPEFILE_DIR
+        / parameters["path_admin0_shp"]
+    )
+    # get path structure with publication date as wildcard
+    raw_path = _get_raw_path_daily(config, year=None, resolution=resolution)
+    filepath_list = list(raw_path.parents[0].glob(raw_path.name))
+    # output_filepath = _get_processed_path_daily()
+    # output_filepath.parent.mkdir(exist_ok=True, parents=True)
+    gdf_adm0 = gpd.read_file(adm0_bound_path)
+    output_path = _get_processed_path_country_daily(
+        iso3=iso3, config=config, year=None, resolution=resolution
+    )
+    Path(output_path.parent).mkdir(parents=True, exist_ok=True)
+    with xr.open_mfdataset(filepath_list) as ds:
+        ds_country = (
+            ds.rio.write_crs("EPSG:4326")
+            .rio.set_spatial_dims(x_dim="longitude", y_dim="latitude")
+            .rio.clip(gdf_adm0["geometry"], all_touched=True)
+        )
+        ds_country.attrs["included_files"] = [f.stem for f in filepath_list]
+        ds_country.to_netcdf(output_path)
+    return output_path
+
+
+def load_chirps_daily_clipped(
+    iso3, config, resolution, year: Union[int, None] = None
+):
+    ds = xr.load_dataset(
+        _get_processed_path_country_daily(
+            iso3=iso3, config=config, resolution=resolution, year=year
+        )
+    )
+    return ds.rio.write_crs("EPSG:4326", inplace=True)
+
+
+def _get_raw_path_daily(config, year: Union[int, None], resolution: int):
+    """Get the path to the raw api data for a given `date_forecast`."""
+    chirps_dir = Path(config.GLOBAL_DIR) / config.CHIRPS_DIR
+    if year is None:
+        year_str = "*"
+    else:
+        year_str = year
+    chirps_filepath = os.path.join(
+        chirps_dir,
+        config.CHIRPS_NC_FILENAME_RAW.format(
+            year=year_str, resolution=resolution
+        ),
+    )
+    return chirps_dir / chirps_filepath
+
+
+def _get_processed_path_country_daily(
+    iso3, config, year: Union[int, None], resolution: int
+):
+    """Get the path to the raw api data for a given `date_forecast`."""
+    chirps_dir = (
+        Path(config.DATA_DIR)
+        / config.PUBLIC_DIR
+        / config.PROCESSED_DIR
+        / iso3
+        / "chirps"
+        / "daily"
+    )
+    chirps_filepath = f"{iso3}_chirps_daily"
+    if year is not None:
+        chirps_filepath += f"_{year}"
+    chirps_filepath += f"_p{resolution}.nc"
+    return chirps_dir / chirps_filepath
 
 
 def get_chirps_data_monthly(
