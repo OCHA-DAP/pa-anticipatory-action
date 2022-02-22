@@ -107,7 +107,7 @@ df_wider <- df_join %>%
     values_from = rainfall_mm
   )
 
-df_wider %>%
+df_worst <- df_wider %>%
   group_by(year) %>%
   summarize(
     flood_extent = max(flood_extent),
@@ -120,7 +120,9 @@ df_wider %>%
   group_by(
     name
   ) %>%
-  slice_max(value, n = 5) %>%
+  slice_max(value, n = 5) 
+
+df_worst %>%
   right_join(
     expand_grid(
       year = 1998:2021,
@@ -182,6 +184,13 @@ df_wider %>%
     value = (value - mean(value)) / sd(value),
   ) %>%
   ungroup() %>%
+  left_join(
+    mutate(
+      df_worst,
+      worst = TRUE
+    ) %>%
+      select(-value)
+  ) %>%
   mutate(
     name = ifelse(name == "flood_extent", "Flood extent", name),
     name = fct_relevel(
@@ -194,6 +203,11 @@ df_wider %>%
         "Pibor-Akabo-Sobat- Level 6",
         "Flood extent"
       )
+    ),
+    worst = ifelse(
+      is.na(worst),
+      "",
+      "W"
     )
   ) %>%
   ggplot(
@@ -204,6 +218,18 @@ df_wider %>%
     )
   ) +
   geom_tile() +
-  theme_light()
-  
-  
+  theme_light() +
+  scale_fill_gradient2() +
+  labs(
+    x = "Year",
+    y = "Rainfall and Sudd flood extent",
+    fill = "Z-score",
+    title = "Standardized comparison of rainfall and flood values"
+  ) +
+  geom_text(
+    aes(
+      label = worst
+    ),
+    size = 2,
+    fontface = "bold"
+  )
