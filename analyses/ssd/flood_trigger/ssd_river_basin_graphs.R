@@ -74,7 +74,6 @@ df_join <- inner_join(
 ) 
 
 # get correlations
-
 df_join %>%
   mutate(time = paste("y", year, month, sep = "_")) %>%
   select(basin, time, rainfall_mm) %>%
@@ -88,7 +87,7 @@ df_join %>%
   ggcorrplot(lab = TRUE)
 
 # get worst years
-df_join %>%
+df_wider <- df_join %>%
   bind_rows(
     df_join %>%
       group_by(year, month) %>%
@@ -106,7 +105,9 @@ df_join %>%
     c(basin, year, month, flood_extent),
     names_from = basin,
     values_from = rainfall_mm
-  ) %>%
+  )
+
+df_wider %>%
   group_by(year) %>%
   summarize(
     flood_extent = max(flood_extent),
@@ -167,3 +168,42 @@ df_join %>%
     title = "Comparison of largest yearly flooding with most rainfall by basin"
   )
 
+# look at z-scores to see differences across years
+
+df_wider %>%
+  select(-month) %>%
+  pivot_longer(
+    -year
+  ) %>%
+  group_by(
+    name
+  ) %>%
+  mutate(
+    value = (value - mean(value)) / sd(value),
+  ) %>%
+  ungroup() %>%
+  mutate(
+    name = ifelse(name == "flood_extent", "Flood extent", name),
+    name = fct_relevel(
+      name,
+      levels = c(
+        "Total",
+        "Bahrel Ghazal",
+        "Bameel Jable Sudd",
+        "LakeKyoga-Lake Albert",
+        "Pibor-Akabo-Sobat- Level 6",
+        "Flood extent"
+      )
+    )
+  ) %>%
+  ggplot(
+    aes(
+      x = year,
+      y = name,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  theme_light()
+  
+  
