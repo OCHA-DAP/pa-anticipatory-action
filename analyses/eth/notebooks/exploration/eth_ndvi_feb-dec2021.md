@@ -68,6 +68,11 @@ From the plots we can conclude two main points:
 2) The pattern is different for the dekads in 2021 than the latest dekad. Where for the first two the worst NDVI conditions are seen in the south and East, while in the latest dekad the worst conditions are in the South but also more up north in the middle of the country. 
 
 ```python
+#feb-may 2021
+dekad_list_fmam=[[2021,d] for d in range(4,16)]
+```
+
+```python
 #jun-sep 2021
 dekad_list_jjas=[[2021,d] for d in range(16,28)]
 ```
@@ -88,7 +93,7 @@ dekad_list_jan=[[2022,1]]#,[2022,2]]
 ```
 
 ```python
-all_dekads_dict={"jjas":dekad_list_jjas,"ond":dekad_list_ond,"jan":dekad_list_jan}
+all_dekads_dict={"fmam":dekad_list_fmam,"jjas":dekad_list_jjas,"ond":dekad_list_ond,"jan":dekad_list_jan}
 ```
 
 ```python
@@ -98,6 +103,8 @@ for v in all_dekads_dict.values():
 ```
 
 ```python
+# #only compute when adding new data
+# #takes around 20 mins
 # da_dekad_list=[]
 # for year_dekad in all_dekads_list:
 #     da_dekad=load_raw_dekad_ndvi("east",year_dekad[0],year_dekad[1])
@@ -108,8 +115,8 @@ for v in all_dekads_dict.values():
 ```
 
 ```python
-# da.to_netcdf(ndvi_exploration_dir/"eth_raster_jun2021_jan2022.nc")
-da=xr.load_dataset(ndvi_exploration_dir/"eth_raster_jun2021_jan2022.nc")
+# da.to_netcdf(ndvi_exploration_dir/"eth_raster_feb2021_jan2022.nc")
+da=xr.load_dataset(ndvi_exploration_dir/"eth_raster_feb2021_jan2022.nc")
 ```
 
 ### Define functions
@@ -134,6 +141,7 @@ def aggregate_admin(da,gdf,pcode_col,bins=None):
         df_stats["mean_binned"]=pd.cut(df_stats[f"mean_{pcode_col}"],bins)
         df_stats["median_binned"]=pd.cut(df_stats[f"median_{pcode_col}"],bins)
     gdf_stats=gdf[[pcode_col,"geometry"]].merge(df_stats,on=pcode_col)
+    gdf_stats["median_binned_str"]=pd.cut(gdf_stats_adm3[f"median_{pcode_col}"],ndvi_bins,labels=ndvi_labels)
     return gdf_stats
 ```
 
@@ -167,18 +175,20 @@ Below the values per admin3 are shown. We use the same bins as [those used by US
 We can see the same pattern as we saw with the raw data, which is a good sign. We see that in the beginning of October most of the country saw median conditions. This moved to below median NDVI conditions in the South-East. Towards the end of December the conditions return to median in the east, but below median conditions are seen in the Middle of the country. However, these plots should only be seen as the NDVI and not perse drought conditions as this e.g. depends on the rainy seasons. 
 
 ```python
-# #this takes a couple of minutes to compute
-# #only needed first time, else can load the file below
-# gdf_stats_adm3=aggregate_admin(da,gdf_adm3,pcode3_col,bins=ndvi_bins)
-```
-
-```python
+# # #this takes a couple of minutes to compute
+# # #only needed first time, else can load the file below
+# gdf_stats_adm3=aggregate_admin(da.rio.write_crs("EPSG:4326"),gdf_adm3,pcode3_col,bins=ndvi_bins)
 # #save file
 # gdf_stats_adm3[["ADM3_PCODE","date","year","dekad","median_ADM3_PCODE","median_binned_str"]].rename(
 #     columns={"median_binned_str":"median_binned_ADM3_PCODE"}).to_csv(
-#     ndvi_exploration_dir/"eth_ndvi_adm3_062021-012022.csv")
-#read file
-df_stats_adm3=pd.read_csv(ndvi_exploration_dir/"eth_ndvi_adm3_062021-012022.csv",parse_dates=['date'])
+#     ndvi_exploration_dir/"eth_ndvi_adm3_022021-052021.csv")
+```
+
+```python
+#read files
+df_stats_adm3_junjan=pd.read_csv(ndvi_exploration_dir/"eth_ndvi_adm3_062021-012022.csv",parse_dates=['date'])
+df_stats_adm3_fmam=pd.read_csv(ndvi_exploration_dir/"eth_ndvi_adm3_022021-052021.csv",parse_dates=['date'])
+df_stats_adm3=pd.concat([df_stats_adm3_fmam,df_stats_adm3_junjan])
 gdf_stats_adm3=gdf_adm3[["geometry",pcode3_col]].merge(df_stats_adm3,how="right")
 ```
 
@@ -220,16 +230,17 @@ def clip_lz(gdf,lztype):
 ```
 
 ```python
-def clip_lz(gdf,lztype):
-    gdf_lz_fn=gpd.read_file(country_data_exploration_dir/"ET_LHZ_2009/ET_LHZ_2009.shp")
-    #clip removes the admin3s that are not fully covered by (agro)pastoral livelihood zone
-    gdf_clip=gpd.clip(gdf,gdf_lz_fn[gdf_lz_fn.LZTYPE.isin(lztype)])
-    #determine admin3's that are (partially) (agro)pastoral
-    gdf_clip["include"]=True
-    gdf_include=gdf.merge(gdf_clip[[pcode3_col,"include"]],on=pcode3_col,how="left")
-    gdf_include["include"]=np.where(gdf_include.include.isnull(),False,True)
-    gdf_include.loc[gdf_include.include==False,"perc_binned"]=np.nan
-    return gdf_include                      
+def plot_ndvi(gdf,title):
+    #use when no missing data
+    g=gdf.plot(
+        "perc_binned",
+        legend=True,
+        figsize=(10,10),
+        cmap=ListedColormap(perc_colors),
+    )
+    g.set_title(title);
+    g.axis("off");
+    return g
 ```
 
 ```python
@@ -245,6 +256,14 @@ def plot_mask(gdf,label_missing,title):
     g.set_title(title);
     g.axis("off");
     return g
+```
+
+```python
+perc_bins=[0,20,40,60,80,100]
+#select subset of the original ndvi colors
+perc_colors=["#724c04","#d86f27","#f7c90a","#3ca358","#197d71"]
+perc_colors.reverse()
+perc_labels=["0-20","20-40","40-60","60-80","80-100"]
 ```
 
 ```python
@@ -277,13 +296,23 @@ gdf_stats_mask_jjas_sel=gdf_stats_mask_jjas.drop(['geometry','date'],axis=1).ren
     columns={'median_ADM3_PCODE':'num_dekad_below80',
              'percent':'perc_dekad_below80','perc_binned':'perc_dekad_below80_bin',
             'include':'cropping_lz'})
-gdf_stats_mask_jjas_sel.to_csv(ndvi_exploration_dir / "eth_ndvi_adm3_jjas2021_perc80.csv",index=False)
+# gdf_stats_mask_jjas_sel.to_csv(ndvi_exploration_dir / "eth_ndvi_adm3_jjas2021_perc80.csv",index=False)
 ```
 
 ```python
-
+#unclear what we should mask, so not applying any atm
+gdf_stats_adm3_fmam=gdf_stats_adm3[gdf_stats_adm3.date.isin(
+    [_dekad_to_date(dek[0],dek[1]) for dek in dekad_list_fmam])]
+gdf_medb_count_fmam=compute_dekads_below_thresh(gdf_stats_adm3_fmam,pcode3_col,"median_ADM3_PCODE")
+#this takes long due to the large number of cropping areas
+g=plot_ndvi(gdf_medb_count_fmam,title=f"Percentage of dekads Feb-May 2021 NDVI \n was <={thresh}% of median NDVI");
+# g.figure.savefig(country_data_exploration_dir / "plots" / "eth_ndvi_adm3_fmam2021.png", facecolor="white", bbox_inches="tight")
 ```
 
 ```python
-
+gdf_stats_adm3_fmam_sel=gdf_stats_adm3_fmam.drop(['geometry','date'],axis=1).rename(
+    columns={'median_ADM3_PCODE':'num_dekad_below80',
+             'percent':'perc_dekad_below80','perc_binned':'perc_dekad_below80_bin',
+            'include':'cropping_lz'})
+# gdf_stats_adm3_fmam_sel.to_csv(ndvi_exploration_dir / "eth_ndvi_adm3_fmam2021_perc80.csv",index=False)
 ```
