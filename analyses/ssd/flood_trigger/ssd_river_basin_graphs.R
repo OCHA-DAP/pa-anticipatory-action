@@ -46,10 +46,10 @@ df_chirps <- map_dfr(
 df_floodscan <- read_csv(
   file.path(
     data_dir,
-    "public",
+    "private",
     "exploration",
     "ssd",
-    "floods",
+    "floodscan",
     "ssd_floodscan_roi.csv"
   )
 ) %>%
