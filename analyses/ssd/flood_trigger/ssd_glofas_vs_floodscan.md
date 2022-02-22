@@ -15,7 +15,7 @@ However, the peak years of the GloFas data don't fully correspond with the peak 
 This notebook is inspired by the Malawi glofas vs floodscan analysis
 <!-- #endregion -->
 
-![afbeelding.png](attachment:673c27fd-83fb-4679-aa6d-a7d53b1703ee.png)
+![afbeelding.png](https://drive.google.com/uc?export=view&id=1gL_7ZzNw1kPaoTeHv0X3TPjsDqjnQes9)
 
 ```python
 import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ Read in the historical GloFAS reanalysis and floodscan data
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=COUNTRY_ISO3)
+    country_iso3=iso3)
 ```
 
 ```python
@@ -72,7 +72,7 @@ def filter_event_dates(df_event, start, end):
 for station in stations: 
         
     fig, axs = plt.subplots(1, 
-                            figsize=(10,6 * len(stations.values())), 
+                            figsize=(10,6 * len(stations)), 
                             squeeze=False, sharex=True, sharey=True)
     fig.suptitle(f'Historical streamflow at {station}')
     
