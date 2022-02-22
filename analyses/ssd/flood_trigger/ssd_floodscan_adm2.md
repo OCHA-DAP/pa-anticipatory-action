@@ -155,11 +155,11 @@ Now that we have analyzed the raster data, we can aggregate this to get the stat
 #         all_touched=False,
 #     )
 # df_floodscan=df_floodscan.merge(gdf_adm2[["ADM2_EN","ADM2_PCODE"]],on="ADM2_PCODE",how="left")
-# # df_floodscan.to_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.nc',index=False)
+# # df_floodscan.to_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.csv',index=False)
 ```
 
 ```python
-df_floodscan=pd.read_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.nc',parse_dates=['time'])
+df_floodscan=pd.read_csv(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan_adm2_stats.csv',parse_dates=['time'])
 ```
 
 With these statistics we can plot the timeseries per admin2. 
