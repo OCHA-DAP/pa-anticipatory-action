@@ -159,9 +159,9 @@ ax.legend()
 ```
 
 ```python
-df_floodscan_reg.to_csv(
-    country_data_exploration_dir / "floodscan" / "bentiu_flood.csv"
-)
+# df_floodscan_reg.to_csv(
+#     country_data_exploration_dir / "floodscan" / "bentiu_flood.csv"
+# )
 ```
 
 ```python
