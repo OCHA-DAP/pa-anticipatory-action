@@ -1,11 +1,32 @@
-body{
+body {
   font-family: 'Source Sans Pro';
 }
 /* Headers */
-h1{
+h1 {
     font-family: Arvo;
     font-weight: bold;
     color: #1bb580;
+    font-size: 18px;
+    text-align: center;
+}
+
+h2 {
+    font-family: Arvo;
+    color: #1bb580;
+    font-size: 16px;
+}
+
+h3 {
+    font-family: Arvo;
+    color: #007ce1;
+    font-size: 14px;
+}
+
+h4 {
+    font-family: Arvo;
+    font-style: italic;
+    color: #1bb580;
+    font-size: 12px;
 }
 
 blockquote {

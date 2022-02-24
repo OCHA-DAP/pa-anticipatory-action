@@ -38,6 +38,7 @@ ADM0_BOUND_PATH = os.path.join(
 )
 
 USE_UNROUNDED_AREA_COORDS = False
+SOURCE_CDS = False
 
 
 def main(download=False, compute_stats=True, use_cache=True):
@@ -46,7 +47,7 @@ def main(download=False, compute_stats=True, use_cache=True):
         use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS
     )
     df_country_boundaries = gpd.read_file(ADM0_BOUND_PATH)
-    if download:
+    if download and SOURCE_CDS:
         # retrieve the area, with a buffer from the boundary shape
         area = AreaFromShape(df_country_boundaries.buffer(3))
         # download the ecmwf data for the area
@@ -54,6 +55,11 @@ def main(download=False, compute_stats=True, use_cache=True):
         # combine the downloaded ecmwf data into one file and
         # do a bit of postprocessing to get it in a nicer format
         ecmwf_forecast.process(country_iso3=COUNTRY_ISO3)
+    elif download and not SOURCE_CDS:
+        logger.error(
+            "Downloading non-CDS data is not implemented in this repo. "
+            "Go to the aa-toolbox repo to download this data."
+        )
 
     if compute_stats:
         # aggregate the raster data to statistics on the admin1 level
@@ -63,6 +69,7 @@ def main(download=False, compute_stats=True, use_cache=True):
             # resolution=0.05,
             all_touched=False,
             use_cache=use_cache,
+            source_cds=SOURCE_CDS,
             use_unrounded_area_coords=USE_UNROUNDED_AREA_COORDS,
             # date_list=[d.strftime("%Y-%m-%d") for d in
             #            pd.date_range(start='2000-01-01',

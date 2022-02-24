@@ -1,0 +1,3 @@
+﻿decision,rationale,assumptions,questions
+Added a requirement for above average being 5 percentage points above,A false alarm is costlier when the rains are above average than at normal levels,A larger delta in probabilities between the two terciles reduces the risk of above average occurring,Does it help reduce false alarms in the face of above average rains? Is it a useful / needed condition?
+some other decision,some other rationale,some other assumption,some other question
