@@ -28,7 +28,7 @@ df %>%
 
 # Biomasse anomaly across years, showing growing season
 
-df %>%
+plt_bm_anom_jjason = df %>%
   mutate(season = (year + (dekad >= 10)) - 1,
          season_order = ifelse(dekad >= 10,
                                dekad - 9,
@@ -61,7 +61,7 @@ df %>%
   labs(title="Confusion matrix, threshold of 80 on August 1")
 
 
-df %>%
+bm_cm_80_nov <- df %>%
   mutate(drought = factor(year %in% c(2001, 2004, 2009, 2011, 2017))) %>%
   group_by(year) %>%
   filter(dekad == 27) %>%

@@ -46,7 +46,7 @@ df <- ndvi %>%
             dekad = (mday(date) %/% 10) + ((month(date) - 1) * 3) + 1 + 2, # +2 so date publication matches Biomasse
             iso3 = toupper(iso3),
             anomaly_thresholds = anomaly_thresholds,
-            ndvi_percent_area = percent_area * 100,
+            ndvi_percent_area = percent_area,
             drought_list = factor(year %in% c(2001, 2004, 2009, 2011, 2017), levels = c(TRUE, FALSE)),
             drought_biom = factor(year %in% biomasse_drought_years, levels = c(TRUE, FALSE))) %>%
   arrange(date)
@@ -202,9 +202,9 @@ p_ndvi_bm_fy_80 +
 point_year_df <- df %>%
   filter(anomaly_thresholds == 80, dekad == 24) %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
-  filter(biomasse_anomaly <= 80 | ndvi_percent_area >= 12)
+  filter(biomasse_anomaly <= 80 | ndvi_percent_area >= 12 | year == 2017)
 
-p_ndvi_bm_fy_80 +
+p_ndvi_bm_year_comp <- p_ndvi_bm_fy_80 +
   ggrepel::geom_text_repel(
     data = point_year_df,
     aes(label = year),
@@ -214,12 +214,21 @@ p_ndvi_bm_fy_80 +
              color = "white") +
   geom_hline(yintercept = 80,
              color = "white") +
-  geom_text(x = 7.5,
-            y = 120,
-            label = "Question is, how do we consider\nyears 2008 & 2013 captured by NDVI\nvs 2006 captured by Biomasse?\nDo we trust our list of years?",
+  geom_text(x = 2.2,
+            y = 75,
+            color = "white",
+            label = "Biomasse threshold",
+            fontface = "bold",
+            check_overlap = T) +
+  geom_text(x = 12.5,
+            y = 118,
+            color = "white",
+            label = "NDVI threshold",
+            fontface = "bold",
             check_overlap = T,
-            hjust = 0,
-            color = "white")
+            angle = -90)
+
+p_ndvi_bm_year_comp
 
 ##########################
 #### NDVI PERFORMANCE ####
@@ -230,7 +239,7 @@ p_ndvi_bm_fy_80 +
 ndvi_anom_80_df <- df %>%
   filter(anomaly_thresholds == 80)
 
-ndvi_anom_80_df %>%
+plt_ndvi_anom_80 <- ndvi_anom_80_df %>%
   ggplot(aes(x = date, y = ndvi_percent_area, group = year)) +
   geom_area(fill = "#FF8080") +
   facet_wrap(~year, scales = "free_x", ncol = 4) +

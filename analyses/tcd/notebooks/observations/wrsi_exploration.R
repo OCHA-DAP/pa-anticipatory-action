@@ -424,7 +424,7 @@ point_year_df <- df %>%
   left_join(biomasse, by = c("year", "dekad")) %>%
   filter(biomasse_anomaly <= 80 | wrsi_percent_area >= 3)
 
-p_crop_bm_fy_80 +
+p_crop_bm_comp <- p_crop_bm_fy_80 +
   geom_text(
     data = point_year_df,
     aes(label = year),
@@ -435,12 +435,10 @@ p_crop_bm_fy_80 +
              color = "white") +
   geom_hline(yintercept = 80,
              color = "white") +
-  geom_text(x = 3.5,
-            y = 110,
-            label = "Question is, how do we consider\nyears 2008 & 2013 captured by WRSI\nvs 2006 captured by Biomasse?\nDo we trust our list of years?",
-            check_overlap = T,
-            hjust = 0,
-            color = "white")
+  geom_label(x = 3.5,
+             y = 110,
+             label = "Question is, how do we consider\nyears 2008 & 2013 captured by WRSI\nvs 2006 captured by Biomasse?\nDo we trust our list of years?",
+             hjust = 0)
 
 ##########################
 #### WRSI PERFORMANCE ####
@@ -451,12 +449,12 @@ p_crop_bm_fy_80 +
 crop_anom_80_df <- df %>%
   filter(threshold == 80, type == "cropland_anomaly")
 
-crop_anom_80_df %>%
+plt_crop_anom_80 <- crop_anom_80_df %>%
   ggplot(aes(x = time, y = wrsi_percent_area, group = year)) +
   geom_area(fill = "#FF8080") +
   facet_wrap(~year, scales = "free_x", ncol = 4) +
   theme_minimal() +
-  scale_x_date(date_breaks = "1 month",
+  scale_x_date(date_breaks = "2 month",
                date_labels = "%b") +
   labs(y = "WRSI % of area <= 80% median",
        x = "Month",

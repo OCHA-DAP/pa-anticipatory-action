@@ -1,8 +1,6 @@
-<!-- #region -->
 # Observed lower tercile precipitation
 This notebook explores the occurrence of historical below average precipitation in Chad. The dataset used is CHIRPS. 
-The area of interest for the pilot are the following admin1 areas: Barh el Gazel, Batha, Kanem, Lac (une partie), Ouaddaï (une partie), Sila (une partie), Wadi Fira. It still has to be discussed which parts of the `une partie` regions will be included.
-
+The area of interest for the pilot are the following admin1 areas: Lac, Kanem, Barh-El-Gazel, Batha, and Wadi Fira. 
 
 Therefore this analysis is mainly focussed on those areas. 
 
@@ -12,7 +10,6 @@ If you are not working with CHD's Google Drive for the data access or want to up
 
 Resources
 - [CHC's Early Warning Explorer](https://chc-ewx2.chc.ucsb.edu) is a nice resource to scroll through historically observed CHIRPS data
-<!-- #endregion -->
 
 ```python
 %load_ext autoreload
@@ -34,6 +31,8 @@ from dateutil.relativedelta import relativedelta
 import calendar
 import holoviews as hv
 import hvplot.xarray
+from mlxtend.evaluate import confusion_matrix
+from mlxtend.plotting import plot_confusion_matrix
 
 import altair as alt
 #to plot maps with altair
@@ -60,18 +59,21 @@ iso3="tcd"
 ```python
 config=Config()
 parameters = config.parameters(iso3)
-data_raw_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR)
-data_processed_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.PROCESSED_DIR)
-country_data_raw_dir = os.path.join(data_raw_dir,iso3)
-chirps_country_processed_dir = os.path.join(data_processed_dir,iso3,"chirps")
+data_raw_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.RAW_DIR
+data_processed_dir=Path(config.DATA_DIR)/config.PUBLIC_DIR/config.PROCESSED_DIR
+country_data_raw_dir = data_raw_dir/iso3
+chirps_country_processed_dir = data_processed_dir/iso3/"chirps"
+country_data_exploration_dir = Path(config.DATA_DIR)/config.PUBLIC_DIR/"exploration"/iso3
 
-chirps_country_processed_path = os.path.join(chirps_country_processed_dir,"monthly",f"{iso3}_chirps_monthly.nc")
-chirps_seasonal_lower_tercile_processed_path = os.path.join(chirps_country_processed_dir,"seasonal",f"{iso3}_chirps_seasonal_lowertercile.nc")
-chirps_seasonal_tercile_bounds_processed_path = os.path.join(chirps_country_processed_dir,"seasonal",f"{iso3}_chirps_seasonal_tercile_bounds.nc")
-cerf_dir=os.path.join(config.DATA_DIR,config.PUBLIC_DIR,config.RAW_DIR,config.GLOBAL_ISO3,"cerf")
-cerf_path=os.path.join(cerf_dir,'CERF Allocations.csv')
+chirps_country_processed_path = chirps_country_processed_dir/"monthly"/f"{iso3}_chirps_monthly.nc"
+chirps_seasonal_lower_tercile_processed_path = chirps_country_processed_dir/"seasonal"/f"{iso3}_chirps_seasonal_lowertercile.nc"
+chirps_seasonal_tercile_bounds_processed_path = chirps_country_processed_dir/"seasonal"/f"{iso3}_chirps_seasonal_tercile_bounds.nc"
+cerf_dir=data_raw_dir/config.GLOBAL_ISO3/"cerf"
+cerf_path=cerf_dir/'CERF Allocations.csv'
+plot_dir = data_processed_dir/iso3/"plots"
 
-adm1_bound_path=os.path.join(country_data_raw_dir,config.SHAPEFILE_DIR,parameters["path_admin1_shp"])
+adm1_bound_path=country_data_raw_dir/config.SHAPEFILE_DIR/parameters["path_admin1_shp"]
+adm2_path=data_processed_dir/iso3/config.SHAPEFILE_DIR / "tcd_adm2_area_of_interest.gpkg"
 ```
 
 ```python
@@ -88,25 +90,22 @@ grey_med="#CCCCCC"
 ### Define parameters
 
 ```python
-adm_sel=['Barh-El-Gazel','Batha','Kanem','Lac','Ouaddaï','Sila','Wadi Fira']
+gdf_adm1=gpd.read_file(adm1_bound_path)
+gdf_adm2=gpd.read_file(adm2_path)
+incl_adm_col="area_of_interest"
+gdf_aoi = gdf_adm2[gdf_adm2[incl_adm_col] == True]
 #the end months of 3 months periods that we are interested in
 #i.e. end_month=8 represents the JJA season
 end_months_sel=[8,9]
+months_sel=[6,7,8,9]
 ```
 
 ### Included areas
 
 ```python
-gdf_adm=gpd.read_file(adm1_bound_path)
-adm_col="admin1Name"
-gdf_reg=gdf_adm[gdf_adm[adm_col].isin(adm_sel)]
-```
-
-```python
-gdf_adm['include']=np.where(gdf_adm[adm_col].isin(adm_sel),True,False)
-alt.Chart(gdf_adm).mark_geoshape(stroke="black").encode(
-    color=alt.Color("include",scale=alt.Scale(range=["grey","red"])),
-    tooltip=[adm_col]
+alt.Chart(gdf_adm2).mark_geoshape(stroke="black").encode(
+    color=alt.Color(incl_adm_col,scale=alt.Scale(range=["grey","red"])),
+    tooltip=["admin2Name"]
 ).properties(width=600,title="Included admins")
 ```
 
@@ -137,16 +136,18 @@ g=da_country.sel(time=da_country.time.dt.year.isin([2020])).plot(
 )
 
 for ax in g.axes.flat:
-    gdf_adm.boundary.plot(linewidth=1, ax=ax, color="grey")
+    gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
     ax.axis("off")
 ```
+
+Next we plot the median over all years of the monthly rainfall. We can see a similair pattern as in 2020
 
 ```python
 #compute median rainfall per month, grouped by the years
 da_country_month_med=da_country.groupby(
         da_country.time.dt.month
     ).median()
-#show distribution of rainfall across months for 2020 to understand rainy season patterns
+
 da_country_month_med=da_country.groupby(
         da_country.time.dt.month
     ).median()
@@ -165,20 +166,57 @@ g=da_country_month_med.plot(
 )
 
 for ax in g.axes.flat:
-    gdf_adm.boundary.plot(linewidth=1, ax=ax, color="grey")
+    gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
     #dissolve to one polygon so we only plot the outer boundaries
-    gdf_reg.dissolve("admin0Pcod").boundary.plot(linewidth=0.5,ax=ax,color="red")
+    gdf_aoi.dissolve("admin0Pcod").boundary.plot(linewidth=0.5,ax=ax,color="red")
     ax.axis("off")
     ax.set_title(calendar.month_name[int(ax.get_title().split(" ")[-1])])
 g.fig.suptitle(f"Median per month between {da_country.time.dt.year.values.min()} and {da_country.time.dt.year.values.max()}",size=16)
 g.fig.subplots_adjust(top=0.9,bottom=0.4,hspace=0.3)
+# plt.savefig(plot_dir/"tcd_map_med_monthly_precip.png")
 ```
+
+To understand the differences between years, we aggregate the raster data to our area of interest by taking the mean. We then plot the observed mean precipitation per year and month. 
+
+```python
+da_country_aoi=da_country.rio.set_crs("EPSG:4326").rio.clip(gdf_aoi["geometry"])
+da_country_aoi_mean=da_country_aoi.mean(dim=("latitude","longitude"))
+da_country_aoi_mean_sel=da_country_aoi_mean.sel(time=da_country_aoi_mean.time.dt.month.isin(months_sel))
+```
+
+```python
+df_country_aoi_mean_sel=da_country_aoi_mean_sel.to_dataframe().reset_index()
+df_country_aoi_mean_sel["year"]=df_country_aoi_mean_sel.time.dt.year
+df_country_aoi_mean_sel["month"]=df_country_aoi_mean_sel.time.dt.month
+```
+
+```python
+df_country_aoi_mean_sel[["month","precip"]].groupby("month").mean()
+```
+
+```python
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('precip', title = "mean precipitation"),
+).properties(width=350,height=250)
+(plot).facet(columns=2,
+             facet="month:N",
+             data=df_country_aoi_mean_sel, 
+title=["Mean precipitation in the AOI per month and year"]).resolve_axis(
+    x='independent',
+)
+```
+
+From the graph above we can see that July and August clearly recieve the most rain. Moreover, we can see that the pattern can strongly differ per month. For example in 2000 the rain was very poor in August but normal in the other months. In 2004 it wasn't great during all months. It is unclear which month has the most impact and whether we should look at them in relative or absolute terms as the quantities differ so much per month. 
+
+However, for now we stick to the notion of below average 3-monthly (=season) rainfall which we will explore next. 
+
 
 ### Observed seasonal rainfall
 
 
 The plots below show the distribution of seasonal rainfall across the region for the JJA and JAS season. The values are computed per raster cell. 
-We can see that the rainfall ranges from 0 to 800 mm with about one third of the observations being below 150mm. The distribution for JAS is slightly wider than for JJA meaning that the values are on average a bit higher.
+We can see that the rainfall ranges from 0 to 700 mm with about one third of the observations being below 150mm. The distribution for JAS is slightly wider than for JJA meaning that the values are on average a bit higher.
 <!-- The red line indicates the tercile value averaged across all raster cells. This means it is slightly different for each raster cell, but it helps to get a general feeling -->
 
 ```python
@@ -187,7 +225,7 @@ da_season=da_country.rolling(time=seas_len,min_periods=seas_len).sum().dropna(di
 ```
 
 ```python
-da_season_reg=da_season.rio.set_crs("EPSG:4326").rio.clip(gdf_reg["geometry"])
+da_season_reg=da_season.rio.set_crs("EPSG:4326").rio.clip(gdf_aoi["geometry"])
 ```
 
 ```python
@@ -202,16 +240,12 @@ for i, m in enumerate(end_months_sel):
     ax = fig.add_subplot(rows,colp_num,i+1)
     da_season_reg_sel=da_season_reg.sel(time=da_season_reg.time.dt.month==m)
     g=sns.histplot(da_season_reg_sel.values.flatten(),color="#CCCCCC",ax=ax)
-    #I think this lower tercile cap is too generalized an not very useful in this case
-#     perc=np.percentile(da_season_reg_sel.values.flatten()[~np.isnan(da_season_reg_sel.values.flatten())], 33)
-#     plt.axvline(perc,color="#C25048",label="lower tercile cap")
-    ax.legend()
     ax.set(xlabel="Seasonal precipitation (mm)")
     ax.set_title(f"Distribution of seasonal precipitation in {month_season_mapping[m]} from {da_season_reg_sel.time.dt.year.values.min()}-{da_season_reg_sel.time.dt.year.values.max()}")
     ax.set_xlim(0,np.nanmax(da_season_reg.values))
 ```
 
-We also show the distribution of rain across the whole country. We can see that this is significantly lower than in our region of interest
+We also show the distribution of rain across the whole country. We can see that this is significantly higher than in our region of interest
 
 ```python
 colp_num=2
@@ -265,7 +299,7 @@ g=da_plot.plot(
 )
 
 for ax, title in zip(g.axes.flat, da_plot_titles):
-    gdf_adm.boundary.plot(linewidth=1, ax=ax, color="grey")
+    gdf_adm1.boundary.plot(linewidth=1, ax=ax, color="grey")
     ax.axis("off")
     ax.set_title(title)
 g.fig.suptitle("Pixels with below average rainfall",size=24)
@@ -278,7 +312,7 @@ Therefore we check if the lower tercile bounds look reasonable.
 
 ```python
 ds_season_bounds=rioxarray.open_rasterio(chirps_seasonal_tercile_bounds_processed_path)
-da_season_bounds_reg=ds_season_bounds.rio.write_crs("EPSG:4326").rio.clip(gdf_reg["geometry"]).precip
+da_season_bounds_reg=ds_season_bounds.rio.write_crs("EPSG:4326").rio.clip(gdf_aoi["geometry"]).precip
 ```
 
 ```python
@@ -293,7 +327,7 @@ for m in end_months_sel:
     this_plot =  da_season_bounds_reg.sel(month=m).hvplot.kde().opts(ylabel="JAS precipitation",
 title=f"Lower tercile boundary per raster cell for {month_season_mapping[m]}")
     plots_list.append(this_plot)
-hv.Layout(plots_list).cols(2)
+hv.Layout(plots_list).cols(1)
 ```
 
 From the plots above we can see that the tercile boundaries differ quite widely across the region. Especially in the north-western part of our region of interest the boundaries are quite low. It might therefore be advised to exclude this region. However, I don't know if that is a reasonable thing to do and should maybe be discussed with meteorologists. 
@@ -306,21 +340,15 @@ Now that we have analyzed the data on pixel level, we aggregate to the area of i
 We compute the percentage of the area having experienced below average rainfall for each season.
 
 ```python
-gdf_adm1=gpd.read_file(adm1_bound_path)
-#select the adms of interest
-gdf_reg=gdf_adm1[gdf_adm1[adm_col].isin(adm_sel)]
-```
-
-```python
 #since we are only selecting below avg values, only the count stat makes sense
 #e.g. the mean doesn't reflect the actual situation, for that da_country would need to be used
-gdf_reg_dissolved=gdf_reg.dissolve(by="admin0Name")
-gdf_reg_dissolved=gdf_reg_dissolved[["admin0Pcod","geometry"]]
-da_season_below_clip=da_season_below.rio.clip(gdf_reg["geometry"],all_touched=False)
+gdf_aoi_dissolved=gdf_aoi.dissolve(by="admin0Name")
+gdf_aoi_dissolved=gdf_aoi_dissolved[["admin0Pcod","geometry"]]
+da_season_below_clip=da_season_below.rio.clip(gdf_aoi["geometry"],all_touched=False)
 da_season_below_bavg=da_season_below_clip.where(da_season_below >=0)
 
 df_stats_reg=compute_raster_statistics(
-        gdf=gdf_reg_dissolved,
+        gdf=gdf_aoi_dissolved,
         bound_col="admin0Pcod",
         raster_array=da_season_below_bavg,
         lon_coord="x",
@@ -328,7 +356,7 @@ df_stats_reg=compute_raster_statistics(
         stats_list=["count"],
         percentile_list=[90],
     )
-df_stats_reg_all=compute_raster_statistics(gdf=gdf_reg_dissolved,bound_col="admin0Pcod",raster_array=da_season_below,lon_coord="x",lat_coord="y",stats_list=["count"])
+df_stats_reg_all=compute_raster_statistics(gdf=gdf_aoi_dissolved,bound_col="admin0Pcod",raster_array=da_season_below,lon_coord="x",lat_coord="y",stats_list=["count"])
 
 df_stats_reg["perc_bavg"] = df_stats_reg[f"count_admin0Pcod"]/df_stats_reg_all[f"count_admin0Pcod"]*100
 df_stats_reg.time=pd.to_datetime(df_stats_reg.time.apply(lambda x: x.strftime("%Y-%m-%d")))
@@ -354,7 +382,7 @@ We can see that most occurences saw none of a small part of the region experienc
 histo = alt.Chart().mark_bar(color="#CCCCCC").encode(
     x=alt.X("perc_bavg",bin=alt.Bin(step=10),title="Percentage of area with below average precipitation"),
     y="count()",
-).properties(width=500)
+).properties(width=350)
 
 histo.facet(column=alt.Column("season:N",sort=df_stats_reg_selm.season.unique(),title="Season"),
                                        data=df_stats_reg_selm[["season","perc_bavg"]],title=f"Distribution of percentage of area with below average precipitation from {df_stats_reg_selm.end_month.dt.year.min()}-{df_stats_reg_selm.end_month.dt.year.max()}"
@@ -419,15 +447,6 @@ From here we can see that 1982,1983,1984,1987,1989, 1990,1993,1996, and 2004 saw
 1986, 2000, 2007, 2008, 2011, 2013,2015 saw 1 in 3 year return period percentages.
 
 ```python
-df_stats_reg["season"]=df_stats_reg.end_month.apply(lambda x:month_season_mapping[x.month])
-df_stats_reg["seas_year"]=df_stats_reg.apply(lambda x: f"{x.season} {x.end_month.year}",axis=1)
-df_stats_reg["seas_trig"]=np.where(df_stats_reg.end_month.dt.month.isin(end_months_sel),True,False)
-df_stats_reg=df_stats_reg.sort_values("start_month")
-df_stats_reg["seas_trig_str"]=df_stats_reg["seas_trig"].replace({True:"season included in trigger",False:"season not included in trigger"})
-df_stats_reg["year"]=df_stats_reg.end_month.dt.year
-```
-
-```python
 g = sns.catplot(data=df_stats_reg, x="season",y="perc_bavg",col="year", hue="seas_trig_str", col_wrap=3, kind="bar",
                   palette={"season not included in trigger":grey_med,"season included in trigger":hdx_blue}, height=4, aspect=2,legend=False,order=list(month_season_mapping.values()))
 g.map(plt.axhline, y=df_rps_empirical_selm.loc[5,"rp_round"], linestyle='dashed', color=hdx_red, zorder=1,label="5 year return period")
@@ -435,6 +454,12 @@ g.map(plt.axhline, y=df_rps_empirical_selm.loc[5,"rp_round"], linestyle='dashed'
 g.map(plt.axhline,y=df_rps_empirical_selm.loc[3,"rp_round"], linestyle='dashed', color=hdx_green, zorder=1,label="3 year return period").add_legend()
 g.set_ylabels("% of area observed below average precip")
 g.set_xlabels("3-month period");
+```
+
+```python
+#the years with highest percentage of bavg since 2000
+#computing this since other data sources we use only start from 2000
+df_stats_reg_selm[df_stats_reg_selm.year>=2000].sort_values("perc_bavg",ascending=False).head(10)
 ```
 
 compute the rp per season as these can differ per season, depending on the geospatial correlation
@@ -466,7 +491,7 @@ We can see that large areas of below average rainfall were more common in the 80
 plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
     x=alt.X('year:N',title="Year"),
     y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
-).properties(width=700,height=400)
+).properties(width=350,height=200)
 rp3_line = alt.Chart().mark_rule(color=hdx_green,strokeDash=[12,6]).encode(
     y="rp_3:Q",)
 rp5_line = alt.Chart().mark_rule(color=hdx_red,strokeDash=[12,6]).encode(
@@ -477,37 +502,178 @@ title=["Percentage of the area with bavg obs precip by year and season","the gre
 
 ### Correlation with other sources of historical drought
 
-
+<!-- #region -->
 We have now identified the years that had large areas of below average precipitation during JJA and JAS in our region of interest. 
 
-To understand if this correlates with drought that results in humanitarian needs, we compare this with a few data sources. 
+To understand if this correlates with drought that results in humanitarian needs, we compare this with a list of historical drought years that was compiled from several data sources. 
 
-It was shared by us [by email](https://docs.google.com/document/d/1c_L9Z_Y_P0vMmIiPaaeEQe8Vf6bzZHFUcsawis3zfCQ/edit) [we really need the original documents here or figure out who reported these years] that the worst drought years observed were 1993,1997,2001,2004,2009,2011,and 2017.
 
-We assume years before 1993 were not reported in these sources, which leaves us with 29 years from 1993 to 2021. In that case we see a partial overlap with the reported years and observed below average precipitation. The dataframe shows the rank of the drought years. 
+From this literature research, the most substantial drought years were 1968-1973, 1983, 1984, 1993, 1997, 2001, 2004, 2009, 2011, and 2017.
+Note however that this list couldn't be fully validated, so not too much value should be attached to it. 
 
-From the dataframe we can see that 1993 and 2004 were specifically bad years in observed precipitation. 2011 and 2009 also had some deficit, being the 8th and 9th worst year observed out of the 29. 
+We see a partial overlap with the reported years and observed below average precipitation. The dataframe shows the rank of the drought years. 
 
-1996 was also a perticularly bad year in terms of precipitation, which might be the drought referred to by the year 1997 as impacts are sometimes felt later. 
+There might also be delay between the precipitation and the drought years. 
+
+e.g. 1996 was also a perticularly bad year in terms of precipitation, which might be the drought referred to by the year 1997 as impacts are sometimes felt later. 
 
 With that same reasoning the 2001 drought might be caused by a deficit of rainfall in 2000 and 2009 drought might be worsened by deficits in 2007 and 2008.
 
 2017 barely saw any below average rainfall in our region of interest. It could be that the drought is caused by the deficit of rain between ASO and DJF
-
-Summarizing, we see some relation between the reported drought years and below average precipitation, thought this relation is not crystal clear. 
+<!-- #endregion -->
 
 ```python
-df_rank=df_stats_reg_selm[df_stats_reg_selm.year>=1993].sort_values("perc_bavg",ascending=False).drop_duplicates("year").reset_index()
+df_rank=df_stats_reg_selm.sort_values("perc_bavg",ascending=False).drop_duplicates("year").reset_index()
 ```
 
 ```python
-drought_years=[1993,1997,2001,2004,2009,2011,2017]
+df_rank.head()
 ```
 
-#### CERF allocations
+```python
+#remains questionable what are the actual drought years 
+#but this is a list compiled from several sources
+drought_years=[1968,1969,1970,1971,1972,1973, 1983, 1984, 1993, 1997, 2001, 2004, 2009, 2011, 2017]
+```
+
+### Relation of below average precipitation and drought
 
 
-Another source of historical drought that is especially relevant to our case is the CERF allocations. We inspect the CERF allocations for drought since 2006, to see if these correlate with high levels of observed below average precipitation
+By looking at the confusion matrices we can see that the drought years don't correspond very well with observed below average precipitation. There might be a number of reasons:  
+1) It seems that precipitation patterns have changed. In the 80s and 90s it was much more common that large areas experience below average rainfall
+2) Below average rainfall over a 3 month period might not capture all types of droughts. For example a late onset or long dry spells could also have a significant socio-economic impact. 
+3) socio-economic drought might also be (partially) caused by other factors than precipitation, such as temperature
+
+```python
+def compute_confusionmatrix_column(df,subplot_col,target_col,predict_col, ylabel,xlabel,colp_num=3,title=None,adjust_top=None):
+    #number of dates with observed dry spell overlapping with forecasted per month
+    num_plots = len(df[subplot_col].unique())
+    if num_plots==1:
+        colp_num=1
+    rows = math.ceil(num_plots / colp_num)
+    position = range(1, num_plots + 1)
+    fig=plt.figure(figsize=(15,8))
+    for i, m in enumerate(df.sort_values(by=subplot_col)[subplot_col].unique()):
+        ax = fig.add_subplot(rows,colp_num,i+1)
+        y_target =    df.loc[df[subplot_col]==m,target_col]
+        y_predicted = df.loc[df[subplot_col]==m,predict_col]
+        cm = confusion_matrix(y_target=y_target, 
+                              y_predicted=y_predicted)
+
+        plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax,class_names=["No","Yes"])
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(xlabel)
+        ax.set_title(f"{subplot_col}={m}")
+    if title is not None:
+        fig.suptitle(title)
+    if adjust_top is not None:
+        plt.subplots_adjust(top=adjust_top)
+    return fig
+```
+
+```python
+df_stats_drought=df_stats_reg_selm.copy()
+```
+
+```python
+#drought years indicated by drought_years
+df_stats_drought["drought"]=np.where(df_stats_drought.year.isin(drought_years),True,False)
+df_stats_drought["rp3"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[3,"rp_round"],True,False)
+df_stats_drought["rp5"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[5,"rp_round"],True,False)
+df_stats_drought["bavg_20"]=np.where(df_stats_drought.perc_bavg>=20,True,False)
+```
+
+```python
+# #save for using for bootstrap
+# df_stats_drought.to_csv(country_data_exploration_dir/"chirps"/"tcd_perc_aoi_bavg.csv",index=False)
+```
+
+```python
+fig=compute_confusionmatrix_column(df_stats_drought,"season","drought","bavg_20","drought year in framework",
+                               f">=20% of area below average",
+                              title=f"Correspondence of >=20% area observed below average precipitation and reported drought years",
+                                  adjust_top=1.2)
+```
+
+```python
+rp_cm=[3,5]
+for rp in rp_cm:
+    fig=compute_confusionmatrix_column(df_stats_drought,"season","drought",f"rp{rp}","drought year in framework",
+                                   f"percentage bavg above {rp} year return period (>={int(df_rps_empirical_selm.loc[rp,'rp_round'])}%)",
+                                  title=f"Correspondence of 1 in {rp} year observed below average precipitation and reported drought years",
+                                      adjust_top=1.2)
+```
+
+```python
+def compute_performance_metrics(df,subgroup_col,target_col,predict_col,num_dec=2):
+    df_perf=pd.DataFrame(index=df[subgroup_col].unique(),columns=["valid_act_rate","fa_rate","det_rate","miss_rate","acc"],dtype=float)
+    for i, m in enumerate(df.sort_values(by=subgroup_col)[subgroup_col].unique()):
+        ax = fig.add_subplot(rows,colp_num,i+1)
+        y_target =    df.loc[df[subgroup_col]==m,target_col]
+        y_predicted = df.loc[df[subgroup_col]==m,predict_col]
+        cm = confusion_matrix(y_target=y_target, 
+                              y_predicted=y_predicted)
+        tn,fp,fn,tp=cm.flatten()
+        valid_act_rate=tp/(tp+fp)
+        fa_rate=1-valid_act_rate
+        det_rate=tp/(tp+fn)
+        miss_rate=1-det_rate
+        acc=(tp+tn) / (tp+tn+fp+fn)
+        df_perf.loc[m,["valid_act_rate","fa_rate","det_rate","miss_rate","acc"]]=[valid_act_rate,fa_rate,det_rate,miss_rate,acc]
+    #multiply by 100 to get percentage
+    df_perf=df_perf*100
+    return df_perf.round(decimals=num_dec)
+```
+
+```python
+compute_performance_metrics(df_stats_drought,"season","drought","rp5")
+```
+
+```python
+#group the seasons by taking the max value
+#max value of [True,False] is True
+df_stats_drought_yearly=df_stats_drought.groupby("year").max()
+```
+
+```python
+rp=3
+fig=compute_confusionmatrix_column(df_stats_drought_yearly,"admin0Pcod","drought",f"rp{rp}","drought year in framework",
+                                   f"percentage bavg above {rp} year return period (>={int(df_rps_empirical_selm.loc[rp,'rp_round'])}%)",
+                                  title=f"Correspondence of 1 in {rp} year observed below average precipitation and reported drought years")
+```
+
+```python
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
+).properties(width=600,height=400)
+(plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
+title=["Percentage of the area with bavg obs precip by year and season"])
+# plt_facet.save(str(plot_dir / "tcd_obs_bavg_perc_jja_jas.png"))#,format="png")
+```
+
+```python
+plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
+    x=alt.X('year:N',title="Year"),
+    y=alt.Y('perc_bavg', title = "% of AOI with below avg precip"),
+    color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
+).properties(width=600,height=400)
+(plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
+title=["Percentage of the AOI with below average observed precipitation by year and season"])
+# plt_facet.save(str(plot_dir/"tcd_obs_bavg_perc_drought_jja_jas.png"))
+```
+
+### Conclusions
+We see that the correspondence between historical below average precipitation and drought years is not great.  
+From this analysis it also seems that a 1 in 5 year return period suits best with the historical droughts. 
+
+We can also conclude that the years for which we have IRI data (since 2017), there was not much observed below average precipitation
+
+
+#### Anenx: CERF allocations
+
+
+Below the code to analyze the years CERF released funding
 
 
 As can be seen below, drought-related CERF funding since 2006 was released in 2010,2011,2012, and 2018. 
@@ -552,96 +718,3 @@ ax.spines['bottom'].set_visible(False)
 
 plt.title(f"Funds allocated by CERF for drought in {iso3} from 2006 till 2019");
 ```
-
-### Relation of below average precipitation and drought
-
-
-For now we base our list of historical droughts on the years shared in the document and by CERF. In the future we might include a drought indicator that is measurable every year to correlate to the observed precipitation. 
-
-By looking at the confusion matrices we can see that the drought years don't correspond very well with observed below average precipitation. There might be a number of reasons:  
-1) It seems that precipitation patterns have changed. In the 80s and 90s it was much more common that large areas experience below average rainfall
-2) Below average rainfall over a 3 month period might not capture all types of droughts. For example a late onset or long dry spells could also have a significant socio-economic impact. 
-
-```python
-from mlxtend.evaluate import confusion_matrix
-from mlxtend.plotting import plot_confusion_matrix
-```
-
-```python
-def compute_confusionmatrix_column(df,subplot_col,target_col,predict_col, ylabel,xlabel,colp_num=3,title=None,adjust_top=None):
-    #number of dates with observed dry spell overlapping with forecasted per month
-    num_plots = len(df[subplot_col].unique())
-    if num_plots==1:
-        colp_num=1
-    rows = math.ceil(num_plots / colp_num)
-    position = range(1, num_plots + 1)
-    fig=plt.figure(figsize=(15,8))
-    for i, m in enumerate(df.sort_values(by=subplot_col)[subplot_col].unique()):
-        ax = fig.add_subplot(rows,colp_num,i+1)
-        y_target =    df.loc[df[subplot_col]==m,target_col]
-        y_predicted = df.loc[df[subplot_col]==m,predict_col]
-        cm = confusion_matrix(y_target=y_target, 
-                              y_predicted=y_predicted)
-
-        plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax,class_names=["No","Yes"])
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel(xlabel)
-        ax.set_title(f"{subplot_col}={m}")
-    if title is not None:
-        fig.suptitle(title)
-    if adjust_top is not None:
-        plt.subplots_adjust(top=adjust_top)
-    return fig
-```
-
-```python
-df_stats_drought=df_stats_reg_selm.copy()#[df_stats_reg_selm.year>=1993]
-```
-
-```python
-#drought years indicated by drought_years
-df_stats_drought["drought"]=np.where(df_stats_drought.year.isin(drought_years),True,False)
-df_stats_drought["rp3"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[3,"rp_round"],True,False)
-df_stats_drought["rp5"]=np.where(df_stats_drought.perc_bavg>=df_rps_empirical_selm.loc[5,"rp_round"],True,False)
-```
-
-```python
-#sel years since 1993 for cm as those are the years we have impact drought data for
-df_stats_drought_sely=df_stats_drought[df_stats_drought.year>=1993]
-```
-
-```python
-rp_cm=[3,5]
-for rp in rp_cm:
-    fig=compute_confusionmatrix_column(df_stats_drought,"season","drought",f"rp{rp}","drought year in framework",
-                                   f"percentage bavg above {rp} year return period (>={int(df_rps_empirical_selm.loc[rp,'rp_round'])}%)",
-                                  title=f"Correspondence of 1 in {rp} year observed below average precipitation and reported drought years",
-                                      adjust_top=1.2)
-```
-
-```python
-#group the seasons by taking the max value
-#max value of [True,False] is True
-df_stats_drought_yearly=df_stats_drought.groupby("year").max()
-```
-
-```python
-rp=3
-fig=compute_confusionmatrix_column(df_stats_drought_yearly,"admin0Pcod","drought",f"rp{rp}","drought year in framework",
-                                   f"percentage bavg above {rp} year return period (>={int(df_rps_empirical_selm.loc[rp,'rp_round'])}%)",
-                                  title=f"Correspondence of 1 in {rp} year observed below average precipitation and reported drought years")
-```
-
-```python
-plot=alt.Chart().mark_bar(color=hdx_blue,opacity=0.7).encode(
-    x=alt.X('year:N',title="Year"),
-    y=alt.Y('perc_bavg', title = "% of area with bavg precip"),
-    color=alt.Color('drought:N',scale=alt.Scale(range=[grey_med,hdx_red])),
-).properties(width=600,height=400)
-(plot).facet(column=alt.Column("season:N",sort=df_stats_drought.season.unique(),title="season"),data=df_stats_drought[["year","perc_bavg","drought","season"]], 
-title=["Percentage of the area with bavg obs precip by year and season"])
-```
-
-### Conclusions
-While we cannot relate all reported drought years with below average precipitation, we generally see quite a good correspondence.   
-From this analysis it also seems that a 1 in 3 year return period is not too sensitive. Simeltaneously, we can conclude that the years for which we have IRI data (since 2017), there was not much observed below average precipitation
