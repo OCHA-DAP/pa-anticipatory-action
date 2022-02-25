@@ -86,12 +86,19 @@ def load_plague_data(
     ``pandas.DataFrame``
 
     """
-    df = pd.read_csv(path, delimiter=delimiter)
-
+    # print("heh")
+    if path.suffix == ".csv":
+        df = pd.read_csv(path, delimiter=delimiter)
+    elif path.suffix == ".xls":
+        df = pd.read_excel(path)
+    else:
+        raise ValueError(
+            "Path doesn't have a valid extension. "
+            "Should either be .csv or .xls"
+        )
     # adjust column names
     df.columns = df.columns.str.lower()
     df.rename(columns={"mdg_com_code": "ADM3_PCODE"}, inplace=True)
-
     # to make pcodes correspond with shp file
     df.ADM3_PCODE = df.ADM3_PCODE.str.replace("MDG", "MG")
 
@@ -120,6 +127,7 @@ def load_plague_data(
 
 def aggregate_to_date(
     df: pd.DataFrame,
+    cases_cols=["cases_number"],
     start_date: Union[str, None] = None,
     end_date: Union[str, None] = None,
 ):
@@ -152,7 +160,7 @@ def aggregate_to_date(
         df_date = df_date.append(
             pd.DataFrame(
                 [[0]],
-                columns=["cases_number"],
+                columns=cases_cols,
                 index=[pd.to_datetime(start_date, format="%Y-%m-%d")],
             )
         )
@@ -161,7 +169,7 @@ def aggregate_to_date(
         df_date = df_date.append(
             pd.DataFrame(
                 [[0]],
-                columns=["cases_number"],
+                columns=[cases_cols],
                 index=[pd.to_datetime(end_date, format="%Y-%m-%d")],
             )
         )
@@ -176,5 +184,7 @@ def aggregate_to_date(
     # compute the year and week numbers from the dates
     df_date[["year", "week"]] = df_date.index.isocalendar()[["year", "week"]]
     df_date.reset_index(inplace=True)
+    df_date.drop("max_week", axis=1, inplace=True)
+    df_date["date"] = pd.to_datetime(df_date["date"])
 
     return df_date
