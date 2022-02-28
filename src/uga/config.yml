@@ -1,0 +1,21 @@
+iso3_code: uga
+iso2_code: ug
+path_admin0_shp: uga_admbnda_ubos_20200824_shp/uga_admbnda_adm0_ubos_20200824.shp #Shapefiles downloaded from https://data.humdata.org/dataset/cod-ab-uga
+path_admin1_shp: uga_admbnda_ubos_20200824_shp/uga_admbnda_adm1_ubos_20200824.shp
+path_admin2_shp: uga_admbnda_ubos_20200824_shp/uga_admbnda_adm2_ubos_20200824.shp
+shp_adm0c: ADM0_EN
+shp_adm1c: ADM1_EN
+shp_adm2c: ADM2_EN
+
+foodinsecurity:
+  region: east-africa
+  regioncode: EA
+  fewsnet_dates_add: []
+  fewsnet_dates_remove: []
+  pop_filename:  #Downloaded from https://data.humdata.org/dataset/9a997a19-0531-46cc-aa2e-a314d253c40f/resource/95fe67c6-53bc-4884-a0bd-9a81ba5f467f/download/uga_admpop_2020_csv.zip
+  pop_col: 
+  adm1c_pop: 
+  adm2c_pop: 
+  pop_adm1_mapping:
+  pop_adm2_mapping:
+  globalipc_adm_mapping:
