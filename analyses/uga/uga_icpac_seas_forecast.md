@@ -20,6 +20,7 @@ from matplotlib.colors import ListedColormap
 from rasterio.enums import Resampling
 import hvplot.xarray
 import altair as alt
+import matplotlib.pyplot as plt
 
 from pathlib import Path
 import sys
@@ -40,6 +41,7 @@ country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DI
 
 glb_private_raw_dir = Path(config.DATA_DIR) /config.PRIVATE_DIR / config.RAW_DIR / "glb"
 icpac_raw_dir = glb_private_raw_dir / "icpac"
+output_dir =  Path(config.DATA_DIR) / config.PRIVATE_DIR / "exploration" / "uga" / "icpac"
 ```
 
 ```python
@@ -59,7 +61,7 @@ ds=xr.load_dataset(icpac_filepath)
 ```
 
 ```python
-ds=ds.rio.write_crs("EPSG:4326",inplace=True)
+ds=ds.rio.set_spatial_dims("lon","lat",inplace=True).rio.write_crs("EPSG:4326",inplace=True)
 ```
 
 ```python
@@ -77,6 +79,9 @@ da_above.plot();
 ```python
 g=da_above.rio.set_spatial_dims("lon","lat",inplace=True).rio.clip(gdf_adm1.geometry).plot()
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+plt.title("MMA Above Average Rainfall Forecast \n Issued by ICPAC Feb 2022")
+plt.savefig(output_dir / 'forecast_adm1_overlay_20220301.png')
+
 ```
 
 ```python
@@ -85,20 +90,19 @@ gdf_adm2.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
-#TODO: you need to define the method of which cells you want to include in the aggregation. 
-#depends a bit on the cell size relative to the adm size
+#aggregation method
 #if False then take cells with centre within the adm
 #if True take cells touching the adm
-all_touched = #fill, choose False or True
+all_touched = True
 ```
 
 ```python
 #% probability of above avg
-threshold= #fill
+threshold = 40
 ```
 
 ```python
-pcode_col= "ADM1_PCODE"
+pcode_col = "ADM1_PCODE"
 ```
 
 ```python
@@ -122,8 +126,6 @@ df_stats_aavg_thresh=compute_raster_statistics(
         lon_coord="lon",
         lat_coord="lat",
         stats_list=["count"],
-        #if False then take cells with centre within the adm
-        #if True take cells touching the adm
         all_touched=all_touched,
     )
 
@@ -137,4 +139,15 @@ gdf_stats_avg=gdf_adm1.merge(df_stats_aavg,on=pcode_col,how="right")
 
 ```python
 gdf_stats_avg.plot("perc_thresh",legend=True);
+```
+
+```python
+stats_summary = gdf_stats_avg[['ADM1_PCODE', 'ADM1_EN', 'min_ADM1_PCODE', 'mean_ADM1_PCODE', 'max_ADM1_PCODE', 'std_ADM1_PCODE', 'count_ADM1_PCODE', '80quant_ADM1_PCODE', 'perc_thresh']]
+stats_summary
+```
+
+```python
+data_output_filename = output_dir / "stats_summary_20220301.csv"
+data_output_filename
+stats_summary.to_csv(data_output_filename, index=False)
 ```
