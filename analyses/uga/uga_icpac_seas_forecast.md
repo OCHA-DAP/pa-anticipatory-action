@@ -43,10 +43,11 @@ icpac_raw_dir = glb_private_raw_dir / "icpac"
 ```
 
 ```python
-#TODO: you need to add the adm path to the config before being able to use this
 parameters = config.parameters(iso3)
 adm1_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin1_shp"]
+adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin2_shp"]
 gdf_adm1=gpd.read_file(adm1_bound_path)
+gdf_adm2=gpd.read_file(adm2_bound_path)
 ```
 
 ```python
@@ -58,6 +59,10 @@ ds=xr.load_dataset(icpac_filepath)
 ```
 
 ```python
+ds=ds.rio.write_crs("EPSG:4326",inplace=True)
+```
+
+```python
 ds
 ```
 
@@ -66,17 +71,25 @@ da_above=ds.above
 ```
 
 ```python
-da_above.plot()
+da_above.plot();
 ```
 
 ```python
-g=da_above.rio.write_crs("EPSG:4326").rio.clip(gdf_adm1.geometry).plot()
+g=da_above.rio.set_spatial_dims("lon","lat",inplace=True).rio.clip(gdf_adm1.geometry).plot()
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
+```
+
+```python
+g=da_above.rio.set_spatial_dims("lon","lat",inplace=True).rio.clip(gdf_adm1.geometry).plot()
+gdf_adm2.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
 #TODO: you need to define the method of which cells you want to include in the aggregation. 
 #depends a bit on the cell size relative to the adm size
+#if False then take cells with centre within the adm
+#if True take cells touching the adm
+all_touched = #fill, choose False or True
 ```
 
 ```python
@@ -85,7 +98,7 @@ threshold= #fill
 ```
 
 ```python
-pcode_col= #fill
+pcode_col= "ADM1_PCODE"
 ```
 
 ```python
@@ -93,15 +106,13 @@ pcode_col= #fill
 df_stats_aavg=compute_raster_statistics(
         gdf=gdf_adm1,
         bound_col=pcode_col,
-        raster_array=da_above,
+        raster_array=da_above.rio.write_crs("EPSG:4326"),
         lon_coord="lon",
         lat_coord="lat",
         stats_list=["min","mean","max","std","count"],
         #computes value where 20% of the area is above that value
         percentile_list=[80],
-        #if False then take cells with centre within the adm
-        #if True take cells touching the adm
-        all_touched=#fill,
+        all_touched=all_touched,
     )
 da_above_thresh=da_above.where(da_above>=threshold)
 df_stats_aavg_thresh=compute_raster_statistics(
@@ -113,11 +124,11 @@ df_stats_aavg_thresh=compute_raster_statistics(
         stats_list=["count"],
         #if False then take cells with centre within the adm
         #if True take cells touching the adm
-        all_touched=#fill,
+        all_touched=all_touched,
     )
 
 df_stats_aavg["perc_thresh"] = (df_stats_aavg_thresh[f"count_{pcode_col}"]
-                                /df_stats_reg_aavg[f"count_{pcode_col}"]*100)
+                                /df_stats_aavg[f"count_{pcode_col}"]*100)
 ```
 
 ```python
@@ -125,5 +136,5 @@ gdf_stats_avg=gdf_adm1.merge(df_stats_aavg,on=pcode_col,how="right")
 ```
 
 ```python
-gdf_stats_avg.plot("perc_thresh")
+gdf_stats_avg.plot("perc_thresh",legend=True);
 ```
