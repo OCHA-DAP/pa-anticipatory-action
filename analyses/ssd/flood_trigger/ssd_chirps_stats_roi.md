@@ -38,11 +38,20 @@ parameters = config.parameters(iso3)
 country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
 adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin2_shp"]
 chirps_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "processed" / iso3 / "chirps" / "daily"
+country_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "processed" / iso3
+bentiu_bound_path = country_processed_dir / "bentiu" / "bentiu_bounding_box.gpkg"
 ```
 
 ```python
 gdf_adm2=gpd.read_file(adm2_bound_path)
 ```
+
+```python
+#load the country data
+ds_country = load_chirps_daily_clipped(iso3,config,resolution)
+```
+
+### Stats on Sudd region of interest
 
 ```python
 #admin2's of interest for now
@@ -57,11 +66,6 @@ adm2_list=['Panyijiar', 'Leer', 'Mayendit', 'Koch', 'Guit',
 gdf_reg=gdf_adm2[gdf_adm2.ADM2_EN.isin(adm2_list)]
 adm0_col="ADM0_EN"
 pcode0_col="ADM0_PCODE"
-```
-
-```python
-#load the country data
-ds_country = load_chirps_daily_clipped(iso3,config,resolution)
 ```
 
 ```python
@@ -95,4 +99,66 @@ df_chirps_reg.columns = df_chirps_reg.columns.str.replace(r'_ADM0_PCODE$', '')
 
 ```python
 # df_chirps_reg.to_csv(chirps_processed_dir/f'{iso3}_chirps_roi_stats_p{resolution}.csv',index=False)
+```
+
+### Stats on Bentiu
+Only stats on rectangle around Bentiu IDP Camp
+
+```python
+gdf_bentiu=gpd.read_file(bentiu_bound_path)
+```
+
+```python
+#check how many cells are included in the region
+ds_country.rio.clip(gdf_bentiu.geometry, all_touched = True)
+```
+
+```python
+df_chirps_reg=compute_raster_statistics(
+        gdf=gdf_bentiu,
+        bound_col="id",
+        raster_array=ds_country.precip,
+        lon_coord="longitude",
+        lat_coord="latitude",
+        stats_list=["median","min","mean","max","sum","count"],
+        #computes value where 20% of the area is above that value
+        percentile_list=[80],
+        all_touched=True,
+    )
+df_chirps_reg['year']=df_chirps_reg.time.dt.year
+```
+
+```python
+# df_chirps_reg.to_csv(chirps_processed_dir/f'{iso3}_chirps_bentiu_stats_p{resolution}.csv',index=False)
+```
+
+### Stats on Rubkona and Fangak
+Rubkona is the county of which Bentiu is part
+
+```python
+gdf_rubfan=gdf_adm2[gdf_adm2.ADM2_EN.isin(['Rubkona','Fangak'])]
+```
+
+```python
+#check how many cells are included in the region
+ds_country.rio.clip(gdf_rubfan.geometry, all_touched = True)
+```
+
+```python
+df_chirps_reg=compute_raster_statistics(
+        gdf=gdf_rubfan,
+        bound_col="ADM2_EN",
+        raster_array=ds_country.precip,
+        lon_coord="longitude",
+        lat_coord="latitude",
+        stats_list=["median","min","mean","max","sum","count"],
+        #computes value where 20% of the area is above that value
+        percentile_list=[80],
+        all_touched=True,
+    )
+df_chirps_reg['year']=df_chirps_reg.time.dt.year
+```
+
+```python
+df_chirps_reg
 ```
