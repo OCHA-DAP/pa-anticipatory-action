@@ -2,7 +2,9 @@
 Based on conversations, we explore the flooded fraction at more specific areas. 
 Namely Bentiu IDP Camp, Rubkona county, and Fangak county. 
 
-We can see large differences between the areas. Where Fangak is partly covered by wetlands which get flooded each year. To account from this we also look at anomalies. 
+To account for wetlands which get flooded each year we also look at anomalies. 
+
+We can see large differences between the two counties. Fangak sees more recurrent annual flooding. Both counties saw the largest flooding in 2021. However, for example a large part of Fangak got already flooded in 2020 while that wasn't the case for Rubkona. 
 
 ```python
 %load_ext autoreload
@@ -295,7 +297,7 @@ da_anom_rub=xr.apply_ufunc(lambda x,m:x-m,da_rub.groupby('time.dayofyear'),da_me
 df_floodscan_anom_rub=compute_raster_statistics(
         gdf=gdf_rub,
         bound_col=bound_col,
-        raster_array=wow.rio.write_crs("EPSG:4326"),
+        raster_array=da_anom_rub.rio.write_crs("EPSG:4326"),
         lon_coord="lon",
         lat_coord="lat",
         stats_list=["median","min","mean","max","sum","count"],
@@ -479,8 +481,4 @@ df_floodscan_anom_fan['mean_rolling']=df_floodscan_anom_fan.sort_values('time')[
 df_plot <- df_floodscan_anom_fan %>%
 mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100)
 plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction of Rubkona")
-```
-
-```python
-
 ```
