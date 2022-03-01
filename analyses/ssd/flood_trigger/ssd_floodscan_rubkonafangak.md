@@ -45,6 +45,7 @@ from src.utils_general.raster_manipulation import compute_raster_statistics
 
 ```R tags=[]
 library(tidyverse)
+library(lubridate)
 ```
 
 #### define functions
@@ -142,6 +143,10 @@ df_floodscan_bent['mean_rolling']=df_floodscan_bent.sort_values('time').mean_id.
 We can plot the data over all years. 
 We see that it is pretty rare for Bentiu to get flooded. However, in 2007, 2008, and 2021 a large part of Bentiu did see flooding.  
 Also noteabily the water in 2008 and 2022 didn't recede during the beginning of the year. 
+
+```python
+#note: the 2022 data x-axis is not correct but too hard to fix for purpose
+```
 
 ```R magic_args="-i df_floodscan_bent -w 40 -h 20 --units cm"
 df_plot <- df_floodscan_bent %>%
@@ -282,7 +287,7 @@ da_rub.plot();
 da_med_rub=da_rub.groupby(da_rub.time.dt.dayofyear).median()
 ```
 
-We can see that only in the bottom-right there are pixels that are often flooded. Note that even here the numbers are really small (max 2.5% of the pixel flooded), but this is also partly caused by the fact that we take the mean over the full year. 
+We can see that only in the bottom-left there are pixels that are often flooded. Note that even here the numbers are really small (max 2.5% of the pixel flooded), but this is also partly caused by the fact that we take the mean over the full year. 
 
 ```python
 da_med_rub.mean("dayofyear").plot()
@@ -313,7 +318,7 @@ df_floodscan_anom_rub['mean_rolling']=df_floodscan_anom_rub.sort_values('time')[
 ```R magic_args="-i df_floodscan_anom_rub -w 40 -h 20 --units cm"
 df_plot <- df_floodscan_anom_rub %>%
 mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100)
-plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction of Rubkona")
+plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction minus the median flooded fraction,Rubkona")
 ```
 
 In the above graph we can see that substracting the median does flatten the curvesournd jun/july while we continue to see a very clear peak towards the end of 2021. 
@@ -393,7 +398,7 @@ plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction of Fangak
 
 We next plot the raster data again. 
 In 2021 we can see that around the whole county there was flooding, with different intensity per pixel. 
-In 2021 already a large part of the country was flooded at the beginning of the season. When we look at 2020, we can see that the flooding clearly starts from the bottom-right bottom and then spreads. 
+In 2021 already a large part of the country was flooded at the beginning of the season. When we look at 2020, we can see that the flooding clearly starts from the bottom-left bottom and then spreads. 
 
 ```python
 #gif of the timeseries
@@ -449,7 +454,7 @@ da_fan.plot();
 da_med_fan=da_fan.groupby(da_fan.time.dt.dayofyear).median()
 ```
 
-We can again see that mainly the pixels in the bottom-right are regularly flooded. However, this does cover a substantially larger area than in Rubkona. 
+We can again see that mainly the pixels in the bottom-left are regularly flooded. However, this does cover a substantially larger area than in Rubkona. 
 
 ```python
 da_med_fan.mean("dayofyear").plot()
@@ -480,5 +485,9 @@ df_floodscan_anom_fan['mean_rolling']=df_floodscan_anom_fan.sort_values('time')[
 ```R magic_args="-i df_floodscan_anom_fan -w 40 -h 20 --units cm"
 df_plot <- df_floodscan_anom_fan %>%
 mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100)
-plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction of Rubkona")
+plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction minus the median flooded fraction, Fangak")
+```
+
+```python
+
 ```
