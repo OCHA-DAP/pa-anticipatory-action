@@ -59,7 +59,7 @@ ds=xr.load_dataset(icpac_filepath)
 ```
 
 ```python
-ds=ds.rio.write_crs("EPSG:4326",inplace=True)
+ds=ds.rio.set_spatial_dims("lon","lat",inplace=True).rio.write_crs("EPSG:4326",inplace=True)
 ```
 
 ```python
@@ -85,20 +85,19 @@ gdf_adm2.boundary.plot(ax=g.axes,color="grey");
 ```
 
 ```python
-#TODO: you need to define the method of which cells you want to include in the aggregation. 
-#depends a bit on the cell size relative to the adm size
+#aggregation method
 #if False then take cells with centre within the adm
 #if True take cells touching the adm
-all_touched = #fill, choose False or True
+all_touched = True
 ```
 
 ```python
 #% probability of above avg
-threshold= #fill
+threshold = 40
 ```
 
 ```python
-pcode_col= "ADM1_PCODE"
+pcode_col = "ADM1_PCODE"
 ```
 
 ```python
@@ -122,8 +121,6 @@ df_stats_aavg_thresh=compute_raster_statistics(
         lon_coord="lon",
         lat_coord="lat",
         stats_list=["count"],
-        #if False then take cells with centre within the adm
-        #if True take cells touching the adm
         all_touched=all_touched,
     )
 
@@ -137,4 +134,9 @@ gdf_stats_avg=gdf_adm1.merge(df_stats_aavg,on=pcode_col,how="right")
 
 ```python
 gdf_stats_avg.plot("perc_thresh",legend=True);
+```
+
+```python
+stats_summary = gdf_stats_avg[['ADM1_PCODE', 'ADM1_EN', 'min_ADM1_PCODE', 'mean_ADM1_PCODE', 'max_ADM1_PCODE', 'std_ADM1_PCODE', 'count_ADM1_PCODE', '80quant_ADM1_PCODE', 'perc_thresh']]
+stats_summary.to_csv(index=False)
 ```
