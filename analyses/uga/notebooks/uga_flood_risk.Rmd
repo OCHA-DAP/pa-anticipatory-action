@@ -28,11 +28,13 @@ options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 
 # paths
 data_dir <- Sys.getenv("AA_DATA_DIR") 
-public_raw_glb_dir <- paste0(data_dir,'/public/raw/glb')
 public_raw_uga_dir <- paste0(data_dir,'/public/raw/uga')
-private_exploration_uga_icpac_dir <- paste0(data_dir,'/private/exploration/uga/icpac')
-forecast_image_path <- paste0(private_exploration_uga_icpac_dir, "/forecast_adm1_overlay_20220301.png")
-forecast_data_path <- paste0(private_exploration_uga_icpac_dir, "/stats_summary_20220301.csv")
+private_exploration_uga_dir <- paste0(data_dir,'/private/exploration/uga')
+forecast_image_path <- paste0(private_exploration_uga_dir, "/icpac/forecast_adm1_overlay_20220301.png")
+forecast_data_path <- paste0(private_exploration_uga_dir, "/icpac/stats_summary_20220301.csv")
+uga_adm1_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm1_ubos_20200824.shp")
+uga_adm3_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm3_ubos_20200824.shp")
+ec_jrc_image_path <- paste0(private_exploration_uga_dir, "/ec_jrc_uga_flood_risk_adm3_20220302.png")
 
 ```
 
@@ -67,9 +69,18 @@ This report compiles data on the risk of flood and its potential humanitarian im
 
 ```
 
-```{r flood_risk}
+### Flood Risk
+
+```{r flood_risk, include = FALSE, message = FALSE, warning = FALSE}
+#source("process_flood_risk_data.R")
 
 ```
+The map below depicts flood prone areas for flood events with 10-year return period. Resolution is approx. 1km and colors indicate water depth (in m). 
+
+&nbsp;
+
+![EC-JRC](`r ec_jrc_image_path`)
+
 
 ```{r displacement}
 
@@ -84,7 +95,7 @@ This report compiles data on the risk of flood and its potential humanitarian im
 
 [ICPAC](https://www.icpac.net/seasonal-forecast/) issued its seasonal forecast the months of March through May 2022. On it is the overlay of boundaries for adm1 regions. The colours indicate probability that the 3-month period receives above average rainfall. Probabilities above 40 are considered high and likely. The assumption is that above-average rainfall increases the risk of flooding.
 
-&nbsp
+&nbsp;
 
 ![](`r forecast_image_path`)
 
@@ -108,3 +119,11 @@ forecast_table %>%
 The four regions vary in their forecasted likelihood of receiving above average precipitation. We note that the country's north-east (yellow on the map) is the most likely to experience a particularly wet season. Note that the likelihood is not uniform within a region. Seasonal forecasts do not enable more granular projections (for example, at adm 2 or adm3). The exact location of higher probabilities (that is, yellow pixels in the image) may shift within an adm1 and/or across boundaries between two regions when it comes to actual rainfall.
 
 The summary table report that the Eastern and Northern regions are the most likely to see above average precipitation: they have the highest average probability (ie highest certainty) over the majority of their areas (46.9 and 46.1, respectively.) They also have the largest portions of their area with a probability above 40% and considered "likely" (83.4% and 76.2%, respectively.)
+
+
+## Sources
+
+**Flood risk**
+
+* [EC JRC](https://data.jrc.ec.europa.eu/dataset/jrc-floods-floodmapgl_rp10y-tif)
+
