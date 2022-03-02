@@ -26,10 +26,13 @@ knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
 options(scipen = 999) # turn off scientific notation
 options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 
+# paths
 data_dir <- Sys.getenv("AA_DATA_DIR") 
 public_raw_glb_dir <- paste0(data_dir,'/public/raw/glb')
 public_raw_uga_dir <- paste0(data_dir,'/public/raw/uga')
 private_exploration_uga_icpac_dir <- paste0(data_dir,'/private/exploration/uga/icpac')
+forecast_image_path <- paste0(private_exploration_uga_icpac_dir, "/forecast_adm1_overlay_20220301.png")
+forecast_data_path <- paste0(private_exploration_uga_icpac_dir, "/stats_summary_20220301.csv")
 
 ```
 
@@ -48,11 +51,21 @@ lapply(packages, library, character.only = TRUE)
 
 ```
 
-```{r precipitation_forecast}
 
+<br>
+<br>
+<br>
+
+## Uganda Flood Risk MAM 2022
+Analysis last updated on: `r Sys.Date()`
+
+This report compiles data on the risk of flood and its potential humanitarian impact.
+
+***
+
+```{r maps, dpi=300, include=T, message= FALSE, warning=FALSE, fig.height=8, fig.align="center"}
 
 ```
-
 
 ```{r flood_risk}
 
@@ -67,4 +80,31 @@ lapply(packages, library, character.only = TRUE)
 
 ```
 
+### Precipitation Forecast MAM 2022
 
+[ICPAC](https://www.icpac.net/seasonal-forecast/) issued its seasonal forecast the months of March through May 2022. On it is the overlay of boundaries for adm1 regions. The colours indicate probability that the 3-month period receives above average rainfall. Probabilities above 40 are considered high and likely. The assumption is that above-average rainfall increases the risk of flooding.
+
+&nbsp
+
+![](`r forecast_image_path`)
+
+```{r precipitation_forecast}
+forecast_table <- read.csv(forecast_data_path)
+
+forecast_table %>%
+  select(ADM1_EN, mean_ADM1_PCODE, X80quant_ADM1_PCODE, perc_thresh) %>%
+  mutate(mean_ADM1_PCODE = round(mean_ADM1_PCODE, 1),
+         X80quant_ADM1_PCODE = round(X80quant_ADM1_PCODE, 1),
+         perc_thresh = round(perc_thresh, 1)
+         ) %>%
+  knitr::kable(caption = "Above Average Precipitation Forecast Summary per Adm1",
+               col.names = c('Region', 'Mean Probability', 'Min prob for 80% of area', 'Perc of area with at least 40% prob'),
+               align = c('l', 'c', 'c', 'c')) %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T) 
+
+```
+
+The four regions vary in their forecasted likelihood of receiving above average precipitation. We note that the country's north-east (yellow on the map) is the most likely to experience a particularly wet season. Note that the likelihood is not uniform within a region. Seasonal forecasts do not enable more granular projections (for example, at adm 2 or adm3). The exact location of higher probabilities (that is, yellow pixels in the image) may shift within an adm1 and/or across boundaries between two regions when it comes to actual rainfall.
+
+The summary table report that the Eastern and Northern regions are the most likely to see above average precipitation: they have the highest average probability (ie highest certainty) over the majority of their areas (46.9 and 46.1, respectively.) They also have the largest portions of their area with a probability above 40% and considered "likely" (83.4% and 76.2%, respectively.)
