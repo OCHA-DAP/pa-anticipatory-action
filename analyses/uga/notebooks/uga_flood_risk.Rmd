@@ -30,12 +30,12 @@ options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 data_dir <- Sys.getenv("AA_DATA_DIR") 
 public_raw_uga_dir <- paste0(data_dir,'/public/raw/uga')
 private_exploration_uga_dir <- paste0(data_dir,'/private/exploration/uga')
-forecast_image_path <- paste0(private_exploration_uga_dir, "/icpac/forecast_adm1_overlay_20220301.png")
-forecast_data_path <- paste0(private_exploration_uga_dir, "/icpac/stats_summary_20220301.csv")
 uga_adm1_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm1_ubos_20200824.shp")
 uga_adm3_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm3_ubos_20200824.shp")
 ec_jrc_image_path <- paste0(private_exploration_uga_dir, "/ec_jrc/ec_jrc_uga_flood_risk_adm3_20220302.png")
-
+icpac_image_path <- paste0(private_exploration_uga_dir, "/icpac/forecast_adm1_overlay_20220301.png")
+icpac_data_path <- paste0(private_exploration_uga_dir, "/icpac/stats_summary_20220301.csv")
+unma_image_path <- paste0(public_raw_uga_dir, "/unma/seasonal-forecast-mam2022.gif")
 ```
 
 ```{r libraries, include = FALSE}
@@ -79,14 +79,17 @@ The map below depicts flood prone areas for flood events with 10-year return per
 
 &nbsp;
 
-!["Source: EC-JRC"](`r ec_jrc_image_path`)
+![Source: EC-JRC](`r ec_jrc_image_path`)
 
-```{r displacement}
-
-```
+### Population Density
 
 ```{r population}
 
+
+```
+
+
+```{r displacement}
 
 ```
 
@@ -96,10 +99,11 @@ The map below depicts flood prone areas for flood events with 10-year return per
 
 &nbsp;
 
-![](`r forecast_image_path`)
+![Source: ICPAC](`r icpac_image_path`)
 
 ```{r precipitation_forecast}
-forecast_table <- read.csv(forecast_data_path)
+
+forecast_table <- read.csv(icpac_data_path)
 
 forecast_table %>%
   select(ADM1_EN, mean_ADM1_PCODE, X80quant_ADM1_PCODE, perc_thresh) %>%
@@ -119,10 +123,21 @@ The four regions vary in their forecasted likelihood of receiving above average 
 
 The summary table report that the Eastern and Northern regions are the most likely to see above average precipitation: they have the highest average probability (ie highest certainty) over the majority of their areas (46.9 and 46.1, respectively.) They also have the largest portions of their area with a probability above 40% and considered "likely" (83.4% and 76.2%, respectively.)
 
+For additional input, we also present [UNMA](https://www.unma.go.ug/download/mam2022-seasonal-rainfall-outlook/?wpdmdl=1059)'s seasonal forecast for MAM 2022 below.
+
+```{r, echo=FALSE, out.width="50%", fig.cap="Source: UNMA"}
+knitr::include_graphics(unma_image_path)
+```
 
 ## Sources
 
 **Flood risk**
 
 * [EC JRC](https://data.jrc.ec.europa.eu/dataset/jrc-floods-floodmapgl_rp10y-tif)
+* [Think Hazard - River floods](https://thinkhazard.org/en/report/253-uganda/FL)
+* [Think Hazard - Urban flodds](https://thinkhazard.org/en/report/253-uganda/UF)
 
+**Seasonal forecasts**
+
+* [ICPAC](https://www.icpac.net/seasonal-forecast/)
+* [UNMA](https://www.unma.go.ug/download/mam2022-seasonal-rainfall-outlook/?wpdmdl=1059)
