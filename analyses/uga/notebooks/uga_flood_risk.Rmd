@@ -88,6 +88,8 @@ The map below depicts flood prone areas for flood events with 10-year return per
 
 [Think Hazard](https://thinkhazard.org/en/report/253-uganda/FL), in a collaboration between GFRR and UNMA, produced separate risk maps for river (left) and urban (right) floods. They are shown below.
 
+**River** &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp;  &emsp; &emsp; &emsp; &emsp;  &emsp; &emsp; &emsp; &emsp; &emsp; **Urban**
+
 ![River](`r thinkhzd_river_path`){width=350px} ![Urban](`r thinkhdz_urban_path`){width=350px}
 
 ![](`r thinkhzd_legend_path`)
