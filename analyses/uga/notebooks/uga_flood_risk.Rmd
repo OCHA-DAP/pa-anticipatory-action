@@ -33,6 +33,9 @@ private_exploration_uga_dir <- paste0(data_dir,'/private/exploration/uga')
 uga_adm1_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm1_ubos_20200824.shp")
 uga_adm3_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm3_ubos_20200824.shp")
 ec_jrc_image_path <- paste0(private_exploration_uga_dir, "/ec_jrc/ec_jrc_uga_flood_risk_adm3_20220302.png")
+thinkhdz_urban_path <- paste0(public_raw_uga_dir, "/thinkhazard/urban_flood.png")
+thinkhzd_river_path <- paste0(public_raw_uga_dir, "/thinkhazard/river_flood.png")
+thinkhzd_legend_path <- paste0(public_raw_uga_dir, "/thinkhazard/legend_horizontal.png")
 icpac_image_path <- paste0(private_exploration_uga_dir, "/icpac/forecast_adm1_overlay_20220301.png")
 icpac_data_path <- paste0(private_exploration_uga_dir, "/icpac/stats_summary_20220301.csv")
 unma_image_path <- paste0(public_raw_uga_dir, "/unma/seasonal-forecast-mam2022.gif")
@@ -75,11 +78,19 @@ This report compiles data on the risk of flood and its potential humanitarian im
 #source("process_flood_risk_data.R")
 
 ```
-The map below depicts flood prone areas for flood events with 10-year return period. Resolution is approx. 1km and colors indicate water depth (in m). 
+The map below depicts flood prone areas for flood events with 10-year return period, according to the European Commission Joint Research Council. Resolution is approx. 1km and colors indicate water depth (in m). 
 
 &nbsp;
 
 ![Source: EC-JRC](`r ec_jrc_image_path`)
+
+&nbsp;
+
+[Think Hazard](https://thinkhazard.org/en/report/253-uganda/FL), in a collaboration between GFRR and UNMA, produced separate risk maps for river (left) and urban (right) floods. They are shown below.
+
+![River](`r thinkhzd_river_path`){width=350px} ![Urban](`r thinkhdz_urban_path`){width=350px}
+
+![](`r thinkhzd_legend_path`)
 
 ### Population Density
 
