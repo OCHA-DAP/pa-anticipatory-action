@@ -160,8 +160,11 @@ pop_summary <- cbind(pop_summary, age_80plus = rowSums(pop[, names(pop) %in% age
 DT::datatable(pop_summary, 
               caption = "Population Summary by Sex and Age",
               filter = 'top', 
-              options = list(pageLength = 40, fillContainer = T)) %>%
-    DT::formatRound(3:10, digits = 0) # add thousands marker
+              extensions = "Buttons",
+              options = list(pageLength = 40,
+                             dom = 'Blfrtip',
+                             buttons = c('copy', 'csv', 'excel', 'pdf', 'print'))) %>%
+        DT::formatRound(3:10, digits = 0) # add thousands marker
 ```
 
 
