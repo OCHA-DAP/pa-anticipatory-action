@@ -30,19 +30,24 @@ options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 data_dir <- Sys.getenv("AA_DATA_DIR") 
 public_raw_uga_dir <- paste0(data_dir,'/public/raw/uga')
 private_exploration_uga_dir <- paste0(data_dir,'/private/exploration/uga')
+
 uga_adm1_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm1_ubos_20200824.shp")
 uga_adm3_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm3_ubos_20200824.shp")
+
 ec_jrc_image_path <- paste0(private_exploration_uga_dir, "/ec_jrc/ec_jrc_uga_flood_risk_adm3_20220302.png")
 thinkhdz_urban_path <- paste0(public_raw_uga_dir, "/thinkhazard/urban_flood.png")
 thinkhzd_river_path <- paste0(public_raw_uga_dir, "/thinkhazard/river_flood.png")
 thinkhzd_legend_path <- paste0(public_raw_uga_dir, "/thinkhazard/legend_horizontal.png")
+
+pop_path <- paste0(public_raw_uga_dir, "/cod_ps/uga_admpop_2020_csv/uga_admpop_adm2_2020proj_1y.csv")
+
 icpac_image_path <- paste0(private_exploration_uga_dir, "/icpac/forecast_adm1_overlay_20220301.png")
 icpac_data_path <- paste0(private_exploration_uga_dir, "/icpac/stats_summary_20220301.csv")
 unma_image_path <- paste0(public_raw_uga_dir, "/unma/seasonal-forecast-mam2022.gif")
 ```
 
 ```{r libraries, include = FALSE}
-packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable', 'rebus')
 
 # install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
@@ -96,9 +101,67 @@ The map below depicts flood prone areas for flood events with 10-year return per
 
 ### Population Density
 
+For each adm2 we list below its population density. Each column can be searched and sorted. Upon requested age groups can be modified and/or further broken down by gender.
+
+<br>
+
+```{r population_setup, echo=F, include=F, message=FALSE, warning=FALSE}
+
+pop <- read.csv(pop_path)
+
+# columns by sex
+men_cols <- grepl("M_", names(pop))
+wom_cols <- grepl("F_", names(pop))
+
+# columns by age
+(age_0_12_rx <- rebus::number_range(00, 12)) 
+(age_13_20_rx <- rebus::number_range(13, 20)) 
+(age_21_60_rx <- rebus::number_range(21, 60)) 
+(age_61_79_rx <- rebus::number_range(61, 79)) 
+(age_80plus_rx <- "_80plus")
+
+patterns <- c(age_0_12_rx, age_13_20_rx, age_21_60_rx, age_61_79_rx, age_80plus_rx)  
+cols_by_age <- c('age_0_12', 'age_13_20', 'age_21_60', 'age_61_79', 'age_80plus')  
+
+pattern_labels <- data.frame(patterns, cols_by_age)
+
+for (p in patterns) {
+  df <- grep(pattern = p, x = names(pop), value = TRUE)
+  p_label <- pattern_labels[pattern_labels$patterns == p, 2]
+  assign(paste0(p_label, "_cols"), df)
+  }
+
+```
+
 ```{r population}
+# compute totals per age group across sex
+pop_summary <- data.frame(pop[, c(3,5,7,8,90)]) %>%
+                rename(Sex_M = M_TOTAL,
+                      Sex_F = F_TOTAL)
 
+pop_summary <- cbind(pop_summary, age_0_12 = rowSums(pop[, names(pop) %in% age_0_12_cols]))
+pop_summary <- cbind(pop_summary, age_13_20 = rowSums(pop[, names(pop) %in% age_13_20_cols]))
+pop_summary <- cbind(pop_summary, age_21_60 = rowSums(pop[, names(pop) %in% age_21_60_cols]))
+pop_summary <- cbind(pop_summary, age_61_79 = rowSums(pop[, names(pop) %in% age_61_79_cols]))
+pop_summary <- cbind(pop_summary, age_80plus = rowSums(pop[, names(pop) %in% age_80plus_cols]))
 
+# pop_summary %>%
+#  rename(Sex_M = M_TOTAL,
+#          Sex_F = F_TOTAL) %>%
+#  knitr::kable(caption = "Population Summary by Sex and Age",
+#                align = c('l'),
+#               format.args = list(big.mark = ",")) %>%
+#         #collapse_rows(columns = 1, valign = "top") %>%
+#         add_header_above(c("Area" = 2, "Total Pop" = 1,"Sex" = 2, "Age" = 5)) %>% 
+#         kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+#                       fixed_thead = T) %>%
+#         scroll_box(width = "100%", height = "500px")
+        
+DT::datatable(pop_summary, 
+              caption = "Population Summary by Sex and Age",
+              filter = 'top', 
+              options = list(pageLength = 40, fillContainer = T)) %>%
+    DT::formatRound(3:10, digits = 0) # add thousands marker
 ```
 
 
