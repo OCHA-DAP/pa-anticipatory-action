@@ -52,31 +52,37 @@ library(lubridate)
 
 ```R
 plotFloodedFraction <- function (df,y_col,facet_col,title){
-df %>%
-ggplot(
-aes_string(
-x = "time",
-y = y_col
-)
-) +
-stat_smooth(
-geom = "area",
-span = 1/4,
-fill = "#ef6666"
-) +
-scale_x_date(
-date_breaks = "3 months",
-date_labels = "%b"
-) +
-facet_wrap(
-as.formula(paste("~", facet_col)),
-scales="free_x",
-ncol=5
-) +
-ylab("Flooded fraction")+
-xlab("Month")+
-labs(title = title)+
-theme_minimal()
+    df %>%
+    ggplot(
+        aes_string(
+            x = "time",
+            y = y_col
+        )
+    ) +
+    stat_smooth(
+        geom = "area",
+        span = 1/4,
+        fill = "#ef6666"
+    ) +
+    scale_x_date(
+        date_breaks = "3 months",
+        date_labels = "%b"
+    ) +
+    facet_wrap(
+        as.formula(paste("~", facet_col)),
+        scales="free_x",
+        ncol=5
+    ) +
+    ylab(
+        "Flooded fraction"
+    )+
+    xlab(
+        "Month"
+    )+
+    labs(
+        title = title
+    )+
+    theme_minimal()
 }
 ```
 
@@ -111,7 +117,7 @@ da_clip=fs_clip.SFED_AREA
 ```
 
 ### Stats on Bentiu IDP Camp
-We first compute the statistics for Bentiu only. Note that this is a very small area where there are only 3 cells touching the region and none with the centre in the region.  
+We first compute the statistics for Bentiu only. Note that this is a very small area where there are only 2 cells touching the region and none with the centre in the region.  
 
 ```python
 gdf_bentiu=gpd.read_file(bentiu_bound_path)
@@ -119,7 +125,7 @@ gdf_bentiu=gpd.read_file(bentiu_bound_path)
 
 ```python
 #check how many cells are included in the region
-#NOTE: no cells have their centre within the area.. Only 3 touching it
+#NOTE: no cells have their centre within the area.. Only 2 touching it
 da_clip.rio.clip(gdf_bentiu.geometry, all_touched = True)
 ```
 
@@ -180,15 +186,14 @@ da_rub=da_clip.rio.clip(gdf_rub.geometry, all_touched = True)
 
 ```python
 #how much data do we have and where is Bentiu
-g=da_rub.isel(time=10).plot()
+g=da_rub.mean(axis=2).plot()
 gdf_rub.boundary.plot(ax=g.axes)
 gdf_bentiu.boundary.plot(ax=g.axes,color="red");
 ```
 
 ```python
 #check how many cells are included in the region
-print(f"lat cells: {len(da_rub.lat)}")
-print(f"lon cells: {len(da_rub.lon)}")
+da_rub.mean(axis=2).count().values
 ```
 
 ```python
@@ -212,7 +217,8 @@ df_floodscan_rub['month'] = pd.DatetimeIndex(df_floodscan_rub['time']).month
 df_floodscan_rub['mean_rolling']=df_floodscan_rub.sort_values('time')[f"mean_{bound_col}"].rolling(10,min_periods=10).mean()
 ```
 
-From the graph below we can see quite a different pattern in Rubkona than in Bentiu alone. A small part of the county gets flooded almost every year around June. 
+From the graph below we can see quite a different pattern in Rubkona than in Bentiu alone. A small part of the county gets flooded almost every year around June. Later on, we will see that this annual flooding occurs in the south-west of Rubkona. 
+
 Moroever, we do see the flooding of 2007/2008 as well, but this was relatively small compared to the flooding in 2014/2015. Wheras in 2014 Bentiu saw less flooding during 2014 compared to 2007. 
 
 ```R magic_args="-i df_floodscan_rub -w 40 -h 20 --units cm"
@@ -223,11 +229,21 @@ plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction of Rubkon
 
 With the above plot we convert the 2D situation to a 1D situation. We therefore next plot an animation of the 2D situation for a few years. 
 
-We can see from here that in 2021 and 2014 the flooding clearly started from the left bottom corner and spread slowly further in the county. This spreading is quite slow and takes several weeks. 
+We first look at the mean value per month across all years. We can see from there that the south-west is more regularly flooded, though the mean values are really low (note that the axis only goes to 0.5). 
+
+We can also inspect individual years. We animate 2021, 2014, and 2007. We can see from here that in 2021 and 2014 the flooding clearly started from the left bottom corner and spread slowly further in the county. This spreading is quite slow and takes several weeks. 
 
 In 2007 part of the flooding also started from the left bottom, but part also came from the middle-right. 
 
 When we compare 2014 and 2021, we can also see that the flood in 2021 was both wider spread, as well as more intens in certain areas. 
+
+```python
+da_rub.groupby('time.month').mean().interactive(loc='bottom').isel(
+    month=pnw.Player(name='month', start=0, end=11, 
+                  step=1,
+                  loop_policy='loop')).plot(
+    vmin=0,vmax=0.5)
+```
 
 ```python
 #gif of the timeseries
@@ -273,18 +289,24 @@ da_rub.sel(time=(da_rub.time.dt.year==2007)&(da_rub.time.dt.month.isin([7,8,9,10
 
 Based on the above analysis, it could be an idea to look at the anomaly instead of the absolute value. With this, you filter out areas that are commonly flooded. 
 
-For now we just substract the median from the absolute value. We could also use percentage-based methods or metrics like the z-score. However, the struggle with these is that our data has very small numbers, and is not normallly distributed. This causes that these scores have a wide range of values. 
+For now we just substract the median from the absolute value. If we decide to use this method as part of the trigger, we probably want a more robust method to compute the median. 
+The simplest method we apply here is to remove years during which we saw extremely high values by eyeballing the above graphs. More rigorous options could be a curve fit with sigma clipping for positive outliers, or some kind of fourier fit
+
+We could also use percentage-based methods or metrics like the z-score. However, the struggle with these is that our data has very small numbers, and is not normallly distributed. This causes that these scores have a wide range of values. 
 
 Another option could be to based on this analysis mask out certain areas. I.e. if the median (during the rainy season) is above x
 
 ```python
 #data is not normally distributed
-da_rub.plot();
+da_rub.plot(bins=np.arange(0.01,1,0.01));
 ```
 
 ```python
 #compute the median per pixel and day of the year
-da_med_rub=da_rub.groupby(da_rub.time.dt.dayofyear).median()
+#remove the most extreme years from the median computation. 
+#This is not very objective!
+da_rub_sel=da_rub.where(~da_rub.time.dt.year.isin([2014,2015,2021,2022]))
+da_med_rub=da_rub_sel.groupby(da_rub_sel.time.dt.dayofyear).median()
 ```
 
 We can see that only in the bottom-left there are pixels that are often flooded. Note that even here the numbers are really small (max 2.5% of the pixel flooded), but this is also partly caused by the fact that we take the mean over the full year. 
@@ -353,15 +375,14 @@ da_fan=da_clip.rio.clip(gdf_fan.geometry, all_touched = True)
 
 ```python
 #how much data do we have and where is Bentiu
-g=da_fan.isel(time=10).plot()
+g=da_fan.mean(axis=2).plot()
 gdf_fan.boundary.plot(ax=g.axes)
 gdf_bentiu.boundary.plot(ax=g.axes,color="red");
 ```
 
 ```python
 #check how many cells are included in the region
-print(f"lat cells: {len(da_fan.lat)}")
-print(f"lon cells: {len(da_fan.lon)}")
+da_fan.mean(axis=2,skipna=True).count().values
 ```
 
 ```python
@@ -385,7 +406,7 @@ df_floodscan_fan['month'] = pd.DatetimeIndex(df_floodscan_fan['time']).month
 df_floodscan_fan['mean_rolling']=df_floodscan_fan.sort_values('time')[f"mean_{bound_col}"].rolling(10,min_periods=10).mean()
 ```
 
-From the graph below we can see quite a different pattern in Fangak than in Rubkona. A larger part of the county gets flooded almost every year. The peak of the annual flooding is around September whereas in Rubkona this was around July.  
+From the graph below we can see quite a different pattern in Fangak than in Rubkona. A larger part of the county gets flooded almost every year. The peak of the annual flooding is around September whereas in Rubkona this was around July. 
 Moroever, we see a larger flooding in 2016 and 2020, while we didn't see this in Rubkona. Contrary the flodings that were seen in 2007 and 2014 in Rubkona, are not out of the extraordinary in Fangak. 
 
 We can still clearly see that also in Fangak, 2021 was the most extreme and the waters havent receded so far in 2022. 
@@ -399,6 +420,15 @@ plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction of Fangak
 We next plot the raster data again. 
 In 2021 we can see that around the whole county there was flooding, with different intensity per pixel. 
 In 2021 already a large part of the country was flooded at the beginning of the season. When we look at 2020, we can see that the flooding clearly starts from the bottom-left bottom and then spreads. 
+
+```python
+#Mean flooded fraction across all years per month for Fangak county
+da_fan.groupby('time.month').mean().drop("spatial_ref").interactive(loc='bottom').isel(
+    month=pnw.Player(name='month', start=0, end=11, 
+                  step=1,
+                  loop_policy='loop')).plot(
+    vmin=0,vmax=0.5,cbar_kwargs={"label":"flooded fraction"})
+```
 
 ```python
 #gif of the timeseries
@@ -446,12 +476,15 @@ Next we look at the anomaly compared to the median again. The same issues of non
 
 ```python
 #data is not normally distributed
-da_fan.plot();
+da_fan.plot(bins=np.arange(0.01,1,0.01));
 ```
 
 ```python
 #compute the median per pixel and day of the year
-da_med_fan=da_fan.groupby(da_fan.time.dt.dayofyear).median()
+#remove the most extreme years from the median computation. 
+#This is not very objective!
+da_fan_sel=da_fan.where(~da_fan.time.dt.year.isin([2016,2020,2021,2022]))
+da_med_fan=da_fan_sel.groupby(da_fan_sel.time.dt.dayofyear).median()
 ```
 
 We can again see that mainly the pixels in the bottom-left are regularly flooded. However, this does cover a substantially larger area than in Rubkona. 
@@ -486,8 +519,4 @@ df_floodscan_anom_fan['mean_rolling']=df_floodscan_anom_fan.sort_values('time')[
 df_plot <- df_floodscan_anom_fan %>%
 mutate(time = as.Date(time, format = '%Y-%m-%d'),mean_ADM2_PCODE = mean_ADM2_PCODE*100)
 plotFloodedFraction(df_plot,'mean_ADM2_PCODE','year',"Flooded fraction minus the median flooded fraction, Fangak")
-```
-
-```python
-
 ```
