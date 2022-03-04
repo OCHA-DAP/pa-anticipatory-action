@@ -9,7 +9,11 @@ The two data sources show partial correspondence in years with the highest peaks
 
 As we can see from the analysis the Floodscan data in Malaka shows a strange pattern. It is therefore a little hard to compare the two datasources here.
 
-However, the peak years of the GloFas data don't fully correspond with the peak years of the county of interest either. Especially surprising is that no large peak has been seen in 2021, while according to all other sources this had the most flooding. It must be said though that at the beginning of 2021 there was already a large fraction flooded. I would nevertheless expect the river discharge to be high, but I am not sure if I understand well-enough how river discharge works (Monica, help;)). 
+However, the peak years of the GloFas data don't fully correspond with the peak years of the county of interest either. Especially surprising is that no large peak has been seen in 2021, while according to all other sources this had the most flooding. It must be said though that at the beginning of 2021 there was already a large fraction flooded. 
+
+While the relationship between flooding and river discharge is complicated, we would expect a lagged excess in flood extent after a river discharge peak. It is therefore odd that the annual floodscan peak appears to come before the GloFAS one. The difficulty is that we don't know the reliability of either of the data sources. 
+
+A little bit of Monica knowledge on river discharge vs water level vs flood extent: In principle, river discharge should correspond to water level according to a rating curve. And when water level exceeds the height of a river bank, flooding occurs. However, after that point the relationship breaks down because it depends on how the water spreads around etc. Also, the connection between water level and flood extent is rather complicated for the same reasons.
 
 
 This notebook is inspired by the Malawi glofas vs floodscan analysis
@@ -193,7 +197,26 @@ alt.Chart(df_comb_long[df_comb_long.variable.isin(
 )
 ```
 
-From the graphs above we can see confirmed what we saw in the timeseries graph. Namely, that the two datasources don't correspond very well. 
+```python
+df_comb_raw=df_floodscan[['time','mean_ADM2_PCODE']].merge(
+    df_glofas.reset_index()[['time','Malakal']],on='time',how='inner')
+df_comb_raw=df_comb_raw.rename(columns={"Malakal":"GloFAS","mean_ADM2_PCODE":"floodscan"})
+```
+
+Lastly, we look at the corelation between the two datasources. We also look at the lagged correlation, as we would expect this to be stronger. 
+
+```python
+df_corr=pd.DataFrame.from_dict({t: df_comb_raw["floodscan"].corr(df_comb_raw["GloFAS"].shift(t)) 
+         for t in range(10)},orient="index",columns=["correlation"])#.T
+df_corr.index.name="lag (days)"
+df_corr
+```
+
+From the graphs and the pearson correlation above we can see confirmed what we saw in the timeseries graph. Namely, that the two datasources don't correspond very well. 
 However, given the strange patttern in the floodscan data it is questionable whether this is a good comparison dataset. 
 
 What is worrying nevertheless, is that we don't see a big peak in the 2021 glofas data. Also other years, such as 2014 and 2017 no peak discharge was observed whereas these were years that also saw flooding in the area around the Nile, i.e. south-east of Malakal. 
+
+```python
+
+```
