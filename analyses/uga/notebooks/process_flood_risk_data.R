@@ -1,3 +1,5 @@
+# script to be sourced within analyses/uga/docs/uga_flood_risk.Rmd
+
 # set paths
 public_raw_glb_dir <- paste0(data_dir,'/public/raw/glb')
 flood_risk_filename <- paste0(public_raw_glb_dir, "/ec_jrc/floodMapGL_rp10y/floodMapGL_rp10y.tif")
