@@ -173,7 +173,7 @@ displ_tot <- displ_df %>%
 
 ```
 
-IDMC reports flood-related displacement events going back to 2008. Their catalog of events is displayed in its entirety below (the table is sorted by Year and Hazard_type). The largest displacement for a single event stands at `r max(displ_df$New_displacements)`. 
+[IDMC](https://www.internal-displacement.org/database/displacement-data) reports flood-related displacement events going back to 2008. Their catalog of events is displayed in its entirety below (the table is sorted by Year and Hazard_type). The largest displacement for a single event stands at `r max(displ_df$New_displacements)`. 
 
 ```{r displacement-table}
 displ_df %>%
