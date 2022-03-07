@@ -8,25 +8,17 @@ Exploration of the ICPAC seasonal forecast of above average rainfall in Uganda f
 
 ```python
 import geopandas as gpd
-from shapely.geometry import mapping
 import pandas as pd
 import rioxarray
 import numpy as np
 import xarray as xr
-import cftime
-import calendar
-from dateutil.relativedelta import relativedelta
-from matplotlib.colors import ListedColormap
-from rasterio.enums import Resampling
-import hvplot.xarray
-import altair as alt
 import matplotlib.pyplot as plt
 
 from pathlib import Path
 import sys
 import os
 
-path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[0]}/"
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[1]}/"
 sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 
@@ -79,9 +71,8 @@ da_above.plot();
 ```python
 g=da_above.rio.set_spatial_dims("lon","lat",inplace=True).rio.clip(gdf_adm1.geometry).plot()
 gdf_adm1.boundary.plot(ax=g.axes,color="grey");
-plt.title("MMA Above Average Rainfall Forecast \n Issued by ICPAC Feb 2022")
-plt.savefig(output_dir / 'forecast_adm1_overlay_20220301.png')
-
+plt.title("MAM Above Average Rainfall Forecast \n Issued by ICPAC Feb 2022")
+# plt.savefig(output_dir / 'forecast_adm1_overlay_20220301.png')
 ```
 
 ```python
@@ -149,5 +140,5 @@ stats_summary
 ```python
 data_output_filename = output_dir / "stats_summary_20220301.csv"
 data_output_filename
-stats_summary.to_csv(data_output_filename, index=False)
+# stats_summary.to_csv(data_output_filename, index=False)
 ```
