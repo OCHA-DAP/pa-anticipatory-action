@@ -18,17 +18,17 @@ data_masked <- raster::mask(data_cropped, mask = adm3_shp)
 ec_flood_risk_map <- raster::plot(data_masked, axes = FALSE, box = FALSE)
 
 # save as png
-png(paste0(private_exploration_uga_ec_jrc_dir, '/ec_jrc_uga_flood_risk_adm3_20220302.png'))
-raster::plot(data_masked,
-             main = "Flood Prone Areas\n 10-year return period",
-             xlim = c(29.57501, 35.00001),
-             ylim = c(-1.483236, 4.233431),
-             axes = FALSE,
-             box = FALSE,
-             legend = TRUE,
-             legend.args = list(text = 'Water Depth (m)',
-                                font = 2,
-                                line = 1,
-                                cex = 0.8))
-raster::plot(adm3_shp$geometry, border = "grey", add = TRUE, lwd = 0.5)
-dev.off()
+# png(paste0(private_exploration_uga_ec_jrc_dir, '/ec_jrc_uga_flood_risk_adm3_20220302.png'))
+# raster::plot(data_masked,
+#              main = "Flood Prone Areas\n 10-year return period",
+#              xlim = c(29.57501, 35.00001),
+#              ylim = c(-1.483236, 4.233431),
+#              axes = FALSE,
+#              box = FALSE,
+#              legend = TRUE,
+#              legend.args = list(text = 'Water Depth (m)',
+#                                 font = 2,
+#                                 line = 1,
+#                                 cex = 0.8))
+# raster::plot(adm3_shp$geometry, border = "grey", add = TRUE, lwd = 0.5)
+# dev.off()
