@@ -82,7 +82,7 @@ This report compiles data on the risk of flood and its potential humanitarian im
 #source("../notebooks/process_flood_risk_data.R") # removed to knit. Script produces dataframe and png of flood risk included in this report.
 
 ```
-The map below depicts flood prone areas for flood events with 10-year return period, according to the European Commission Joint Research Council. Resolution is approx. 1km and colors indicate water depth (in m). 
+The map below depicts flood prone areas for flood events with 10-year return period, according to the [European Commission Joint Research Council](https://data.jrc.ec.europa.eu/dataset/jrc-floods-floodmapgl_rp10y-tif) Resolution is approx. 1km and colors indicate water depth (in m). 
 
 &nbsp;
 
