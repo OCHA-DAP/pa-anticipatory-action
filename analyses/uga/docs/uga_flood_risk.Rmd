@@ -226,7 +226,7 @@ forecast_table %>%
          perc_thresh = round(perc_thresh, 1)
          ) %>%
   knitr::kable(caption = "Above Average Precipitation Forecast Summary per Adm1",
-               col.names = c('Region', 'Mean Probability', 'Min prob for 80% of area', 'Perc of area with at least 40% prob'),
+               col.names = c('Region', 'Mean Probability', 'Min prob for 20% of area', 'Perc of area with at least 40% prob'),
                align = c('l', 'c', 'c', 'c')) %>%
         kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                       fixed_thead = T) 
