@@ -1,0 +1,161 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+pagetitle: 'Analyse du risque pour le Tchad'
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+```{r wd-setup, include=FALSE}
+wd <- getwd()
+knitr::opts_knit$set(root.dir = wd)
+```
+
+```{css style settings, echo = FALSE}
+
+# this code chunk allows to modify the appearance of block quoted text throughout the document
+
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 12px;
+    border-left: 5px solid #eee;
+}
+```
+
+<br>
+<br>
+<br>
+
+# Analyse du risque pour le Tchad
+Dernière mise à jour `r Sys.Date()`
+
+<br>
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE, error=FALSE}
+library(here)
+source(here("notebooks/tcd_risk_data_summary.R"))
+
+data_dir <- Sys.getenv("AA_DATA_DIR") # AA_DATA_DIR is set as a variable in .Renviron or .bashprofile
+plot_dir <-paste0(data_dir,'/public/processed/tcd/plots/')
+
+library(kableExtra)
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = FALSE) # do not print output by default
+```
+
+Ce rapport présente une exploration sommaire des risques et vulnérabilités humanitaries au Tchad. Des données sont compilées et présentées sur ces sujets:
+
+- [Analyse ICA](https://geonode.wfp.org/layers/geonode%3Atcd_ica_categories_areas_geonode_mar2017)
+- [Risque d'inondations](https://geonode.wfp.org/layers/geonode%3Atcd_ica_floodrisk_geonode_mar2017)
+- [Risque de sécheresse](https://geonode.wfp.org/layers/geonode%3Atcd_ica_droughtrisk_geonode_mar2017)
+- [Risque de chocs naturels](https://geonode.wfp.org/layers/geonode%3Atcd_ica_naturalshocksrisk_geonode_mar2017)
+- [Population](https://data.humdata.org/dataset/population-statistics-of-chad)
+- [Personnes déplacées à l'interne](https://data.humdata.org/dataset/population-au-tchad-et-total-idps-retournes-refugies-sadd)
+- [Sécurité alimentaire](https://data.humdata.org/dataset/cadre-harmonise)
+- [Pauvreté](https://data.humdata.org/dataset/chad-mpi)
+- [Présence opérationnelle](https://data.humdata.org/dataset/chad-operational-presence)
+- [Projections de précipitations saisonnières](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/)
+
+Certaines données sont offertes au niveau Admin 2 (Départements). Dans certains cas, une moyenne pour la Région (Admin 1) a été calculée.
+
+***
+### Carte géographique du pays
+
+![](`r paste0(plot_dir,"tcd_admin1_boundaries.png")`){width=600px}
+
+### Sommaire de l'AIC
+
+L'analyse de risques de chocs naturels (sécheresses et inondations) fit partie de l'analyse AIC ("Analyse intégrée du contexte") conduite par le Programme d'alimentation mondiale. Celle-ci montre les zones de haute convergence entre la récurrence de l'insécurité alimentaire et la propension aux chocs naturels (inondations, sécheresses, glissements de terrain). 
+
+```{r aic, echo = FALSE, fig.show="hold", out.width="50%",  fig.align='center', dpi = 300}
+
+#par(mar = c(4, 4, .1, .1))
+#include_graphics(aic_areas_map_path)
+aic_areas_map_path <- paste0(plot_dir,"aic-areas-map.png")
+aic_areas_table_path <- paste0(plot_dir,"aic-areas-table.png")
+
+```
+
+![](`r aic_areas_map_path`){width=600px}
+![](`r aic_areas_table_path`){width=500px} 
+
+On peut lire le [rapport ici](https://geonode.wfp.org/documents/8911). La liste complète des classifications est en annexe.
+
+### Cartes de facteurs clé
+
+Les régions les plus affectées par les sécheresses et par les inondations diffèrent. Par conséquent le risque de chocs naturels recouvre une vaste partie du territoire. La région de Lac comprend le plus grand nombre de personne en insécurité alimentaire malgré le fait qu'elle ne soit pas la plus populeuse. Les données sur les chocs naturels et l'insécurité alimentaires ne couvrent pas une période ajacente. Une analyse additionnelle sera nécessaire pour comprendre le lien entre les chocs et la présence de choc.
+
+La région de Lac fut la seule récipiendaire d'activités humanitaires reportées en juin 2020. Elle est la région avec l'index multidimensionnel de pauvreté le plus élevé du pays et reçoit un des plus grands nombres de personnes déplacées internes après Ouaddaï.
+
+
+
+```{r maps, include=T, message= FALSE, warning=FALSE}
+
+combine_map(shp_sum)
+
+```
+
+&nbsp;
+&nbsp;
+
+***
+
+### Données en format tabulaire
+
+```{r table, include=T}
+
+df_sum_display %>%
+  arrange(Admin1) %>%
+  knitr::kable(caption = "Risques, vulnérabliités et facteurs de capacité par Région",
+               col.names = c('Région', 'Risque sécheresse', 'Risque inondations', 'Risque chocs naturels' ,'Population', 'IPC Phase 3+', 'Index multidimensionnel\npauvreté', 'PDIs', 'Activités humanitaires'),
+               align = c('l', 'l', 'l', 'l', 'l', 'l', 'l', 'l',  'l')) %>%
+        kableExtra::collapse_rows(columns = 1, valign = "top") %>%
+        kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = T) 
+
+```
+
+&nbsp;
+&nbsp;
+
+***
+
+### Prévisions de précipitations
+
+Les prévisions de l'[IRI](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/) les plus récentes projettent une saison des pluies avec un cumul de précipitations au-delà de la normale pour la majeure partie du pays, et une saison en-deçà de la normale dans le sud est.
+
+<img src="https://iri.columbia.edu/climate/forecast/net_asmt_nmme/2021/apr2021/images/JJA21_Afr_pcp.gif" alt="drawing" width="400"/>
+
+
+### Annexe
+
+Résultats de l'analyse intégrée du contexte.
+
+
+```{r annex, include=T}
+
+shp_ica_all %>%
+  dplyr::select(admin1Name_fr, adm2_name, ICA_Areas) %>%
+  mutate(f_sec = ifelse(ICA_Areas %in% c('Area 1a','Area 1b','Area 3a'), "Élevée", 
+                        ifelse(ICA_Areas %in% c('Area 2a','Area 2b','Area 3b'), "Moyenne",  
+                               "Faible")),
+         nat = ifelse(ICA_Areas %in% c('Area 1a','Area 2a','Area 4a'), "Élevée", 
+                        ifelse(ICA_Areas %in% c('Area 1b','Area 2b','Area 4b'), "Moyenne",  
+                               "Faible")),
+         ) %>%
+  arrange(admin1Name_fr, adm2_name) %>%
+  knitr::kable(caption = "Analyse intégrée du contexte au Tchad (2017)",
+               col.names = c('Région','Département', 'Aire AIC', 'Récurrence insécurité alimentaire', 'Exposition aux chocs naturels'),
+               align = c('l', 'l', 'l', 'l', 'l')) %>%
+        kableExtra::collapse_rows(columns = 1, valign = "top") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), fixed_thead = T) 
+
+```

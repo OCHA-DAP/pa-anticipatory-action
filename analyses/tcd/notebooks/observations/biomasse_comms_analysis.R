@@ -1,0 +1,294 @@
+###############
+#### SETUP ####
+###############
+
+library(tidyverse)
+library(ggthemes)
+library(yardstick)
+library(lubridate)
+library(ggrepel)
+library(ggpubr)
+
+aa_dir <- Sys.getenv("AA_DATA_DIR")
+
+df <- read_csv(file.path(
+  aa_dir, "public", "processed", "tcd", "biomasse", "biomasse_tcd_ADM2_dekad_10.csv"
+)) %>%
+  mutate(month = ((dekad - 1) %/% 3) + 1,
+         day = 10 * ((dekad - 1) %% 3) + 1,
+         date = ymd(paste(2000, month, day, sep = "-")),
+         date_pub = date + days(20))
+
+biomasse_years <- read_csv(
+  file.path(
+    aa_dir, "public", "processed", "tcd", "biomasse", "biomasse_impact_years.csv"
+  )
+)$year
+
+list_years <- c(2001, 2004, 2009, 2011, 2017)
+
+####################
+#### PREDICTION ####
+####################
+
+pred_df <- mutate(
+  df,
+  biomasse_pred = factor(biomasse_anomaly <= 80, levels = c(T,F)),
+  bm_end_season = factor(year %in% biomasse_years, levels = c(T,F)),
+  drought_list = factor(year %in% list_years, levels = c(T,F))
+)
+
+#################
+#### METRICS ####
+#################
+
+# generate metrics for months July to December
+# only looking at data from the 2nd dekad of
+# each month, which is roughly available from
+# the first of the next month
+
+calc_metrics <- function(df, pred, true, group = NULL) {
+  df %>%
+    group_by({{ group }}) %>%
+    summarize(`Valid activation rate` = precision_vec({{ true }}, {{ pred }}),
+              `False alarm rate` = 1 - `Valid activation rate`,
+              `Detection rate` = recall_vec({{ true }}, {{ pred }}),
+              `Miss rate` = 1 - `Detection rate`,
+              Accuracy = accuracy_vec({{ true }}, {{ pred }}),
+              `Return period` = (n() + 1) / sum({{ pred }} == TRUE))
+}
+
+pred_jul_dec_df <- pred_df %>%
+  mutate(month_pub = month + 1) %>%
+  filter(day == 11, between(month_pub, 5, 12))
+
+end_season_metrics <- calc_metrics(pred_jul_dec_df, bm_end_season, biomasse_pred, month_pub)
+list_metrics <- calc_metrics(pred_jul_dec_df, drought_list, biomasse_pred, month_pub)
+
+# Compared to end of season Biomasse (end of November)
+
+bm_end_season_p <- end_season_metrics %>%
+  pivot_longer(-month_pub) %>%
+  filter(name %in% c("Valid activation rate", "False alarm rate", "Miss rate")) %>%
+  ggplot(aes(x = month_pub, y = name)) +
+  geom_tile(aes(alpha = value, fill = name), color = "white") +
+  geom_text_repel(aes(label = scales::percent(value, accuracy = 1, suffix = "")),
+                  color = "#111111",
+                  fontface = "bold",
+                  size = 3.5,
+                  bg.color = "white",
+                  bg.r = 0.15,
+                  force = 0) +
+  scale_alpha(range = c(0.2, 1)) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#EA4C46", "#EA4C46", "#62BD69")) +
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks = 5:12,
+                     labels = ~ month.abb[.x]) +
+  labs(x = "Month of publication",
+       y = "",
+       title = "Biomasse anomaly, threshold of 80%, against end of season Biomasse, Chad",
+       subtitle = "Data published around the 1st of each month")
+
+bm_end_season_p
+
+# Compared to drought list
+
+bm_drought_list_p <- list_metrics %>%
+  pivot_longer(-month_pub) %>%
+  filter(name %in% c("Valid activation rate", "False alarm rate", "Miss rate")) %>%
+  ggplot(aes(x = month_pub, y = name)) +
+  geom_tile(aes(alpha = value, fill = name), color = "white") +
+  geom_text_repel(aes(label = scales::percent(value, accuracy = 1, suffix = "")),
+                  color = "#111111",
+                  fontface = "bold",
+                  size = 3.5,
+                  bg.color = "white",
+                  bg.r = 0.15,
+                  force = 0) +
+  scale_alpha(range = c(0.2, 1)) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#EA4C46", "#EA4C46", "#62BD69")) +
+  theme(legend.position = "none") +
+  scale_x_continuous(breaks = 5:12,
+                     labels = ~ month.abb[.x]) +
+  labs(x = "Month of publication",
+       y = "",
+       title = "Biomasse anomaly, threshold of 80%, against list of drought years, Chad",
+       subtitle = "Data published around the 1st of each month")
+
+bm_drought_list_p
+
+
+# Bootstrap performance metrics for September
+
+pred_sep_df <- pred_jul_dec_df %>%
+  filter(month_pub == 9) %>%
+  select(biomasse_pred, bm_end_season, drought_list)
+
+bootstrapped_metrics <- map_dfr(
+  1:10000,
+  ~ pred_sep_df[sample(1:nrow(pred_sep_df), nrow(pred_sep_df), replace = T),] %>%
+    calc_metrics(biomasse_pred, drought_list)
+    )
+
+bootstrapped_metrics %>%
+  summarize(
+    across(
+      everything(),
+      ~quantile(.x, probs = c(0.125, 0.875), na.rm = T)
+    )
+  )
+
+# Historical events graph
+
+plot_df <- pred_sep_df %>%
+  summarize(`False activations` = sum(biomasse_pred == TRUE & drought_list == FALSE),
+            `Valid activations` = sum(biomasse_pred == TRUE & drought_list == TRUE),
+            `Missed events` = sum(biomasse_pred == FALSE & drought_list == TRUE)) %>%
+  pivot_longer(everything()) %>%
+  mutate(dummy = 1,
+         name = factor(name, levels = c("False activations", "Valid activations", "Missed events")))
+
+plot_df %>%
+  ggplot(aes(fill = name, y = value, x = dummy)) +
+  geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 1) +
+  scale_fill_manual(values = c("#f07470", "#1bb580", "#f07470")) +
+  coord_flip() +
+  geom_segment(y = 0, yend = 5, x = 1.6, xend = 1.6,
+             color = "#444444",
+             arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
+  geom_text(y = 2.5,
+            x = 1.7,
+            label = paste(sum(plot_df[2:3, 2]), "drought events"),
+            size = 5,
+            fontface = "bold") +
+  geom_segment(y = 2, yend = 7, x = 0.4, xend = 0.4,
+             color = "#444444",
+             arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
+  geom_text(y = 4.5,
+            x = 0.3,
+            label = paste(sum(plot_df[1:2, 2]), "activations"),
+            size = 5,
+            fontface = "bold") +
+  scale_x_continuous(limits = c(0.2, 1.8)) +
+  scale_y_continuous(breaks = 0:7) +
+  geom_text(x = 1,
+            y = 1,
+            label = paste0("atop(bold('", unlist(plot_df[3,2]), "'),'missed events')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 3.5,
+            label = paste0("atop(bold('", unlist(plot_df[2,2]), "'),'valid activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 6,
+            label = paste0("atop(bold('", unlist(plot_df[1,2]), "'),'false activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        legend.position = "none") +
+  labs(x = NULL,
+       y = NULL,
+       title = "Historical drought trigger activations and events",
+       subtitle = "Threshold of 80% Biomasse anomaly published in September")
+
+
+# trying the new color scheme
+
+
+plot_df %>%
+  ggplot(aes(fill = name, y = value, x = dummy)) +
+  geom_bar(aes(alpha = name), position = "stack", stat = "identity", width = 1) +
+  scale_fill_manual(values = c("#c2bea7", "#6a8a93", "#81a9b5")) +
+  scale_alpha_manual(values = c(0.8, 0.95, 0.8)) +
+  coord_flip() +
+  geom_segment(y = 0, yend = 5, x = 1.6, xend = 1.6,
+               color = "#b1ae9d",
+               arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
+  geom_text(y = 2.5,
+            x = 1.7,
+            label = paste(sum(plot_df[2:3, 2]), "SHOCKS"),
+            size = 5,
+            fontface = "bold",
+            color = "#b1ae9d") +
+  geom_segment(y = 2, yend = 7, x = 0.4, xend = 0.4,
+               color = "#b1ae9d",
+               arrow = arrow(angle = 20, length = unit(0.1, "in"), ends = "both", type = "closed")) +
+  geom_text(y = 4.5,
+            x = 0.3,
+            label = paste(sum(plot_df[1:2, 2]), "ACTIVATIONS"),
+            size = 5,
+            fontface = "bold",
+            color = "#b1ae9d") +
+  scale_x_continuous(limits = c(0.2, 1.8)) +
+  scale_y_continuous(breaks = 0:7) +
+  geom_text(x = 1,
+            y = 1,
+            label = paste0("atop(bold('", unlist(plot_df[3,2]), "'),'Missed Shocks')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 3.5,
+            label = paste0("atop(bold('", unlist(plot_df[2,2]), "'),'Valid Activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_text(x = 1,
+            y = 6,
+            label = paste0("atop(bold('", unlist(plot_df[1,2]), "'),'False Activations')"),
+            color = "white",
+            size = 5,
+            parse = TRUE) +
+  geom_segment(y = 2,
+               yend = 2,
+               x = 0.5,
+               xend = 1.5,
+               color = "white",
+               lwd = 1,
+               linetype = "dashed") +
+  geom_segment(y = 5,
+               yend = 5,
+               x = 0.5,
+               xend = 1.5,
+               color = "white",
+               lwd = 1,
+               linetype = "dashed") +
+  theme_classic() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        legend.position = "none") +
+  labs(x = NULL,
+       y = NULL,
+       title = "Historical drought trigger activations and shocks",
+       subtitle = "Threshold of 80% Biomasse anomaly published in September")
+
+# are results due to random chance?
+
+bootstrapped_jumble_metrics <- map_dfr(
+  1:10000,
+  ~ pred_sep_df %>%
+    mutate(
+      biomasse_pred = sample(biomasse_pred, n()),
+      drought_list = sample(drought_list, n())
+    ) %>%
+    calc_metrics(biomasse_pred, drought_list)
+)           
+
+bootstrapped_jumble_metrics %>%
+  summarize(
+    `Valid activation rate` = 100 * sum(`Valid activation rate` >= 0.6, na.rm = T) / n(),
+    `Miss rate` = 100 * sum(`Miss rate` <= 0.4, na.rm = T) / n(),
+    `False alarm rate` = 100 * sum(`False alarm rate` <= 0.4, na.rm = T) / n(),
+    `Detection rate` = 100 * sum(`Detection rate` >= 0.6, na.rm = T) / n(),
+  )
