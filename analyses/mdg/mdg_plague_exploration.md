@@ -56,7 +56,8 @@ def max_week(year):
         return 52
 
 def preprocess_plague_data(path,list_cases_class=None, delimiter = ";"):
-    df = pd.read_csv(path, delimiter = delimiter)
+#     df = pd.read_csv(path, delimiter = delimiter)
+    df=pd.read_excel(plague_path)
     df.columns=df.columns.str.lower()
     df.rename(columns={"mdg_com_code":"ADM3_PCODE"},inplace=True)
     #to make pcodes correspond with shp file
@@ -106,7 +107,7 @@ def plague_group_by_date(df, sel_start_date=None, sel_end_date=None):
 ```python
 #define period of current interest
 sel_start_date = "2021-08-02"
-sel_end_date = "2021-10-01"
+sel_end_date = "2022-02-25"
 sel_start_week = 31
 sel_end_week = 38
 ```
@@ -136,7 +137,8 @@ Path(plot_dir).mkdir(parents=True, exist_ok=True)
 ```
 
 ```python
-plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2021-10-01.csv"
+plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2022-01-03.csv"
+plague_data_filename = "Madagascar_IPM_Plague_cases_Aggregated_2022-02-24_checked for OCHA_v1.xls"
 plague_dir = Path(config.DATA_DIR) / config.PRIVATE_DIR / config.RAW_DIR / iso3 / "institut_pasteur"
 plague_path = plague_dir / plague_data_filename
 plague_data_filename_old = "Madagascar_IPM_Plague_cases_Aggregated_2021-09-28.csv"
@@ -144,7 +146,66 @@ plague_path_old = plague_dir / plague_data_filename_old
 ```
 
 ```python
-df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class,delimiter=",")
+df=preprocess_plague_data(plague_path,list_cases_class=incl_cases_class, delimiter=",")
+```
+
+```python
+bla=pd.read_excel(plague_path)
+```
+
+```python
+def preprocess_plague_data_test(path,list_cases_class=None, delimiter = ";"):
+#     df = pd.read_csv(path, delimiter = delimiter)
+    df=pd.read_excel(plague_path)
+    df.columns=df.columns.str.lower()
+    df.rename(columns={"mdg_com_code":"ADM3_PCODE"},inplace=True)
+    #to make pcodes correspond with shp file
+    df.ADM3_PCODE=df.ADM3_PCODE.str.replace("MDG","MG")
+    #In old data, there is an entry of week 53 in 2021, 
+    #this cannot be correct so drop it 
+    #not neatest method but good enough for now
+    df=df[~((df.year==2021)&(df.week==53))]
+    #create a datetime from the year and week as this is easier with plotting
+    #first, make sure no invalid iso weeks (sometimes had week as 53 when max
+    #iso weeks in a year were 52)
+    df["max_week"] = [max_week(x) for x in df.year]
+    df["week"] = df[["week", "max_week"]].min(axis=1)
+    df["date"]=df.apply(lambda x: date.fromisocalendar(x.year,x.week,1),axis=1)
+    df["date"]=pd.to_datetime(df["date"])
+
+    #simplify names if long so all datasets match
+    df.cases_class.replace(
+        to_replace = ["CONFIRME", "SUSPECTE", "PROBABLE"],
+        value = ["CONF", "SUSP", "PROB"],
+        inplace = True
+    )
+    if list_cases_class is not None:
+        df=df[df.cases_class.isin(list_cases_class)]
+    return df
+```
+
+```python
+boo=preprocess_plague_data_test(plague_path)
+```
+
+```python
+boo[boo.year==2022].groupby("week").count()
+```
+
+```python
+df[df.year==2022].groupby("week").count()#sort_values("week")
+```
+
+```python
+df[df.year==2022].groupby("week").count()#sort_values("week")
+```
+
+```python
+df[df.commune=="FIRAVAHANA"]
+```
+
+```python
+bla[bla.Year==2022].groupby("Week").count()
 ```
 
 ```python
@@ -213,7 +274,7 @@ This column contains the Commune Pcode, which is admin3 level. However, it seems
 Very basic plot with cases over time
 
 ```python
-df_date=plague_group_by_date(df, sel_end_date="2021-11-08")
+df_date=plague_group_by_date(df, sel_end_date=sel_end_date)
 ```
 
 ```python
@@ -313,7 +374,7 @@ df_urb = df_urb[df_urb.urban_area_weighted_13.notnull()]
 df_urb = df_urb.loc[df_urb.urban_area_weighted_13 & (df_urb.clinical_form == "PP")]
 
 #group by date
-df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date="2021-11-08")
+df_date_urb=plague_group_by_date(df_urb, sel_start_date="2012-01-01", sel_end_date=sel_end_date)
 ```
 
 ```python
@@ -638,11 +699,23 @@ df_sel=df[(df.date>=sel_start_date)&(df.date<=sel_end_date)]
 ```
 
 ```python
+df.date.max()
+```
+
+```python
+# df[df.year==2022]
+```
+
+```python
 df_sel.head()
 ```
 
 ```python
 df_sel.cases_number.sum()
+```
+
+```python
+df_sel[df_sel.year==2022]
 ```
 
 ```python
