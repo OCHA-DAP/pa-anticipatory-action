@@ -1,6 +1,11 @@
 ### Flooded fraction in the country
 As we can see in the notebook `ssd_floodscan_adm2`, there is a lot of fluctuation between the counties. Since the division of counties is pretty artificial, we can also look at the total flooded fraction in the country. With this we can get a general idea of the floods across the country, after which we can zoom in on the specific counties. 
 
+
+Thoughts: we might want to look at clustering. I.e. if there is one random pixel with high flooded fraction, there is a higher chance that is a false positive than when there are many pixels in the same area being flooded. 
+
+The same goes for number of consecutive days. 
+
 ```python
 %load_ext autoreload
 %autoreload 2
