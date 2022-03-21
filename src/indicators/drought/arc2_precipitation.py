@@ -294,10 +294,9 @@ class ARC2:
                 f"into main file: {main_filepath.name}."
             )
 
-            main = xr.open_dataarray(main_filepath)
-            raw = xr.open_dataarray(raw_filepath)
-
-            main_merge = xr.concat([main, raw], dim=T_COL)
+            main_da = xr.open_dataarray(main_filepath)
+            raw_da = xr.open_dataarray(raw_filepath)
+            main_merge = xr.concat([main_da, raw_da], dim=T_COL)
 
             # TODO: use these as temporary files rather
             # than download then delete
@@ -307,7 +306,7 @@ class ARC2:
             # Ensuring fill value encoding is properly set in new
             # merged dataset
             main_merge.encoding["_FillValue"] = -999
-
+           
             main_merge.to_netcdf(main_filepath)
 
     def _get_directory(self, dir: Union[Path, str]) -> Path:
@@ -540,7 +539,7 @@ class DrySpells(ARC2):
             x_res, y_res = da.rio.resolution()
             da = da.rio.reproject(
                 da.rio.crs, resolution=(x_res / 4, y_res / 4)
-            )
+            ).rename({"x":"X", "y":"Y"})
 
         df_zonal_stats = compute_raster_statistics(
             gdf=gdf,
@@ -715,7 +714,7 @@ class DrySpells(ARC2):
             filepath_or_buffer=fp,
             parse_dates=["ds_first_date", "ds_confirmation", "ds_last_date"],
         )
-        if filter:
+        if filter and df.shape[0] > 0:
             t_col = "ds_confirmation"
             df = df[
                 (df[t_col].dt.date >= self.date_min)
