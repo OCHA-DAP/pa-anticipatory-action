@@ -1,18 +1,3 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,md,Rmd
-    text_representation:
-      extension: .md
-      format_name: markdown
-      format_version: '1.3'
-      jupytext_version: 1.10.3
-  kernelspec:
-    display_name: antact
-    language: python
-    name: antact
----
-
 # RPSS across Burkina Faso
 This notebook explores the Ranked Probability Skill Score (RPSS) for IRI's seasonal forecast. 
 

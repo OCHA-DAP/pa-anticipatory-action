@@ -38,8 +38,6 @@ parameters = config.parameters(iso3)
 country_data_raw_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / config.RAW_DIR / iso3
 adm2_bound_path=country_data_raw_dir / config.SHAPEFILE_DIR / parameters["path_admin2_shp"]
 chirps_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "processed" / iso3 / "chirps" / "daily"
-country_processed_dir = Path(config.DATA_DIR) / config.PUBLIC_DIR / "processed" / iso3
-bentiu_bound_path = country_processed_dir / "bentiu" / "bentiu_bounding_box.gpkg"
 ```
 
 ```python
