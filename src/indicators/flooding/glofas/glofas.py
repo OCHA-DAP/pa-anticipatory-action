@@ -270,7 +270,7 @@ class GlofasReanalysis(Glofas):
     def __init__(self, **kwargs):
         super().__init__(
             year_min=1979,
-            year_max=2020,
+            year_max=2021,
             cds_name="cems-glofas-historical",
             dataset=["consolidated_reanalysis"],
             dataset_variable_name="dataset",
