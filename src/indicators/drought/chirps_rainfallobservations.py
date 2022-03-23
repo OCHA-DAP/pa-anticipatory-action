@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import urllib
 from calendar import month_name
 from datetime import datetime, timedelta
@@ -10,6 +11,8 @@ import geopandas as gpd
 import rasterio
 import xarray as xr
 
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
+sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.utils_general.utils import download_ftp
 
