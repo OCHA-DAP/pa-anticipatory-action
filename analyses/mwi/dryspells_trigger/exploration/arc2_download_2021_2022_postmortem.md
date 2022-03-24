@@ -1,3 +1,4 @@
+```python
 ## download arc2 data covering the 2021-2022 rainy season
 
 # set up
@@ -41,3 +42,4 @@ arc2_centr = DrySpells(
 )
 
 arc2_centr.download() # downloads raw raster
+```
