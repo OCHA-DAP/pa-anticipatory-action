@@ -24,12 +24,23 @@ _SEASONAL_TERCILE_BOUNDS_FILENAME = (
 )
 
 
-def download_chirps_daily(config, year, resolution="25", write_crs=False):
+def download_chirps_daily(
+    config,
+    year,
+    resolution="25",
+    write_crs=False,
+    clobber=False,
+):
     """
-    Download the CHIRPS data for year from their ftp server Args: config
-    (Config): config for the drought indicator year (str or int): year
-    for which the data should be downloaded in YYYY format resolution
-    (str): resolution of the data to be downloaded. Can be 25 or 05
+    Download the CHIRPS data for year from their ftp server
+    Args: config (Config):
+    config for the drought indicator
+    year (str or int):
+    year for which the data should be downloaded in YYYY format
+    resolution (str):
+    resolution of the data to be downloaded. Can be 25 or 05
+    clobber (bool):
+        if True, overwrite data
     """
     chirps_dir = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
@@ -44,7 +55,11 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
     # are in the current year and in the previous year if at the start
     # of new year
     year_update = (today - timedelta(days=60)).year
-    if not os.path.exists(chirps_filepath) or int(year) >= year_update:
+    if (
+        not os.path.exists(chirps_filepath)
+        or int(year) >= year_update
+        or clobber
+    ):
         try:
             if os.path.exists(chirps_filepath):
                 os.remove(chirps_filepath)
@@ -345,7 +360,9 @@ def _compute_tercile_category(da, da_quantile):
     return da_bn, da_no, da_an
 
 
-def get_chirps_data_daily(config, year, resolution="25", download=False):
+def get_chirps_data_daily(
+    config, year, resolution="25", download=False, clobber=False
+):
     """
     Load CHIRP's NetCDF file as xarray dataset Args: config (Config):
     config for the drought indicator year (str or int): year for which
@@ -359,7 +376,7 @@ def get_chirps_data_daily(config, year, resolution="25", download=False):
     """
 
     if download:
-        download_chirps_daily(config, year, resolution)
+        download_chirps_daily(config, year, resolution, clobber=clobber)
 
     chirps_filepath_crs = os.path.join(
         config.GLOBAL_DIR,
