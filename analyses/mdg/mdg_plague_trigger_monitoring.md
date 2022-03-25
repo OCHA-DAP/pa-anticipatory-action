@@ -56,8 +56,8 @@ urban_path = urban_dir / urban_filename
 
 ```python
 #define period of monitoring
-mon_start_date = "2022-01-01"
-mon_end_date = "2022-03-14"
+mon_start_date = pd.Timestamp(date.fromisoformat("2022-01-01"))
+mon_end_date = pd.Timestamp('today').floor('D')
 ```
 
 ```python
