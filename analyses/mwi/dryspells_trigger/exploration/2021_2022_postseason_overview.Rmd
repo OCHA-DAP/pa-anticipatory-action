@@ -1,0 +1,32 @@
+---
+title: "MWI 2021 - 2022 Season Overview"
+pagetitle: "Malawi Rains Dec 2021 - Jan 2022"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r global-setup}
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = TRUE) # include chunk output by default
+knitr::opts_chunk$set(message = FALSE) # do not print messages by default
+knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
+
+options(scipen = 999) # turn off scientific notation
+options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
+```
+
+```{r libraries}
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
+
+# install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# load libraries 
+lapply(packages, library, character.only = TRUE)
+```
+
