@@ -26,25 +26,40 @@ arc2_filepath <- paste0(data_dir, "/public/raw/mwi/arc2/arc2_daily_precip_mwi_32
 #dry_spell_processed_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/")
 
 # prep to mask area outside of MWI & Southern region
-mwi_adm1_vect <- terra::vect(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
+mwi_adm1_vect <- vect(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
 southern_vect <- mwi_adm1_vect[mwi_adm1_vect$ADM1_EN == 'Southern',]
 
 #####
 ## process ARC2 observational rainfall data (already cropped)
 #####
 
-raw <- terra::rast(arc2_filepath) 
-arc2_terra_masked <- terra::mask(raw, mask = southern_vect)
+# read in arc2 files (full history, cropped to MWI) and crop to Southern region
+raw <- rast(arc2_filepath) 
+res(raw)
 
-arc2 <- subset(arc2_terra_masked, start_date:end_date)
+cropped <- crop(raw, southern_vect, mask = T)
+
+# subset period of interest
 start_date <- 7959 #7958 = number of days between 19 dec 1999 and 1 oct 2021
-#end_date <- 8141 #8140 = number of days between 19 dec 1999 and 1 apr 2022  
-end_date <- 8130 ###FIX ME ONCE DATA UP TO 1 APR AVAILABLE
+end_date <- 8129 #8140 = number of days between 19 dec 1999 and 1 apr 2022  ###FIX ME ONCE DATA UP TO 1 APR AVAILABLE
+date_numbers <- seq(from = start_date, to = end_date, by = 1)
+dates <- paste0("est_prcp_T=", date_numbers)
+  
+data_r <- subset(cropped, dates)
 
-plot(arc2[[start_date:end_date]]) 
+# extract values
+cell_numbers <- cells(data_r, 
+                      southern_vect, 
+                      touches = T, # all cells touched by polygons are extracted not just those whose center point is within the polygon
+                      exact = T) # weights =  exact fraction of each cell that is covered
 
-x <- raster::extract(arc2, cellnumbers = T, df = T, nl = nlayers(masked))
+data <- extract(data_r, 
+                southern_vect,
+                touches = T,
+                cells = T, # return cell numbers
+                xy = T) # return cell coordinates
 
-data.frame(values(arc2)) -> r
+data <- data %>%
+          select(ID, cell, x, y, everything()) # move cell number + coordinates columns to first positions
 
-# saveRDS(data_masked, paste0(dry_spell_processed_path, "mwi_2021_2022_overview_r5.RDS"))) # 5-deg resolution
+# saveRDS(data, paste0(dry_spell_processed_path, "mwi_2021_2022_postseason_overview.RDS"))
