@@ -23,7 +23,7 @@ options(scipen = 999)
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
 arc2_filepath <- paste0(data_dir, "/public/raw/mwi/arc2/arc2_daily_precip_mwi_32E_36E_20S_5S_main.nc")
-#dry_spell_processed_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/")
+dry_spell_processed_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/")
 
 # prep to mask area outside of MWI & Southern region
 mwi_adm1_vect <- vect(paste0(shapefile_path, "/mwi_admbnda_adm1_nso_20181016.shp"))
