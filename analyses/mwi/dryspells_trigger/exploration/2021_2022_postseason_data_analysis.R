@@ -39,3 +39,43 @@ lf$week <- lubridate::week(lf$labels)
 
 lf <- lf %>%
       select(cell, date_chr, labels, month, week, rainfall)  
+
+lf <- lf %>% arrange(cell, labels) 
+
+###
+# analysis
+###
+
+## TO DO handle rainfall = NAs ****
+
+# determine if day was rainy. Binary value. Rainy = received 3 or more mm of rain. Definition from February 2022 bulletin from DCCMS
+lf$rainy_bin <- ifelse(lf$rainfall >= 3, 1, 0)
+
+# identify streaks of rainy days per cell (streak minimum: 1 day)
+debug <- lf %>%
+        group_by(cell) %>%
+        mutate(lagged = dplyr::lag(rainy_bin),
+               streak_start = ifelse(row_number() == 1, TRUE, (rainy_bin != lagged)),  # If first date of cell, then it's first day of a streak. If not, check if this day's value is the same as previous row's.
+               streak_id = cumsum(streak_start)) %>%
+        group_by(cell, streak_id) %>%
+        mutate(day_into_streak = ifelse(!is.na(streak_id), row_number(), NA)) %>%
+        ungroup() %>%
+        mutate(streak_type = ifelse(rainy_bin == 0, "dry", "wet"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
