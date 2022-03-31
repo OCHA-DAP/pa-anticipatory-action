@@ -14,13 +14,12 @@ source('2021_2022_postseason_data_pull.R')
 #####
 
 # user-friendly date labels
-dates <- seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'), 
+dates <- data.frame(dates = seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'), 
                    to = as.Date('2022-03-20', format = '%Y-%m-%d'), ## FIX ME
                    # to = as.Date('2022-04-01', format = '%Y-%m-%d'), 
-                   by = "days")
-dates_df <- as.data.frame(dates) 
+                   by = "days"))
 
-date_labels <- cbind(dates_chr, dates_df)
+date_labels <- cbind(dates_chr, dates)
 
 # pivot data to long format & formatting
 lf <- data %>% 
@@ -78,10 +77,33 @@ onsets <- stats %>%
              slice(which.min(dates)) %>% # retrieve earliest date that meets criterion per cell 
              ungroup() %>%
              select(cell, date_chr, dates, roll_sum_foll_10d, followed_by_ds) %>%
+             rename(onset_date_chr = date_chr, onset_date = dates) %>%
+             mutate(onset_days_since_1nov = as.numeric(difftime(onset_date, as.Date("2021-11-01"), unit = "days"))) %>% # Day 0 = 1 Nov
              as.data.frame()
 
+#####
+# create raster with results
+#####
 
+# create blank raster and cell number list
+raster_template <- terra::subset(data_r, 1) # keep a single layer and create a template raster
+template_cells <- data.frame(cell = 1:ncell(raster_template))
 
+names(raster_template) <- "discardable" # rename existing layer
+varnames(raster_template) <- "discardable" # rename existing variable
+
+# create time-static raster
+static <- raster_template
+
+# create onset raster layer
+onsets_all_cells <- left_join(template_cells, onsets, by = 'cell')
+onset_r <- raster_template
+onset_r <- setValues(onset_r, onsets_all_cells$onset_days_since_1nov)
+varnames(onset_r) <- "onset"
+
+names(onset_r) <- "onset"
+
+static <- c(static, onset_r)
 
 
 
