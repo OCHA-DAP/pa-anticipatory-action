@@ -43,9 +43,9 @@ cropped <- crop(raw, southern_vect, mask = T)
 start_date <- 7959 #7958 = number of days between 19 dec 1999 and 1 oct 2021
 end_date <- 8129 #8140 = number of days between 19 dec 1999 and 1 apr 2022  ###FIX ME ONCE DATA UP TO 1 APR AVAILABLE
 date_numbers <- seq(from = start_date, to = end_date, by = 1)
-dates <- paste0("est_prcp_T=", date_numbers)
+dates_chr <- paste0("est_prcp_T=", date_numbers)
   
-data_r <- subset(cropped, dates)
+data_r <- subset(cropped, dates_chr)
 
 # extract values
 cell_numbers <- cells(data_r, 
