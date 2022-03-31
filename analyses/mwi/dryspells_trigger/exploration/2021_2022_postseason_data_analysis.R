@@ -14,7 +14,7 @@ source('2021_2022_postseason_data_pull.R')
 #####
 
 # user-friendly date labels
-dates = seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'), 
+dates <- seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'), 
                    to = as.Date('2022-03-20', format = '%Y-%m-%d'), ## FIX ME
                    # to = as.Date('2022-04-01', format = '%Y-%m-%d'), 
                    by = "days")
@@ -45,55 +45,40 @@ lf <- data %>%
 ## TO DO handle rainfall = NAs ****
 
 ## 
-# Season stats
+# Rainy season stats
 ##
-Rainy season onset: 
-First day of a period after 1 Nov with at least 40mm of rain over 10 days 
-AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
-
-
 
 # identify streaks of rainy days per cell (streak minimum: 1 day)
 stats <- lf %>%
         group_by(cell) %>%
-        arrange(labels) %>%
+        arrange(dates) %>%
         mutate(lagged = dplyr::lag(rainy_bin),
-               streak_start = ifelse(row_number() == 1, TRUE, (rainy_bin != lagged)),  # If first date of cell, then it's first day of a streak. If not, check if this day's value is the same as previous row's.
-               streak_id = cumsum(streak_start)) %>%
+               streak_start = case_when(row_number() == 1 & !is.na(rainfall) ~ TRUE  # If cell's first date and there is rainfall data, then it's first day of a streak. If not, check if this day's value is the same as previous row's.
+                                      ,row_number() == 1 & is.na(rainfall) ~ NA
+                                      ,TRUE ~ (rainy_bin != lagged)),
+               streak_id = ifelse(!is.na(streak_start), cumsum(streak_start), NA),
+               streak_type = ifelse(rainy_bin == 0, "dry", "wet")) %>%
         group_by(cell, streak_id) %>%
         mutate(day_into_streak = ifelse(!is.na(streak_id), row_number(), NA)) %>%
         ungroup() %>%
-        mutate(streak_type = ifelse(rainy_bin == 0, "dry", "wet"))
-
-
+        arrange(cell, dates)
 
 ## identify season onset
-
-## compute rolling sum
-computeRollingSumPerPixel <- function(dataframe_long, window){
+# First day of a period after 1 Nov with at least 40mm of rain over 10 days 
+# AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
+#stats$roll_sum_prev_10d <- ifelse(!is.na(stats$rainfall), zoo::rollsum(stats$rainfall, k = 10, fill = NA, align = 'right'), NA) # sum of precipitation in previous 10 days
+stats$roll_sum_foll_10d <- ifelse(!is.na(stats$rainfall), zoo::rollsum(stats$rainfall, k = 10, fill = NA, align = 'left'), NA) # sum of precipitation in following 10 days
+stats$foll_by_10d_ds_bin <- ifelse(stats$roll_sum_foll_10d < 2, 1, 0)
   
-  rolling_sum <-  dataframe_long %>%
-    arrange(cell, date) %>%
-    group_by(cell) %>%
-    mutate(rollsum = zoo::rollsum(total_prec, k = window, fill = NA, align = 'right')
-    ) 
-  return(rolling_sum)
-}
-## redo streaks within season
-
-
-#####
-# create new raster
-#####
-
-raster_template <- terra::subset(data_r, 1) # keep a single layer and create a template raster
-names(raster_template) <- "discardable" # rename layers
-varnames(raster_template) <- "varname" # rename variables
-
-addValuestoRaster <- function(raster, df, col) {
-  values(raster)[df[["cell"]]] <- df[[col]]
-}
-
+onsets <- stats %>%
+             group_by(cell) %>%
+             arrange(dates) %>%
+             mutate(followed_by_ds = ifelse(!is.na(rainfall), zoo::rollsum(foll_by_10d_ds_bin, k = 20, align = 'left') >= 1, NA)) %>% # boolean: if at least 1 day is followed by 10-day cum sum less than 2. 20th day last chance to be followed by 10 days within 30-day period
+             filter(dates >= '2021-11-01' & roll_sum_foll_10d >= 40 & followed_by_ds == FALSE) %>% # after 1 Nov, at least 40mm of rain over 10 days since 1 Nov and not followed by 10 days with 2mm or less of rain within 30 days
+             slice(which.min(dates)) %>% # retrieve earliest date that meets criterion per cell 
+             ungroup() %>%
+             select(cell, date_chr, dates, roll_sum_foll_10d, followed_by_ds) %>%
+             as.data.frame()
 
 
 
