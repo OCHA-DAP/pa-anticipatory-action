@@ -16,7 +16,6 @@ if (any(installed_packages == FALSE)) {
 lapply(packages, library, character.only = TRUE)
 
 # set options
-rasterOptions(maxmemory = 1e+09)
 options(scipen = 999)
 
 # set directory paths
