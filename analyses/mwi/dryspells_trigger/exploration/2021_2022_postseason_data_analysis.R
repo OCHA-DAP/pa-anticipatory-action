@@ -3,7 +3,7 @@
 # this script is sourced by 2021_2022_postseason_overview.Rmd
 
 #####
-## setup
+## data pull
 #####
 
 # load data and useful R objects
@@ -45,22 +45,7 @@ lf <- data %>%
 # Rainy season stats
 ##
 
-# identify streaks of rainy days per cell (streak minimum: 1 day)
-streaks <- lf %>%
-        group_by(cell) %>%
-        arrange(cell, dates) %>%
-        mutate(lagged = dplyr::lag(rainy_bin),
-               streak_start = case_when(row_number() == 1 & !is.na(rainfall) ~ TRUE  # If cell's first date and there is rainfall data, then it's first day of a streak. If not, check if this day's value is the same as previous row's.
-                                      ,row_number() == 1 & is.na(rainfall) ~ NA
-                                      ,TRUE ~ (rainy_bin != lagged)),
-               streak_id = ifelse(!is.na(streak_start), cumsum(streak_start), NA),
-               streak_type = ifelse(rainy_bin == 0, "dry", "wet")) %>%
-        group_by(cell, streak_id) %>%
-        mutate(day_into_streak = ifelse(!is.na(streak_id), row_number(), NA)) %>%
-        ungroup() %>%
-        arrange(cell, dates)
-
-## identify season onset & cessation
+# compute rolling sums
 stats <- lf %>%
   group_by(cell) %>%
   arrange(cell, dates) %>%
@@ -90,7 +75,7 @@ onsets <- stats %>%
 cessations <- stats %>%
             group_by(cell) %>%
             arrange(dates) %>%
-            filter(dates >= '2022-03-15' & foll_by_15d_ds_bin == TRUE) %>% 
+            filter(dates >= '2022-03-15' & foll_by_15d_ds_bin == TRUE) %>%  # on or after 15 March
             slice(which.min(dates)) %>% # retrieve earliest date that meets criterion per cell 
             ungroup() %>%
             select(cell, date_chr, dates, roll_sum_foll_15d, foll_by_15d_ds_bin) %>%
@@ -99,10 +84,40 @@ cessations <- stats %>%
             as.data.frame()
 
 # Duration:
-season_summary <- onsets %>%
+season_dates <- data.frame(cell_numbers) %>%
+                    select(cell) %>%
+                    left_join(onsets, by = 'cell') %>%
                     left_join(cessations, by = 'cell') %>%
                     select(cell, onset_date, onset_days_since_1nov, cessation_date, cessation_days_since_1nov) %>%
                     mutate(duration = as.numeric(cessation_date - onset_date))
+
+#####
+## in-season analysis
+#####
+
+dat <- lf %>%
+       left_join(season_dates[, c('cell', 'onset_date', 'cessation_date')], by = 'cell') %>%
+       mutate(in_seas_bin = case_when(is.na(onset_date) | is.na(cessation_date) ~ "unknown",
+                                      dates >= onset_date & dates <= cessation_date ~ "1",
+                                      TRUE ~ "0")) %>% # 1 and 0 are strings because of 'UNKNOWN'
+       filter(in_seas_bin == '1' | in_seas_bin == 'unknown') %>% # keep in-season data & keep cells without onset/cessation dates
+       filter(dates >= "2021-11-01" & dates <= "2022-03-15") # arbitrary cutoffs for cells without onset/cessation dates
+          
+
+# identify in-season streaks of rainy days per cell (streak minimum: 1 day)
+streaks <- dat %>%
+            group_by(cell) %>%
+            arrange(cell, dates) %>%
+            mutate(lagged = dplyr::lag(rainy_bin),
+                   streak_start = case_when(row_number() == 1 & !is.na(rainfall) ~ TRUE,  # If cell's first date and there is rainfall data, then it's first day of a streak. If not, check if this day's value is the same as previous row's.
+                                            row_number() == 1 & is.na(rainfall) ~ NA,
+                                            TRUE ~ (rainy_bin != lagged)),
+                   streak_id = ifelse(!is.na(streak_start), cumsum(streak_start), NA),
+                   streak_type = ifelse(rainy_bin == 0, "dry", "wet")) %>%
+            group_by(cell, streak_id) %>%
+            mutate(day_into_streak = ifelse(!is.na(streak_id), row_number(), NA)) %>%
+            ungroup() %>%
+            arrange(cell, dates)
 
 #####
 # create raster files with results
