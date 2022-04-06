@@ -7,7 +7,7 @@
 #####
 
 # load data and useful R objects
-source('2021_2022_postseason_data_pull.R')
+source('dryspells_trigger/exploration/2021_2022_postseason_data_pull.R')
 
 #####
 ## data formatting
