@@ -6,7 +6,7 @@
 #####
 
 # load libraries
-packages <- c('tidyverse', 'sf', 'terra')
+packages <- c('tidyverse', 'sf', 'terra', 'zoo')
 installed_packages <- packages %in% rownames(installed.packages())
 
 if (any(installed_packages == FALSE)) {
@@ -61,4 +61,4 @@ data <- extract(data_r,
 data <- data %>%
           select(ID, cell, x, y, everything()) # move cell number + coordinates columns to first positions
 
-# saveRDS(data, paste0(dry_spell_processed_path, "mwi_2021_2022_postseason_overview.RDS"))
+# saveRDS(data, paste0(dry_spell_processed_path, "2021_2022_postseason/", "mwi_2021_2022_postseason_overview.RDS"))
