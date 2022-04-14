@@ -1,12 +1,29 @@
 ---
-title: "MWI 2021 - 2022 Season Overview"
-pagetitle: "Malawi Rains Dec 2021 - Jan 2022"
-output: html_notebook
-editor_options: 
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:align; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:align; margin:10px" />'
+pagetitle: 'Malawi Rains Dec 2021 - April 2022'
+output:
+  html_document:
+    css: ../../../country_template/docs/style.css
+    includes:
+      in_header: ../../../country_template/docs/header.html
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
   chunk_output_type: inline
 ---
+***
+<br> 
+<br>
 
-```{r global-setup}
+# Background
+
+
+```{r global-setup, message = F, warning = F, echo = F}
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = TRUE) # include chunk output by default
 knitr::opts_chunk$set(message = FALSE) # do not print messages by default
@@ -16,17 +33,34 @@ options(scipen = 999) # turn off scientific notation
 options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
-```{r libraries}
-packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
+```{r libraries, include = F}
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable', 'terra')
 
 # install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 
 if (any(installed_packages == FALSE)) {
-  install.packages(packages[!installed_packages])
+  install.packages(packages[!installed_packages], repos = "https://cran.rstudio.com")
 }
 
 # load libraries 
 lapply(packages, library, character.only = TRUE)
 ```
 
+```{r paths}
+data_dir <- Sys.getenv("AA_DATA_DIR")
+shp_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
+postseason_folder_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/2021_2022_postseason/")
+```
+
+```{r load_data, include = F}
+adm3_shp <- vect(paste0(shp_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
+season_dates <- readRDS(paste0(postseason_folder_path, "season_dates.RDS"))
+streaks <- readRDS(paste0(postseason_folder_path, "streaks.RDS"))
+
+```
+
+```{r descriptive stats}
+
+
+```
