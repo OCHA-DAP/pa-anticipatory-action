@@ -1,0 +1,189 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:centre; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:centre; margin:10px" />'
+pagetitle: 'Secondary Humanitarian Impacts of Ukraine Crisis' 
+output:
+  html_document:
+    css: ../country_template/docs/style.css 
+    includes:
+      in_header: ../country_template/docs/header.html 
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: console
+---
+
+***
+Last updated: `r Sys.Date()`
+
+## Key Messages
+* Situation is degrading in Ukraine and elsewhere.
+* Food insecurity is projected to increase in several countries including xyz
+
+
+```{r setup, include = F}
+library(tidyverse)
+library(kableExtra)
+library(zoo)
+library(ggrepel)
+
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(message = FALSE) 
+knitr::opts_chunk$set(warning = FALSE)
+
+data_dir <- Sys.getenv("AA_DATA_DIR")
+ukr_data_folder_path <- paste0(data_dir, "/private/exploration/glb/ukr_crisis/")
+ukr_inform_data_folder_path <- paste0(data_dir, "/private/exploration/glb/ukr_crisis/inform/")
+ukr_data_filepath <- paste0(data_dir, "/private/exploration/glb/ukr_crisis/TEMP_ukr-secondary-impacts.csv")
+
+```
+
+```{r data-pulls}
+data <- read.csv(ukr_data_filepath) # TEMP
+  
+risk <- readxl::read_excel(paste0(ukr_inform_data_folder_path, "INFORM_Risk_Mid2022_v064.xlsx"), 
+                             sheet = "INFORM Risk 2022 (a-z)",
+                             range = readxl::cell_cols("A:AD")) %>%
+          select(COUNTRY, ISO3, `INFORM RISK`, `RISK CLASS`, `HAZARD & EXPOSURE`, VULNERABILITY, `LACK OF COPING CAPACITY`) %>%
+          rename(country = COUNTRY, 
+                 risk_score_apr2022 = `INFORM RISK`,
+                 risk_class_apr2022 = `RISK CLASS`,
+                 he = `HAZARD & EXPOSURE`,
+                 vu = VULNERABILITY,
+                 cc = `LACK OF COPING CAPACITY`) %>%
+          slice(-1)
+          
+
+severity <- readxl::read_excel(paste0(ukr_inform_data_folder_path, "20220405_inform_severity_-_march_2022_0.xlsx"), 
+                             sheet = "INFORM Severity - country",
+                             range = readxl::cell_cols("B:J")) %>%
+          select(COUNTRY, ISO3, `CRISIS ID`, `INFORM Severity Index`, `INFORM Severity category...6`, `INFORM Severity category...7`, `Trend (last 3 months)`, Reliability) %>%
+          rename(country = COUNTRY, 
+                 crisis_id = `CRISIS ID`,
+                 severity_index = `INFORM Severity Index`,
+                 severity_level = `INFORM Severity category...6`,
+                 severity_cat = `INFORM Severity category...7`,
+                 trend_3mo = `Trend (last 3 months)`,
+                 reliability = Reliability) %>%
+                 slice(-(1:2))
+
+crisis_ids <- severity[, 'crisis_id']
+                       
+severity_trends <- readxl::read_excel(paste0(ukr_inform_data_folder_path, "20220405_inform_severity_-_march_2022_0.xlsx"), 
+                             sheet = "Trends") %>%
+             rename(country = Country, 
+                crisis_name = Crisis,
+                crisis_id = `Crisis ID`,
+                current_trend_label = Trend) %>%
+            pivot_longer(!c(country, crisis_name, crisis_id, current_trend_label), 
+                         names_to = "date") %>%
+            rename(severity_index = value) %>%
+            mutate(date = as.Date(as.numeric(date), origin = "1899-12-30"),
+                   severity_index = as.numeric(severity_index))
+
+hrp <- c('Afghanistan',
+'Burkina Faso',
+'Burundi',
+'Cameroon',
+'Central African Republic',
+'Chad',
+'Colombia',
+'Democratic Republic of the Congo',
+'Congo DRC', # manual addition to match CERF spelling
+'El Salvador',
+'Ethiopia',
+'Guatemala',
+'Haiti',
+'Honduras',
+'Iraq',
+'Libya',
+'Mali',
+'Mozambique',
+'Myanmar',
+'Niger',
+'Nigeria',
+'occupied Palestinian territory',
+'Somalia',
+'South Sudan',
+'Sudan',
+'Syrian Arab Republic',
+'Syria', # manual addition to match CERF spelling
+'Ukraine',
+'Venezuela',
+'Yemen'
+)
+```
+
+```{r data-formatting}
+severity_deltas <- severity_trends %>%
+                    select(country, crisis_id, date, severity_index) %>%
+                    filter(crisis_id %in% crisis_ids$crisis_id) %>% # to address multi-crisis countries
+                    group_by(country, crisis_id) %>% 
+                    arrange(country, crisis_id, desc(date)) %>%
+                    mutate(rollmean_last3 = round(rollmean(severity_index, k = 3, align = 'left', fill = NA), 1), # mean of last 3 months including current
+                           roll_mean_prev3 = round(rollmean(lead(severity_index, 4), k = 3, align = 'left', fill = NA), 1)) %>% # mean of 3-mo period preceding the last 3 mos (last 4 to 6 mos)
+                    ungroup(country, crisis_id) %>%
+                    mutate(delta = round(rollmean_last3 - roll_mean_prev3, 1), # without rounding BDI001 2022-03-01 is misclassified.
+                           trend_label = dplyr::case_when(delta >= 0.1 ~ "Deterioration",
+                                                   delta <= -0.1 ~ "Improvement",
+                                                   delta == 0 ~ "Stable", # note the rounding so no values between -0.1 and 0.1 possible besides 0
+                                                   TRUE ~ "NA"))
+
+```
+
+## Data
+
+### Severity
+INFORM Severity Index, we define severity as “a measure of the outcomes generated by the impact of a crisis, which can be exacerbated by the complexity of the operational environment”. NFORM Severity Index is a composite indicator8 designed to measure the severity of humanitarian crises globally, against a common scale. It aggregates data from various sources to categorise all crises into five levels. that require an understanding of the severity of crises globally and to understand changes in crisis severity over time. It should not be used for decisions about the operational response to a specific crisis.
+of severity.
+```{r severity}
+
+
+severity_deltas %>%
+  filter(date == '2022-03-01') %>%
+  ggplot(aes(x = delta,
+           y = severity_index,
+           color = trend_label)) +
+     geom_point() + 
+     scale_color_manual(breaks = c("Deterioration", "Improvement", "Stable"), values = c("firebrick4", "darkblue", "azure4", "cyan")) + # must leave value for NA as well
+   geom_text_repel(aes(label = country), size = 3) +
+  labs(title = "Severity of Humanitarian Crisis",
+       subtitle = "Index by 3-month Trend",
+        x = "Change in Severity",
+        y = "Current Severity Index",
+       caption = "Source: INFORM Severity Index. Trend data not available for all countries. \n Change computed by subtracting from the average of the last 3 months \n the average of the previous 3 months (months 4 - 6), per INFORM methodology.",
+       colour = "Trend") +
+  theme_minimal() +
+  theme(axis.line.x.bottom = element_line(colour = "black"), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())
+  
+```
+
+### Risk
+```{r risk}
+
+data %>%
+  full_join(risk, by = "country") %>%
+  mutate(HRP = ifelse(country %in% hrp, 'Yes', 'No')) %>% 
+  arrange(desc(HRP), country) %>%
+  filter(HRP == "Yes") %>%
+  select(country, pop, inform_risk_jan2022, inform_severity_feb2022) %>%
+  kbl(
+    format = 'html',
+    row.names = FALSE, 
+    col.names = c("Country", "Population", "Risk", "Severity"),
+    align = "ccccc",
+    digits = 3,
+    format.args = list(big.mark = ",", scientific = FALSE)
+    ) %>%
+  kable_minimal(c("hover", "striped")) %>%
+  add_header_above(c(" " = 2, "INFORM" = 2))
+```
+
+### Food Security
+
