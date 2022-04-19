@@ -43,7 +43,7 @@ ukr_data_filepath <- paste0(data_dir, "/private/exploration/glb/ukr_crisis/TEMP_
 ```
 
 ```{r data-pulls}
-data <- read.csv(ukr_data_filepath) # TEMP
+data <- read.csv(ukr_data_filepath) # TEMP. TO BE REPLACED WITH DIRECTLY SOURCED DATA
 
 risk <- readxl::read_excel(paste0(ukr_inform_data_folder_path, "INFORM_Risk_Mid2022_v064.xlsx"), 
                              sheet = "INFORM Risk 2022 (a-z)",
@@ -200,9 +200,11 @@ severity_deltas %>%
 
 ### Trajectory of Food Security
 
+<br>
+
 \textcolor{firebrick4}{Note: Current Situation figures are as of November 2021. Projections from Novembre 2021 for Apr - June 2022.}
 
-```{r food-security}
+```{r food-security-computations}
 
 current_fs <- data %>%
   mutate(HRP = ifelse(country %in% hrp, 'Yes', 'No')) %>% 
@@ -211,7 +213,9 @@ current_fs <- data %>%
          curr_2021Q4_ipc4_perc = round(curr_2021Q4_ipc4/pop * 100, 1),
          curr_2021Q4_ipc5_perc = round(curr_2021Q4_ipc5/pop * 100, 1)) %>%
   select(HRP, country, pop, curr_2021Q4_ipc3plus, curr_2021Q4_ipc3plus_perc, curr_2021Q4_ipc4, curr_2021Q4_ipc4_perc, curr_2021Q4_ipc5, curr_2021Q4_ipc5_perc) %>%
-  replace(is.na(.), 0) %>%
+  replace(is.na(.), 0) 
+
+current_fs_tbl <- current_fs %>%
   kbl(
     format = 'html',
     row.names = FALSE, 
@@ -226,14 +230,13 @@ current_fs <- data %>%
   add_header_above(c(" " = 3, "Current" = 6)) %>%
   scroll_box(width = "100%", height = "500px", fixed_thead = T)
 
-projected_fs <- data %>%
+proj_fs <- data %>%
   mutate(HRP = ifelse(country %in% hrp, 'Yes', 'No')) %>% 
   arrange(desc(HRP), country) %>%
-  mutate(curr_2021Q4_ipc3_perc = round(curr_2021Q4_ipc3/pop * 100, 1),
-         curr_2021Q4_ipc4_perc = round(curr_2021Q4_ipc4/pop * 100, 1),
-         curr_2021Q4_ipc5_perc = round(curr_2021Q4_ipc5/pop * 100, 1)) %>%
   select(HRP, country, pop, highest_projected_ipc, delta_22Q2_21Q4_ipc3plus_perc, delta_22Q2_21Q4_ipc4_perc, delta_22Q2_21Q4_ipc5_perc) %>%
-  replace(is.na(.), 0) %>%
+  replace(is.na(.), 0) 
+
+proj_fs_tbl <- proj_fs %>%
   kbl(
     format = 'html',
     row.names = FALSE, 
@@ -248,12 +251,55 @@ projected_fs <- data %>%
   add_header_above(c(" " = 3,  "Projected" = 4)) %>%
   scroll_box(width = "100%", height = "500px", fixed_thead = T)
 
-current_fs
+fs_plot <- 
+  current_fs %>%
+  filter(HRP == 'Yes') %>%
+  left_join(proj_fs, by = c('HRP', 'country', 'pop')) %>%
+    ggplot(aes(x = curr_2021Q4_ipc3plus_perc,
+           y = delta_22Q2_21Q4_ipc3plus_perc)) +
+         #  color = trend_label)) +
+     geom_point() +
+     geom_text_repel(aes(label = country), size = 3, seed = 50) +
+  labs(title = "Current and Projected Food Security in HRP Countries",
+       subtitle = "Nov 2021 - Jun 2022",
+        x = "Current Population in Phases 3+ (%)",
+        y = "Projected Change in Phase 3+ (%)",
+       caption = "Source: FewsNet") +
+  theme_minimal() +
+  theme(axis.line.x.bottom = element_line(colour = "black"), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.5, 0.93),
+        legend.direction="horizontal",
+        legend.box.background = element_rect(colour = "black")) +
+ # annotate(geom = "text", x = lowest_delta, y = 1, label = "Lowest \n Increase", color="darkgreen", alpha = 0.8, size = 3.5) +
+  #annotate(geom = "text", x = lowest_delta, y = 4.5, label = "Highest \n Increase", color='darkgreen', alpha = 0.8, size = 3.5) +
+  annotate(geom = "rect", xmin = 0.3, xmax = 0.6, ymin = 0.0, ymax = 0.25, fill = 'gold2', alpha = 0.2) +
+  annotate(geom = "text", x = 0.45, y = 0.28, label = "Currently most severe", color = 'gold2', alpha = 1, size = 4) +
+  annotate(geom = "rect", xmin = 0.0, xmax = 0.2, ymin = 0.5, ymax = 0.82, fill = 'darkorange', alpha = 0.2) +
+  annotate(geom = "text", x = 0.1, y = 0.85, label = "Largest Projected Increase", color = 'darkorange', alpha = 1, size = 4)
+
+```
+```{r food-security-table}
+current_fs_tbl
 ```
 
 <br>
 
-`r projected_fs`
+```{r food-security-plot}
+fs_plot
+```
+
+<br>
+
+Countries projected to reach phase 5: `r data %>% mutate(HRP = ifelse(country %in% hrp, 'Yes', 'No')) %>% filter(highest_projected_ipc == 'IPC 5' | highest_projected_ipc == 'IPC5') %>% select(HRP, country)` 
+
+Countries projected to reach phase 4: `r data %>% mutate(HRP = ifelse(country %in% hrp, 'Yes', 'No')) %>% filter(highest_projected_ipc == 'IPC 4') %>% select(HRP, country)` 
+
+<br>
+Food security projections per phase in the table below.
+
+`r proj_fs_tbl`
 
 <br>
 
@@ -279,7 +325,7 @@ risk %>%
     format = 'html',
     row.names = FALSE, 
     col.names = c("HRP", "Country", "Population", "Risk Score", "Risk Class", "Hazard & Exposure", "Vulnera-\n bility", "Coping Capacity"),
-    align = "llcccccc",
+    align = "llrccccc",
     format.args = list(big.mark = ",", scientific = FALSE),
     escape = F
     ) %>%
@@ -287,7 +333,7 @@ risk %>%
   kable_minimal(c("hover", "striped")) %>%
   kable_styling() %>%
   column_spec(2, width = "8em") %>%
-  column_spec(5:8, width = "6em") %>%
+  column_spec(5, width = "8em") %>%
   add_header_above(c(" " = 3, "Score" = 2, "Dimensions" = 3)) %>%
   add_header_above(c(" " = 3, "INFORM" = 5)) %>%
   scroll_box(width = "100%", height = "500px", fixed_thead = T)
