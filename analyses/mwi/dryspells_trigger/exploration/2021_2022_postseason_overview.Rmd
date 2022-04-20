@@ -19,9 +19,9 @@ editor_options:
 ***
 <br> 
 <br>
-
+# Executive Summary
 # Background
-
+Malawi implemented a multi-sectorial Anticipation Action Framework for the 2021-2022 rainy season to mitigate the humanitarian impact of dry spells. A trigger mechanism was designed to signal a higher risk of dry spells occurring (the _predictive_ component) and the actual occurrence of a dry spell (the _observational_ component) within the Southern region. Dry spells are defined as at least 14 consecutive days with no more than 2mm of cumulative rain. This report retrospectively examines rainfall patterns during the months of Nov 2021 through April 2022 to provide an evaluation of the trigger mechanism's performance during the rainy season.
 
 ```{r global-setup, message = F, warning = F, echo = F}
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
