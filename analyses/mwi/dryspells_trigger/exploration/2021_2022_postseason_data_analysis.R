@@ -146,4 +146,5 @@ static <- c(static, onset_r)
 saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
 saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
 writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"))
+writeRaster(static, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"))
 
