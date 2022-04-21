@@ -134,13 +134,26 @@ varnames(raster_template) <- "discardable" # rename existing variable
 static <- raster_template
 
 # create onset raster layer
-onsets_all_cells <- left_join(template_cells, onsets, by = 'cell')
+season_all_cells <- left_join(template_cells, season_dates, by = 'cell')
+
 onset_r <- raster_template
-onset_r <- setValues(onset_r, onsets_all_cells$onset_days_since_1nov)
+onset_r <- setValues(onset_r, season_all_cells$onset_days_since_1nov)
 varnames(onset_r) <- "onset"
 names(onset_r) <- "onset"
 
-static <- c(static, onset_r)
+# create cessation raster layer
+cessation_r <- raster_template
+cessation_r <- setValues(cessation_r, season_all_cells$cessation_days_since_1nov)
+varnames(cessation_r) <- "cessation"
+names(cessation_r) <- "cessation"
+
+# create duration raster layer
+duration_r <- raster_template
+duration_r <- setValues(duration_r, season_all_cells$duration)
+varnames(duration_r) <- "duration"
+names(duration_r) <- "duration"
+
+static <- c(static, onset_r, cessation_r, duration_r)
 
 ## save results ##
 saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
