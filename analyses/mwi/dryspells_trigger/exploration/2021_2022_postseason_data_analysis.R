@@ -15,7 +15,7 @@ source('dryspells_trigger/exploration/2021_2022_postseason_data_pull.R')
 
 # user-friendly date labels
 dates <- data.frame(dates = seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'), 
-                   to = as.Date('2022-03-20', format = '%Y-%m-%d'), ## FIX ME
+                   to = as.Date('2022-04-20', format = '%Y-%m-%d'), ## FIX ME
                    # to = as.Date('2022-04-01', format = '%Y-%m-%d'), 
                    by = "days"))
 
@@ -60,7 +60,7 @@ stats <- lf %>%
 # AND no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 onsets <- stats %>%
              group_by(cell) %>%
-             arrange(dates) %>%
+             arrange(cell, dates) %>%
              mutate(followed_by_ds = ifelse(!is.na(rainfall), zoo::rollsum(lead(start_10d_ds_bin, 1), k = 20, align = 'left') >= 1, NA)) %>% # boolean: is there at least one 10-day period with cum sum less than 2 in the next 20 days starting tomorrow (lead = 1)? k=20th day is the last chance to start a 10d-period within 30-day period
              filter(dates >= '2021-11-01' & roll_sum_next_10d >= 40 & followed_by_ds == FALSE) %>%
              slice(which.min(dates)) %>% # retrieve earliest date that meets criterion per cell 
@@ -74,7 +74,7 @@ onsets <- stats %>%
 # Last day before a 15-day period after 15 March with 25mm or less of rain
 cessations <- stats %>%
             group_by(cell) %>%
-            arrange(dates) %>%
+            arrange(cell, dates) %>%
             filter(dates >= '2022-03-15' & foll_by_15d_ds_bin == TRUE) %>%  # on or after 15 March
             slice(which.min(dates)) %>% # retrieve earliest date that meets criterion per cell 
             ungroup() %>%
@@ -155,9 +155,9 @@ names(duration_r) <- "duration"
 
 static <- c(static, onset_r, cessation_r, duration_r)
 
-## save results ##
+## save results
 saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
 saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
-writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"))
-writeRaster(static, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"))
+writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"), overwrite=T)
+writeRaster(static, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"), overwrite=T)
 
