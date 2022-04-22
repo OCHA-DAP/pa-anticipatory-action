@@ -140,7 +140,7 @@ cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one
 ```
 
 
-**FIX ME**
+## **FIX ME**
 
 Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
 
@@ -163,3 +163,45 @@ plot(southern_shp, add = T)
 
 
 ### Duration
+
+```{r duration-setup}
+#duration_max <- minmax(static_r$duration)[2]
+duration_max <- 156 ## FIX ME
+
+duration_breaks <- seq(80, duration_max, by = 10)
+
+duration_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one colour per month, darkens later in the month
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[4],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[8],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
+
+```
+
+
+## **FIX ME**
+
+Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
+
+The map below shows during which week (7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates April. The darker colours capture cessation dates later in the month.
+
+Most of the Southern region had an April end to its season. By `r  format((as.Date("2021-11-01") + cessation_max), "%d %b")`, rains had ended on the entire region.
+
+```{r duration-plot}
+plot(static_r, 
+     "duration", 
+     type = "interval", 
+     breaks = duration_breaks, 
+     main = "Rainy Season Duration",
+     plg = list(title = "In Days"))
+           #     legend = duration_labels[-length(duration_labels)]))  UNTIL NUMBER OF BREAKS IS KNOWN
+   #  col = duration_palette[1:(length(duration_labels) - 1)])   UNTIL NUMBER OF LEVELS NEEDED IN PALETTE IS KNOWN
+plot(southern_shp, add = T)
+
+```
+
