@@ -22,6 +22,9 @@ editor_options:
 
 ## Executive Summary
 
+* Bullet point 1
+* Bullet point 2
+
 ***
 ## Report Purpose
 This report retrospectively examines rainfall patterns during the months of Nov 2021 through April 2022 to provide an evaluation of the trigger mechanism's performance. It uses ARC2 observational rainfall data to determine if, when, and where dry spells have occurred during the past year's rainy season.
@@ -94,9 +97,9 @@ onset_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one col
 
 Season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 
-The map below shows which week (7-day period) after 1 Nov the season begun. Beige-brown indicates a November onset date while blue-purple indicates Dec. The darker colours capture onset dates later in the month.
+The map below shows which week (7-day period) the season began. Beige-brown indicates a November onset date while blue-purple indicates Dec. The darker colours capture onset dates later in the month.
 
-Most of the Southern region had an early November start to its season while the northern part of the region saw its season begin in Dec. By `r  format((as.Date("2021-11-01") + onset_max), "%d %b")`, rains had begun on the entire region.
+Across the region the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season while the northern part of the region saw its season begin in Dec. 
 
 ```{r onset-plot}
 plot(static_r, 
@@ -104,9 +107,59 @@ plot(static_r,
      type = "interval", 
      breaks = onset_breaks, 
      main = "Rainy Season Onset",
-     plg = list(title = "Onset Week",
+     plg = list(title = "Week Starting On",
                 legend = onset_labels[-length(onset_labels)]),
-     col = onset_palette[1:(length(onset_labels) - 1)]) # to display all dates in a month one color
+     col = onset_palette[1:(length(onset_labels) - 1)]) 
 plot(southern_shp, add = T)
 
 ```
+
+### Cessation
+
+```{r cessation-setup}
+#cessation_max <- minmax(static_r$cessation)[2]
+cessation_max <- 156 ## FIX ME
+
+cessation_breaks <- seq(134, (cessation_max + 7), by = 7) # +7 to ensure the max date is included. From = 15 Mar or 134: as.Date(134, origin = "2021-11-01")
+cessation_labels <-  format(seq(from = as.Date('2022-03-15', format = "%Y-%m-%d"), 
+                     to = as.Date('2021-11-01', format = "%Y-%m-%d") + cessation_max + 7, # cessation_max computed in days since 1 Nov
+                     by = "7 days"),
+                 format = "%d-%b")
+
+cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one colour per month, darkens later in the month
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[4],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[8],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
+
+```
+
+
+**FIX ME**
+
+Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
+
+The map below shows during which week (7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates April. The darker colours capture cessation dates later in the month.
+
+Most of the Southern region had an April end to its season. By `r  format((as.Date("2021-11-01") + cessation_max), "%d %b")`, rains had ended on the entire region.
+
+```{r cessation-plot}
+plot(static_r, 
+     "cessation", 
+     type = "interval", 
+     breaks = cessation_breaks, 
+     main = "Rainy Season End",
+     plg = list(title = "Week Starting On"))
+           #     legend = cessation_labels[-length(cessation_labels)]))  UNTIL NUMBER OF BREAKS IS KNOWN
+   #  col = cessation_palette[1:(length(cessation_labels) - 1)])   UNTIL NUMBER OF LEVELS NEEDED IN PALETTE IS KNOWN
+plot(southern_shp, add = T)
+
+```
+
+
+### Duration
