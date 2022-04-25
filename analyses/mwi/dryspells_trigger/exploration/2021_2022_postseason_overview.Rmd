@@ -65,6 +65,7 @@ postseason_folder_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/202
 ```{r load_data, include = F}
 adm3_shp <- vect(paste0(shp_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
 southern_shp <- adm3_shp[adm3_shp$ADM1_EN == 'Southern',]
+#in_season <- readRDS(paste0(postseason_folder_path, "in_season_daily_measurements.RDS"))
 season_dates <- readRDS(paste0(postseason_folder_path, "season_dates.RDS"))
 streaks <- readRDS(paste0(postseason_folder_path, "streaks.RDS"))
 
@@ -97,7 +98,7 @@ onset_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one col
 
 Season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
 
-The map below shows which week (7-day period) the season began. Beige-brown indicates a November onset date while blue-purple indicates Dec. The darker colours capture onset dates later in the month.
+The map below shows which week (7-day period) the season began. Beige-brown indicates a November onset date while blue-purple indicates Dec. The darker colours reflect onset dates later in the month.
 
 Across the region the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season while the northern part of the region saw its season begin in Dec. 
 
@@ -120,33 +121,27 @@ plot(southern_shp, add = T)
 #cessation_max <- minmax(static_r$cessation)[2]
 cessation_max <- 156 ## FIX ME
 
-cessation_breaks <- seq(134, (cessation_max + 7), by = 7) # +7 to ensure the max date is included. From = 15 Mar or 134: as.Date(134, origin = "2021-11-01")
+cessation_breaks <- seq(134, (cessation_max + 7), by = 7) # +7 to ensure the max date is included. From = 15 Mar ie as.Date(134, origin = "2021-11-01")
 cessation_labels <-  format(seq(from = as.Date('2022-03-15', format = "%Y-%m-%d"), 
                      to = as.Date('2021-11-01', format = "%Y-%m-%d") + cessation_max + 7, # cessation_max computed in days since 1 Nov
                      by = "7 days"),
                  format = "%d-%b")
 
 cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one colour per month, darkens later in the month
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[4],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1],
+                       RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
+                       RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1], 
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[8],
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
 
 ```
 
 
-## **FIX ME**
-
 Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
 
-The map below shows during which week (7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates April. The darker colours capture cessation dates later in the month.
+The map below shows during which week (7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates April. The darker colours reflect cessation dates later in the month.  **FIX ME**
 
-Most of the Southern region had an April end to its season. By `r  format((as.Date("2021-11-01") + cessation_max), "%d %b")`, rains had ended on the entire region.
 
 ```{r cessation-plot}
 plot(static_r, 
@@ -154,9 +149,9 @@ plot(static_r,
      type = "interval", 
      breaks = cessation_breaks, 
      main = "Rainy Season End",
-     plg = list(title = "Week Starting On"))
-           #     legend = cessation_labels[-length(cessation_labels)]))  UNTIL NUMBER OF BREAKS IS KNOWN
-   #  col = cessation_palette[1:(length(cessation_labels) - 1)])   UNTIL NUMBER OF LEVELS NEEDED IN PALETTE IS KNOWN
+     plg = list(title = "Week Starting On",
+                legend = cessation_labels[-length(cessation_labels)]),
+     col = cessation_palette[1:(length(cessation_labels) - 1)])
 plot(southern_shp, add = T)
 
 ```
@@ -170,27 +165,11 @@ duration_max <- 156 ## FIX ME
 
 duration_breaks <- seq(80, duration_max, by = 10)
 
-duration_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one colour per month, darkens later in the month
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[4],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[8],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
-                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
+duration_palette <-  RColorBrewer::brewer.pal(n = 9, name = "YlGnBu")
 
 ```
 
-
-## **FIX ME**
-
-Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
-
-The map below shows during which week (7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates April. The darker colours capture cessation dates later in the month.
-
-Most of the Southern region had an April end to its season. By `r  format((as.Date("2021-11-01") + cessation_max), "%d %b")`, rains had ended on the entire region.
+The map below shows the total duration of the rainy season in number of days between the season onset and cessation dates. 
 
 ```{r duration-plot}
 plot(static_r, 
@@ -198,10 +177,30 @@ plot(static_r,
      type = "interval", 
      breaks = duration_breaks, 
      main = "Rainy Season Duration",
-     plg = list(title = "In Days"))
-           #     legend = duration_labels[-length(duration_labels)]))  UNTIL NUMBER OF BREAKS IS KNOWN
-   #  col = duration_palette[1:(length(duration_labels) - 1)])   UNTIL NUMBER OF LEVELS NEEDED IN PALETTE IS KNOWN
+     plg = list(title = "In Days"),
+     col = duration_palette[1:(length(duration_breaks) - 1)])
 plot(southern_shp, add = T)
 
+```
+
+## Rainy Days
+
+During the rainy season there are days during which it rained while other days were dry.
+
+The ratio of days that were rainy (rainy = that received at least 3mm of rain) over the duration of the rainy season was computed. It is shown in the graph below as a percentage of days. Yellow areas in the graph received rain on a small portion of days during the rainy season, while the dark blue areas received rain on the majority of days.
+
+
+```{r rainy-days-plot}
+
+rainy_ratio_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
+
+plot(static_r, 
+     "rainy_ratio", 
+     breaks = seq(from = 0, to = 100, by = 20), 
+     main = "Rainy Days During Rainy Season",
+     plg = list(title = "Rainy Days (%)",
+                legend = rainy_ratio_labels),
+     col = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+plot(southern_shp, add = T)
 ```
 
