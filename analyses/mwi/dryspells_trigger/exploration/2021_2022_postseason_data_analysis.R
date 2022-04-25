@@ -95,17 +95,16 @@ season_dates <- data.frame(cell_numbers) %>%
 ## in-season analysis
 #####
 
-dat <- lf %>%
-       left_join(season_dates[, c('cell', 'onset_date', 'cessation_date')], by = 'cell') %>%
+in_season <- lf %>%
+       left_join(season_dates[, c('cell', 'onset_date', 'cessation_date', 'duration')], by = 'cell') %>%
        mutate(in_seas_bin = case_when(is.na(onset_date) | is.na(cessation_date) ~ "unknown",
                                       dates >= onset_date & dates <= cessation_date ~ "1",
                                       TRUE ~ "0")) %>% # 1 and 0 are strings because of 'UNKNOWN'
        filter(in_seas_bin == '1' | in_seas_bin == 'unknown') %>% # keep in-season data & keep cells without onset/cessation dates
        filter(dates >= "2021-11-01" & dates <= "2022-03-15") # arbitrary cutoffs for cells without onset/cessation dates
           
-
 # identify in-season streaks of rainy days per cell (streak minimum: 1 day)
-streaks <- dat %>%
+streaks <- in_season %>%
             group_by(cell) %>%
             arrange(cell, dates) %>%
             mutate(lagged = dplyr::lag(rainy_bin),
@@ -119,6 +118,18 @@ streaks <- dat %>%
             ungroup() %>%
             arrange(cell, dates)
 
+# identify in-season rainy days
+rainy_day_counts <- in_season %>%
+               group_by(cell) %>%
+               summarise(rainy_days_n = sum(rainy_bin))
+
+rainy_ratio <- in_season %>%
+               select(cell, duration) %>%
+               distinct() %>%
+               left_join(rainy_day_counts, by = 'cell') %>%
+               mutate(rainy_days_perc = 100 * round(rainy_days_n / duration, 2))
+                         
+
 #####
 # create raster files with results
 #####
@@ -131,7 +142,7 @@ names(raster_template) <- "discardable" # rename existing layer
 varnames(raster_template) <- "discardable" # rename existing variable
 
 # create time-static raster
-static <- raster_template
+static_r <- raster_template
 
 # create onset raster layer
 season_all_cells <- left_join(template_cells, season_dates, by = 'cell')
@@ -153,11 +164,20 @@ duration_r <- setValues(duration_r, season_all_cells$duration)
 varnames(duration_r) <- "duration"
 names(duration_r) <- "duration"
 
-static <- c(static, onset_r, cessation_r, duration_r)
+# create rainy_ratio raster layer
+rainy_ratio_all_cells <- left_join(template_cells, rainy_ratio, by = 'cell')
+rainy_ratio_r <- raster_template
+rainy_ratio_r <- setValues(rainy_ratio_r, rainy_ratio_all_cells$rainy_days_perc)
+varnames(rainy_ratio_r) <- "rainy_ratio"
+names(rainy_ratio_r) <- "rainy_ratio"
+
+# create raster with static layers
+static_r <- c(static_r, onset_r, cessation_r, duration_r, rainy_ratio_r)
 
 ## save results
+saveRDS(object = dat, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season_daily_measurements.RDS"))
 saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
 saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
 writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"), overwrite=T)
-writeRaster(static, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"), overwrite=T)
+writeRaster(static_r, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"), overwrite=T)
 
