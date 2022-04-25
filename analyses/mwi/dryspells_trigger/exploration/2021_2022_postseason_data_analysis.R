@@ -118,6 +118,14 @@ streaks <- in_season %>%
             ungroup() %>%
             arrange(cell, dates)
 
+max_dry_streak <- streaks %>%
+              filter(streak_type == 'dry') %>%
+              group_by(cell) %>%
+              slice(which.max(day_into_streak)) %>%
+              ungroup() %>%
+              select(cell, day_into_streak) %>%
+              rename(max_streak = day_into_streak)
+
 # identify in-season rainy days
 rainy_day_counts <- in_season %>%
                group_by(cell) %>%
@@ -171,8 +179,15 @@ rainy_ratio_r <- setValues(rainy_ratio_r, rainy_ratio_all_cells$rainy_days_perc)
 varnames(rainy_ratio_r) <- "rainy_ratio"
 names(rainy_ratio_r) <- "rainy_ratio"
 
+# create max dry streak raster layer
+max_dry_streak_all_cells <- left_join(template_cells, max_dry_streak, by = 'cell')
+max_streak_r <- raster_template
+max_streak_r <- setValues(max_streak_r, max_dry_streak_all_cells$max_streak)
+varnames(max_streak_r) <- "max_streak"
+names(max_streak_r) <- "max_streak"
+
 # create raster with static layers
-static_r <- c(static_r, onset_r, cessation_r, duration_r, rainy_ratio_r)
+static_r <- c(static_r, onset_r, cessation_r, duration_r, rainy_ratio_r, max_streak_r)
 
 ## save results
 saveRDS(object = dat, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season_daily_measurements.RDS"))

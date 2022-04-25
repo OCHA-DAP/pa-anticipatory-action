@@ -204,3 +204,37 @@ plot(static_r,
 plot(southern_shp, add = T)
 ```
 
+
+## Dry Days
+
+The graph above also shows how frequently areas experienced dry days (dry = less than 3mm of rain) during the rainy season. It is reproduced below to highlight the ratio of days that were dry during the rainy season (left).
+
+Dry days could be interspersed between rainy days, or tend to group into periods of consecutive dry days. The longest streak of dry days is represented on the right.
+
+
+```{r dry-days-plots, fig.show="hold", out.width="50%"}
+dry_ratio_r <- 100 - static_r[["rainy_ratio"]] 
+names(dry_ratio_r) <- "dry_ratio"
+
+dry_ratio_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
+
+par(mar = c(4, 4, .1, .1))
+plot(dry_ratio_r, 
+     "dry_ratio", 
+     breaks = seq(from = 0, to = 100, by = 20), 
+     main = "Dry Days During Rainy Season",
+     plg = list(title = "Dry Days (%)",
+                legend = dry_ratio_labels),
+     col = RColorBrewer::brewer.pal(n = 9, name = "YlOrBr"))
+plot(southern_shp, add = T)
+
+max_max_streak <- minmax(static_r$max_streak)[2]
+plot(static_r, 
+     "max_streak", 
+     main = "Longest Dry Streaks During Rainy Season",
+     plg = list(title = "Streak Duration in Days",
+                legend = dry_ratio_labels))
+plot(southern_shp, add = T)
+
+```
+
