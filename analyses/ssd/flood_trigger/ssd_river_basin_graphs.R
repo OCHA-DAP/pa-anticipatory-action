@@ -6,6 +6,7 @@ library(tidyverse)
 library(janitor)
 library(ggridges)
 library(ggcorrplot)
+library(ggtext)
 
 #################
 #### LOADING ####
@@ -56,6 +57,7 @@ df_floodscan <- read_csv(
   select(-1) %>%
   group_by(year, month) %>%
   summarize(
+    time = min(time),
     flood_extent = mean(mean_ADM0_PCODE),
     .groups = "drop"
   )
@@ -69,7 +71,7 @@ df_floodscan <- read_csv(
 # first join the data
 df_join <- inner_join(
   df_chirps,
-  df_monthly,
+  df_floodscan,
   by = c("year", "month")
 ) 
 
@@ -102,7 +104,7 @@ df_wider <- df_join %>%
       )
   ) %>%
   pivot_wider(
-    c(basin, year, month, flood_extent),
+    id_cols = c("year", "month", "flood_extent"),
     names_from = basin,
     values_from = rainfall_mm
   )
@@ -174,6 +176,7 @@ df_worst %>%
 
 df_wider %>%
   select(-month) %>%
+  filter(year < 2022) %>%
   pivot_longer(
     -year
   ) %>%
@@ -207,7 +210,7 @@ df_wider %>%
     worst = ifelse(
       is.na(worst),
       "",
-      "W"
+      "H"
     )
   ) %>%
   ggplot(
@@ -218,13 +221,17 @@ df_wider %>%
     )
   ) +
   geom_tile() +
-  theme_light() +
+  theme_minimal() +
   scale_fill_gradient2() +
   labs(
     x = "Year",
     y = "Rainfall and Sudd flood extent",
     fill = "Z-score",
-    title = "Standardized comparison of rainfall and flood values"
+    title = "Standardized comparison of rainfall and flood values",
+    caption = "**H** indicates it's one of the 5 highest years on record, for either flooding or rainfall"
+  ) +
+  theme(
+    plot.caption = element_markdown()
   ) +
   geom_text(
     aes(
@@ -232,4 +239,13 @@ df_wider %>%
     ),
     size = 2,
     fontface = "bold"
+  )
+
+
+# graph time series
+
+df_floodscan %>%
+  ggplot(
+    x = time,
+    y = 
   )
