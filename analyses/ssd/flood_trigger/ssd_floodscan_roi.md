@@ -176,18 +176,22 @@ We see a yearly pattern where some years the peak is higher than others (though 
 We see that some peaks have very high outliers, while others are wider. Which to classify as a flood, I am unsure about. With the method of std, we are now looking at the high outliers. 
 
 ```python
-#should document but for now removing 2022 as it is not a full year
-#but does have very high values till feb, so computations get a bit skewed with that
-df_floodscan_reg=df_floodscan_reg[df_floodscan_reg.year<=2021]
-```
-
-```python
 df_floodscan_reg['mean_rolling']=df_floodscan_reg.sort_values('time').mean_ADM0_PCODE.rolling(10,min_periods=10).mean()
 ```
 
 ```python
 df_floodscan_reg['month'] = pd.DatetimeIndex(df_floodscan_reg['time']).month
 df_floodscan_reg_rainy = df_floodscan_reg.loc[(df_floodscan_reg['month'] >= 7) & (df_floodscan_reg['month'] <= 10)]
+```
+
+```python
+# df_floodscan_reg.to_csv(country_data_exploration_dir/'floodscan'/'ssd_floodscan_roi.csv')
+```
+
+```python
+#should document but for now removing 2022 as it is not a full year
+#but does have very high values till feb, so computations get a bit skewed with that
+df_floodscan_reg=df_floodscan_reg[df_floodscan_reg.year<=2021]
 ```
 
 ```python
