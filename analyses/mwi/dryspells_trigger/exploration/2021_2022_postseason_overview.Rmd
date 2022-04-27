@@ -65,7 +65,6 @@ postseason_folder_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/202
 ```{r load_data, include = F}
 adm3_shp <- vect(paste0(shp_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
 southern_shp <- adm3_shp[adm3_shp$ADM1_EN == 'Southern',]
-#in_season <- readRDS(paste0(postseason_folder_path, "in_season_daily_measurements.RDS"))
 season_dates <- readRDS(paste0(postseason_folder_path, "season_dates.RDS"))
 streaks <- readRDS(paste0(postseason_folder_path, "streaks.RDS"))
 
@@ -127,8 +126,8 @@ cessation_labels <-  format(seq(from = as.Date('2022-03-15', format = "%Y-%m-%d"
                      by = "7 days"),
                  format = "%d-%b")
 
-cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one colour per month, darkens later in the month
-                       RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
+cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3], # one colour per month, darkens later in the month
+                       RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
                        RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1], 
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
@@ -209,32 +208,101 @@ plot(southern_shp, add = T)
 
 The graph above also shows how frequently areas experienced dry days (dry = less than 3mm of rain) during the rainy season. It is reproduced below to highlight the ratio of days that were dry during the rainy season (left).
 
-Dry days could be interspersed between rainy days, or tend to group into periods of consecutive dry days. The longest streak of dry days is represented on the right.
+Dry days could be interspersed between rainy days, or tend to group into periods of consecutive dry days. The longest streak of dry days is represented on the right. Note that a dry day can receive up to 3mm of rain while the definition of dry spell used for Anticipatory Action was a 14-day streak with no more than 2mm in total.
 
 
-```{r dry-days-plots, fig.show="hold", out.width="50%"}
+```{r longest-streak-plot, fig.show="hold", out.width="100%"}
 dry_ratio_r <- 100 - static_r[["rainy_ratio"]] 
 names(dry_ratio_r) <- "dry_ratio"
 
 dry_ratio_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
 
-par(mar = c(4, 4, .1, .1))
-plot(dry_ratio_r, 
-     "dry_ratio", 
-     breaks = seq(from = 0, to = 100, by = 20), 
-     main = "Dry Days During Rainy Season",
-     plg = list(title = "Dry Days (%)",
-                legend = dry_ratio_labels),
-     col = RColorBrewer::brewer.pal(n = 9, name = "YlOrBr"))
-plot(southern_shp, add = T)
-
 max_max_streak <- minmax(static_r$max_streak)[2]
+
 plot(static_r, 
      "max_streak", 
-     main = "Longest Dry Streaks During Rainy Season",
+     main = "Longest Streak of Dry Days During Rainy Season",
      plg = list(title = "Streak Duration in Days",
                 legend = dry_ratio_labels))
 plot(southern_shp, add = T)
+```
 
+```{r dry-streak-counts-plot, fig.show="hold", out.width="100%"}
+
+# side-by-side of streak counts
+lg_min <- min(minmax(static_r$n_5dplus_streaks)[1],
+               minmax(static_r$n_7dplus_streaks)[1],
+               minmax(static_r$n_10dplus_streaks)[1],
+               minmax(static_r$n_14dplus_streaks)[1])
+
+lg_max <- max(minmax(static_r$n_5dplus_streaks)[2],
+               minmax(static_r$n_7dplus_streaks)[2],
+               minmax(static_r$n_10dplus_streaks)[2],
+               minmax(static_r$n_14dplus_streaks)[2]) + 1 # so highest value will be include in legends/breaks
+
+# plot number of streaks
+par(mfrow = c(1,4),
+    mar = c(1, 1, 3, 1)) # bottom, left, top, right.
+
+plot(static_r, 
+     "n_5dplus_streaks", 
+     main = "5+day Streaks",
+     type = 'continuous',
+     breaks = seq(lg_min, lg_max, by = 1),
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = lg_max - 1),
+     legend = "topleft",
+     plg = list(legend = seq(lg_min, lg_max - 1, by = 1)),
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "n_7dplus_streaks", 
+     main = "7+day Streaks",
+     type = 'continuous',
+     breaks = seq(lg_min, lg_max, by = 1),
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = lg_max - 1),
+     legend = NULL,
+     mar = NA,
+     cex.main = 1.3, )
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "n_10dplus_streaks", 
+     main = "10+day Streaks",
+     type = 'continuous',
+     breaks = seq(lg_min, lg_max, by = 1),
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = lg_max - 1),
+     legend = NULL,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "n_14dplus_streaks", 
+     main = "14+day Streaks",
+     type = 'continuous',
+     breaks = seq(lg_min, lg_max, by = 1),
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = lg_max - 1),
+     legend = NULL,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+```
+
+```{r, fig.show="hold", out.width="100%"}
+par(mfrow = c(1,1),
+    mar = c(0, 0, 0, 0))
+plot(NULL,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1, mar = NA, ) 
+legend("top",
+       inset = c(0.5, 0.2), # Distance from the margin as a fraction of the plot region,
+       legend = seq(lg_min, lg_max - 1), 
+       fill = RColorBrewer::brewer.pal(name = "Oranges", n = lg_max - 1), 
+       horiz = T, 
+       cex = 0.8)
 ```
 
