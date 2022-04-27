@@ -114,6 +114,7 @@ plot(static_r,
      type = "interval", 
      breaks = onset_breaks, 
      main = "Rainy Season Onset",
+     axes = F,
      plg = list(title = "Week Starting On",
                 legend = onset_labels[-length(onset_labels)]),
      col = onset_palette[1:(length(onset_labels) - 1)]) 
@@ -155,6 +156,7 @@ plot(static_r,
      type = "interval", 
      breaks = cessation_breaks, 
      main = "Rainy Season End",
+     axes = F,
      plg = list(title = "Week Starting On",
                 legend = cessation_labels[-length(cessation_labels)]),
      col = cessation_palette[1:(length(cessation_labels) - 1)])
@@ -183,6 +185,7 @@ plot(static_r,
      type = "interval", 
      breaks = duration_breaks, 
      main = "Rainy Season Duration",
+     axes = F,
      plg = list(title = "In Days"),
      col = duration_palette[1:(length(duration_breaks) - 1)])
 plot(southern_shp, add = T)
@@ -206,7 +209,6 @@ The data for 2021-2022 confirms the challenge: while `r perc_nov_onset`% of the 
 
 As for cessation dates, [INSERT NARRATIVE HERE]
 
-<br>
 
 ### KEY TAKEAWAYS
 - The assumption of the trigger that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
@@ -214,33 +216,51 @@ As for cessation dates, [INSERT NARRATIVE HERE]
 - A single onset/cessation date for the entire region is not viable. Waiting for confirmation of the onset /cessation dates for the entire region causes too much delay to enable AA: it prevents AA in areas where dry spells occur because the rainy season has not begun or is already over in other areas.
 - To address Dec and March dry spells, a probabilistic approach should be used to select onset/cessation dates per district (adm2 area) based on historical patterns (eg: 90% of the time in past 20 years, the season had begun by X for Nsanje). 
 
-
+<br>
 
 ## Rainy Days
 
 During the rainy season there are days during which it rained while other days were dry.
 
-The ratio of days that were rainy (rainy = that received at least 3mm of rain) over the duration of the rainy season was computed. It is shown in the graph below as a percentage of days. Yellow areas in the graph received rain on a small portion of days during the rainy season, while the dark blue areas received rain on the majority of days.
+The ratio of days that were rainy (rainy = that received at least 3mm of rain) over the duration of the rainy season was computed. It is shown in the graph on the left below as a percentage of days. Yellow areas in the graph received rain on a small portion of days during the rainy season, while the dark blue areas received rain on the majority of days. The graph on the right shows total rainfall during the rainy season. Darker colours captured highest rainfall totals.
 
+<br>
 
-```{r rainy-days-plot}
+```{r rainy-days-plots}
 
 rainy_ratio_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
+  
+rain_seas_tot_min <- plyr::round_any(minmax(static_r[["rain_seas_tot"]])[1], 100, f=floor)
+rain_seas_tot_max <- plyr::round_any(minmax(static_r[["rain_seas_tot"]])[2], 100, f=ceiling)
+rain_seas_tot_breaks <- seq(from = plyr::round_any(rain_seas_tot_min, 100, f=floor), 
+                            to = plyr::round_any(rain_seas_tot_max, 100, f=ceiling),
+                            by = 100)
+
+par(mfrow = c(1,2),
+    mar = c(1, 1, 3, 1)) # bottom, left, top, right.
 
 plot(static_r, 
      "rainy_ratio", 
      breaks = seq(from = 0, to = 100, by = 20), 
-     main = "Rainy Days During Rainy Season",
+     main = "Rainy Days \n During Rainy Season",
+     axes = F,
      plg = list(title = "Rainy Days (%)",
                 legend = rainy_ratio_labels),
      col = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "rain_seas_tot", 
+     breaks = rain_seas_tot_breaks, 
+     main = "Total Rainfall \n During Rainy Season",
+     axes = F,
+     plg = list(title = "Rainfall (mm)"),
+     col = RColorBrewer::brewer.pal(n = 9, name = "Blues"))
 plot(southern_shp, add = T)
 ```
 
 
 ## Dry Days
-
-The graph above also shows how frequently areas experienced dry days (dry = less than 3mm of rain) during the rainy season. It is reproduced below to highlight the ratio of days that were dry during the rainy season (left).
 
 Dry days could be interspersed between rainy days, or tend to group into periods of consecutive dry days. The longest streak of dry days is represented on the right. Note that a dry day can receive up to 3mm of rain while the definition of dry spell used for Anticipatory Action was a 14-day streak with no more than 2mm in total.
 
