@@ -118,6 +118,7 @@ streaks <- in_season %>%
             ungroup() %>%
             arrange(cell, dates)
 
+# identify longest dry streak per cell
 max_dry_streak <- streaks %>%
               filter(streak_type == 'dry') %>%
               group_by(cell) %>%
@@ -126,6 +127,40 @@ max_dry_streak <- streaks %>%
               select(cell, day_into_streak) %>%
               rename(max_streak = day_into_streak)
 
+# count number of dry streaks per cell
+dry_5dplus_streak_count <- streaks %>%
+                  filter(streak_type == 'dry' & day_into_streak >= 5) %>%
+                  group_by(cell) %>%
+                  summarise(n_5dplus_streaks = n_distinct(streak_id)) %>%
+                  ungroup() %>%
+                  select(cell, n_5dplus_streaks)
+
+dry_7dplus_streak_count <- streaks %>%
+  filter(streak_type == 'dry' & day_into_streak >= 7) %>%
+  group_by(cell) %>%
+  summarise(n_7dplus_streaks = n_distinct(streak_id)) %>%
+  ungroup() %>%
+  select(cell, n_7dplus_streaks)
+
+dry_10dplus_streak_count <- streaks %>%
+  filter(streak_type == 'dry' & day_into_streak >= 10) %>%
+  group_by(cell) %>%
+  summarise(n_10dplus_streaks = n_distinct(streak_id)) %>%
+  ungroup() %>%
+  select(cell, n_10dplus_streaks)
+
+dry_14dplus_streak_count <- streaks %>%
+  filter(streak_type == 'dry' & day_into_streak >= 14) %>%
+  group_by(cell) %>%
+  summarise(n_14dplus_streaks = n_distinct(streak_id)) %>%
+  ungroup() %>%
+  select(cell, n_14dplus_streaks)
+
+dry_streak_counts <- dry_5dplus_streak_count %>%
+                    full_join(dry_7dplus_streak_count, by = 'cell', ) %>%
+                    full_join(dry_10dplus_streak_count, by = 'cell') %>%
+                    full_join(dry_14dplus_streak_count, by = 'cell')
+  
 # identify in-season rainy days
 rainy_day_counts <- in_season %>%
                group_by(cell) %>%
@@ -186,11 +221,44 @@ max_streak_r <- setValues(max_streak_r, max_dry_streak_all_cells$max_streak)
 varnames(max_streak_r) <- "max_streak"
 names(max_streak_r) <- "max_streak"
 
-# create raster with static layers
-static_r <- c(static_r, onset_r, cessation_r, duration_r, rainy_ratio_r, max_streak_r)
+# create dry streak count raster layers
+dry_streak_counts_all_cells <- left_join(template_cells, dry_streak_counts, by = 'cell')
+n_5dplus_streaks_r <- raster_template
+n_5dplus_streaks_r <- setValues(n_5dplus_streaks_r, dry_streak_counts_all_cells$n_5dplus_streaks)
+varnames(n_5dplus_streaks_r) <- "n_5dplus_streaks"
+names(n_5dplus_streaks_r) <- "n_5dplus_streaks"
+
+n_7dplus_streaks_r <- raster_template
+n_7dplus_streaks_r <- setValues(n_7dplus_streaks_r, dry_streak_counts_all_cells$n_7dplus_streaks)
+varnames(n_7dplus_streaks_r) <- "n_7dplus_streaks"
+names(n_7dplus_streaks_r) <- "n_7dplus_streaks"
+
+n_10dplus_streaks_r <- raster_template
+n_10dplus_streaks_r <- setValues(n_10dplus_streaks_r, dry_streak_counts_all_cells$n_10dplus_streaks)
+varnames(n_10dplus_streaks_r) <- "n_10dplus_streaks"
+names(n_10dplus_streaks_r) <- "n_10dplus_streaks"
+
+n_14dplus_streaks_r <- raster_template
+n_14dplus_streaks_r <- setValues(n_14dplus_streaks_r, dry_streak_counts_all_cells$n_14dplus_streaks)
+varnames(n_14dplus_streaks_r) <- "n_14dplus_streaks"
+names(n_14dplus_streaks_r) <- "n_14dplus_streaks"
+
+### create rasters
+
+# create static raster
+static_r <- c(static_r, 
+              onset_r, 
+              cessation_r, 
+              duration_r, 
+              rainy_ratio_r, 
+              max_streak_r,
+              n_5dplus_streaks_r,
+              n_7dplus_streaks_r,
+              n_10dplus_streaks_r,
+              n_14dplus_streaks_r)
 
 ## save results
-saveRDS(object = dat, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season_daily_measurements.RDS"))
+saveRDS(object = in_season, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season_daily_measurements.RDS"))
 saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
 saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
 writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"), overwrite=T)
