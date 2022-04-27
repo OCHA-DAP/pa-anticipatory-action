@@ -22,12 +22,17 @@ editor_options:
 
 ## Executive Summary
 
-* Bullet point 1
-* Bullet point 2
+* Q1: Could Dec/Mar dry spells be included or was the season not started/ended?
+* Q2: How do streaks of dry days compare to streaks with max cumulative rainfall?
+* Q3: How much rainfall in 14-day periods?
 
 ***
 ## Report Purpose
-This report retrospectively examines rainfall patterns during the months of Nov 2021 through April 2022 to provide an evaluation of the trigger mechanism's performance. It uses ARC2 observational rainfall data to determine if, when, and where dry spells have occurred during the past year's rainy season.
+This report retrospectively examines rainfall patterns during the months of Nov 2021 through April 2022 to provide an evaluation of the trigger mechanism's performance. It uses ARC2 observational rainfall data to investigate rainfall patterns during the rainy season. Specifically, it determines the onset and offset of the rainy season, the frequency of rainy days and rainfall received, and the occurrence of dry streaks and spells. For each, an **exploration of the data** is followed by an **answer to a question** related to the trigger:
+
+* Q1: Could Dec/Mar dry spells be included or was the season not started/ended?
+* Q2: How do streaks of dry days compare to streaks with max cumulative rainfall?
+* Q3: How much rainfall in 14-day periods?
 
 ## Background
 Malawi implemented a multi-sectorial Anticipation Action Framework for the 2021-2022 rainy season to mitigate the humanitarian impact of dry spells. A trigger mechanism was designed to signal a higher risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region. Dry spells are defined as at least 14 consecutive days with no more than 2mm of cumulative rain. 
@@ -69,6 +74,8 @@ season_dates <- readRDS(paste0(postseason_folder_path, "season_dates.RDS"))
 streaks <- readRDS(paste0(postseason_folder_path, "streaks.RDS"))
 
 static_r <- rast(paste0(postseason_folder_path, "static_r.tif"))
+
+nbr_cells <- 343 # nbr of cellsin southern region (touching=T)
 ```
 
 ## Rainy Season Characteristics
@@ -182,6 +189,33 @@ plot(southern_shp, add = T)
 
 ```
 
+```{r q1}
+perc_nov_onset <- season_dates %>% filter(onset_date < '2021-12-01') %>% summarise(nov_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * nov_onset / nbr_cells, 0)) %>% select(-nov_onset) %>% as.numeric()
+
+perc_24dec_onset <- season_dates %>% filter(onset_date <= '2021-12-24') %>% summarise(dec24_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * dec24_onset / nbr_cells, 0)) %>% select(-dec24_onset) %>% as.numeric()
+
+onset_90perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.9))
+onset_50perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.5))
+```
+
+### Q1: Dec/Mar Dry Spells
+
+The Anticipatory Action (AA) trigger monitored for January and February dry spells. Dry spells have historically occurred in December and March however those months were not monitored due to the difficulty in assessing in real-time whether a dry period during those months were a dry spell or a streak of dry days outside of the rainy season. The 2021-2022 trigger assumed that the rainy season would have begun over the Southern Region by 24 Dec.
+
+The data for 2021-2022 confirms the challenge: while `r perc_nov_onset`% of the Southern Region began its rainy season in November, the remaining saw their season begin in December and as late as `r format(as.Date(onset_max, origin = "2021-11-01"), format = "%d %b")`. Due to the need for 40 days to pass after the onset date to confirm the season has begun, it took until `r format(as.Date(onset_max + 30, origin = "2021-11-01"), format = "%d %b")` to ascertain the onset for the entire region. Until then, it would not have been possible to confirm that a dry period was not an in-season dry spell for `r 100 - perc_nov_onset`% of the region. Note that November onsets could not be confirmed until the second week of December at the earliest, either. For the 2021-2022 season, 50% of onset dates occurred by `r format(as.Date(onset_50perc_known, origin = "2021-11-01"), format = "%d %b")` and 90%  by `r format(as.Date(onset_90perc_known, origin = "2021-11-01"), format = "%d %b")`.
+
+As for cessation dates, [INSERT NARRATIVE HERE]
+
+<br>
+
+### KEY TAKEAWAYS
+- The assumption of the trigger that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
+- In the Southern Region, Dec and March dry spells are hard to differentiate from dry days outside the rainy season due to the difficulty in rapidly confirming the onset or cessation of the rainy season. 
+- A single onset/cessation date for the entire region is not viable. Waiting for confirmation of the onset /cessation dates for the entire region causes too much delay to enable AA: it prevents AA in areas where dry spells occur because the rainy season has not begun or is already over in other areas.
+- To address Dec and March dry spells, a probabilistic approach should be used to select onset/cessation dates per district (adm2 area) based on historical patterns (eg: 90% of the time in past 20 years, the season had begun by X for Nsanje). 
+
+
+
 ## Rainy Days
 
 During the rainy season there are days during which it rained while other days were dry.
@@ -292,17 +326,5 @@ plot(static_r,
      mar = NA,
      cex.main = 1.3)
 plot(southern_shp, add = T)
-```
-
-```{r, fig.show="hold", out.width="100%"}
-par(mfrow = c(1,1),
-    mar = c(0, 0, 0, 0))
-plot(NULL,xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1, mar = NA, ) 
-legend("top",
-       inset = c(0.5, 0.2), # Distance from the margin as a fraction of the plot region,
-       legend = seq(lg_min, lg_max - 1), 
-       fill = RColorBrewer::brewer.pal(name = "Oranges", n = lg_max - 1), 
-       horiz = T, 
-       cex = 0.8)
 ```
 
