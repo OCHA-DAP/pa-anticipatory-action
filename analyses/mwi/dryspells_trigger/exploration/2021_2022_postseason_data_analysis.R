@@ -171,7 +171,12 @@ rainy_ratio <- in_season %>%
                distinct() %>%
                left_join(rainy_day_counts, by = 'cell') %>%
                mutate(rainy_days_perc = 100 * round(rainy_days_n / duration, 2))
-                         
+
+# compute in-season rainy totals
+rain_seas_totals <- in_season %>%
+  group_by(cell) %>%
+  summarise(rainfall_seas_total = sum(rainfall)) %>%
+  ungroup()
 
 #####
 # create raster files with results
@@ -214,6 +219,13 @@ rainy_ratio_r <- setValues(rainy_ratio_r, rainy_ratio_all_cells$rainy_days_perc)
 varnames(rainy_ratio_r) <- "rainy_ratio"
 names(rainy_ratio_r) <- "rainy_ratio"
 
+# create rain season total raster layer
+rain_seas_tot_all_cells <- left_join(template_cells, rain_seas_totals, by = 'cell')
+rain_seas_tot_r <- raster_template
+rain_seas_tot_r <- setValues(rain_seas_tot_r, rain_seas_tot_all_cells$rainfall_seas_total)
+varnames(rain_seas_tot_r) <- "rain_seas_tot"
+names(rain_seas_tot_r) <- "rain_seas_tot"
+
 # create max dry streak raster layer
 max_dry_streak_all_cells <- left_join(template_cells, max_dry_streak, by = 'cell')
 max_streak_r <- raster_template
@@ -250,7 +262,8 @@ static_r <- c(static_r,
               onset_r, 
               cessation_r, 
               duration_r, 
-              rainy_ratio_r, 
+              rainy_ratio_r,
+              rain_seas_tot_r,
               max_streak_r,
               n_5dplus_streaks_r,
               n_7dplus_streaks_r,
