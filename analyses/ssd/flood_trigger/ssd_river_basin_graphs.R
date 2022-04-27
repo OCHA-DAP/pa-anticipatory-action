@@ -110,6 +110,7 @@ df_wider <- df_join %>%
   )
 
 df_worst <- df_wider %>%
+  filter(year < 2022) %>%
   group_by(year) %>%
   summarize(
     flood_extent = max(flood_extent),
@@ -175,8 +176,16 @@ df_worst %>%
 # look at z-scores to see differences across years
 
 df_wider %>%
-  select(-month) %>%
+  group_by(year) %>%
   filter(year < 2022) %>%
+  summarize(
+    flood_extent = max(flood_extent),
+    across(
+      `Bahrel Ghazal`:Total,
+      sum
+    ),
+    .groups = "drop"
+  ) %>%
   pivot_longer(
     -year
   ) %>%
@@ -213,6 +222,12 @@ df_wider %>%
       "H"
     )
   ) %>%
+  filter(
+    name %in% c("Total", "Flood extent")
+  ) %>%
+  mutate(
+    name = ifelse(name == "Total", "Total rainfall\n(Sudd and neighboring river basins)", "Sudd flood extent")
+  ) %>%
   ggplot(
     aes(
       x = year,
@@ -225,7 +240,7 @@ df_wider %>%
   scale_fill_gradient2() +
   labs(
     x = "Year",
-    y = "Rainfall and Sudd flood extent",
+    y = "",
     fill = "Z-score",
     title = "Standardized comparison of rainfall and flood values",
     caption = "**H** indicates it's one of the 5 highest years on record, for either flooding or rainfall"
@@ -244,8 +259,31 @@ df_wider %>%
 
 # graph time series
 
+brks <- df_floodscan %>%
+  filter(
+    month == 1,
+    year %in% c(2000, 2005, 2010, 2015, 2020, 2021, 2022)
+  ) %>%
+  pull(time)
+
 df_floodscan %>%
   ggplot(
-    x = time,
-    y = 
+    aes(
+      x = time,
+      y = flood_extent
+    )
+  ) +
+  geom_area(fill = "#ef6666") +
+  theme_minimal() +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_x_date(
+    breaks = brks,
+    date_labels = "%Y"
+  ) +
+  labs(
+    x = "Year",
+    y = "% of areas flooded",
+    title = "Flooded areas in the Sudd wetlands, South Sudan"
   )
