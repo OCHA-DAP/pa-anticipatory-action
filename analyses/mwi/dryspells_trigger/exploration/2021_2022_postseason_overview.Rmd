@@ -32,7 +32,7 @@ This report retrospectively examines rainfall patterns during the months of Nov 
 
 * Q1: Could Dec/Mar dry spells be included or was the season not started/ended?
 * Q2: How do streaks of dry days compare to streaks with max cumulative rainfall?
-* Q3: How much rainfall in 14-day periods?
+* Q3: How much rainfall in 14-day periods? How extreme is the 2mm threshold?
 
 ## Background
 Malawi implemented a multi-sectorial Anticipation Action Framework for the 2021-2022 rainy season to mitigate the humanitarian impact of dry spells. A trigger mechanism was designed to signal a higher risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region. Dry spells are defined as at least 14 consecutive days with no more than 2mm of cumulative rain. 
@@ -72,13 +72,14 @@ adm3_shp <- vect(paste0(shp_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
 southern_shp <- adm3_shp[adm3_shp$ADM1_EN == 'Southern',]
 season_dates <- readRDS(paste0(postseason_folder_path, "season_dates.RDS"))
 streaks <- readRDS(paste0(postseason_folder_path, "streaks.RDS"))
-
+in_season <- readRDS(paste0(postseason_folder_path, "in_season.RDS"))
 static_r <- rast(paste0(postseason_folder_path, "static_r.tif"))
+dry_days_per_month_r <- rast(paste0(postseason_folder_path, "dry_days_per_month_r.tif"))
 
-nbr_cells <- 343 # nbr of cellsin southern region (touching=T)
+nbr_cells <- 343 # nbr of cells in southern region (touching=T)
 ```
 
-## Rainy Season Characteristics
+## Rainy Season Onset, Cessation and Duration
 
 ### Onset
 ```{r onset-setup}
@@ -218,11 +219,17 @@ As for cessation dates, [INSERT NARRATIVE HERE]
 
 <br>
 
-## Rainy Days
+## Rainfall 
 
 During the rainy season there are days during which it rained while other days were dry.
 
-The ratio of days that were rainy (rainy = that received at least 3mm of rain) over the duration of the rainy season was computed. It is shown in the graph on the left below as a percentage of days. Yellow areas in the graph received rain on a small portion of days during the rainy season, while the dark blue areas received rain on the majority of days. The graph on the right shows total rainfall during the rainy season. Darker colours captured highest rainfall totals.
+### Rainy Days
+
+The ratio of days that were rainy (rainy = that received at least 3mm of rain) over the duration of the rainy season was computed. It is shown in the graph on the left below as a percentage of days. Yellow areas in the graph received rain on a small portion of days during the rainy season, while the dark blue areas received rain on the majority of days. 
+
+### Rainfall Amount
+
+The graph on the right shows total rainfall during the rainy season. Darker colours captured highest rainfall totals.
 
 <br>
 
@@ -259,17 +266,100 @@ plot(static_r,
 plot(southern_shp, add = T)
 ```
 
+### Monthly Patterns
 
-## Dry Days
+Days with less than 3mm of rainfall are considered dry days. Below the maps show the number of dry days per month. Note that the maps include days that precede or follow the formal onset or cessation of the rainy season as defined above.
+
+<br>
+
+```{r dry-days-per-month-plot}
+
+dry_days_per_month_breaks <- seq(from = 0, to = 32, by = 5)
+
+par(mfrow = c(1,5),
+    mar = c(0, 0, 1.5, 0)) # bottom, left, top, right.
+
+plot(dry_days_per_month_r, 
+     "nov", 
+     main = "Nov",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     col = rev(viridis::plasma(6)),
+     alpha = 0.9,
+     legend = "topleft",
+     plg = list(title = "Dry Days", cex = 0.7),
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "dec", 
+     main = "Dec",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = rev(viridis::plasma(6)),
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "jan", 
+     main = "Jan",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = rev(viridis::plasma(6)),
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "feb", 
+     main = "Feb",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = rev(viridis::plasma(6)),
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "mar", 
+     main = "Mar",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = rev(viridis::plasma(6)),
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+```
+
+
+## Streaks
 
 Dry days could be interspersed between rainy days, or tend to group into periods of consecutive dry days. The longest streak of dry days is represented on the right. Note that a dry day can receive up to 3mm of rain while the definition of dry spell used for Anticipatory Action was a 14-day streak with no more than 2mm in total.
 
+### Dry Days Streaks
+
+<br>
 
 ```{r longest-streak-plot, fig.show="hold", out.width="100%"}
-dry_ratio_r <- 100 - static_r[["rainy_ratio"]] 
-names(dry_ratio_r) <- "dry_ratio"
+#dry_ratio_r <- 100 - static_r[["rainy_ratio"]] 
+#names(dry_ratio_r) <- "dry_ratio"
 
-dry_ratio_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
+perc_bin_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
 
 max_max_streak <- minmax(static_r$max_streak)[2]
 
@@ -277,9 +367,11 @@ plot(static_r,
      "max_streak", 
      main = "Longest Streak of Dry Days During Rainy Season",
      plg = list(title = "Streak Duration in Days",
-                legend = dry_ratio_labels))
+                legend = perc_bin_labels))
 plot(southern_shp, add = T)
 ```
+
+<br>
 
 ```{r dry-streak-counts-plot, fig.show="hold", out.width="100%"}
 
@@ -296,7 +388,7 @@ lg_max <- max(minmax(static_r$n_5dplus_streaks)[2],
 
 # plot number of streaks
 par(mfrow = c(1,4),
-    mar = c(1, 1, 3, 1)) # bottom, left, top, right.
+    mar = c(1, 1, 2, 1)) # bottom, left, top, right.
 
 plot(static_r, 
      "n_5dplus_streaks", 
@@ -348,3 +440,67 @@ plot(static_r,
 plot(southern_shp, add = T)
 ```
 
+<br>
+
+```{r dry-days-timelines}
+#ggplot(subset(in_season, cell = 25), 
+#       aes(x=dates, y=rainfall)) +
+#       geom_line()
+```
+
+### Rainfall during 14-day streaks
+
+During the 2021-2022 season, around `r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`% of 14-day periods across the Southern Region received 2 or less mm of rain. This amount of cumulative rainfall, which is the definition of a dry spell selected for AA, is very rare. For comparison, around `r round(100*ecdf(in_season$roll_sum_next_14d)(10), 2)`% received 10 or less mm. The graph below shows shows how frequent was each total rainfall per 14-day period, with the taller bars being the most frequent.
+
+<br>
+
+```{r 14d-cum-rainfall}
+  
+in_season$lt5_rollsum14d_bin = ifelse(in_season$roll_sum_next_14d <= 5, 1, 0)
+
+in_season %>%
+  filter(!is.na(roll_sum_next_14d)) %>%
+  ggplot(aes(x=roll_sum_next_14d, fill = lt5_rollsum14d_bin)) +
+    geom_histogram(data=subset(in_season, lt5_rollsum14d_bin==1),
+                   binwidth = 5, 
+                   boundary = 0, # bars are left aligned
+                   fill="deeppink4",
+                   color="#e9ecef", # bar border
+                   alpha=0.9) +
+    geom_histogram(data=subset(in_season, lt5_rollsum14d_bin==0),
+                   binwidth = 5, 
+                   boundary = 0, 
+                   fill="#6BAED6",
+                   color="#e9ecef", 
+                   alpha=0.9) +
+    annotate("text", 
+             label = "Less than\n5mm", 
+             x = 2,
+             y = 1200, 
+             hjust = 0, 
+             vjust = 2, 
+             color = "deeppink4") +
+  annotate("segment", 
+           x = 2, 
+           xend = 2, 
+           y = 450, 
+           yend = 800,
+           color = "deeppink4", 
+           size = 0.6, 
+           linetype='dashed') +
+    ggtitle("Rainfall Amounts in 14-day Periods") +
+  theme_minimal() +
+    theme(
+      plot.title = element_text(size=12, hjust = 0.5, vjust = -2),
+      axis.title.x = element_text(size=10),
+      axis.title.y = element_text(size=10),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank()) +
+  labs(x = "Cumulative Rainfall (mm)",
+       y = "Number of 14-day periods",
+       caption = "A vertical bar covers a 5mm range.")
+```
+
+<br>
+
+In other words, even when allowing for 5 times more rainfall than the selected definition for dry spell, the frequency of occurrence was still significantly less than 5% (a 1 in 20 year event). Note however that the analysis looks at a single year and that thresholds should be set based on historical data over longer period of times. Note also that the analysis examines small areas of about 10 x 10 km so patterns can change when computing metrics for larger areas such as adm2 (district) or adm3 (traditional authority) regions (for instance, by averaging). For AA, the trigger was intentionally designed to target severe, geographically widespread dry spells.

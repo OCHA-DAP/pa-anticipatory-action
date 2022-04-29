@@ -52,8 +52,9 @@ stats <- lf %>%
   dplyr::mutate(roll_sum_next_10d = ifelse(!is.na(rainfall), zoo::rollsum(rainfall, k = 10, fill = NA, align = 'left'), NA), # sum of precipitation in 10-day period starting today
          start_10d_ds_bin = ifelse(roll_sum_next_10d < 2, 1, 0), # is this the first day of a dry 10-day period?
          roll_sum_foll_15d = ifelse(!is.na(rainfall), zoo::rollsum(lead(rainfall, 1), k = 15, fill = NA, align = 'left'), NA), # sum of precipitation in 15-day period starting tomorrow (lead=1)
-         foll_by_15d_ds_bin = ifelse(roll_sum_foll_15d <= 25, 1, 0) # is tomorrow the first day of a 15-d dry period?
-  )
+         foll_by_15d_ds_bin = ifelse(roll_sum_foll_15d <= 25, 1, 0), # is tomorrow the first day of a 15-d dry period?
+         roll_sum_next_14d = ifelse(!is.na(rainfall), zoo::rollsum(rainfall, k = 14, fill = NA, align = 'left'), NA), # sum of precipitation in 14-day period starting today 
+         )
 
 # Onsets:
 # First day of a period after 1 Nov with at least 40mm of rain over 10 days 
@@ -95,7 +96,8 @@ season_dates <- data.frame(cell_numbers) %>%
 ## in-season analysis
 #####
 
-in_season <- lf %>%
+#in_season <- lf %>%
+in_season <- stats %>%
        left_join(season_dates[, c('cell', 'onset_date', 'cessation_date', 'duration')], by = 'cell') %>%
        mutate(in_seas_bin = case_when(is.na(onset_date) | is.na(cessation_date) ~ "unknown",
                                       dates >= onset_date & dates <= cessation_date ~ "1",
@@ -178,6 +180,14 @@ rain_seas_totals <- in_season %>%
   summarise(rainfall_seas_total = sum(rainfall)) %>%
   ungroup()
 
+# compute number of dry days per month, regardless of whether season has begun/ended
+dry_days_per_month <- stats %>%
+                      group_by(cell, month) %>%
+                      summarise(dry_days_n = sum(ifelse(rainy_bin == 0, 1, 0), na.rm = T)) %>%
+                      ungroup() %>%
+                      mutate(month = recode(month, `1` = 'jan', `2` = 'feb', `3` =  'mar', `4` = 'apr', `10` = 'oct', `11` = 'nov', `12` = 'dec')) %>%
+                      spread(month, dry_days_n)
+
 #####
 # create raster files with results
 #####
@@ -255,6 +265,16 @@ n_14dplus_streaks_r <- setValues(n_14dplus_streaks_r, dry_streak_counts_all_cell
 varnames(n_14dplus_streaks_r) <- "n_14dplus_streaks"
 names(n_14dplus_streaks_r) <- "n_14dplus_streaks"
 
+dry_days_per_month_r <- c(rep(raster_template, 5))
+varnames(dry_days_per_month_r) <- 'dry_days_n'
+names(dry_days_per_month_r) <- c('nov', 'dec', 'jan', 'feb', 'mar')
+dry_days_per_month_all_cells <- left_join(template_cells, dry_days_per_month, by = 'cell')
+dry_days_per_month_r[[1]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$nov
+dry_days_per_month_r[[2]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$dec
+dry_days_per_month_r[[3]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$jan
+dry_days_per_month_r[[4]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$feb
+dry_days_per_month_r[[5]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$mar
+
 ### create rasters
 
 # create static raster
@@ -270,10 +290,15 @@ static_r <- c(static_r,
               n_10dplus_streaks_r,
               n_14dplus_streaks_r)
 
-## save results
-saveRDS(object = in_season, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season_daily_measurements.RDS"))
+# save datasets
+saveRDS(object = in_season, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season.RDS"))
 saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
 saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
+
+# save static rasters
 writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"), overwrite=T)
 writeRaster(static_r, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"), overwrite=T)
+
+# save time series raster
+writeRaster(dry_days_per_month_r , filename = paste0(dry_spell_processed_path, "2021_2022_postseason/dry_days_per_month_r.tif"), overwrite=T)
 
