@@ -74,6 +74,10 @@ plague_path = Path(plague.plague_raw_dir) / plague_filename
 ```
 
 ```python
+plague_filename
+```
+
+```python
 df=plague.load_plague_data(plague_path,keep_cases=incl_cases_class)
 ```
 
@@ -121,6 +125,7 @@ df = pd.merge(df, adm3_urban[["ADM3_PCODE", "urban_area_weighted_13"]], on="ADM3
 # then filter to only urban areas with pneumonic plague
 # df_urb = df_urb.loc[df_urb.urban_area_weighted_13 & (df_urb.clinical_form == "PP")]
 df['urb_pp_cases']=np.where((df.urban_area_weighted_13) & (df.clinical_form == "PP"),df.cases_number,0)
+df['urb_cases']=np.where(df.urban_area_weighted_13,df.cases_number,0)
 #group by date
 df['pp_cases']=np.where(df.clinical_form == "PP",df.cases_number,0)
 df_date=plague.aggregate_to_date(df,cases_cols=["cases_number","urb_pp_cases","pp_cases"])
@@ -197,7 +202,7 @@ print(f"Total number of cases during monitoring period: {int(df_date_sel.cases_n
 ```
 
 ```python
-alt.Chart(df_date_sel).mark_bar().encode(
+bar_weekly = alt.Chart(df_date_sel).mark_bar().encode(
     x='week:N',
     y=alt.Y('sum(cases_number)',title="weekly cases")
     ).properties(width=300,height=100).facet(
@@ -206,10 +211,12 @@ alt.Chart(df_date_sel).mark_bar().encode(
     ).properties(
     title='Weekly cases during monitoring period'
 ).resolve_scale(x="independent")
+# bar_weekly.save(os.path.join(plot_dir,f"{iso3}_cases_weekly_{mon_end_date.strftime('%Y%m%d')}.svg"))
+bar_weekly
 ```
 
 ```python
-alt.Chart(df_date_sel).mark_bar().encode(
+bar_3week = alt.Chart(df_date_sel).mark_bar().encode(
     x='week:N',
     y=alt.Y('rolling_sum_cases_number',title="3-week sum of cases")
     ).properties(width=300,height=100).facet(
@@ -218,6 +225,8 @@ alt.Chart(df_date_sel).mark_bar().encode(
     ).properties(
     title='3-week rolling sum of cases during monitoring period'
 ).resolve_scale(x="independent")
+# bar_3week.save(os.path.join(plot_dir,f"{iso3}_cases_3weeksum_{mon_end_date.strftime('%Y%m%d')}.svg"))
+bar_3week
 ```
 
 ```python
@@ -361,15 +370,14 @@ chart_mon = (bar_mon + line_std + band_std + line_avg).properties(
     title = "Number of cases during 2022 and historical average"
 )
 chart_mon
-##not working :( need some packages installed which is complicated
-# chart_2021.save(os.path.join(plot_dir,f"{iso3}_cases_histavg_2021.png"))
+# chart_mon.save(os.path.join(plot_dir,f"{iso3}_cases_histavg_{mon_end_date.strftime('%Y%m%d')}.svg"))
 ```
 
 ### Pneunomic cases
 Chart should be improved
 
 ```python
-alt.Chart(df_date[df_date.year.isin(range(2018,2023))]).mark_line().encode(
+plt_pneumonic = alt.Chart(df_date[df_date.year.isin(range(2018,2023))]).mark_line().encode(
     x='week:N',
     y='pp_cases',
     color=alt.Color('year:N', scale=alt.Scale(range=["#D3D3D3","#D3D3D3","#D3D3D3","#D3D3D3",color_twentyone]))
@@ -378,4 +386,12 @@ alt.Chart(df_date[df_date.year.isin(range(2018,2023))]).mark_line().encode(
     height=300,
     title="Pneumonic cases from 2018 to 2022"
 )
+# plt_pneumonic.save(os.path.join(plot_dir,f"{iso3}_pneunomic_cases_{mon_end_date.strftime('%Y%m%d')}.svg"))
+plt_pneumonic
+```
+
+### Urban cases
+
+```python
+print(f"Sum of urban cases in monitoring period: {int(df_date_sel.urb_cases.sum())}")
 ```
