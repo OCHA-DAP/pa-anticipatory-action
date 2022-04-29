@@ -36,7 +36,7 @@ area_df <- df_floodscan %>%
 line_df <- df_floodscan %>%
   filter(year >= 2021)
 
-ggplot(
+plt_floodextent <- ggplot(
   mapping = aes(
     x = month
   )
@@ -83,3 +83,11 @@ ggplot(
   theme(
     text = element_text(family = "Helvetica")
   )
+# ggsave(file.path(
+#   data_dir,
+#   "private",
+#   "exploration",
+#   "ssd",
+#   "floodscan",
+#   "ssd_floodscan_roi_perc_flooded_timeseries.png"
+# ),plot = plt_floodextent, width=7,height=3)

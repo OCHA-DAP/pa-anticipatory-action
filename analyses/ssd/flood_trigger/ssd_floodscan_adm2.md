@@ -5,6 +5,11 @@ A specific focus is on a subset of the counties in the states of Jonglei and Uni
 As these experience flooding and might be the focus of the pilot
 
 ```python
+%load_ext autoreload
+%autoreload 2
+```
+
+```python
 import os
 from pathlib import Path
 import sys
@@ -73,19 +78,19 @@ adms+rivers
 # #clip to country
 # #this takes long, so only do when not saved the file yet
 # #read floodscan data
-# fs = floodscan.Floodscan()
-# fs_raw = fs.read_raw_dataset()
-# fs_clip = (fs_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
-#            .rio.write_crs("EPSG:4326")
-#            .rio.clip(gdf_adm2["geometry"], all_touched=True))
+fs = floodscan.Floodscan()
+fs_raw = fs.read_raw_dataset()
+fs_clip = (fs_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
+           .rio.write_crs("EPSG:4326")
+           .rio.clip(gdf_adm2["geometry"], all_touched=True))
 ```
 
 ```python
-# #somehow cannot save the file with these attributes
-# fs_clip.SFED_AREA.attrs.pop('grid_mapping')
-# fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
-# fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
-# fs_clip.to_netcdf(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
+#somehow cannot save the file with these attributes
+fs_clip.SFED_AREA.attrs.pop('grid_mapping')
+fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
+fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
+fs_clip.to_netcdf(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
 ```
 
 ```python
