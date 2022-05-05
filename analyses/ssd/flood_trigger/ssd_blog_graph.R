@@ -78,16 +78,16 @@ plt_floodextent <- ggplot(
   labs(
     x = "Month",
     y = "% of areas flooded",
-    title = "Flooded areas in the Sudd wetlands, South Sudan"
+    title = "Flooded areas around the Sudd wetlands, South Sudan"
   ) +
   theme(
     text = element_text(family = "Helvetica")
   )
-# ggsave(file.path(
-#   data_dir,
-#   "private",
-#   "exploration",
-#   "ssd",
-#   "floodscan",
-#   "ssd_floodscan_roi_perc_flooded_timeseries.png"
-# ),plot = plt_floodextent, width=7,height=3)
+ggsave(file.path(
+  data_dir,
+  "private",
+  "exploration",
+  "ssd",
+  "floodscan",
+  "ssd_floodscan_roi_perc_flooded_timeseries.png"
+),plot = plt_floodextent, width=7,height=3)
