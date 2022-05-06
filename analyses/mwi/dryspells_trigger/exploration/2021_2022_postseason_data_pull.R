@@ -40,7 +40,7 @@ cropped <- crop(raw, southern_vect)
 
 # subset period of interest
 start_date <- 7957 # 1 oct 2021: as.Date(7957, origin = "1999-12-19")
-end_date <- 8158 # 20 Apr 2022: as.Date(8158, origin = "1999-12-19")  ###FIX ME TO INCLUDE LATEST DATA
+end_date <- 8168 # 30 Apr 2022: as.Date(8168, origin = "1999-12-19") 
 date_numbers <- seq(from = start_date, to = end_date, by = 1)
 dates_chr <- paste0("est_prcp_T=", date_numbers)
   
@@ -61,4 +61,4 @@ data <- extract(data_r,
 data <- data %>%
           select(ID, cell, x, y, everything()) # move cell number + coordinates columns to first positions
 
-# saveRDS(data, paste0(dry_spell_processed_path, "2021_2022_postseason/", "mwi_2021_2022_postseason_overview.RDS"))
+saveRDS(data, paste0(dry_spell_processed_path, "2021_2022_postseason/", "mwi_2021_2022_postseason_overview.RDS"))

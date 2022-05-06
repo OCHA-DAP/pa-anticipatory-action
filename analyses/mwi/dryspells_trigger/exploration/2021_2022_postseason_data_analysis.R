@@ -15,8 +15,7 @@ source('dryspells_trigger/exploration/2021_2022_postseason_data_pull.R')
 
 # user-friendly date labels
 dates <- data.frame(dates = seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'), 
-                   to = as.Date('2022-04-20', format = '%Y-%m-%d'), ## FIX ME
-                   # to = as.Date('2022-04-01', format = '%Y-%m-%d'), 
+                   to = as.Date('2022-04-30', format = '%Y-%m-%d'), 
                    by = "days"))
 
 date_labels <- cbind(dates_chr, dates)
@@ -102,8 +101,8 @@ in_season <- stats %>%
        mutate(in_seas_bin = case_when(is.na(onset_date) | is.na(cessation_date) ~ "unknown",
                                       dates >= onset_date & dates <= cessation_date ~ "1",
                                       TRUE ~ "0")) %>% # 1 and 0 are strings because of 'UNKNOWN'
-       filter(in_seas_bin == '1' | in_seas_bin == 'unknown') %>% # keep in-season data & keep cells without onset/cessation dates
-       filter(dates >= "2021-11-01" & dates <= "2022-03-15") # arbitrary cutoffs for cells without onset/cessation dates
+       filter(in_seas_bin == '1')  # keep in-season data 
+
           
 # identify in-season streaks of rainy days per cell (streak minimum: 1 day)
 streaks <- in_season %>%
