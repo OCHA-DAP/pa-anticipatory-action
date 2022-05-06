@@ -6,6 +6,7 @@ library(tidyverse)
 library(janitor)
 library(ggridges)
 library(ggcorrplot)
+library(ggtext)
 
 #################
 #### LOADING ####
@@ -56,6 +57,7 @@ df_floodscan <- read_csv(
   select(-1) %>%
   group_by(year, month) %>%
   summarize(
+    time = min(time),
     flood_extent = mean(mean_ADM0_PCODE),
     .groups = "drop"
   )
@@ -69,7 +71,7 @@ df_floodscan <- read_csv(
 # first join the data
 df_join <- inner_join(
   df_chirps,
-  df_monthly,
+  df_floodscan,
   by = c("year", "month")
 ) 
 
@@ -102,12 +104,13 @@ df_wider <- df_join %>%
       )
   ) %>%
   pivot_wider(
-    c(basin, year, month, flood_extent),
+    id_cols = c("year", "month", "flood_extent"),
     names_from = basin,
     values_from = rainfall_mm
   )
 
 df_worst <- df_wider %>%
+  filter(year < 2022) %>%
   group_by(year) %>%
   summarize(
     flood_extent = max(flood_extent),
@@ -173,7 +176,16 @@ df_worst %>%
 # look at z-scores to see differences across years
 
 df_wider %>%
-  select(-month) %>%
+  group_by(year) %>%
+  filter(year < 2022) %>%
+  summarize(
+    flood_extent = max(flood_extent),
+    across(
+      `Bahrel Ghazal`:Total,
+      sum
+    ),
+    .groups = "drop"
+  ) %>%
   pivot_longer(
     -year
   ) %>%
@@ -207,8 +219,14 @@ df_wider %>%
     worst = ifelse(
       is.na(worst),
       "",
-      "W"
+      "H"
     )
+  ) %>%
+  filter(
+    name %in% c("Total", "Flood extent")
+  ) %>%
+  mutate(
+    name = ifelse(name == "Total", "Total rainfall\n(Sudd and neighboring river basins)", "Sudd flood extent")
   ) %>%
   ggplot(
     aes(
@@ -218,13 +236,17 @@ df_wider %>%
     )
   ) +
   geom_tile() +
-  theme_light() +
+  theme_minimal() +
   scale_fill_gradient2() +
   labs(
     x = "Year",
-    y = "Rainfall and Sudd flood extent",
+    y = "",
     fill = "Z-score",
-    title = "Standardized comparison of rainfall and flood values"
+    title = "Standardized comparison of rainfall and flood values",
+    caption = "**H** indicates it's one of the 5 highest years on record, for either flooding or rainfall"
+  ) +
+  theme(
+    plot.caption = element_markdown()
   ) +
   geom_text(
     aes(
@@ -232,4 +254,36 @@ df_wider %>%
     ),
     size = 2,
     fontface = "bold"
+  )
+
+
+# graph time series
+
+brks <- df_floodscan %>%
+  filter(
+    month == 1,
+    year %in% c(2000, 2005, 2010, 2015, 2020, 2021, 2022)
+  ) %>%
+  pull(time)
+
+df_floodscan %>%
+  ggplot(
+    aes(
+      x = time,
+      y = flood_extent
+    )
+  ) +
+  geom_area(fill = "#ef6666") +
+  theme_minimal() +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_x_date(
+    breaks = brks,
+    date_labels = "%Y"
+  ) +
+  labs(
+    x = "Year",
+    y = "% of areas flooded",
+    title = "Flooded areas in the Sudd wetlands, South Sudan"
   )

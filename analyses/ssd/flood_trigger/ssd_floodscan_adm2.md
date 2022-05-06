@@ -5,6 +5,11 @@ A specific focus is on a subset of the counties in the states of Jonglei and Uni
 As these experience flooding and might be the focus of the pilot
 
 ```python
+%load_ext autoreload
+%autoreload 2
+```
+
+```python
 import os
 from pathlib import Path
 import sys
