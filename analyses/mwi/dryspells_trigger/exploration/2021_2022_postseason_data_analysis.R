@@ -264,15 +264,16 @@ n_14dplus_streaks_r <- setValues(n_14dplus_streaks_r, dry_streak_counts_all_cell
 varnames(n_14dplus_streaks_r) <- "n_14dplus_streaks"
 names(n_14dplus_streaks_r) <- "n_14dplus_streaks"
 
-dry_days_per_month_r <- c(rep(raster_template, 5))
+dry_days_per_month_r <- c(rep(raster_template, 6))
 varnames(dry_days_per_month_r) <- 'dry_days_n'
-names(dry_days_per_month_r) <- c('nov', 'dec', 'jan', 'feb', 'mar')
+names(dry_days_per_month_r) <- c('nov', 'dec', 'jan', 'feb', 'mar', 'apr')
 dry_days_per_month_all_cells <- left_join(template_cells, dry_days_per_month, by = 'cell')
 dry_days_per_month_r[[1]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$nov
 dry_days_per_month_r[[2]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$dec
 dry_days_per_month_r[[3]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$jan
 dry_days_per_month_r[[4]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$feb
 dry_days_per_month_r[[5]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$mar
+dry_days_per_month_r[[6]][dry_days_per_month_all_cells$cell] <- dry_days_per_month_all_cells$apr
 
 ### create rasters
 
