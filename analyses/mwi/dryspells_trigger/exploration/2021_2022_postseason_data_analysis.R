@@ -291,14 +291,14 @@ static_r <- c(static_r,
               n_14dplus_streaks_r)
 
 # save datasets
-saveRDS(object = in_season, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season.RDS"))
-saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
-saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
+#saveRDS(object = in_season, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "in_season.RDS"))
+#saveRDS(object = season_dates, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "season_dates.RDS"))
+#saveRDS(object = streaks, file = paste0(dry_spell_processed_path, "2021_2022_postseason/" , "streaks.RDS"))
 
 # save static rasters
-writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"), overwrite=T)
-writeRaster(static_r, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"), overwrite=T)
+#writeRaster(raster_template, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/raster_template.tif"), overwrite=T)
+#writeRaster(static_r, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/static_r.tif"), overwrite=T)
 
 # save time series raster
-writeRaster(dry_days_per_month_r , filename = paste0(dry_spell_processed_path, "2021_2022_postseason/dry_days_per_month_r.tif"), overwrite=T)
+#writeRaster(dry_days_per_month_r , filename = paste0(dry_spell_processed_path, "2021_2022_postseason/dry_days_per_month_r.tif"), overwrite=T)
 
