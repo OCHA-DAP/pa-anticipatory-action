@@ -84,9 +84,10 @@ nbr_cells <- 343 # nbr of cells in southern region (touching=T)
 ```
 
 ## On the Rainy Season
+We look at when the rainy season began and ended, and therefore how long it lasted, throughout the Southern Region.
 
 ### Onset
-Season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS 2008).
+Season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, cited in Kimaro and Sibande 2008).
 
 The map below shows during which week (ie 7-day period) the season began. Beige-brown indicates a November onset date while blue-purple indicates December start dates. The darker colours reflect onset dates later in the month.
 
@@ -209,20 +210,20 @@ onset_90perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.
 onset_50perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.5))
 ```
 
-## Rainfall 
-
-During the rainy season there are days during which it rained while other days were dry.
+## On Rainfall Patterns
+We examine rainfall patterns below.
 
 ### Rainy Days
+[DCCMS](https://www.metmalawi.gov.mw/dccms_agromet.php) in its latest bulletins defines "rainy day" has having received at least 3mm of rain. This definition was adopted in this analysis.
 
-The ratio of days that were rainy (rainy = that received at least 3mm of rain) over the duration of the rainy season was computed. It is shown in the graph on the left below as a percentage of days. Yellow areas in the graph received rain on a small portion of days during the rainy season, while the dark blue areas received rain on the majority of days. 
+The graph below (left) shows the ratio of rainy days over season duration (ie., percentage of days). The yellow-pale green areas received rain on a smaller portion of days compared to the teal-blue areas. Notably, no area received rain on more than `r minmax(static_r[["rainy_ratio"]])[2]`% of days during the rainy season. Thus, dry days were quite common (up to `r 100 - minmax(static_r[["rainy_ratio"]])[1]`% of days).
 
-### Rainfall Amount
+### Rainfall Amounts
+The cumulative amount of rainfall over the duration of the rainy season was computed and is shown below (right). Darker colours indicate highest rainfall totals. 
 
-The graph on the right shows total rainfall during the rainy season. Darker colours captured highest rainfall totals.
+There were large variations in amount of rainfall received. Although there is a relation between total rainfall and season duration and between total rainfall and ratio of dry days, it is not straightforward: not all areas with the longest durations or highest ratios of rainy days received the most rain.
 
 <br>
-
 
 ```{r rainy-days-plots}
 
@@ -259,7 +260,15 @@ plot(southern_shp, add = T)
 
 ### Monthly Patterns
 
-Days with less than 3mm of rainfall are considered dry days. Below the maps show the number of dry days per month. Note that the maps include days that precede or follow the formal onset or cessation of the rainy season as defined above.
+Returning to dry days (ie, with less than 3mm of rain), patterns emerge when their occurrence is examined per calendar month as in the maps below. (Note that the maps include days that preceded or followed season onset or cessation as defined above in order to represent the full calendar month).
+
+The months of January and February saw the fewest dry days, although there were numerous dry days in both months (January: `r minmax(dry_days_per_month_r[['jan']])[1]`-`r minmax(dry_days_per_month_r[['jan']])[2]`. February: `r minmax(dry_days_per_month_r[['feb']])[1]`-`r minmax(dry_days_per_month_r[['feb']])[2]`). 
+
+November, December, March and April were similar in the average number of dry days observed across the Southern Region 
+(`r round(as.numeric(global(dry_days_per_month_r[['nov']], mean, na.rm=T)), 1)`, 
+`r round(as.numeric(global(dry_days_per_month_r[['dec']], mean, na.rm=T)), 1)`,
+`r round(as.numeric(global(dry_days_per_month_r[['mar']], mean, na.rm=T)), 1)`,
+`r round(as.numeric(global(dry_days_per_month_r[['apr']], mean, na.rm=T)), 1)`, respectively.)
 
 <br>
 
