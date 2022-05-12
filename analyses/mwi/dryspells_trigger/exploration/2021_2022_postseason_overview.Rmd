@@ -389,8 +389,6 @@ plot(static_r,
 plot(southern_shp, add = T)
 ```
 
-<br>
-
 Examining the frequency of streaks of consecutive dry days, the maps below represent the number of streaks of various durations experienced during the rainy season. It can be seen that streaks were quite frequent and widespread at shorter durations (5 and 7 days) and became increasingly infrequent and localised at longer durations (10 and 14 days).
 
 ```{r dry-streak-counts-plot, fig.show="hold", out.width="100%"}
@@ -521,6 +519,12 @@ in_season %>%
 
 <br>
 
+```{r}
+sprouting takes 1 to 2 weeks depending of moisture conditions and the variety of the crop.
+If we talk about maize, between sprouting and flowering the time will be more and less 9 to 11 weeks, but this might vary by location, moisture and the variety (drought tolerant varieties can take even less than 10 weeks).
+ 
+```
+
 ## Key Takeaways
 
 * Q1: Were dry days distinguishable from dry spells in December and in March?
@@ -552,3 +556,9 @@ In other words, even when allowing for 5 times more rainfall than the selected d
 ## References
 FAO (2006). Water and Soil Requirements. Cited in Kimaro and Sibande 2008.
 Kimaro TA and Sibande H. (2008). Trends of rainfall and maize productivity in Malawi. Tanzania Journal of Engineering and Technology. Vol. 31 (No.1)
+
+## Appendix
+```{r}
+fao_onset <- paste0(data_dir, "/public/raw/mwi/fao-giews/MWI_2021_2022_start_of_season.png")
+knitr::include_graphics(fao_onset)
+```
