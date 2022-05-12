@@ -1,0 +1,266 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left; margin:10px" />'
+pagetitle: "UGA flood risk MAM 2022" 
+output:
+  html_document:
+    css: ../../country_template/docs/style.css
+    includes:
+      in_header: ../../country_template/docs/header.html
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = TRUE) # include chunk output by default
+knitr::opts_chunk$set(message = FALSE) # do not print messages by default
+knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
+
+options(scipen = 999) # turn off scientific notation
+options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
+
+# paths
+data_dir <- Sys.getenv("AA_DATA_DIR") 
+public_raw_uga_dir <- paste0(data_dir,'/public/raw/uga')
+private_exploration_uga_dir <- paste0(data_dir,'/private/exploration/uga')
+
+uga_adm1_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm1_ubos_20200824.shp")
+uga_adm3_shapefile_path <- paste0(public_raw_uga_dir, "/cod_ab/uga_admbnda_ubos_20200824_shp/uga_admbnda_adm3_ubos_20200824.shp")
+
+ec_jrc_image_path <- paste0(private_exploration_uga_dir, "/ec_jrc/ec_jrc_uga_flood_risk_adm3_20220302.png")
+thinkhdz_urban_path <- paste0(public_raw_uga_dir, "/thinkhazard/urban_flood.png")
+thinkhzd_river_path <- paste0(public_raw_uga_dir, "/thinkhazard/river_flood.png")
+thinkhzd_legend_path <- paste0(public_raw_uga_dir, "/thinkhazard/legend_horizontal.png")
+
+pop_path <- paste0(public_raw_uga_dir, "/cod_ps/uga_admpop_2020_csv/uga_admpop_adm2_2020proj_1y.csv")
+
+displ_path <- paste0(public_raw_uga_dir, "/idmc/IDMC_GIDD_disasters_internal_displacement_data_2020-1646173891391.csv")
+
+icpac_image_path <- paste0(private_exploration_uga_dir, "/icpac/forecast_adm1_overlay_20220301.png")
+icpac_data_path <- paste0(private_exploration_uga_dir, "/icpac/stats_summary_20220301.csv")
+unma_image_path <- paste0(public_raw_uga_dir, "/unma/seasonal-forecast-mam2022.gif")
+```
+
+```{r libraries, include = FALSE}
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable', 'rebus')
+
+# install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# load libraries 
+lapply(packages, library, character.only = TRUE)
+
+## If collapse_rows() doesn't work, this manual install will fix the issue until kabelExtra issues an update: devtools::install_github(repo="haozhu233/kableExtra", ref="a6af5c0")
+```
+
+
+<br>
+<br>
+<br>
+
+# Uganda Flood Risk MAM 2022
+Analysis last updated on: `r Sys.Date()`
+
+This report compiles data on the risk of flood and its potential humanitarian impact. Administrative boundaries as of August 2020.
+
+***
+
+## Flood Risk
+
+```{r flood_risk, include = FALSE, message = FALSE, warning = FALSE}
+#source("../notebooks/process_flood_risk_data.R") # removed to knit. Script produces dataframe and png of flood risk included in this report.
+
+```
+The map below depicts flood prone areas for flood events with 10-year return period, according to the [European Commission Joint Research Council](https://data.jrc.ec.europa.eu/dataset/jrc-floods-floodmapgl_rp10y-tif) Resolution is approx. 1km and colors indicate water depth (in m). 
+
+&nbsp;
+
+![Source: EC-JRC](`r ec_jrc_image_path`)
+
+&nbsp;
+
+[Think Hazard](https://thinkhazard.org/en/report/253-uganda/FL), in a collaboration between GFRR and UNMA, produced separate risk maps for river (left) and urban (right) floods. They are shown below.
+
+**River** &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp; &emsp;  &emsp; &emsp; &emsp; &emsp;  &emsp; &emsp; &emsp; &emsp; &emsp; **Urban**
+
+![River](`r thinkhzd_river_path`){width=350px} ![Urban](`r thinkhdz_urban_path`){width=350px}
+
+![](`r thinkhzd_legend_path`)
+
+## Population Density
+
+For each adm2 we list below its population density as last updated in June 2020. Each column can be searched and sorted. Upon requested age groups can be modified and/or further broken down by gender.
+
+<br>
+
+```{r population_setup, echo=F, include=F, message=FALSE, warning=FALSE}
+
+pop <- read.csv(pop_path)
+
+# columns by sex
+men_cols <- grepl("M_", names(pop))
+wom_cols <- grepl("F_", names(pop))
+
+# columns by age
+(age_0_12_rx <- rebus::number_range(00, 12)) 
+(age_13_20_rx <- rebus::number_range(13, 20)) 
+(age_21_60_rx <- rebus::number_range(21, 60)) 
+(age_61_79_rx <- rebus::number_range(61, 79)) 
+(age_80plus_rx <- "_80plus")
+
+patterns <- c(age_0_12_rx, age_13_20_rx, age_21_60_rx, age_61_79_rx, age_80plus_rx)  
+cols_by_age <- c('age_0_12', 'age_13_20', 'age_21_60', 'age_61_79', 'age_80plus')  
+
+pattern_labels <- data.frame(patterns, cols_by_age)
+
+for (p in patterns) {
+  df <- grep(pattern = p, x = names(pop), value = TRUE)
+  p_label <- pattern_labels[pattern_labels$patterns == p, 2]
+  assign(paste0(p_label, "_cols"), df)
+  }
+
+```
+
+```{r population}
+# compute totals per age group across sex
+pop_summary <- data.frame(pop[, c(3,5,7,8,90)]) %>%
+                rename(Sex_M = M_TOTAL,
+                      Sex_F = F_TOTAL)
+
+pop_summary <- cbind(pop_summary, age_0_12 = rowSums(pop[, names(pop) %in% age_0_12_cols]))
+pop_summary <- cbind(pop_summary, age_13_20 = rowSums(pop[, names(pop) %in% age_13_20_cols]))
+pop_summary <- cbind(pop_summary, age_21_60 = rowSums(pop[, names(pop) %in% age_21_60_cols]))
+pop_summary <- cbind(pop_summary, age_61_79 = rowSums(pop[, names(pop) %in% age_61_79_cols]))
+pop_summary <- cbind(pop_summary, age_80plus = rowSums(pop[, names(pop) %in% age_80plus_cols]))
+
+DT::datatable(pop_summary, 
+              caption = "Population Summary by Sex and Age",
+              filter = 'top', 
+              extensions = "Buttons",
+              options = list(pageLength = 40,
+                             dom = 'Blfrtip',
+                             buttons = c('copy', 'csv', 'excel', 'pdf', 'print'))) %>%
+        DT::formatRound(3:10, digits = 0) # add thousands marker
+```
+
+## Displacement
+
+```{r displacement-setup}
+displ <- read.csv(displ_path)
+
+displ_df <- displ %>%
+  mutate(Event_start = as.Date(displ$Date.of.event..start., format = "%Y-%m-%d")) %>%
+  select(-ISO3, -Country...Territory, -Hazard.Category, -Hazard.Type, -Date.of.event..start.) %>%
+  select(Year, Hazard.Sub.Type, Event_start, Event.Name, Disaster.New.Displacements) %>%
+  rename(Hazard_type = Hazard.Sub.Type, 
+         Event_name = Event.Name, 
+         New_displacements = Disaster.New.Displacements)
+
+displ_tot <- displ_df %>%
+  group_by(Year) %>%
+  summarise(Total = sum(New_displacements))
+
+```
+
+[IDMC](https://www.internal-displacement.org/database/displacement-data) reports flood-related displacement events going back to 2008. Their catalog of events is displayed in its entirety below (the table is sorted by Year and Hazard_type). The largest displacement for a single event stands at `r max(displ_df$New_displacements)`. 
+
+```{r displacement-table}
+displ_df %>%
+  arrange(desc(Year), Hazard_type)  %>%
+  mutate(Year = as.character(Year)) %>% # to avoid it receiving a big mark for thousands
+knitr::kable(caption = "Displacements Due to Floods (Source: IDMC)",
+               align = c('l'),
+              format.args = list(big.mark = ",")) %>%
+        collapse_rows(columns = 1:2, valign = "top") %>%
+        kable_styling(bootstrap_options = c( "hover", "condensed", "responsive"),
+                      fixed_thead = T) 
+#%>%          scroll_box(width = "100%", height = "500px") 
+```
+We summed up displacements per year across Hazard_type, as shown in the bar plot below. The highest number of total displacements due to floods in a calendar year was `r format(max(displ_tot$Total), big.mark = ",")` in `r as.integer(displ_tot[displ_tot$Total == max(displ_tot$Total),'Year'])`.
+
+```{r displacement-graph}
+displ_tot %>%
+  ggplot(aes(x=Year, y=Total)) +
+    geom_bar(stat="identity", 
+             fill="steelblue") +
+    geom_text(aes(label=Total), # show figures as labels
+              vjust=-0.3, 
+              color="black",
+              size=3) +
+    theme_minimal() +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+  ggtitle("Flood-related Displacements per Year") +
+  xlab("Year") +
+  ylab("Total Displacements") +
+  labs(caption = "Source: IDMC")
+```
+
+## Precipitation Forecast MAM 2022
+
+[ICPAC](https://www.icpac.net/seasonal-forecast/) issued its seasonal forecast the months of March through May 2022. On it is the overlay of boundaries for adm1 regions. The colours indicate probability that the 3-month period receives above average rainfall. Probabilities above 40 are considered high and likely. The assumption is that above-average rainfall increases the risk of flooding.
+
+&nbsp;
+
+![Source: ICPAC](`r icpac_image_path`)
+
+```{r icpac_forecast}
+
+forecast_table <- read.csv(icpac_data_path)
+
+forecast_table %>%
+  select(ADM1_EN, mean_ADM1_PCODE, X80quant_ADM1_PCODE, perc_thresh) %>%
+  mutate(mean_ADM1_PCODE = round(mean_ADM1_PCODE, 1),
+         X80quant_ADM1_PCODE = round(X80quant_ADM1_PCODE, 1),
+         perc_thresh = round(perc_thresh, 1)
+         ) %>%
+  knitr::kable(caption = "Above Average Precipitation Forecast Summary per Adm1",
+               col.names = c('Region', 'Mean Probability', 'Min prob for 20% of area', 'Perc of area with at least 40% prob'),
+               align = c('l', 'c', 'c', 'c')) %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      fixed_thead = T) 
+
+```
+
+The four regions vary in their forecasted likelihood of receiving above average precipitation. We note that the country's north-east (yellow on the map) is the most likely to experience a particularly wet season. Note that the likelihood is not uniform within a region. Seasonal forecasts do not enable more granular projections (for example, at adm 2 or adm3). The exact location of higher probabilities (that is, yellow pixels in the image) may shift within an adm1 and/or across boundaries between two regions when it comes to actual rainfall.
+
+The summary table report that the Eastern and Northern regions are the most likely to see above average precipitation: they have the highest average probability (ie highest certainty) over the majority of their areas (46.9 and 46.1, respectively.) They also have the largest portions of their area with a probability above 40% and considered "likely" (83.4% and 76.2%, respectively.)
+
+For additional input, we also present [UNMA](https://www.unma.go.ug/download/mam2022-seasonal-rainfall-outlook/?wpdmdl=1059)'s seasonal forecast for MAM 2022 below.
+
+```{r unma-forecast, echo=FALSE, out.width="50%", fig.cap="Source: UNMA"}
+knitr::include_graphics(unma_image_path)
+```
+
+## Sources
+
+**Administrative boundaries**
+* [HDX](https://data.humdata.org/dataset/cod-ab-uga)
+
+**Flood risk**
+* [EC JRC](https://data.jrc.ec.europa.eu/dataset/jrc-floods-floodmapgl_rp10y-tif)
+* [Think Hazard - River floods](https://thinkhazard.org/en/report/253-uganda/FL)
+* [Think Hazard - Urban flodds](https://thinkhazard.org/en/report/253-uganda/UF)
+
+**Population**
+* [HDX](https://data.humdata.org/dataset/cod-ps-uga)
+
+**Displacement**
+* [IDMC](https://www.internal-displacement.org/database/displacement-data)
+
+**Seasonal forecasts**
+* [ICPAC](https://www.icpac.net/seasonal-forecast/)
+* [UNMA](https://www.unma.go.ug/download/mam2022-seasonal-rainfall-outlook/?wpdmdl=1059)
+
+

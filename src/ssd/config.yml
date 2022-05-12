@@ -7,3 +7,9 @@ path_admin2_shp: "ssd_admbnda_imwg_nbs_shp/ssd_admbnda_adm2_imwg_nbs_20180817.sh
 shp_adm0c: "ADM0_EN"
 shp_adm1c: "ADM1_EN"
 shp_adm2c: "ADM2_EN"
+
+glofas:
+  stations:
+    Malakal:
+      lat: 9.55
+      lon: 31.65

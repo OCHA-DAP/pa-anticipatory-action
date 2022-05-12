@@ -1,14 +1,18 @@
 import logging
 import os
+import sys
 import urllib
 from calendar import month_name
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Union
 
 import geopandas as gpd
 import rasterio
 import xarray as xr
 
+path_mod = f"{Path(os.path.dirname(os.path.realpath(__file__))).parents[2]}/"
+sys.path.append(path_mod)
 from src.indicators.drought.config import Config
 from src.utils_general.utils import download_ftp
 
@@ -20,12 +24,23 @@ _SEASONAL_TERCILE_BOUNDS_FILENAME = (
 )
 
 
-def download_chirps_daily(config, year, resolution="25", write_crs=False):
+def download_chirps_daily(
+    config,
+    year,
+    resolution="25",
+    write_crs=False,
+    clobber=False,
+):
     """
-    Download the CHIRPS data for year from their ftp server Args: config
-    (Config): config for the drought indicator year (str or int): year
-    for which the data should be downloaded in YYYY format resolution
-    (str): resolution of the data to be downloaded. Can be 25 or 05
+    Download the CHIRPS data for year from their ftp server
+    Args: config (Config):
+    config for the drought indicator
+    year (str or int):
+    year for which the data should be downloaded in YYYY format
+    resolution (str):
+    resolution of the data to be downloaded. Can be 25 or 05
+    clobber (bool):
+        if True, overwrite data
     """
     chirps_dir = os.path.join(config.GLOBAL_DIR, config.CHIRPS_DIR)
     Path(chirps_dir).mkdir(parents=True, exist_ok=True)
@@ -40,7 +55,11 @@ def download_chirps_daily(config, year, resolution="25", write_crs=False):
     # are in the current year and in the previous year if at the start
     # of new year
     year_update = (today - timedelta(days=60)).year
-    if not os.path.exists(chirps_filepath) or int(year) >= year_update:
+    if (
+        not os.path.exists(chirps_filepath)
+        or int(year) >= year_update
+        or clobber
+    ):
         try:
             if os.path.exists(chirps_filepath):
                 os.remove(chirps_filepath)
@@ -341,7 +360,9 @@ def _compute_tercile_category(da, da_quantile):
     return da_bn, da_no, da_an
 
 
-def get_chirps_data_daily(config, year, resolution="25", download=False):
+def get_chirps_data_daily(
+    config, year, resolution="25", download=False, clobber=False
+):
     """
     Load CHIRP's NetCDF file as xarray dataset Args: config (Config):
     config for the drought indicator year (str or int): year for which
@@ -355,7 +376,7 @@ def get_chirps_data_daily(config, year, resolution="25", download=False):
     """
 
     if download:
-        download_chirps_daily(config, year, resolution)
+        download_chirps_daily(config, year, resolution, clobber=clobber)
 
     chirps_filepath_crs = os.path.join(
         config.GLOBAL_DIR,
@@ -376,6 +397,97 @@ def get_chirps_data_daily(config, year, resolution="25", download=False):
         transform = src.transform
 
     return ds, transform
+
+
+def clip_chirps_daily(
+    iso3,
+    config,
+    resolution,
+) -> Path:
+    """
+    Combine the daily CHIRPS data.
+
+    Data is downloaded per dyear, combine to one file.
+
+    Returns
+    -------
+    Path to processed NetCDF file
+
+    """
+    parameters = config.parameters(iso3)
+    adm0_bound_path = (
+        Path(config.DATA_DIR)
+        / config.PUBLIC_DIR
+        / config.RAW_DIR
+        / iso3
+        / config.SHAPEFILE_DIR
+        / parameters["path_admin0_shp"]
+    )
+    # get path structure with publication date as wildcard
+    raw_path = _get_raw_path_daily(config, year=None, resolution=resolution)
+    filepath_list = list(raw_path.parents[0].glob(raw_path.name))
+    # output_filepath = _get_processed_path_daily()
+    # output_filepath.parent.mkdir(exist_ok=True, parents=True)
+    gdf_adm0 = gpd.read_file(adm0_bound_path)
+    output_path = _get_processed_path_country_daily(
+        iso3=iso3, config=config, year=None, resolution=resolution
+    )
+    Path(output_path.parent).mkdir(parents=True, exist_ok=True)
+    with xr.open_mfdataset(filepath_list) as ds:
+        ds_country = (
+            ds.rio.write_crs("EPSG:4326")
+            .rio.set_spatial_dims(x_dim="longitude", y_dim="latitude")
+            .rio.clip(gdf_adm0["geometry"], all_touched=True)
+        )
+        ds_country.attrs["included_files"] = [f.stem for f in filepath_list]
+        ds_country.to_netcdf(output_path)
+    return output_path
+
+
+def load_chirps_daily_clipped(
+    iso3, config, resolution, year: Union[int, None] = None
+):
+    ds = xr.load_dataset(
+        _get_processed_path_country_daily(
+            iso3=iso3, config=config, resolution=resolution, year=year
+        )
+    )
+    return ds.rio.write_crs("EPSG:4326", inplace=True)
+
+
+def _get_raw_path_daily(config, year: Union[int, None], resolution: int):
+    """Get the path to the raw api data for a given `date_forecast`."""
+    chirps_dir = Path(config.GLOBAL_DIR) / config.CHIRPS_DIR
+    if year is None:
+        year_str = "*"
+    else:
+        year_str = year
+    chirps_filepath = os.path.join(
+        chirps_dir,
+        config.CHIRPS_NC_FILENAME_RAW.format(
+            year=year_str, resolution=resolution
+        ),
+    )
+    return chirps_dir / chirps_filepath
+
+
+def _get_processed_path_country_daily(
+    iso3, config, year: Union[int, None], resolution: int
+):
+    """Get the path to the raw api data for a given `date_forecast`."""
+    chirps_dir = (
+        Path(config.DATA_DIR)
+        / config.PUBLIC_DIR
+        / config.PROCESSED_DIR
+        / iso3
+        / "chirps"
+        / "daily"
+    )
+    chirps_filepath = f"{iso3}_chirps_daily"
+    if year is not None:
+        chirps_filepath += f"_{year}"
+    chirps_filepath += f"_p{resolution}.nc"
+    return chirps_dir / chirps_filepath
 
 
 def get_chirps_data_monthly(

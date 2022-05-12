@@ -17,6 +17,7 @@ def main(process=True):
     if process:
         floodscan_data.process(
             country_name=COUNTRY_NAME,
+            adm_level=2,
         )
 
 

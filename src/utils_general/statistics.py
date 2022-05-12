@@ -18,6 +18,7 @@ def get_return_periods_dataframe(
     method: str = "analytical",
     show_plots: bool = False,
     extend_factor: int = 1,
+    round_rp: bool = True,
 ) -> pd.DataFrame:
     """
     Function to get the return periods, either empirically or
@@ -31,6 +32,7 @@ def get_return_periods_dataframe(
     distribution overlaid
     :param extend_factor: If method is analytical, can extend the interpolation
     range to reach higher return periods
+    :param round_rp: if True, round the rp values, else return original values
     :return: Dataframe with return period years as index and stations as
     columns
     """
@@ -52,7 +54,9 @@ def get_return_periods_dataframe(
     else:
         logger.error(f"{method} is not a valid keyword for method")
         return None
-    df_rps["rp"] = np.round(f_rp(years))
+    df_rps["rp"] = f_rp(years)
+    if round_rp:
+        df_rps["rp"] = np.round(df_rps["rp"])
     return df_rps
 
 
