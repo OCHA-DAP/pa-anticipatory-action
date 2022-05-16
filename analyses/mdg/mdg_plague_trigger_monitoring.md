@@ -148,7 +148,31 @@ df_date_sel
 Very basic plot with cases over time
 
 ```python
-px.line(df_date,x="date",y="cases_number", title="Plague cases reported, 2012-2022")
+df_sum=df.groupby("date").sum()
+df_roll=df_sum.cases_number.rolling(window=3).sum()
+df_roll=df_roll.to_frame().reset_index()
+plt_roll = (
+    alt.Chart()
+    .mark_line()
+    .encode(
+        x=alt.X("date:T",axis=alt.Axis(format='%b %Y')),
+        y=alt.Y("cases_number:Q", title="3-week sum of cases"),
+    )
+    .properties(
+        width=1000,
+        height=500,
+    )
+)
+
+line = (
+    alt.Chart()
+    .mark_rule(color="red")
+    .encode(
+        y="a:Q",
+    )
+)
+
+alt.layer(plt_roll, line, data=df_roll,).transform_calculate(a="50").properties(title=["3-week rolling sum of cases","the red line indicates the threshold"])
 ```
 
 ```python

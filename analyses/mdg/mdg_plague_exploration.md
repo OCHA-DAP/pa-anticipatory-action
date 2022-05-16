@@ -156,7 +156,7 @@ bla=pd.read_excel(plague_path)
 ```python
 def preprocess_plague_data_test(path,list_cases_class=None, delimiter = ";"):
 #     df = pd.read_csv(path, delimiter = delimiter)
-    df=pd.read_excel(plague_path)
+    df=pd.read_excel(path)
     df.columns=df.columns.str.lower()
     df.rename(columns={"mdg_com_code":"ADM3_PCODE"},inplace=True)
     #to make pcodes correspond with shp file
@@ -212,7 +212,7 @@ bla[bla.Year==2022].groupby("Week").count()
 # a separate 2012 to 2016 data for analysis
 # this is the disaggregated 2012-2016 data
 plague_path_2012_2016_v2 = plague_dir / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-18.csv"
-df_2012_2016_v2 = preprocess_plague_data(plague_path_2012_2016_v2,list_cases_class=incl_cases_class,delimiter=";")
+df_2012_2016_v2 = preprocess_plague_data(path=plague_path_2012_2016_v2,list_cases_class=incl_cases_class,delimiter=";")
 
 
 df = df.append(df_2012_2016_v2)
