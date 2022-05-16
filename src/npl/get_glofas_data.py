@@ -36,16 +36,16 @@ SHAPEFILE = (
     / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
 )
 VERSION = 3
-USE_INCORRECT_COORDS = False
+USE_INCORRECT_COORDS = True
 
 logging.basicConfig(level=logging.INFO, force=True)
 logger = logging.getLogger(__name__)
 
 
-def main(download=True, process=True):
+def main(download=False, process=True):
 
     glofas_reanalysis = glofas.GlofasReanalysis(
-        use_incorrect_area_coords=USE_INCORRECT_COORDS
+        use_incorrect_area_coords=USE_INCORRECT_COORDS, year_max=2020
     )
     glofas_reforecast = glofas.GlofasReforecast(
         use_incorrect_area_coords=USE_INCORRECT_COORDS
@@ -81,6 +81,7 @@ def main(download=True, process=True):
             stations=stations,
             leadtimes=LEADTIMES,
             version=VERSION,
+            split_by_leadtimes=True,
         )
 
 

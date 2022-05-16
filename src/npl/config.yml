@@ -66,3 +66,8 @@ glofas:
     Simle_v3:
       lat: 27.05
       lon: 87.15
+    # DHM point added later
+    # https://hydrology.gov.np/#/basin/4635?_k=ep79ty
+    Kandra:
+      lat: 28.7
+      lon: 80.9
