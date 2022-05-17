@@ -4,6 +4,7 @@ We want to know if the river discharge is correlated for stations in neighbourin
 from collections import Counter
 
 import pandas as pd
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -27,7 +28,7 @@ STATIONS_SEL = {
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=parameters.COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3, use_incorrect_area_coords=True)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
 df_return_period_glofas = pd.read_excel(parameters.GLOFAS_RP_FILENAME)
 ```
@@ -297,4 +298,8 @@ offset_df.style.background_gradient(cmap='Greens_r', low=-500, high=500)
 
 ```python
 corr_df.style.background_gradient(cmap='Blues_r')
+```
+
+```python
+
 ```

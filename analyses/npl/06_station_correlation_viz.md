@@ -40,7 +40,8 @@ def visualize_station_overlay(
     hist_title, 
     save_title_line,
     save_title_hist,
-    save=False):
+    save=False,
+    make_histograms=False):
 
     groups = utils.get_groups_above_threshold(da_primary.values, val_event, duration)
 
@@ -107,26 +108,27 @@ def visualize_station_overlay(
         plt.savefig(save_title_line)
 
     # Make the histograms of max % of RP reached
-    n_bins = 5
-    fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharey=True, sharex=True)
-    hist_vals = [max_pre, max_during, max_post]
-    hist_titles = ['15 Days Before Trigger Period', 'During Trigger Period', '15 Days After Trigger Period']
-    
-    for iax, ax in enumerate(axs): 
-        if np.isnan(hist_vals[iax]).all():
-            fig.delaxes(ax)
-        else:
-            ax = make_max_rp_hist(ax, hist_vals[iax], n_bins, hist_titles[iax], hist_title)         
-    
-    if save:
-        plt.savefig(save_title_hist)
+    if make_histograms:
+        n_bins = 5
+        fig, axs = plt.subplots(1, 3, figsize=(15, 5), sharey=True, sharex=True)
+        hist_vals = [max_pre, max_during, max_post]
+        hist_titles = ['15 Days Before Trigger Period', 'During Trigger Period', '15 Days After Trigger Period']
+
+        for iax, ax in enumerate(axs): 
+            if np.isnan(hist_vals[iax]).all():
+                fig.delaxes(ax)
+            else:
+                ax = make_max_rp_hist(ax, hist_vals[iax], n_bins, hist_titles[iax], hist_title)         
+
+        if save:
+            plt.savefig(save_title_hist)
 ```
 
 #### Investigate relationship between stations with GloFAS water discharge
 
 ```python
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
-    country_iso3=parameters.COUNTRY_ISO3)
+    country_iso3=parameters.COUNTRY_ISO3, use_incorrect_area_coords=True)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
 df_return_period_glofas = pd.read_excel(parameters.GLOFAS_RP_FILENAME)
 ```
@@ -211,4 +213,50 @@ for station in stations:
             save_title_line,
             save_title_hist,
             False)
+```
+
+## Added in 2022
+
+Checking the correlation of a DHM station in the Mahana basin
+
+```python
+rp_event = 5
+rp_secondary = 5
+stations = ['Chisapani_v3', 'Kandra']
+secondary_stations = [
+    'Kandra', 'Chisapani_v3'
+] 
+days_buffer = 15
+
+for station, station_small in zip(stations, secondary_stations):
+    
+    rp_val_event = df_return_period.loc[rp_event, station]
+    da_primary = ds_glofas_reanalysis[station]
+
+    rp_val_secondary = df_return_period.loc[rp_secondary, station_small] 
+    da_secondary = ds_glofas_reanalysis[station_small]
+
+    plt_title = f'What is water discharge at {station_small} when {station} triggers at {rp_event}-year RP?'
+    save_title_line = f'line_{station_small}_{station}_{rp_secondary}_{rp_event}.png'
+    save_title_hist = f'max_hist_{station_small}_{station}_{rp_secondary}_{rp_event}.png'
+    hist_title = f'Max % of {rp_secondary}-year RP reached'
+
+    visualize_station_overlay(
+        da_primary, 
+        da_secondary, 
+        rp_val_event, 
+        rp_val_secondary, 
+        parameters.DURATION, 
+        days_buffer,
+        plt_title, 
+        hist_title, 
+        save_title_line,
+        save_title_hist,
+        False)
+
+
+```
+
+```python
+
 ```
