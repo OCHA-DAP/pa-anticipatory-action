@@ -61,4 +61,14 @@ data <- extract(data_r,
 data <- data %>%
           select(ID, cell, x, y, everything()) # move cell number + coordinates columns to first positions
 
-saveRDS(data, paste0(dry_spell_processed_path, "2021_2022_postseason/", "mwi_2021_2022_postseason_overview.RDS"))
+#saveRDS(data, paste0(dry_spell_processed_path, "2021_2022_postseason/", "mwi_2021_2022_postseason_overview.RDS"))
+
+#####
+## process planting/flowering dates data
+#####
+
+# read in and crop global dataset from FAO on "start of season" ie beginning of germination
+sos_global_r <- rast(paste0(data_dir, "/public/exploration/glb/fao/fao_cropland_season1_start.tif"))
+sos_r <- crop(sos_global_r[[1]], southern_vect)
+
+#writeRaster(sos_r, filename = paste0(dry_spell_processed_path, "2021_2022_postseason/sos_r.tif"), overwrite=T)
