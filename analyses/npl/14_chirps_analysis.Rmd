@@ -1,0 +1,123 @@
+---
+title: "Analysing CHIRPS data for Flood Trigger Development"
+output: md_document
+---
+
+## Rainfall Analysis
+
+Reading data from shapefile to get river basin bounds:
+
+```{r intro, echo=FALSE, warning = FALSE, message=FALSE, results='hide'}
+filePath <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/")
+options(scipen = 100000)
+    
+# libraries
+library(tidyverse)
+library(sf)
+library(tidyquant)
+library(extRemes)
+library(tseries)
+library(ncdf4)
+
+# reading in shapefile
+nplSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
+
+# reading in historical floods
+NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/NepalHistoricalFlood1971-2020.xlsx"))
+
+# function for reading in files 
+read_files <- function(filePath, fileName){
+    ncObj <- nc_open(paste0(filePath, fileName))
+    DataCube <- ncvar_get(ncObj, "precipitation") %>%
+        data.frame() %>%
+        bind_cols(paste0(round(ncvar_get(ncObj, "X"), 3), "E")) %>%
+        setNames(c(paste0(round(ncvar_get(ncObj, "Y"), 3), "N"), "Longitude")) %>%
+        gather(key = "Latitude", value = "precipitation", -Longitude) %>%
+        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"))
+    nc_close(ncObj)
+    return(DataCube)
+}
+
+# chirps data frame
+chirpsData <- list.files(filePath, pattern = "*.nc") %>%
+    map_df(~ read_files(filePath, .))
+
+```
+
+```{r}
+# rolling sum
+# aggregate all grids into one and find mean
+# rolling sum is assigned to last day of window
+n = 10
+AggNational <- chirpsData %>%
+    group_by(Date) %>%
+    summarise(rfe = mean(precipitation)) %>%
+    ungroup() %>%
+    mutate(rollsum = c(rep(0, n-1), rollapplyr(rfe, n, sum)))
+    
+# getting top month every year
+AggNational2 <- AggNational %>%
+    mutate(Year = substr(Date, 1, 4)) %>%
+    group_by(Year) %>%
+    top_n(1, rollsum)
+
+ggplot(data = AggNational2, aes(x = Year, y = rollsum, group = 1)) + 
+    geom_bar(stat="identity") + 
+    theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
+    ggtitle("CHIRPS Maximum 10-day Rolling Sum of Precipitation with the Associated Month for the Western Basins") +
+    xlab("Month") + 
+    ylab("Maximum 10-day Rolling Sum(mm)")
+
+# checking for stationarity
+adf.test(AggNational$rollsum) # reject H0 and say series is stationary at alpha = 0.05
+returnValues <- return.level(fevd(x = AggNational2$rollsum), return.period = c(2,5,10))
+plot(fevd(x = AggNational2$rollsum), return.period = c(2,5,10))
+
+ggplot(data = AggNational2, aes(x = Date, y = rollsum, group = 1)) + 
+    geom_line() + 
+    geom_hline(aes(yintercept = returnValues["2"], linetype="dashed", color = "red")) + 
+    geom_text(aes(as.Date("1980-01-01"), returnValues["2"], label = "RP: 2", vjust = -1)) + 
+    geom_hline(aes(yintercept = returnValues["5"], linetype="dashed", color = "blue")) + 
+    geom_text(aes(as.Date("1980-01-01"), returnValues["5"], label = "RP: 5", vjust = -1)) + 
+    geom_hline(aes(yintercept = returnValues["10"], linetype="dashed", color = "green")) + 
+    geom_text(aes(as.Date("1980-01-01"), returnValues["10"], label = "RP: 10", vjust = -1)) + 
+    theme(legend.position='none') + 
+    ggtitle("Maximum 10-day Rolling Sums Per Year with Return Periods")
+
+# extracting the return period
+mrlplot(AggNational$rollsum, main="Mean Residual Life Plot")
+threshrange.plot(AggNational$rollsum, r = c(0, 200), nint = 25)
+plot(fevd(AggNational$rollsum, AggNational, method = "MLE", type="GP", threshold = 100))
+returnValues <- return.level(fevd(AggNational$rollsum, AggNational, method = "MLE", type="GP", threshold = 100), return.period = c(2, 5, 10))
+
+ggplot(data = AggNational, aes(x = Date, y = rollsum, group = 1)) + 
+    geom_line() + 
+    geom_hline(aes(yintercept = returnValues["2"], linetype="dashed", color = "red")) + 
+    geom_text(aes(as.Date("1980-01-01"), returnValues["2"], 
+                  label = paste0("RP: 2-", round(returnValues["2"])), vjust = -1)) + 
+    geom_hline(aes(yintercept = returnValues["5"], linetype="dashed", color = "blue")) + 
+    geom_text(aes(as.Date("1980-01-01"), returnValues["5"], 
+                  label = paste0("RP: 5-", round(returnValues["5"])), vjust = -1)) + 
+    geom_hline(aes(yintercept = returnValues["10"], linetype="dashed", color = "green")) + 
+    geom_text(aes(as.Date("1980-01-01"), returnValues["10"], 
+                  label = paste0("RP: 10-", round(returnValues["10"])), vjust = -1)) + 
+    theme(legend.position='none') + 
+    ggtitle("10-day Rolling Sums with Return Periods in Years")
+
+```
+
+```{r}
+# comparing historical values with return values
+# dates where value was exceeded
+AggNational3 <- AggNational %>%
+    mutate(thresh2Yr = rollsum >= returnValues["2"]) %>%
+    mutate(thresh5Yr = rollsum >= returnValues["5"]) %>%
+    mutate(thresh10Yr = rollsum >= returnValues["10"]) %>%
+    filter(thresh2Yr)
+
+summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
+NPLHistFloodsWorst <- NPLHistFloods %>%
+    filter(`Affected Family` >= 5000)
+
+```
+
