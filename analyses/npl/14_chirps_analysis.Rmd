@@ -85,10 +85,6 @@ chirpsData <- list.files(filePath, pattern = "*.nc") %>%
 ```
 
 ```{r}
-
-```
-
-```{r}
 # rolling sum
 # aggregate all grids into one and find mean
 # rolling sum is assigned to last day of window
@@ -118,7 +114,7 @@ ggplot(data = AggNational2, aes(x = Year, y = rollsum, fill = Basin)) +
 adf.test(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"]) # reject H0 and say series is stationary at alpha = 0.05
 adf.test(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"]) # reject H0 and say series is stationary at alpha = 0.05
 
-returnValues <- AggNational2 %>%
+returnValues2 <- AggNational2 %>%
     group_by(Basin) %>%
     summarise(returnyr2 = return.level(fevd(x = rollsum), return.period = 2), 
               returnyr5 = return.level(fevd(x = rollsum), return.period = 5), 
@@ -127,36 +123,73 @@ returnValues <- AggNational2 %>%
 plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Karnali River Basin"]))
 plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Saptakoshi Watershed"]))
 
-ggplot(data = AggNational2, aes(x = Date, y = rollsum, group = 1)) + 
-    geom_line() + 
-    geom_hline(aes(yintercept = returnValues["2"], linetype="dashed", color = "red")) + 
-    geom_text(aes(as.Date("1980-01-01"), returnValues["2"], label = "RP: 2", vjust = -1)) + 
-    geom_hline(aes(yintercept = returnValues["5"], linetype="dashed", color = "blue")) + 
-    geom_text(aes(as.Date("1980-01-01"), returnValues["5"], label = "RP: 5", vjust = -1)) + 
-    geom_hline(aes(yintercept = returnValues["10"], linetype="dashed", color = "green")) + 
-    geom_text(aes(as.Date("1980-01-01"), returnValues["10"], label = "RP: 10", vjust = -1)) + 
-    theme(legend.position='none') + 
-    ggtitle("Maximum 10-day Rolling Sums Per Year with Return Periods")
+ggplot(data = AggNational2, aes(x = Date, y = rollsum, group = Basin)) + 
+    geom_line(aes(colour = Basin)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr2"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr2"]), 
+                  label = "RP: 2", vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr2"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr2"]), 
+                  label = "RP: 2", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr5"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr5"]), 
+                  label = "RP: 5", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr5"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr5"]), 
+                  label = "RP: 5", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr10"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr10"]), 
+                  label = "RP: 10", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr10"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr10"]), 
+                  label = "RP: 10", vjust = -1)) + 
+    ggtitle("Maximum 10-day Rolling Sums Per Year with Return Periods") + 
+    ylab("Rolling Sums(mm)")
 
 # extracting the return period
-mrlplot(AggNational$rollsum, main="Mean Residual Life Plot")
-threshrange.plot(AggNational$rollsum, r = c(0, 200), nint = 25)
-plot(fevd(AggNational$rollsum, AggNational, method = "MLE", type="GP", threshold = 100))
-returnValues <- return.level(fevd(AggNational$rollsum, AggNational, method = "MLE", type="GP", threshold = 100), return.period = c(2, 5, 10))
+mrlplot(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"], main="Mean Residual Life Plot: Karnali River Basin")
+mrlplot(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"], main="Mean Residual Life Plot: Saptakoshi Watershed")
 
-ggplot(data = AggNational, aes(x = Date, y = rollsum, group = 1)) + 
-    geom_line() + 
-    geom_hline(aes(yintercept = returnValues["2"], linetype="dashed", color = "red")) + 
-    geom_text(aes(as.Date("1980-01-01"), returnValues["2"], 
-                  label = paste0("RP: 2-", round(returnValues["2"])), vjust = -1)) + 
-    geom_hline(aes(yintercept = returnValues["5"], linetype="dashed", color = "blue")) + 
-    geom_text(aes(as.Date("1980-01-01"), returnValues["5"], 
-                  label = paste0("RP: 5-", round(returnValues["5"])), vjust = -1)) + 
-    geom_hline(aes(yintercept = returnValues["10"], linetype="dashed", color = "green")) + 
-    geom_text(aes(as.Date("1980-01-01"), returnValues["10"], 
-                  label = paste0("RP: 10-", round(returnValues["10"])), vjust = -1)) + 
-    theme(legend.position='none') + 
-    ggtitle("10-day Rolling Sums with Return Periods in Years")
+threshrange.plot(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"], r = c(0, 100), nint = 25)
+threshrange.plot(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"], r = c(0, 150), nint = 25)
+
+returnValues <- AggNational %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
+                                            threshold = 50), return.period = 2), 
+              returnyr5 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
+                                            threshold = 50), return.period = 5), 
+              returnyr10 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
+                                             threshold = 50), return.period = 10))
+
+ggplot(data = AggNational, aes(x = Date, y = rollsum, group = Basin)) + 
+    geom_line(aes(colour = Basin)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues[1,"returnyr2"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[1,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues[1,"returnyr2"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues[2,"returnyr2"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[2,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues[2,"returnyr2"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues[1,"returnyr5"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[1,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues[1,"returnyr5"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues[2,"returnyr5"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[2,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues[2,"returnyr5"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues[1,"returnyr10"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[1,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues[1,"returnyr10"]))), 
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues[2,"returnyr10"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[2,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues[2,"returnyr10"]))),
+                  vjust = -1)) + 
+    ggtitle("10-day Rolling Sums with Return Periods in Years") + 
+    ylab("Rolling Sums(mm)")
 
 ```
 
@@ -164,9 +197,9 @@ ggplot(data = AggNational, aes(x = Date, y = rollsum, group = 1)) +
 # comparing historical values with return values
 # dates where value was exceeded
 AggNational3 <- AggNational %>%
-    mutate(thresh2Yr = rollsum >= returnValues["2"]) %>%
-    mutate(thresh5Yr = rollsum >= returnValues["5"]) %>%
-    mutate(thresh10Yr = rollsum >= returnValues["10"]) %>%
+    mutate(thresh2Yr = rollsum >= unlist(returnValues[,"returnyr2"])) %>%
+    mutate(thresh5Yr = rollsum >= unlist(returnValues[,"returnyr5"])) %>%
+    mutate(thresh10Yr = rollsum >= unlist(returnValues[,"returnyr10"])) %>%
     filter(thresh2Yr)
 
 summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
