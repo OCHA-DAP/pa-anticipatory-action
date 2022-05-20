@@ -18,6 +18,7 @@ library(tidyquant)
 library(extRemes)
 library(tseries)
 library(ncdf4)
+library(raster)
 
 # reading in shapefile
 nplRBSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
@@ -29,15 +30,53 @@ NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/e
 # function for reading in files 
 read_files <- function(filePath, fileName){
     ncObj <- nc_open(paste0(filePath, fileName))
-    DataCube <- ncvar_get(ncObj, "precipitation") %>%
+    # Karnali
+    KarnaliBox <- nplRBSF %>%
+        filter(Major_Basi == "Karnali River Basin") %>%
+        extent()
+    
+    KarBoxXMin <- which.min(abs(KarnaliBox[1] - round(ncvar_get(ncObj, "X"), 3)))
+    KarBoxXMax <- which.min(abs(KarnaliBox[2] - round(ncvar_get(ncObj, "X"), 3)))
+    KarBoxXLen <- KarBoxXMax - KarBoxXMin + 1
+    KarBoxYMin <- which.min(abs(KarnaliBox[3] - round(ncvar_get(ncObj, "Y"), 3)))
+    KarBoxYMax <- which.min(abs(KarnaliBox[4] - round(ncvar_get(ncObj, "Y"), 3)))
+    KarBoxYLen <- KarBoxYMin - KarBoxYMax + 1
+    KarDataCube <- ncvar_get(ncObj, "precipitation", 
+                             start = c(KarBoxXMin, KarBoxYMax, 1), 
+                             count = c(KarBoxXLen, KarBoxYLen, 1)) %>%
         data.frame() %>%
-        bind_cols(paste0(round(ncvar_get(ncObj, "X"), 3), "E")) %>%
-        setNames(c(paste0(round(ncvar_get(ncObj, "Y"), 3), "N"), "Longitude")) %>%
+        bind_cols(paste0(round(ncvar_get(ncObj, "X")[KarBoxXMin:KarBoxXMax], 3), "E")) %>%
+        setNames(c(paste0(round(ncvar_get(ncObj, "Y")[KarBoxYMax:KarBoxYMin], 3), "N"), "Longitude")) %>%
         gather(key = "Latitude", value = "precipitation", -Longitude) %>%
-        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"))
+        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"), 
+               Basin = "Karnali River Basin")
+    
+    # Koshi
+    KoshiBox <- nplWSSF %>%
+        filter(WSH_NME == "Saptakoshi Watershed") %>%
+        extent()
+    
+    KoshBoxXMin <- which.min(abs(KoshiBox[1] - round(ncvar_get(ncObj, "X"), 3)))
+    KoshBoxXMax <- which.min(abs(KoshiBox[2] - round(ncvar_get(ncObj, "X"), 3)))
+    KoshBoxXLen <- KoshBoxXMax - KoshBoxXMin + 1
+    KoshBoxYMin <- which.min(abs(KoshiBox[3] - round(ncvar_get(ncObj, "Y"), 3)))
+    KoshBoxYMax <- which.min(abs(KoshiBox[4] - round(ncvar_get(ncObj, "Y"), 3)))
+    KoshBoxYLen <- KoshBoxYMin - KoshBoxYMax + 1
+    KoshDataCube <- ncvar_get(ncObj, "precipitation", 
+                              start = c(KoshBoxXMin, KoshBoxYMax, 1), 
+                              count = c(KoshBoxXLen, KoshBoxYLen, 1)) %>%
+        data.frame() %>%
+        bind_cols(paste0(round(ncvar_get(ncObj, "X")[KoshBoxXMin:KoshBoxXMax], 3), "E")) %>%
+        setNames(c(paste0(round(ncvar_get(ncObj, "Y")[KoshBoxYMax:KoshBoxYMin], 3), "N"), "Longitude")) %>%
+        gather(key = "Latitude", value = "precipitation", -Longitude) %>%
+        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"), 
+               Basin = "Saptakoshi Watershed")
+    # close
     nc_close(ncObj)
-    return(DataCube)
+    # data object
+    return(bind_rows(KarDataCube, KoshDataCube))
 }
+
 
 # chirps data frame
 chirpsData <- list.files(filePath, pattern = "*.nc") %>%
