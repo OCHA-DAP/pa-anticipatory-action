@@ -20,7 +20,8 @@ library(tseries)
 library(ncdf4)
 
 # reading in shapefile
-nplSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
+nplRBSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
+nplWSSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_watershed.shp"))
 
 # reading in historical floods
 NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/NepalHistoricalFlood1971-2020.xlsx"))
@@ -40,7 +41,11 @@ read_files <- function(filePath, fileName){
 
 # chirps data frame
 chirpsData <- list.files(filePath, pattern = "*.nc") %>%
-    map_df(~ read_files(filePath, .))
+    map_df(~ read_files(filePath, .)) 
+
+```
+
+```{r}
 
 ```
 
