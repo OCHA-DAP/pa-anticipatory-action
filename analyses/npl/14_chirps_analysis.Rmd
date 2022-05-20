@@ -94,28 +94,38 @@ chirpsData <- list.files(filePath, pattern = "*.nc") %>%
 # rolling sum is assigned to last day of window
 n = 10
 AggNational <- chirpsData %>%
-    group_by(Date) %>%
+    group_by(Date, Basin) %>%
     summarise(rfe = mean(precipitation)) %>%
-    ungroup() %>%
-    mutate(rollsum = c(rep(0, n-1), rollapplyr(rfe, n, sum)))
+    group_by(Basin) %>%
+    mutate(rollsum = c(rep(0, n-1), rollapplyr(rfe, n, sum))) %>%
+    ungroup()
     
 # getting top month every year
 AggNational2 <- AggNational %>%
     mutate(Year = substr(Date, 1, 4)) %>%
-    group_by(Year) %>%
+    group_by(Year, Basin) %>%
     top_n(1, rollsum)
 
-ggplot(data = AggNational2, aes(x = Year, y = rollsum, group = 1)) + 
-    geom_bar(stat="identity") + 
+ggplot(data = AggNational2, aes(x = Year, y = rollsum, fill = Basin)) + 
+    geom_bar(stat="identity", position = "dodge") + 
     theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
-    ggtitle("CHIRPS Maximum 10-day Rolling Sum of Precipitation with the Associated Month for the Western Basins") +
+    ggtitle("CHIRPS Maximum 10-day Rolling Sum of Precipitation with the Associated Month") +
     xlab("Month") + 
     ylab("Maximum 10-day Rolling Sum(mm)")
 
 # checking for stationarity
-adf.test(AggNational$rollsum) # reject H0 and say series is stationary at alpha = 0.05
-returnValues <- return.level(fevd(x = AggNational2$rollsum), return.period = c(2,5,10))
-plot(fevd(x = AggNational2$rollsum), return.period = c(2,5,10))
+
+adf.test(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"]) # reject H0 and say series is stationary at alpha = 0.05
+adf.test(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"]) # reject H0 and say series is stationary at alpha = 0.05
+
+returnValues <- AggNational2 %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = rollsum), return.period = 2), 
+              returnyr5 = return.level(fevd(x = rollsum), return.period = 5), 
+              returnyr10 = return.level(fevd(x = rollsum), return.period = 10))
+
+plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Karnali River Basin"]))
+plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Saptakoshi Watershed"]))
 
 ggplot(data = AggNational2, aes(x = Date, y = rollsum, group = 1)) + 
     geom_line() + 
