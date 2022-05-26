@@ -83,7 +83,7 @@ nbr_cells <- 343 # nbr of cells in southern region (touching=T)
 ```
 
 ## On the Rainy Season
-We look at when the rainy season began and ended, and therefore how long it lasted, throughout the Southern Region.
+We look at when the rainy season began and ended, and how long it lasted, throughout the Southern Region.
 
 ### Onset
 Season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, cited in Kimaro and Sibande 2008).
@@ -146,6 +146,7 @@ cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3], # one
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
 
+mar_cessation_area_pct <- season_dates %>% filter(cessation_date >= '2022-03-15' & cessation_date < '2022-04-01') %>% summarise(n = n()) %>% mutate(t = round(100*n/nrow(season_dates), 1)) %>% select(t) %>% as.numeric()
 ```
 
 
@@ -368,7 +369,7 @@ Dry days could be interspersed between rainy days, or group into streaks of cons
 
 Note that a dry day can receive up to 3mm of rain while the definition of dry spell used for Anticipatory Action was a 14-day streak with no more than 2mm in total.
 
-### Dry Days Streaks
+### Streaks of Dry Days
 The longest streak of consecutive dry days during the entire rainy season is represented below. Those longest streaks lasted between `r minmax(static_r$max_streak)[1]` and `r minmax(static_r$max_streak)[2]` days.
 
 <br>
@@ -519,28 +520,45 @@ in_season %>%
 
 <br>
 
-```{r}
-sprouting takes 1 to 2 weeks depending of moisture conditions and the variety of the crop.
-If we talk about maize, between sprouting and flowering the time will be more and less 9 to 11 weeks, but this might vary by location, moisture and the variety (drought tolerant varieties can take even less than 10 weeks).
- 
+### Timing of Dry Periods
+
+Dry spells damage crops more significantly during the planting and flowering growth phases. While the timing of a dry spell was not included in the 2021-2022 anticipatory action trigger, this analysis sought to determine whether dry periods had occurred around the time of these phases.
+
+Unfortunately, precise data on the dates planting (and/or flowering) took place across the Southern region was not available. Neither was data capturing actual progress of the growing season from which planting or flowering periods could have been derived.
+
+```{r ds-timing}
+#sprouting takes 1 to 2 weeks depending of moisture conditions and the variety of the crop.
+
+#If we talk about maize, between sprouting and flowering the time will be more and less 9 to 11 weeks, but this might vary by location, moisture and the variety (drought tolerant varieties can take even less than 10 weeks).
+
 ```
 
-## Key Takeaways
+## Exploring the Suitability of the Trigger
 
-* Q1: Were dry days distinguishable from dry spells in December and in March?
-* Q2: How frequent were streaks of dry days compared to periods with little to no cumulative rainfall?
-* Q3: How much rainfall was typical over 14-day periods during the rainy season? 
+We explore how the rainy season unfolded through the lens of 3 aspects of the 2021-2022 trigger: 
 
-### Q1: Dec/Mar Dry Spells
+(1) its exclusive focus on January and February;
+(2) the use of low rainfall to define a dry spell;
+(3) its maximum rainfall amount allowed during a dry spell.
+
+### Q1: Could the trigger have covered December and March dry spells?
 
 The Anticipatory Action (AA) trigger monitored for January and February dry spells. Dry spells have historically occurred in December and March however those months were not monitored due to the difficulty in assessing in real-time whether a dry period during those months were a dry spell or a streak of dry days outside of the rainy season. The 2021-2022 trigger assumed that the rainy season would have begun over the Southern Region by 24 Dec.
 
 The data for 2021-2022 confirms the challenge: while `r perc_nov_onset`% of the Southern Region began its rainy season in November, the remaining saw their season begin in December and as late as `r format(as.Date(onset_max, origin = "2021-11-01"), format = "%d %b")`. Due to the need for 40 days to pass after the onset date to confirm the season has begun, it took until `r format(as.Date(onset_max + 30, origin = "2021-11-01"), format = "%d %b")` to ascertain the onset for the entire region. Until then, it would not have been possible to confirm that a dry period was not an in-season dry spell for `r 100 - perc_nov_onset`% of the region. Note that November onsets could not be confirmed until the second week of December at the earliest, either. For the 2021-2022 season, 50% of onset dates occurred by `r format(as.Date(onset_50perc_known, origin = "2021-11-01"), format = "%d %b")` and 90%  by `r format(as.Date(onset_90perc_known, origin = "2021-11-01"), format = "%d %b")`.
 
-As for cessation dates, [INSERT NARRATIVE HERE]
+As for cessation dates, the Southern Region saw its rainy season end at various times. Specifically, `r mar_cessation_area_pct`% of the Southern Region saw its rainy season end in March (mainly in the northern and southern tips). Any dry day before 15 March by definition could not have been after the rainy season (since rainy season cannot end before 15 March) and therefore was in-season and could be part of a dry spell. Dry periods starting on or after 15 March could have been during or after the rainy season. It would have been impossible to confirm before April whether the season had ended in an area as the definition refers to a 15-day period after 15 March. In other words, the earliest confirmation could only be made after 31 March for areas who season ended on 15 March. The implication is that the observational trigger could be expanded to cover 8 - 15 March as those dates are surely during the rainy season (the trigger covered until 7 March.) Operationally, expansions beyond 15 March would require a time lag of 15 days after the first day of a suspected dry spell to verify whether the dry period is a dry spell or after the rainy season has ended. However, considering the definition of dry spell, it is likely that most dry periods suspected of being dry spells would end up meeting the criterion for rainy season cessation. How frequently that may be the case can be verified empirically.
 
 
-### KEY TAKEAWAYS
+### Q2: How frequent were streaks of dry days compared to periods with little to no cumulative rainfall?
+
+In other words, even when allowing for 5 times more rainfall than the selected definition for dry spell, the frequency of occurrence was still significantly less than 5% (a 1 in 20 year event). Note however that the analysis looks at a single year and that thresholds should be set based on historical data over longer period of times. Note also that the analysis examines small areas of about 10 x 10 km so patterns can change when computing metrics for larger areas such as adm2 (district) or adm3 (traditional authority) regions (for instance, by averaging). For AA, the trigger was intentionally designed to target severe, geographically widespread dry spells.
+
+### Q3
+
+* Q3: How much rainfall was typical over 14-day periods during the rainy season? 
+
+## Key Takeaways
 - The assumption of the trigger that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
 - In the Southern Region, Dec and March dry spells are hard to differentiate from dry days outside the rainy season due to the difficulty in rapidly confirming the onset or cessation of the rainy season. 
 - A single onset/cessation date for the entire region is not viable. Waiting for confirmation of the onset /cessation dates for the entire region causes too much delay to enable AA: it prevents AA in areas where dry spells occur because the rainy season has not begun or is already over in other areas.
@@ -548,13 +566,9 @@ As for cessation dates, [INSERT NARRATIVE HERE]
 
 <br>
 
-### Q2
-
-In other words, even when allowing for 5 times more rainfall than the selected definition for dry spell, the frequency of occurrence was still significantly less than 5% (a 1 in 20 year event). Note however that the analysis looks at a single year and that thresholds should be set based on historical data over longer period of times. Note also that the analysis examines small areas of about 10 x 10 km so patterns can change when computing metrics for larger areas such as adm2 (district) or adm3 (traditional authority) regions (for instance, by averaging). For AA, the trigger was intentionally designed to target severe, geographically widespread dry spells.
-### Q3
-
 ## References
 FAO (2006). Water and Soil Requirements. Cited in Kimaro and Sibande 2008.
+
 Kimaro TA and Sibande H. (2008). Trends of rainfall and maize productivity in Malawi. Tanzania Journal of Engineering and Technology. Vol. 31 (No.1)
 
 ## Appendix
