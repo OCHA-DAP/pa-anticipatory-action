@@ -111,7 +111,7 @@ onset_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one col
 
 ```
 
-Across the Southern region, the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season except the northern part of the region, which saw its season begin in later in December. 
+Across the Southern region, the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season except the northern part of the region, which saw its season begin in later in December. The 2021-2022 trigger assumption that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
 
 ```{r onset-plot}
 plot(static_r, 
@@ -549,6 +549,7 @@ The data for 2021-2022 confirms the challenge: while `r perc_nov_onset`% of the 
 
 As for cessation dates, the Southern Region saw its rainy season end at various times. Specifically, `r mar_cessation_area_pct`% of the Southern Region saw its rainy season end in March (mainly in the northern and southern tips). Any dry day before 15 March by definition could not have been after the rainy season (since rainy season cannot end before 15 March) and therefore was in-season and could be part of a dry spell. Dry periods starting on or after 15 March could have been during or after the rainy season. It would have been impossible to confirm before April whether the season had ended in an area as the definition refers to a 15-day period after 15 March. In other words, the earliest confirmation could only be made after 31 March for areas who season ended on 15 March. The implication is that the observational trigger could be expanded to cover 8 - 15 March as those dates are surely during the rainy season (the trigger covered until 7 March.) Operationally, expansions beyond 15 March would require a time lag of 15 days after the first day of a suspected dry spell to verify whether the dry period is a dry spell or after the rainy season has ended. However, considering the definition of dry spell, it is likely that most dry periods suspected of being dry spells would end up meeting the criterion for rainy season cessation. How frequently that may be the case can be verified empirically.
 
+If the trigger were to be expanded to include December or March dry spells, it would also delay framework activation and activity implementation by several weeks to allow for confirmation that the suspected dry spell was within the rainy season. Also of note, a previous analysis revealed that no dry spells occurred in November, very few dry spells occurred in December (2.2% of dry spells between 2000 and 2020) and 26.7% were observed in March - a number similar to January.
 
 ### Q2: How frequent were streaks of dry days compared to periods with little to no cumulative rainfall?
 
@@ -559,10 +560,8 @@ In other words, even when allowing for 5 times more rainfall than the selected d
 * Q3: How much rainfall was typical over 14-day periods during the rainy season? 
 
 ## Key Takeaways
-- The assumption of the trigger that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
-- In the Southern Region, Dec and March dry spells are hard to differentiate from dry days outside the rainy season due to the difficulty in rapidly confirming the onset or cessation of the rainy season. 
-- A single onset/cessation date for the entire region is not viable. Waiting for confirmation of the onset /cessation dates for the entire region causes too much delay to enable AA: it prevents AA in areas where dry spells occur because the rainy season has not begun or is already over in other areas.
-- To address Dec and March dry spells, a probabilistic approach should be used to select onset/cessation dates per district (adm2 area) based on historical patterns (eg: 90% of the time in past 20 years, the season had begun by X for Nsanje). 
+- November and Dec dry spells are very rare and difficult to distinguish from dry days prior to the onset of the rainy season. March dry spells are frequent but can more easily be monitored especially before 15 March. 
+- Expanding trigger monitoring to include December and March could be done with an observational trigger at the cost of a delayed activation. To include these months with a predictive trigger would require assuming that the rainy season is highly likely to be ongoing. A probabilistic approach could be used to select onset/cessation dates per district (adm2 area) based on historical patterns (eg: 90% of the time in the past 20 years, the season had begun by X for Nsanje). 
 
 <br>
 
