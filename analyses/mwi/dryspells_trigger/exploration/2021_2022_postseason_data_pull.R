@@ -68,6 +68,8 @@ data <- data %>%
 #####
 
 # read in and crop global dataset from FAO on "start of season" ie beginning of germination
+# 10. Do Progress of Season maps capture an actual progress of the ongoing season?  
+# No. In ASIS, the seasons’ progress is based on the long-term average of vegetation phenology for each pixel, derived from long-term averages of NDVI imagery received from SPOT Vegetation.
 sos_global_r <- rast(paste0(data_dir, "/public/exploration/glb/fao/fao_cropland_season1_start.tif"))
 sos_r <- crop(sos_global_r[[1]], southern_vect)
 
