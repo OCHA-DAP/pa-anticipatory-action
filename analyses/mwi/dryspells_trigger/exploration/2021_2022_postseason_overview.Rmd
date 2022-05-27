@@ -21,11 +21,11 @@ editor_options:
 <br>
 
 ## Executive Summary
-
-# FIX ME
-* Q1: Could Dec/Mar dry spells be included or was the season not started/ended?
-* Q2: How do streaks of dry days compare to streaks with max cumulative rainfall?
-* Q3: How much rainfall in 14-day periods?
+- Assumptions in the Anticipatory Action (AA) trigger for dry spells were borne out in the data from the 2021-2022 rainy season.
+- November and Dec dry spells are very rare and difficult to distinguish from dry days that precede the rainy season. The 2021-2022 season suggests that the AA gain would be minimal if the trigger monitored them (as currently defined.) 
+- March dry spells were frequent and could more easily be monitored especially before 15 March. They may offer an opportunity to broaden the scope of the AA framework and trigger.
+- Rainfall patterns in the 2021-2022 rainy season suggest that the definition of dry spells used in the trigger may be too restrictive for AA. Extensive analysis would be needed to evaluate and select alternatives.
+- The observations made on the basis of the 2021-2022 season should be validated in a historical analysis.
 
 ***
 ## About this Report
@@ -109,6 +109,7 @@ onset_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one col
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
                    RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
 
+perc_24dec_onset <- season_dates %>% filter(onset_date <= '2021-12-24') %>% summarise(dec24_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * dec24_onset / nbr_cells, 0)) %>% select(-dec24_onset) %>% as.numeric()
 ```
 
 Across the Southern region, the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season except the northern part of the region, which saw its season begin in later in December. The 2021-2022 trigger assumption that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
@@ -203,8 +204,6 @@ plot(southern_shp, add = T)
 
 ```{r q1}
 perc_nov_onset <- season_dates %>% filter(onset_date < '2021-12-01') %>% summarise(nov_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * nov_onset / nbr_cells, 0)) %>% select(-nov_onset) %>% as.numeric()
-
-perc_24dec_onset <- season_dates %>% filter(onset_date <= '2021-12-24') %>% summarise(dec24_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * dec24_onset / nbr_cells, 0)) %>% select(-dec24_onset) %>% as.numeric()
 
 onset_90perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.9))
 onset_50perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.5))
@@ -534,7 +533,7 @@ Unfortunately, precise data on the dates planting (and/or flowering) took place 
 
 ```
 
-## Exploring the Suitability of the Trigger
+## Trigger Suitability
 
 We explore how the rainy season unfolded through the lens of 3 aspects of the 2021-2022 trigger: 
 
@@ -552,24 +551,19 @@ As for cessation dates, the Southern Region saw its rainy season end at various 
 
 If the trigger were to be expanded to include December or March dry spells, it would also delay framework activation and activity implementation by several weeks to allow for confirmation that the suspected dry spell was within the rainy season. Also of note, a previous analysis revealed that no dry spells occurred in November, very few dry spells occurred in December (2.2% of dry spells between 2000 and 2020) and 26.7% were observed in March - a number similar to January.
 
+Expanding trigger monitoring to include December and March could be done with an observational trigger at the cost of a delayed activation. To include these months with a predictive trigger would require assuming that the rainy season is highly likely to be ongoing. A probabilistic approach could be used to select onset/cessation dates per district (adm2 area) based on historical patterns (eg: 90% of the time in the past 20 years, the season had begun by X for Nsanje). 
+
 ### Q2: How do streaks of dry days compare to periods with little to no cumulative rainfall?
 
 The trigger mechanism built on work done by WFP on the definition of dry spells. The shocks were defined as a minimum of 14 consecutive days with no more than 2mm cumulative rainfall. Alternative definitions refer to shorter periods with little rainfall as dry spells (see Q3 below). Yet other definitions instead look for streaks of dry days, where each day is allowed up to a certain amount of rainfall (typically 2-4mm). 
 
 During the 2021-2022, streaks of dry days were common. Every area in the region experienced a dry spell of at least 7 consecutive dry days and most areas experienced a streak of 10+ days. By contrast, fewer areas (`r round(100*length(cells(static_r[["n_14dplus_streaks"]])) / nrow(season_dates), 1)` % of the region) experienced streaks of 14+ dry days. Note that by the trigger definition no dry spells occurred in the region. Therefore, had 14-day dry days streaks been used in the trigger instead, more events would have been recorded and even more so had the streak been reduced in duration. Furthermore, 14-day streaks (may they be defined in dry days or with a maximum rainfall) are likely more localised than widespread, the latter being the type of shocks AA aims to target.
 
-### Q3
-
-* Q3: How much rainfall was typical over 14-day periods during the rainy season? 
+### Q3: How much rainfall was typical over 14-day periods during the rainy season? 
 
 We now turn to the amount of rainfall allowed for a period to be considered a dry spell. The trigger definition set the maximum to 2mm over 14 days. The analysis revealed that this year very few (`r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`%) periods received 2 or less mm. Even when allowing for 5 times more rainfall than the selected definition for dry spell (ie for 10mm per 14 days), the occurrence was still significantly less than 5% of the time, which would be a 1 in 20 year event if the trend held over the years. Note that the analysis looks at a single year and that thresholds should be set based on historical data over longer period of times. Note also that the analysis examines small areas of about 10 x 10 km and patterns can change when computing metrics for larger areas such as adm2 (district) or adm3 (traditional authority) regions (for instance, by averaging). 
 
-These 2021-2022 patterns described in Q2 and Q3 suggest that the trigger definition of dry spell captures quite severe events and may be overly restrictive to get ahead of dry periods that could cause significant crop damage and humanitarian need. The observations made in the analysis of the 2021-2022 season should be validated in a historical analysis before any modifications are made to the trigger.
-
-## Key Takeaways
-- November and Dec dry spells are very rare and difficult to distinguish from dry days prior to the onset of the rainy season. March dry spells are frequent but can more easily be monitored especially before 15 March. 
-- Expanding trigger monitoring to include December and March could be done with an observational trigger at the cost of a delayed activation. To include these months with a predictive trigger would require assuming that the rainy season is highly likely to be ongoing. A probabilistic approach could be used to select onset/cessation dates per district (adm2 area) based on historical patterns (eg: 90% of the time in the past 20 years, the season had begun by X for Nsanje). 
-
+Rainfall patterns in the 2021-2022 suggest that the dry spell definition used in the trigger captures very rare and localised events, and may be overly restrictive to get ahead of dry periods that could cause significant crop damage and humanitarian needs. Further work would be needed to evaluate alternative definitions to find one that may be better suited for AA. It would have to reflect events that are more widespread and frequent, and that are linked to observed crop damage and humanitarian needs. (Triggers would be adjusted to ensure that they would be met for shocks occurring once every 3 to 5 years.) Furthermore, using a less restrictive definition might result in improved predictability and thus, a better performing predictive trigger. This is speculative at the moment and could only be verified through extensive analysis.
 
 ## References
 FAO (2006). Water and Soil Requirements. Cited in Kimaro and Sibande 2008.
