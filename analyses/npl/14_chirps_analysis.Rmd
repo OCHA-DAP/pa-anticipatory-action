@@ -244,6 +244,22 @@ NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
            AmenDate = as.Date(paste0(Year, "-", Month, "-", DayVal)))
 ```
 
+Checking which districts are in which water basins:
+
+```{r}
+nplRBSF2 <- nplRBSF %>%
+    filter(Major_Basi %in% "Karnali River Basin")
+nplWSSF2 <- nplWSSF %>%
+    filter(WSH_NME %in% "Saptakoshi Watershed")
+
+KarnalioverlapVals <- st_intersection(nplRBSF2, nplSF)$DIST_EN
+KoshioverlapVals <- st_intersection(nplWSSF2, nplSF)$DIST_EN
+
+```
+
+There are 24 districts that overlap with the Karnali river basin and 4 districts that overlap with the Saptakoshi watershed.
+
+
 
 
 
