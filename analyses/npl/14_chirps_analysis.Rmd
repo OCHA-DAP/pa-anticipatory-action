@@ -20,8 +20,13 @@ library(tseries)
 library(ncdf4)
 library(raster)
 
-# reading in shapefile
+# reading in shapefiles
+temp <- tempfile()
+unzip(zipfile = paste0(Sys.getenv("AA_DATA_DIR"), "/public/raw/npl/cod_ab/npl_cod_ab.shp.zip"), exdir = temp)
+nplSF <- st_read(temp, layer = "npl_admbnda_districts_nd_20201117")
+
 nplRBSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
+
 nplWSSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_watershed.shp"))
 
 # reading in historical floods
