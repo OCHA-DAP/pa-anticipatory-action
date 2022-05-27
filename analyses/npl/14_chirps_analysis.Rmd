@@ -234,4 +234,21 @@ unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Na
 
 ```
 
+Trying to clean up the dates in the Historical Floods Data:
+ - Replacing the day column with 0 values with 1 
+ - Creating Date column from Year, Month and Amended Day column
+
+```{r}
+NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
+    mutate(DayVal = str_replace_all(Day, "0", "1"), 
+           AmenDate = as.Date(paste0(Year, "-", Month, "-", DayVal)))
+```
+
+
+
+
+
+
+
+
 
