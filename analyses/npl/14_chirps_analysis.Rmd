@@ -259,9 +259,19 @@ KoshioverlapVals <- st_intersection(nplWSSF2, nplSF)$DIST_EN
 
 There are 24 districts that overlap with the Karnali river basin and 4 districts that overlap with the Saptakoshi watershed.
 
+Filtering the Historical Flood Data using these districts:
 
+```{r}
+NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
+    mutate(Basin = ifelse(`District Name` %in% KarnalioverlapVals, "Karnali River Basin", 
+                          ifelse(`District Name` %in% KoshioverlapVals, "Saptakoshi Watershed", "Other")))
+    
+unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Karnali River Basin"])
+unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Saptakoshi Watershed"])
 
+```
 
+There is data for 2 districts for the Karnali River Basin and data for 3 districts for the Saptakoshi watershed.
 
 
 
