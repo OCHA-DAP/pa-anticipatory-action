@@ -216,9 +216,15 @@ AggNational3 <- AggNational %>%
 
 # write.csv(AggNational3, "C:/Users/pauni/Desktop/Work/OCHA/Nepal/Rolling Sums Exceeding 2year return level.csv", row.names = F)
 
-summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
+# summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
 NPLHistFloodsWorst <- NPLHistFloods %>%
     filter(`Affected Family` >= 5000)
 
+unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Name` %in% nplSF$DIST_EN)])
+
 ```
+
+There are 2 districts in the Historical Floods file not found in the shapefile. On further inspection, there seems to be very slight differences in the name that can be explained by data entry. Changing Makwanpur to Makawanpur and Dhanusa to Dhanusha:
+
+
 
