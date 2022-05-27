@@ -197,11 +197,13 @@ ggplot(data = AggNational, aes(x = Date, y = rollsum, group = Basin)) +
 # comparing historical values with return values
 # dates where value was exceeded
 AggNational3 <- AggNational %>%
+    arrange(Date, Basin) %>%
     mutate(thresh2Yr = rollsum >= unlist(returnValues[,"returnyr2"])) %>%
     mutate(thresh5Yr = rollsum >= unlist(returnValues[,"returnyr5"])) %>%
     mutate(thresh10Yr = rollsum >= unlist(returnValues[,"returnyr10"])) %>%
     filter(thresh2Yr) %>%
     group_by(Basin) %>%
+    arrange(Basin, Date) %>%
     # remove if consecutive
     mutate(notConsecutive = c(T, diff(Date) != 1), 
            maxRolWindow = ave(rollsum, cumsum(notConsecutive), FUN = max)) %>%
