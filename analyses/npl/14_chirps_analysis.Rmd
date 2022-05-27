@@ -217,14 +217,15 @@ AggNational3 <- AggNational %>%
 # write.csv(AggNational3, "C:/Users/pauni/Desktop/Work/OCHA/Nepal/Rolling Sums Exceeding 2year return level.csv", row.names = F)
 
 # summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
-NPLHistFloodsWorst <- NPLHistFloods %>%
-    filter(`Affected Family` >= 5000)
+NPLHistFloodsWorst <- NPLHistFloods
+    # filter(`Affected Family` >= 5000)
+
 
 unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Name` %in% nplSF$DIST_EN)])
 
 ```
 
-There are 2 districts in the Historical Floods file not found in the shapefile. On further inspection, there seems to be very slight differences in the name that can be explained by data entry. Changing Makwanpur to Makawanpur and Dhanusa to Dhanusha:
+There are 3 districts in the Historical Floods file not found in the shapefile. On further inspection, there seems to be very slight differences in the name that can be explained by data entry. Changing Makwanpur to Makawanpur, Dhanusa to Dhanusha and Kavrepalanchok to Kabhrepalanchok:
 
 ```{r}
 NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
@@ -264,17 +265,34 @@ Filtering the Historical Flood Data using these districts:
 ```{r}
 NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
     mutate(Basin = ifelse(`District Name` %in% KarnalioverlapVals, "Karnali River Basin", 
-                          ifelse(`District Name` %in% KoshioverlapVals, "Saptakoshi Watershed", "Other")))
+                          ifelse(`District Name` %in% KoshioverlapVals, "Saptakoshi Watershed", "Other"))) %>%
+    filter(Basin %in% c("Karnali River Basin", "Saptakoshi Watershed"))
     
 unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Karnali River Basin"])
 unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Saptakoshi Watershed"])
 
 ```
 
-There is data for 2 districts for the Karnali River Basin and data for 3 districts for the Saptakoshi watershed.
+There is data for 24 districts for the Karnali River Basin and data for 4 districts for the Saptakoshi watershed.
 
+Comparing the data for the 2 river basins:
 
+```{r}
+# joining the two dataframes using full join
+CompleteDF <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggNational3, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
+           WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
+    # for each reported date of flooding which was the closest excess rainfall event
+    group_by(AmenDate) %>%
+    slice(which.min(TimeDiff)) %>%
+    filter(TimeDiff > -5 & TimeDiff <= 30)
 
+```
+
+The analysis shows that one of the flood events were preceded by some extreme rainfall events for the Karnali water basin. A negative time difference value shows that the flooding occurred before the rain event. 
 
 
 
