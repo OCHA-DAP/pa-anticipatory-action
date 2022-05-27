@@ -156,11 +156,11 @@ threshrange.plot(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"
 returnValues <- AggNational %>%
     group_by(Basin) %>%
     summarise(returnyr2 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
-                                            threshold = 50), return.period = 2), 
+                                            threshold = 25), return.period = 2), 
               returnyr5 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
-                                            threshold = 50), return.period = 5), 
+                                            threshold = 25), return.period = 5), 
               returnyr10 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
-                                             threshold = 50), return.period = 10))
+                                             threshold = 25), return.period = 10))
 
 ggplot(data = AggNational, aes(x = Date, y = rollsum, group = Basin)) + 
     geom_line(aes(colour = Basin)) + 
@@ -200,7 +200,14 @@ AggNational3 <- AggNational %>%
     mutate(thresh2Yr = rollsum >= unlist(returnValues[,"returnyr2"])) %>%
     mutate(thresh5Yr = rollsum >= unlist(returnValues[,"returnyr5"])) %>%
     mutate(thresh10Yr = rollsum >= unlist(returnValues[,"returnyr10"])) %>%
-    filter(thresh2Yr)
+    filter(thresh2Yr) %>%
+    group_by(Basin) %>%
+    # remove if consecutive
+    mutate(notConsecutive = c(T, diff(Date) != 1), 
+           maxRolWindow = ave(rollsum, cumsum(notConsecutive), FUN = max)) %>%
+    filter(rollsum == maxRolWindow)
+
+# write.csv(AggNational3, "C:/Users/pauni/Desktop/Work/OCHA/Nepal/Rolling Sums Exceeding 2year return level.csv", row.names = F)
 
 summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
 NPLHistFloodsWorst <- NPLHistFloods %>%
