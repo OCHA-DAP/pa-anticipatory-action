@@ -287,12 +287,30 @@ CompleteDF <- NPLHistFloodsWorst %>%
            WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
     # for each reported date of flooding which was the closest excess rainfall event
     group_by(AmenDate) %>%
+    filter(TimeDiff > -5) %>%
     slice(which.min(TimeDiff)) %>%
-    filter(TimeDiff > -5 & TimeDiff <= 30)
+    filter(TimeDiff <= 30)
 
 ```
 
 The analysis shows that one of the flood events were preceded by some extreme rainfall events for the Karnali water basin. A negative time difference value shows that the flooding occurred before the rain event. 
+
+```{r}
+# finding false positives
+# flood event did not occur but there was an extreme rainfall event
+FloodCheckDF <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggNational3, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
+           WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
+    # for each reported date of flooding which was the closest excess rainfall event
+    group_by(AmenDate) %>%
+    slice(which.min(TimeDiff))
+
+# finding false negatives
+# flood event occurred but not captured by CHIRPS
+```
 
 
 
