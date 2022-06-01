@@ -287,7 +287,7 @@ CompleteDF <- NPLHistFloodsWorst %>%
            WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
     # for each reported date of flooding which was the closest excess rainfall event
     group_by(AmenDate) %>%
-    filter(TimeDiff > -5 & TimeDiff <= 30) %>%
+    filter(TimeDiff >= 0 & TimeDiff <= 30) %>%
     slice(which.min(TimeDiff))
 
 ```
@@ -304,8 +304,11 @@ FloodCheckDF <- NPLHistFloodsWorst %>%
     mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
            WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
     # for each reported date of flooding which was the closest excess rainfall event
-    group_by(AmenDate) %>%
+    group_by(Date) %>%
+    filter(TimeDiff > 0) %>%
+    slice(which.min(TimeDiff)) %>%
     filter(TimeDiff > -5 & TimeDiff <= 30)
+
 
 # finding false negatives
 # flood event occurred but not captured by CHIRPS
