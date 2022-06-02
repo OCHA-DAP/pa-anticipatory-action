@@ -347,3 +347,14 @@ print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 
 ```
 
+# Comparing CHIRPS Event and GLOFAS Event
+
+```{r}
+
+```
+
+# Comparing Water Levels and GLOFAS Event
+
+```{r}
+
+```
