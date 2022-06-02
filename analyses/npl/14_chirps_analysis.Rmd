@@ -321,7 +321,7 @@ FloodCheckFP <- NPLHistFloodsWorst %>%
 
 FPRate <- sum(FloodCheckFP$TPVals == 0)/nrow(FloodCheckFP)
 
-print(paste0("The False Positive Rate is: ", round(FPRate*100, 2), "%."))
+print(paste0("The proportion of false positive events to number of CHIRPS events is: ", round(FPRate*100, 2), "%."))
 
 # finding false negatives
 # flood event occurred but not captured by CHIRPS
@@ -339,7 +339,7 @@ FloodCheckFN <- NPLHistFloodsWorst %>%
 
 FNRate <- sum(FloodCheckFN$TNVals == 0)/nrow(FloodCheckFN)
 
-print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
+print(paste0("The proportion of false negative events to number of actual flood events is: ", round(FNRate*100, 2), "%."))
 
 # we have to take into account that Flood Data starts earlier than CHIRPS Data.
 ```
@@ -381,6 +381,8 @@ AggGLOFAS <- NPLGLOFAS %>%
 
 # finding false positives
 # flood event did not occur but there was a GLOFAS event
+# assumption is that on-the-ground is recorded on the day of or before GLOFAS records an event
+
 FloodCheckFP2 <- NPLHistFloodsWorst %>% 
     dplyr::select(Basin, AmenDate) %>%
     full_join(AggGLOFAS, by = "Basin") %>%
@@ -394,7 +396,7 @@ FloodCheckFP2 <- NPLHistFloodsWorst %>%
 
 FPRate2 <- sum(FloodCheckFP2$TPVals == 0)/nrow(FloodCheckFP2)
 
-print(paste0("The False Positive Rate is: ", round(FPRate2*100, 2), "%."))
+print(paste0("The proportion of false positive events to number of GLOFAS events is: ", round(FPRate2*100, 2), "%."))
 
 # finding false negatives
 # flood event occurred but not captured by GLOFAS
@@ -412,22 +414,24 @@ FloodCheckFN2 <- NPLHistFloodsWorst %>%
 
 FNRate2 <- sum(FloodCheckFN2$TNVals == 0)/nrow(FloodCheckFN2)
 
-print(paste0("The False Negative Rate is: ", round(FNRate2*100, 2), "%."))
+print(paste0("The proportion of false negative events to number of actual events is: ", round(FNRate2*100, 2), "%."))
 
 ```
 
-# Comparing CHIRPS Event and GLOFAS Event
+# Comparing GLOFAS Events and CHIRPS Events
 
 ```{r}
 
 # finding false positives
 # flood event did not occur but there was a GLOFAS event
+# assumption is that CHIRPS event occurs before GLOFAS records an event
+
 FloodCheckFP3 <- AggGLOFAS %>% 
-    dplyr::select(Basin, Date) %>%
+    dplyr::select(Basin, Time) %>%
     full_join(AggNational3, by = "Basin") %>%
     # rain event happens before flood event
-    mutate(TimeDiff = difftime(Date.x, Date.y, units = "days"), 
-           WeekDiff = difftime(Date.x, Date.y, units = "weeks"), 
+    mutate(TimeDiff = difftime(Time, Date, units = "days"), 
+           WeekDiff = difftime(Time, Date, units = "weeks"), 
            FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
     # for each reported date of flooding
     group_by(Date, Basin) %>%
@@ -435,7 +439,7 @@ FloodCheckFP3 <- AggGLOFAS %>%
 
 FPRate2 <- sum(FloodCheckFP2$TPVals == 0)/nrow(FloodCheckFP2)
 
-print(paste0("The False Positive Rate is: ", round(FPRate2*100, 2), "%."))
+print(paste0("The proportion of false positive CHIRPS events to number of CHIRPS events is: ", round(FPRate2*100, 2), "%."))
 
 # finding false negatives
 # flood event occurred but not captured by GLOFAS
@@ -443,17 +447,17 @@ FloodCheckFN2 <- NPLHistFloodsWorst %>%
     dplyr::select(Basin, AmenDate) %>%
     full_join(AggGLOFAS, by = "Basin") %>%
     # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
-           WeekDiff = difftime(AmenDate, Date, units = "weeks"), 
+    mutate(TimeDiff = difftime(Time, Date, units = "days"), 
+           WeekDiff = difftime(Time, Date, units = "weeks"), 
            FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
     # for each reported date of flooding which was the closest excess rainfall event
     # for each reported date of flooding which was the closest excess rainfall event
-    group_by(AmenDate, Basin) %>%
+    group_by(Time, Basin) %>%
     summarise(TNVals = sum(FNCheck, na.rm = T))
 
 FNRate2 <- sum(FloodCheckFN2$TNVals == 0)/nrow(FloodCheckFN2)
 
-print(paste0("The False Negative Rate is: ", round(FNRate2*100, 2), "%."))
+print(paste0("The proportion of false positive events to number of CHIRPS events is: ", round(FNRate2*100, 2), "%."))
 
 ```
 
