@@ -34,6 +34,9 @@ NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/e
 
 # reading in GLOFAS Data
 NPLGLOFASNC <- nc_open(paste0(Sys.getenv("AA_DATA_DIR"),                        "/public/processed/npl/glofas/npl_cems-glofas-historical_v3_incorrect-coords.nc"))
+NPLGLOFAS <- tibble(Chatara = ncvar_get(NPLGLOFASNC, "Chatara_v3"),
+                    Chisapani = ncvar_get(NPLGLOFASNC, "Chisapani_v3"),
+                    Date = as.Date("1979-01-01") + (NPLGLOFASNC$dim$time$vals))
 
 NPLWaterLevel <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/waterl_level_procssed.csv"))
 
@@ -344,6 +347,8 @@ print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 # Comparing Actual Flood Event and GLOFAS Event
 
 ```{r}
+
+
 
 ```
 
