@@ -18,7 +18,7 @@ dates <- data.frame(dates = seq(from = as.Date('2021-10-01', format = '%Y-%m-%d'
                    to = as.Date('2022-04-30', format = '%Y-%m-%d'), 
                    by = "days"))
 
-date_labels <- cbind(dates_chr, dates)
+date_labels <- data.frame(dates_chr, dates)
 
 # pivot data to long format & formatting
 lf <- data %>% 
@@ -48,11 +48,11 @@ lf <- data %>%
 stats <- lf %>%
   group_by(cell) %>%
   arrange(cell, dates) %>%
-  dplyr::mutate(roll_sum_next_10d = ifelse(!is.na(rainfall), zoo::rollsum(rainfall, k = 10, fill = NA, align = 'left'), NA), # sum of precipitation in 10-day period starting today
+  dplyr::mutate(roll_sum_next_10d =  zoo::rollsum(rainfall, k = 10, fill = NA, align = 'left'), # sum of precipitation in 10-day period starting today
          start_10d_ds_bin = ifelse(roll_sum_next_10d < 2, 1, 0), # is this the first day of a dry 10-day period?
-         roll_sum_foll_15d = ifelse(!is.na(rainfall), zoo::rollsum(lead(rainfall, 1), k = 15, fill = NA, align = 'left'), NA), # sum of precipitation in 15-day period starting tomorrow (lead=1)
+         roll_sum_foll_15d = zoo::rollsum(lead(rainfall, 1), k = 15, fill = NA, align = 'left'), # sum of precipitation in 15-day period starting tomorrow (lead=1)
          foll_by_15d_ds_bin = ifelse(roll_sum_foll_15d <= 25, 1, 0), # is tomorrow the first day of a 15-d dry period?
-         roll_sum_next_14d = ifelse(!is.na(rainfall), zoo::rollsum(rainfall, k = 14, fill = NA, align = 'left'), NA), # sum of precipitation in 14-day period starting today 
+         roll_sum_next_14d = zoo::rollsum(rainfall, k = 14, fill = NA, align = 'left'), # sum of precipitation in 14-day period starting today 
          )
 
 # Onsets:
@@ -63,7 +63,7 @@ onsets <- stats %>%
              arrange(cell, dates) %>%
              mutate(followed_by_ds = ifelse(!is.na(rainfall), zoo::rollsum(lead(start_10d_ds_bin, 1), k = 20, align = 'left') >= 1, NA)) %>% # boolean: is there at least one 10-day period with cum sum less than 2 in the next 20 days starting tomorrow (lead = 1)? k=20th day is the last chance to start a 10d-period within 30-day period
              filter(dates >= '2021-11-01' & roll_sum_next_10d >= 40 & followed_by_ds == FALSE) %>%
-             slice(which.min(dates)) %>% # retrieve earliest date that meets criterion per cell 
+             slice_min(dates) %>% # retrieve earliest date that meets criterion per cell 
              ungroup() %>%
              select(cell, date_chr, dates, roll_sum_next_10d, followed_by_ds) %>%
              rename(onset_date_chr = date_chr, onset_date = dates) %>%
