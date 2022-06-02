@@ -13,7 +13,7 @@ While the triggers are adjusted to the local context, most of the data processin
 
 The AA frameworks that are implemented and/or currently under development are displayed in the map below
 
-![image](![image](https://user-images.githubusercontent.com/4512594/167153028-8c828a48-13a7-4625-84ad-b68750f0e942.png))
+![image](https://user-images.githubusercontent.com/4512594/167153028-8c828a48-13a7-4625-84ad-b68750f0e942.png)
 
 Three of these frameworks have had at least one activation as of June 2021:
 - [Bangladesh, flood](https://centre.humdata.org/anticipatory-action-in-bangladesh-before-peak-monsoon-flooding/)
