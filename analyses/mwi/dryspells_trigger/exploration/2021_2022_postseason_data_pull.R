@@ -15,9 +15,6 @@ if (any(installed_packages == FALSE)) {
 
 lapply(packages, library, character.only = TRUE)
 
-# set options
-options(scipen = 999)
-
 # set directory paths
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shapefile_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
