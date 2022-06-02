@@ -347,9 +347,73 @@ print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 # Comparing Actual Flood Event and GLOFAS Event
 
 ```{r}
+# matching Chisapani to Karnali and Chatara to Saptakoshi
+ggplot(NPLGLOFAS, aes(x = Date)) + 
+    geom_line(aes(y = Chisapani)) + 
+    geom_line(aes(y = Chatara), color = "blue") + 
+    ggtitle("Nepal GLOFAS Data: Chisapani(in black) and Chatara(in blue)") +
+    ylab("GLOFAS")
 
+mrlplot(NPLGLOFAS$Chisapani, main="Mean Residual Life Plot: Chisapani")
+mrlplot(NPLGLOFAS$Chatara, main="Mean Residual Life Plot: Chatara")
 
+threshrange.plot(NPLGLOFAS$Chisapani, r = c(0, 10000), nint = 20)
+threshrange.plot(NPLGLOFAS$Chatara, r = c(0, 10000), nint = 20)
 
+returnValues3 <- NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    group_by(Station) %>%
+    summarise(returnyr2 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                             threshold = 6000), return.period = 10))
+AggGLOFAS <- NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    arrange(Date, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    mutate(thresh2Yr = GLOFAS >= unlist(returnValues3[,"returnyr2"])) %>%
+    mutate(thresh5Yr = GLOFAS >= unlist(returnValues3[,"returnyr5"])) %>%
+    mutate(thresh10Yr = GLOFAS >= unlist(returnValues3[,"returnyr10"])) %>%
+    filter(thresh2Yr)
+
+# finding false positives
+# flood event did not occur but there was a GLOFAS event
+FloodCheckFP2 <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggGLOFAS, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
+           WeekDiff = difftime(AmenDate, Date, units = "weeks"), 
+           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding
+    group_by(Date, Basin) %>%
+    summarise(TPVals = sum(FPCheck, na.rm = T))
+
+FPRate2 <- sum(FloodCheckFP2$TPVals == 0)/nrow(FloodCheckFP2)
+
+print(paste0("The False Positive Rate is: ", round(FPRate2*100, 2), "%."))
+
+# finding false negatives
+# flood event occurred but not captured by GLOFAS
+FloodCheckFN2 <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggGLOFAS, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
+           WeekDiff = difftime(AmenDate, Date, units = "weeks"), 
+           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding which was the closest excess rainfall event
+    # for each reported date of flooding which was the closest excess rainfall event
+    group_by(AmenDate, Basin) %>%
+    summarise(TNVals = sum(FNCheck, na.rm = T))
+
+FNRate2 <- sum(FloodCheckFN2$TNVals == 0)/nrow(FloodCheckFN2)
+
+print(paste0("The False Negative Rate is: ", round(FNRate2*100, 2), "%."))
+
+# we have to take into account that Flood Data starts earlier than CHIRPS Data.
 ```
 
 # Comparing CHIRPS Event and GLOFAS Event
