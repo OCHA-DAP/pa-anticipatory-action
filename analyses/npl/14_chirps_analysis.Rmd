@@ -32,6 +32,11 @@ nplWSSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/u
 # reading in historical floods
 NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/NepalHistoricalFlood1971-2020.xlsx"))
 
+# reading in GLOFAS Data
+NPLGLOFASNC <- nc_open(paste0(Sys.getenv("AA_DATA_DIR"),                        "/public/processed/npl/glofas/npl_cems-glofas-historical_v3_incorrect-coords.nc"))
+
+NPLWaterLevel <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/waterl_level_procssed.csv"))
+
 # function for reading in files 
 read_files <- function(filePath, fileName){
     ncObj <- nc_open(paste0(filePath, fileName))
@@ -338,4 +343,7 @@ print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 
 # Comparing Actual Flood Event and GLOFAS Event
 
+```{r}
+
+```
 
