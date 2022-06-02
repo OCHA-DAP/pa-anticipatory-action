@@ -305,13 +305,14 @@ FloodCheckDF <- NPLHistFloodsWorst %>%
            WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
     # for each reported date of flooding which was the closest excess rainfall event
     group_by(Date) %>%
-    filter(TimeDiff > 0) %>%
-    slice(which.min(TimeDiff)) %>%
-    filter(TimeDiff > -5 & TimeDiff <= 30)
+    mutate(FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30 & !is.na(AmenDate), T, F))
 
 
 # finding false negatives
 # flood event occurred but not captured by CHIRPS
+
+
+
 ```
 
 
