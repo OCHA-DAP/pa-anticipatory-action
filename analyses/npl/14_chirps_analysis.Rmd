@@ -294,6 +294,8 @@ CompleteDF <- NPLHistFloodsWorst %>%
 
 The analysis shows that one of the flood events were preceded by some extreme rainfall events for the Karnali water basin. A negative time difference value shows that the flooding occurred before the rain event. 
 
+# Comparing Actual Flood Event and CHIRPS Extreme Rainfall Event
+
 ```{r}
 # finding false positives
 # flood event did not occur but there was an extreme rainfall event
@@ -333,5 +335,7 @@ print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 # we have to take into account that Flood Data starts earlier than CHIRPS Data.
 ```
 
+
+# Comparing Actual Flood Event and GLOFAS Event
 
 
