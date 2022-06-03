@@ -308,7 +308,7 @@ The analysis shows that one of the flood events were preceded by some extreme ra
 ```{r}
 # finding false positives
 # flood event did not occur but there was an extreme rainfall event
-FloodCheckFP <- NPLHistFloodsWorst %>% 
+FloodCheckFP <- NPLHistFloodsWorst %>%
     dplyr::select(Basin, AmenDate) %>%
     full_join(AggNational3, by = "Basin") %>%
     # rain event happens before flood event
@@ -339,7 +339,7 @@ FloodCheckFN <- NPLHistFloodsWorst %>%
 
 FNRate <- sum(FloodCheckFN$TNVals == 0)/nrow(FloodCheckFN)
 
-print(paste0("The proportion of false negative events to number of actual flood events is: ", round(FNRate*100, 2), "%."))
+print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 
 # we have to take into account that Flood Data starts earlier than CHIRPS Data.
 ```
@@ -414,7 +414,7 @@ FloodCheckFN2 <- NPLHistFloodsWorst %>%
 
 FNRate2 <- sum(FloodCheckFN2$TNVals == 0)/nrow(FloodCheckFN2)
 
-print(paste0("The proportion of false negative events to number of actual events is: ", round(FNRate2*100, 2), "%."))
+print(paste0("The False Negative Rate is: ", round(FNRate2*100, 2), "%."))
 
 ```
 
@@ -437,15 +437,15 @@ FloodCheckFP3 <- AggGLOFAS %>%
     group_by(Date, Basin) %>%
     summarise(TPVals = sum(FPCheck, na.rm = T))
 
-FPRate2 <- sum(FloodCheckFP2$TPVals == 0)/nrow(FloodCheckFP2)
+FPRate3 <- sum(FloodCheckFP3$TPVals == 0)/nrow(FloodCheckFP3)
 
-print(paste0("The proportion of false positive CHIRPS events to number of CHIRPS events is: ", round(FPRate2*100, 2), "%."))
+print(paste0("The proportion of false positive GLOFAS events to number of CHIRPS events is: ", round(FPRate3*100, 2), "%."))
 
 # finding false negatives
 # flood event occurred but not captured by GLOFAS
-FloodCheckFN2 <- NPLHistFloodsWorst %>% 
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggGLOFAS, by = "Basin") %>%
+FloodCheckFN3 <- AggGLOFAS %>% 
+    dplyr::select(Basin, Time) %>%
+    full_join(AggNational3, by = "Basin") %>%
     # rain event happens before flood event
     mutate(TimeDiff = difftime(Time, Date, units = "days"), 
            WeekDiff = difftime(Time, Date, units = "weeks"), 
@@ -455,14 +455,51 @@ FloodCheckFN2 <- NPLHistFloodsWorst %>%
     group_by(Time, Basin) %>%
     summarise(TNVals = sum(FNCheck, na.rm = T))
 
-FNRate2 <- sum(FloodCheckFN2$TNVals == 0)/nrow(FloodCheckFN2)
+FNRate3 <- sum(FloodCheckFN3$TNVals == 0)/nrow(FloodCheckFN3)
 
-print(paste0("The proportion of false positive events to number of CHIRPS events is: ", round(FNRate2*100, 2), "%."))
+print(paste0("The False Negative Rate is: ", round(FNRate3*100, 2), "%."))
 
 ```
 
 # Comparing Water Levels and GLOFAS Event
 
 ```{r}
+ggplot(NPLWaterLevel, aes(x = date)) + 
+    geom_line(aes(y = Chisapani)) + 
+    geom_line(aes(y = Chatara), color = "blue") + 
+    ggtitle("Nepal Water Level Data: Chisapani(in black) and Chatara(in blue)") +
+    ylab("Water Level")
+
+returnValues4 <- tibble(Station = c("Chatara", "Chisapani"), 
+                        returnyr2 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
+                                                        threshold = 6, na.action = na.remove), 
+                                                   return.period = 2), 
+                                      return.level(fevd(x = NPLWaterLevel$Chisapani, method = "MLE",
+                                                        type="GP", threshold = 9.5, na.action = na.remove), 
+                                                   return.period = 2)),
+                        returnyr5 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
+                                                        threshold = 6, na.action = na.remove), 
+                                                   return.period = 5), 
+                                      return.level(fevd(x = NPLWaterLevel$Chisapani, method = "MLE",
+                                                        type="GP", threshold = 9.5, na.action = na.remove), 
+                                                   return.period = 5)),
+                        returnyr10 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
+                                                        threshold = 6, na.action = na.remove), 
+                                                   return.period = 10), 
+                                      return.level(fevd(x = NPLWaterLevel$Chisapani, method = "MLE",
+                                                        type="GP", threshold = 9.5, na.action = na.remove), 
+                                                   return.period = 10)))
+    
+    
+AggWaterLevel <- NPLWaterLevel %>%
+    pivot_longer(cols = c("Chatara", "Chisapani"), names_to = "Station", values_to = "WaterLevel") %>%
+    arrange(date, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    mutate(thresh2Yr = WaterLevel >= unlist(returnValues4[,"returnyr2"])) %>%
+    mutate(thresh5Yr = WaterLevel >= unlist(returnValues4[,"returnyr5"])) %>%
+    mutate(thresh10Yr = WaterLevel >= unlist(returnValues4[,"returnyr10"])) %>%
+    filter(thresh2Yr)
+
+
 
 ```
