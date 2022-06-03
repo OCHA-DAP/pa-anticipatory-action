@@ -98,7 +98,7 @@ chirpsData <- list.files(filePath, pattern = "*.nc") %>%
 
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 # rolling sum
 # aggregate all grids into one and find mean
 # rolling sum is assigned to last day of window
@@ -239,7 +239,8 @@ There are 3 districts in the Historical Floods file not found in the shapefile. 
 ```{r}
 NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
     mutate(`District Name` = str_replace_all(`District Name`, "Makwanpur", "Makawanpur"), 
-           `District Name` = str_replace_all(`District Name`, "Dhanusa", "Dhanusha"))
+           `District Name` = str_replace_all(`District Name`, "Dhanusa", "Dhanusha"),
+           `District Name` = str_replace_all(`District Name`, "Kavrepalanchok", "Kabhrepalanchok"))
 unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Name` %in% nplSF$DIST_EN)])
 
 ```
