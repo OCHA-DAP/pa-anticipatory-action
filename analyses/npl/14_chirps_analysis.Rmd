@@ -371,6 +371,39 @@ returnValues3 <- NPLGLOFAS %>%
                                             threshold = 6000), return.period = 5), 
               returnyr10 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
                                              threshold = 6000), return.period = 10))
+
+NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    ggplot(aes(x = Time, y = GLOFAS, group = Station)) + 
+    geom_line(aes(colour = Station)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues3[1,"returnyr2"]), colour = Station[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[1,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues3[1,"returnyr2"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues3[2,"returnyr2"]), colour = Station[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[2,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues3[2,"returnyr2"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues3[1,"returnyr5"]), colour = Station[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[1,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues3[1,"returnyr5"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues3[2,"returnyr5"]), colour = Station[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[2,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues3[2,"returnyr5"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues3[1,"returnyr10"]), colour = Station[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[1,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues3[1,"returnyr10"]))), 
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues3[2,"returnyr10"]), colour = Station[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[2,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues3[2,"returnyr10"]))),
+                  vjust = -1)) + 
+    ggtitle("GLOFAS with Return Periods in Years") + 
+    ylab("GLOFAS")
+
+
 AggGLOFAS <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     arrange(Time, Station) %>%
@@ -462,7 +495,7 @@ print(paste0("The False Negative Rate is: ", round(FNRate3*100, 2), "%."))
 
 ```
 
-# Comparing Water Levels and GLOFAS Event
+# Comparing Water Levels and CHIRPS Event
 
 ```{r}
 ggplot(NPLWaterLevel, aes(x = date)) + 
@@ -493,6 +526,7 @@ returnValues4 <- tibble(Station = c("Chatara", "Chisapani"),
     
     
 AggWaterLevel <- NPLWaterLevel %>%
+    dplyr::select(date, Chatara, Chisapani) %>%
     pivot_longer(cols = c("Chatara", "Chisapani"), names_to = "Station", values_to = "WaterLevel") %>%
     arrange(date, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
@@ -501,6 +535,114 @@ AggWaterLevel <- NPLWaterLevel %>%
     mutate(thresh10Yr = WaterLevel >= unlist(returnValues4[,"returnyr10"])) %>%
     filter(thresh2Yr)
 
+FloodCheckFP4 <- AggWaterLevel %>% 
+    dplyr::select(Basin, date) %>%
+    full_join(AggNational3, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(Date, date, units = "days"), 
+           WeekDiff = difftime(Date, date, units = "weeks"), 
+           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding
+    group_by(Date, Basin) %>%
+    summarise(TPVals = sum(FPCheck, na.rm = T))
 
+FPRate4 <- sum(FloodCheckFP4$TPVals == 0)/nrow(FloodCheckFP4)
+
+print(paste0("The proportion of false positive events to number of High Water Level events is: ", round(FPRate4*100, 2), "%."))
+
+# finding false negatives
+# flood event occurred but not captured by GLOFAS
+FloodCheckFN4 <- AggWaterLevel %>% 
+    dplyr::select(Basin, date) %>%
+    full_join(AggNational3, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(Date, date, units = "days"), 
+           WeekDiff = difftime(Date, date, units = "weeks"), 
+           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding
+    group_by(date, Basin) %>%
+    summarise(TNVals = sum(FNCheck, na.rm = T))
+
+FNRate4 <- sum(FloodCheckFN4$TNVals == 0)/nrow(FloodCheckFN4)
+
+print(paste0("The False Negative Rate is: ", round(FNRate4*100, 2), "%."))
+
+```
+
+# Comparing Water Levels and Actual Events
+
+```{r}
+
+FloodCheckFP5 <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggWaterLevel, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, date, units = "days"), 
+           WeekDiff = difftime(AmenDate, date, units = "weeks"), 
+           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding
+    group_by(date, Basin) %>%
+    summarise(TPVals = sum(FPCheck, na.rm = T))
+
+FPRate5 <- sum(FloodCheckFP5$TPVals == 0)/nrow(FloodCheckFP5)
+
+print(paste0("The proportion of false positive events to number of Historical Floods events is: ", round(FPRate5*100, 2), "%."))
+
+# finding false negatives
+# flood event occurred but not captured by GLOFAS
+FloodCheckFN5 <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggWaterLevel, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, date, units = "days"), 
+           WeekDiff = difftime(AmenDate, date, units = "weeks"), 
+           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding which was the closest excess rainfall event
+    # for each reported date of flooding which was the closest excess rainfall event
+    group_by(AmenDate, Basin) %>%
+    summarise(TNVals = sum(FNCheck, na.rm = T))
+
+FNRate5 <- sum(FloodCheckFN5$TNVals == 0)/nrow(FloodCheckFN5)
+
+print(paste0("The False Negative Rate is: ", round(FNRate5*100, 2), "%."))
+
+```
+
+# Comparing Water Levels and GLOFAS
+
+```{r}
+
+FloodCheckFP6 <- AggGLOFAS %>% 
+    dplyr::select(Basin, Time) %>%
+    full_join(AggWaterLevel, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(Time, date, units = "days"), 
+           WeekDiff = difftime(Time, date, units = "weeks"), 
+           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding
+    group_by(Time, Basin) %>%
+    summarise(TPVals = sum(FPCheck, na.rm = T))
+
+FPRate6 <- sum(FloodCheckFP6$TPVals == 0)/nrow(FloodCheckFP6)
+
+print(paste0("The proportion of false positive events to number of Historical Floods events is: ", round(FPRate6*100, 2), "%."))
+
+# finding false negatives
+# flood event occurred but not captured by GLOFAS
+FloodCheckFN6 <- AggGLOFAS %>% 
+    dplyr::select(Basin, Time) %>%
+    full_join(AggWaterLevel, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(Time, date, units = "days"), 
+           WeekDiff = difftime(Time, date, units = "weeks"), 
+           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
+    # for each reported date of flooding which was the closest excess rainfall event
+    # for each reported date of flooding which was the closest excess rainfall event
+    group_by(date, Basin) %>%
+    summarise(TNVals = sum(FNCheck, na.rm = T))
+
+FNRate6 <- sum(FloodCheckFN6$TNVals == 0)/nrow(FloodCheckFN6)
+
+print(paste0("The False Negative Rate is: ", round(FNRate6*100, 2), "%."))
 
 ```
