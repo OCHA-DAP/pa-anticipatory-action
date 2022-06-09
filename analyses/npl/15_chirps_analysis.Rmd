@@ -10,6 +10,7 @@ Reading data from shapefile to get river basin bounds:
 ```{r intro, echo=FALSE, warning = FALSE, message=FALSE, results='hide'}
 filePath <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/")
 options(scipen = 100000)
+
     
 # libraries
 library(tidyverse)
@@ -20,9 +21,12 @@ library(tseries)
 library(ncdf4)
 library(raster)
 
+
 # reading in shapefiles
 temp <- tempfile()
+
 unzip(zipfile = paste0(Sys.getenv("AA_DATA_DIR"), "/public/raw/npl/cod_ab/npl_cod_ab.shp.zip"), exdir = temp)
+
 nplSF <- st_read(temp, layer = "npl_admbnda_districts_nd_20201117")
 
 nplRBSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
@@ -34,10 +38,12 @@ NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/e
 
 # reading in GLOFAS Data
 NPLGLOFASNC <- nc_open(paste0(Sys.getenv("AA_DATA_DIR"),                        "/public/processed/npl/glofas/npl_cems-glofas-historical_v3_incorrect-coords.nc"))
+
 NPLGLOFAS <- tibble(Chatara = ncvar_get(NPLGLOFASNC, "Chatara_v3"),
                     Chisapani = ncvar_get(NPLGLOFASNC, "Chisapani_v3"),
                     Time = as.Date("1979-01-01") + (NPLGLOFASNC$dim$time$vals))
-nc_close()
+
+nc_close(NPLGLOFASNC)
 
 NPLWaterLevel <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/waterl_level_procssed.csv"))
 
