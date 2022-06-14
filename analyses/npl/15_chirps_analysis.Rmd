@@ -11,14 +11,17 @@ Reading data from shapefile to get river basin bounds:
 filePath <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/")
 options(scipen = 100000)
 
+# devtools::install_github("RS-eco/processNC")
     
 # libraries
 library(tidyverse)
 library(sf)
 library(tidyquant)
 library(extRemes)
+
 library(tseries)
 library(ncdf4)
+# library(processNC)
 library(raster)
 
 
@@ -102,6 +105,39 @@ read_files <- function(filePath, fileName){
 chirpsData <- list.files(filePath, pattern = "*.nc") %>%
     map_df(~ read_files(filePath, .)) 
 
+# to minimise read time
+chirpsData <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/BasinsCHIRPSdata.csv"))
+
+```
+
+```{r}
+nplRBSF2 <- nplRBSF %>%
+    filter(Major_Basi %in% "Karnali River Basin")
+nplWSSF2 <- nplWSSF %>%
+    filter(WSH_NME %in% "Saptakoshi Watershed")
+
+chirpsGrid <- st_sf(st_make_grid(nplRBSF, cellsize = 0.05, offset = c(80.05, 26.3), n = c(163, 83)))
+chirpsGrid <- chirpsGrid %>%
+    mutate(Centroids = st_centroid(chirpsGrid), 
+           Long = round(st_coordinates(Centroids)[,1], 3),
+           Lat = paste0(round(st_coordinates(Centroids)[,2], 3), "N"), 
+           Coords = paste0(Long, "E", Lat))
+
+chirpsData <- chirpsData %>%
+    mutate(Coords = paste0(Longitude, "E", Latitude))
+
+# Karnali
+KarnaliGrids <- st_intersection(chirpsGrid, nplRBSF2)
+KarnaliCHIRPS <- chirpsData %>%
+    filter(Coords %in% KarnaliGrids$Coords)
+
+# Koshi
+KoshiGrids <- st_intersection(chirpsGrid, nplWSSF2)
+KoshiCHIRPS <- chirpsData %>%
+    filter(Coords %in% KoshiGrids$Coords)
+
+chirpsData2 <- bind_rows(KarnaliCHIRPS, KoshiCHIRPS)
+
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -109,7 +145,7 @@ chirpsData <- list.files(filePath, pattern = "*.nc") %>%
 # aggregate all grids into one and find mean
 # rolling sum is assigned to last day of window
 n = 10
-AggNational <- chirpsData %>%
+AggNational <- chirpsData2 %>%
     group_by(Date, Basin) %>%
     summarise(rfe = mean(precipitation)) %>%
     group_by(Basin) %>%
@@ -264,11 +300,6 @@ NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
 Checking which districts are in which water basins:
 
 ```{r}
-nplRBSF2 <- nplRBSF %>%
-    filter(Major_Basi %in% "Karnali River Basin")
-nplWSSF2 <- nplWSSF %>%
-    filter(WSH_NME %in% "Saptakoshi Watershed")
-
 KarnalioverlapVals <- st_intersection(nplRBSF2, nplSF)$DIST_EN
 KoshioverlapVals <- st_intersection(nplWSSF2, nplSF)$DIST_EN
 
@@ -631,7 +662,7 @@ FloodCheckFP6 <- AggGLOFAS %>%
 
 FPRate6 <- sum(FloodCheckFP6$TPVals == 0)/nrow(FloodCheckFP6)
 
-print(paste0("The proportion of false positive events to number of Historical Floods events is: ", round(FPRate6*100, 2), "%."))
+print(paste0("The proportion of false positive events to number of High Water Level events is: ", round(FPRate6*100, 2), "%."))
 
 # finding false negatives
 # flood event occurred but not captured by GLOFAS
