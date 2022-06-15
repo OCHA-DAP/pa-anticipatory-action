@@ -50,6 +50,16 @@ nc_close(NPLGLOFASNC)
 
 NPLWaterLevel <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/waterl_level_procssed.csv"))
 
+NPLFlowChatara <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_695 Koshi Chatara.txt"), sep = ",", skip = 21)
+NPLFlowChisapani <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_280 Karnali Chisapani.txt"), sep = ",", skip = 21)
+NPLFlow <- rbind(
+    cbind(NPLFlowChatara, Basin = "Saptakoshi Watershed"),
+    cbind(NPLFlowChisapani, Basin = "Karnali River Basin")
+)
+colnames(NPLFlow)[1:2] <- c("Dates", "Flow")
+NPLFlow <- NPLFlow %>%
+    mutate(Dates = as.Date(Dates, format = "%d/%b/%Y"))
+
 # subsetting shapefiles
 nplRBSF2 <- nplRBSF %>%
     filter(Major_Basi %in% "Karnali River Basin")
@@ -244,9 +254,10 @@ ggplot(data = AggNational, aes(x = Date, y = rollsum, group = Basin)) +
 # dates where value was exceeded
 AggNational3 <- AggNational %>%
     arrange(Date, Basin) %>%
-    mutate(thresh2Yr = rollsum >= unlist(returnValues[,"returnyr2"])) %>%
-    mutate(thresh5Yr = rollsum >= unlist(returnValues[,"returnyr5"])) %>%
-    mutate(thresh10Yr = rollsum >= unlist(returnValues[,"returnyr10"])) %>%
+    left_join(returnValues, by = "Basin") %>%
+    mutate(thresh2Yr = rollsum >= returnyr2) %>%
+    mutate(thresh5Yr = rollsum >= returnyr5) %>%
+    mutate(thresh10Yr = rollsum >= returnyr10) %>%
     filter(thresh2Yr) %>%
     group_by(Basin) %>%
     arrange(Basin, Date) %>%
@@ -258,8 +269,8 @@ AggNational3 <- AggNational %>%
 # write.csv(AggNational3, "C:/Users/pauni/Desktop/Work/OCHA/Nepal/Rolling Sums Exceeding 2year return level.csv", row.names = F)
 
 # summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
-NPLHistFloodsWorst <- NPLHistFloods
-    # filter(`Affected Family` >= 5000)
+NPLHistFloodsWorst <- NPLHistFloods %>%
+    filter(`Affected Family` >= 10 | `Estimated Loss` >= 50000)
 
 
 unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Name` %in% nplSF$DIST_EN)])
@@ -310,7 +321,7 @@ unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Saptakosh
 
 ```
 
-There is data for 24 districts for the Karnali River Basin and data for 4 districts for the Saptakoshi watershed.
+There is data for 22 districts for the Karnali River Basin and data for 4 districts for the Saptakoshi watershed.
 
 Comparing the data for the 2 river basins:
 
@@ -336,38 +347,28 @@ The analysis shows that one of the flood events were preceded by some extreme ra
 ```{r}
 # finding false positives
 # flood event did not occur but there was an extreme rainfall event
-FloodCheckFP <- NPLHistFloodsWorst %>%
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggNational3, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
-           WeekDiff = difftime(AmenDate, Date, units = "weeks"), 
-           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding which was the closest excess rainfall event
-    group_by(Date, Basin) %>%
-    summarise(TPVals = sum(FPCheck, na.rm = T))
+summaryFXN <- function(DF1, DF2, DateCol1, DateCol2){
+    FloodCheck <- DF1 %>%
+        dplyr::select(Basin, {{ DateCol1 }}) %>%
+        full_join(DF2, by = "Basin") 
+    FloodCheck[,"TimeDiff"] <- difftime(FloodCheck[[DateCol1]], FloodCheck[[DateCol2]], units = "days")
+    FloodCheck[,"Check"] <- ifelse(FloodCheck$TimeDiff >= 0 & FloodCheck$TimeDiff <= 30, T, F)
+    
+    return(FloodCheck)
+}
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggNational3, "AmenDate", "Date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggNational3, "AmenDate", "Date") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
 
-FPRate <- sum(FloodCheckFP$TPVals == 0)/nrow(FloodCheckFP)
 
-print(paste0("The proportion of false positive events to number of CHIRPS events is: ", round(FPRate*100, 2), "%."))
-
-# finding false negatives
-# flood event occurred but not captured by CHIRPS
-FloodCheckFN <- NPLHistFloodsWorst %>% 
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggNational3, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
-           WeekDiff = difftime(AmenDate, Date, units = "weeks"), 
-           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding which was the closest excess rainfall event
-    # for each reported date of flooding which was the closest excess rainfall event
-    group_by(AmenDate, Basin) %>%
-    summarise(TNVals = sum(FNCheck, na.rm = T))
-
-FNRate <- sum(FloodCheckFN$TNVals == 0)/nrow(FloodCheckFN)
-
-print(paste0("The False Negative Rate is: ", round(FNRate*100, 2), "%."))
 
 # we have to take into account that Flood Data starts earlier than CHIRPS Data.
 ```
@@ -397,7 +398,9 @@ returnValues3 <- NPLGLOFAS %>%
               returnyr5 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
                                             threshold = 6000), return.period = 5), 
               returnyr10 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
-                                             threshold = 6000), return.period = 10))
+                                             threshold = 6000), return.period = 10)) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed"))
+
 
 NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
@@ -435,47 +438,27 @@ AggGLOFAS <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     arrange(Time, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
-    mutate(thresh2Yr = GLOFAS >= unlist(returnValues3[,"returnyr2"])) %>%
-    mutate(thresh5Yr = GLOFAS >= unlist(returnValues3[,"returnyr5"])) %>%
-    mutate(thresh10Yr = GLOFAS >= unlist(returnValues3[,"returnyr10"])) %>%
+    left_join(returnValues3, by = "Basin") %>%
+    mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
+    mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
+    mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
     filter(thresh2Yr)
+
 
 # finding false positives
 # flood event did not occur but there was a GLOFAS event
 # assumption is that on-the-ground is recorded on the day of or before GLOFAS records an event
-
-FloodCheckFP2 <- NPLHistFloodsWorst %>% 
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggGLOFAS, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, Time, units = "days"), 
-           WeekDiff = difftime(AmenDate, Time, units = "weeks"), 
-           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding
-    group_by(Time, Basin) %>%
-    summarise(TPVals = sum(FPCheck, na.rm = T))
-
-FPRate2 <- sum(FloodCheckFP2$TPVals == 0)/nrow(FloodCheckFP2)
-
-print(paste0("The proportion of false positive events to number of GLOFAS events is: ", round(FPRate2*100, 2), "%."))
-
-# finding false negatives
-# flood event occurred but not captured by GLOFAS
-FloodCheckFN2 <- NPLHistFloodsWorst %>% 
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggGLOFAS, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, Time, units = "days"), 
-           WeekDiff = difftime(AmenDate, Time, units = "weeks"), 
-           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding which was the closest excess rainfall event
-    # for each reported date of flooding which was the closest excess rainfall event
-    group_by(AmenDate, Basin) %>%
-    summarise(TNVals = sum(FNCheck, na.rm = T))
-
-FNRate2 <- sum(FloodCheckFN2$TNVals == 0)/nrow(FloodCheckFN2)
-
-print(paste0("The False Negative Rate is: ", round(FNRate2*100, 2), "%."))
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggGLOFAS, "AmenDate", "Time") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggGLOFAS, "AmenDate", "Time") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats2 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
 
 ```
 
@@ -486,40 +469,17 @@ print(paste0("The False Negative Rate is: ", round(FNRate2*100, 2), "%."))
 # finding false positives
 # flood event did not occur but there was a GLOFAS event
 # assumption is that CHIRPS event occurs before GLOFAS records an event
-
-FloodCheckFP3 <- AggGLOFAS %>% 
-    dplyr::select(Basin, Time) %>%
-    full_join(AggNational3, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(Time, Date, units = "days"), 
-           WeekDiff = difftime(Time, Date, units = "weeks"), 
-           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding
-    group_by(Date, Basin) %>%
-    summarise(TPVals = sum(FPCheck, na.rm = T))
-
-FPRate3 <- sum(FloodCheckFP3$TPVals == 0)/nrow(FloodCheckFP3)
-
-print(paste0("The proportion of false positive GLOFAS events to number of CHIRPS events is: ", round(FPRate3*100, 2), "%."))
-
-# finding false negatives
-# flood event occurred but not captured by GLOFAS
-FloodCheckFN3 <- AggGLOFAS %>% 
-    dplyr::select(Basin, Time) %>%
-    full_join(AggNational3, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(Time, Date, units = "days"), 
-           WeekDiff = difftime(Time, Date, units = "weeks"), 
-           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding which was the closest excess rainfall event
-    # for each reported date of flooding which was the closest excess rainfall event
-    group_by(Time, Basin) %>%
-    summarise(TNVals = sum(FNCheck, na.rm = T))
-
-FNRate3 <- sum(FloodCheckFN3$TNVals == 0)/nrow(FloodCheckFN3)
-
-print(paste0("The False Negative Rate is: ", round(FNRate3*100, 2), "%."))
-
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggNational3, "Time", "Date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggNational3, "Time", "Date") %>%
+    #Date of ground truth
+    group_by(Basin, Time) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats3 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
 ```
 
 # Comparing Water Levels and CHIRPS Event
@@ -532,6 +492,7 @@ ggplot(NPLWaterLevel, aes(x = date)) +
     ylab("Water Level")
 
 returnValues4 <- tibble(Station = c("Chatara", "Chisapani"), 
+                        Basin = c("Saptakoshi Watershed", "Karnali River Basin"),
                         returnyr2 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
                                                         threshold = 6, na.action = na.remove), 
                                                    return.period = 2), 
@@ -557,119 +518,143 @@ AggWaterLevel <- NPLWaterLevel %>%
     pivot_longer(cols = c("Chatara", "Chisapani"), names_to = "Station", values_to = "WaterLevel") %>%
     arrange(date, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
-    mutate(thresh2Yr = WaterLevel >= unlist(returnValues4[,"returnyr2"])) %>%
-    mutate(thresh5Yr = WaterLevel >= unlist(returnValues4[,"returnyr5"])) %>%
-    mutate(thresh10Yr = WaterLevel >= unlist(returnValues4[,"returnyr10"])) %>%
+    left_join(returnValues4, by = "Basin") %>%
+    mutate(thresh2Yr = WaterLevel >= returnyr2) %>%
+    mutate(thresh5Yr = WaterLevel >= returnyr5) %>%
+    mutate(thresh10Yr = WaterLevel >= returnyr10) %>%
     filter(thresh2Yr)
 
-FloodCheckFP4 <- AggWaterLevel %>% 
-    dplyr::select(Basin, date) %>%
-    full_join(AggNational3, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(Date, date, units = "days"), 
-           WeekDiff = difftime(Date, date, units = "weeks"), 
-           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding
-    group_by(Date, Basin) %>%
-    summarise(TPVals = sum(FPCheck, na.rm = T))
-
-FPRate4 <- sum(FloodCheckFP4$TPVals == 0)/nrow(FloodCheckFP4)
-
-print(paste0("The proportion of false positive events to number of High Water Level events is: ", round(FPRate4*100, 2), "%."))
-
-# finding false negatives
-# flood event occurred but not captured by GLOFAS
-FloodCheckFN4 <- AggWaterLevel %>% 
-    dplyr::select(Basin, date) %>%
-    full_join(AggNational3, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(Date, date, units = "days"), 
-           WeekDiff = difftime(Date, date, units = "weeks"), 
-           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding
-    group_by(date, Basin) %>%
-    summarise(TNVals = sum(FNCheck, na.rm = T))
-
-FNRate4 <- sum(FloodCheckFN4$TNVals == 0)/nrow(FloodCheckFN4)
-
-print(paste0("The False Negative Rate is: ", round(FNRate4*100, 2), "%."))
+FloodCheckpos <- summaryFXN(AggNational3, AggWaterLevel, "Date", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggNational3, AggWaterLevel, "Date", "date") %>%
+    #Date of ground truth
+    group_by(Basin, date) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats4 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
 
 ```
 
 # Comparing Water Levels and Actual Events
 
 ```{r}
-
-FloodCheckFP5 <- NPLHistFloodsWorst %>% 
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggWaterLevel, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, date, units = "days"), 
-           WeekDiff = difftime(AmenDate, date, units = "weeks"), 
-           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding
-    group_by(date, Basin) %>%
-    summarise(TPVals = sum(FPCheck, na.rm = T))
-
-FPRate5 <- sum(FloodCheckFP5$TPVals == 0)/nrow(FloodCheckFP5)
-
-print(paste0("The proportion of false positive events to number of Historical Floods events is: ", round(FPRate5*100, 2), "%."))
-
-# finding false negatives
-# flood event occurred but not captured by GLOFAS
-FloodCheckFN5 <- NPLHistFloodsWorst %>% 
-    dplyr::select(Basin, AmenDate) %>%
-    full_join(AggWaterLevel, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(AmenDate, date, units = "days"), 
-           WeekDiff = difftime(AmenDate, date, units = "weeks"), 
-           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding which was the closest excess rainfall event
-    # for each reported date of flooding which was the closest excess rainfall event
-    group_by(AmenDate, Basin) %>%
-    summarise(TNVals = sum(FNCheck, na.rm = T))
-
-FNRate5 <- sum(FloodCheckFN5$TNVals == 0)/nrow(FloodCheckFN5)
-
-print(paste0("The False Negative Rate is: ", round(FNRate5*100, 2), "%."))
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggWaterLevel, "AmenDate", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggWaterLevel, "AmenDate", "date") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats5 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
 
 ```
 
 # Comparing Water Levels and GLOFAS
 
 ```{r}
-
-FloodCheckFP6 <- AggGLOFAS %>% 
-    dplyr::select(Basin, Time) %>%
-    full_join(AggWaterLevel, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(Time, date, units = "days"), 
-           WeekDiff = difftime(Time, date, units = "weeks"), 
-           FPCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding
-    group_by(Time, Basin) %>%
-    summarise(TPVals = sum(FPCheck, na.rm = T))
-
-FPRate6 <- sum(FloodCheckFP6$TPVals == 0)/nrow(FloodCheckFP6)
-
-print(paste0("The proportion of false positive events to number of High Water Level events is: ", round(FPRate6*100, 2), "%."))
-
-# finding false negatives
-# flood event occurred but not captured by GLOFAS
-FloodCheckFN6 <- AggGLOFAS %>% 
-    dplyr::select(Basin, Time) %>%
-    full_join(AggWaterLevel, by = "Basin") %>%
-    # rain event happens before flood event
-    mutate(TimeDiff = difftime(Time, date, units = "days"), 
-           WeekDiff = difftime(Time, date, units = "weeks"), 
-           FNCheck = ifelse(TimeDiff >= 0 & TimeDiff <= 30, T, F)) %>%
-    # for each reported date of flooding which was the closest excess rainfall event
-    # for each reported date of flooding which was the closest excess rainfall event
-    group_by(date, Basin) %>%
-    summarise(TNVals = sum(FNCheck, na.rm = T))
-
-FNRate6 <- sum(FloodCheckFN6$TNVals == 0)/nrow(FloodCheckFN6)
-
-print(paste0("The False Negative Rate is: ", round(FNRate6*100, 2), "%."))
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggWaterLevel, "Time", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggWaterLevel, "Time", "date") %>%
+    #Date of ground truth
+    group_by(Basin, date) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats6 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
 
 ```
+
+# Discharge Data vs Historical Floods
+
+```{r}
+ggplot(data = NPLFlow, aes(x = Dates, y = Flow, group = Basin)) + 
+    geom_line(aes(colour = Basin)) + 
+    theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
+    ggtitle("River Discharge for the Chatara and Chisapani Stations") +
+    xlab("Dates") + 
+    ylab("River Discharge(m/s)")
+
+returnValues5 <- NPLFlow %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                            threshold = 4000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                            threshold = 4000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                             threshold = 4000), return.period = 10))
+AggFlow <- NPLFlow %>%
+    arrange(Dates, Basin) %>%
+    left_join(returnValues5, by = "Basin") %>%
+    mutate(thresh2Yr = Flow >= returnyr2) %>%
+    mutate(thresh5Yr = Flow >= returnyr5) %>%
+    mutate(thresh10Yr = Flow >= returnyr10) %>%
+    filter(thresh2Yr)
+
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggFlow, "AmenDate", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Dates) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggFlow, "AmenDate", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats7 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
+
+```
+
+
+# Discharge Data vs CHIRPS
+```{r}
+FloodCheckpos <- summaryFXN(AggFlow, AggNational3, "Dates", "Date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggFlow, AggNational3, "Dates", "Date") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats8 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
+```
+
+# Discharge Data vs GLOFAS
+```{r}
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats9 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
+```
+
+# Discharge Data vs Water Level
+```{r}
+FloodCheckpos <- summaryFXN(AggFlow, AggWaterLevel, "Dates", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, Dates) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggFlow, AggWaterLevel, "Dates", "date") %>%
+    #Date of ground truth
+    group_by(Basin, date) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats10 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
+                         FN = sum(FloodCheckneg$TNVals == 0),
+                         TP = sum(FloodCheckneg$TNVals != 0))
+```
+
