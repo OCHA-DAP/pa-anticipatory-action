@@ -50,50 +50,45 @@ nc_close(NPLGLOFASNC)
 
 NPLWaterLevel <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/waterl_level_procssed.csv"))
 
+# subsetting shapefiles
+nplRBSF2 <- nplRBSF %>%
+    filter(Major_Basi %in% "Karnali River Basin")
+nplWSSF2 <- nplWSSF %>%
+    filter(WSH_NME %in% "Saptakoshi Watershed")
+
+# box subset function
+BoxFXN <- function(shapeFile, basin){
+    BasinBox <- shapeFile %>%
+        filter({if("Major_Basi" %in% names(.)) Major_Basi else WSH_NME} == basin) %>%
+        extent()
+    
+    BoxXMin <- which.min(abs(BasinBox[1] - round(ncvar_get(ncObj, "X"), 3)))
+    BoxXMax <- which.min(abs(BasinBox[2] - round(ncvar_get(ncObj, "X"), 3)))
+    BoxXLen <- BoxXMax - BoxXMin + 1
+    BoxYMin <- which.min(abs(BasinBox[3] - round(ncvar_get(ncObj, "Y"), 3)))
+    BoxYMax <- which.min(abs(BasinBox[4] - round(ncvar_get(ncObj, "Y"), 3)))
+    BoxYLen <- BoxYMin - BoxYMax + 1
+    DataCube <- ncvar_get(ncObj, "precipitation", 
+                             start = c(BoxXMin, BoxYMax, 1), 
+                             count = c(BoxXLen, BoxYLen, 1)) %>%
+        data.frame() %>%
+        bind_cols(paste0(round(ncvar_get(ncObj, "X")[BoxXMin:BoxXMax], 3), "E")) %>%
+        setNames(c(paste0(round(ncvar_get(ncObj, "Y")[BoxYMax:BoxYMin], 3), "N"), "Longitude")) %>%
+        gather(key = "Latitude", value = "precipitation", -Longitude) %>%
+        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"), 
+               Basin = basin)
+    return(DataCube)
+}
+
 # function for reading in files 
 read_files <- function(filePath, fileName){
     ncObj <- nc_open(paste0(filePath, fileName))
     # Karnali
-    KarnaliBox <- nplRBSF %>%
-        filter(Major_Basi == "Karnali River Basin") %>%
-        extent()
-    
-    KarBoxXMin <- which.min(abs(KarnaliBox[1] - round(ncvar_get(ncObj, "X"), 3)))
-    KarBoxXMax <- which.min(abs(KarnaliBox[2] - round(ncvar_get(ncObj, "X"), 3)))
-    KarBoxXLen <- KarBoxXMax - KarBoxXMin + 1
-    KarBoxYMin <- which.min(abs(KarnaliBox[3] - round(ncvar_get(ncObj, "Y"), 3)))
-    KarBoxYMax <- which.min(abs(KarnaliBox[4] - round(ncvar_get(ncObj, "Y"), 3)))
-    KarBoxYLen <- KarBoxYMin - KarBoxYMax + 1
-    KarDataCube <- ncvar_get(ncObj, "precipitation", 
-                             start = c(KarBoxXMin, KarBoxYMax, 1), 
-                             count = c(KarBoxXLen, KarBoxYLen, 1)) %>%
-        data.frame() %>%
-        bind_cols(paste0(round(ncvar_get(ncObj, "X")[KarBoxXMin:KarBoxXMax], 3), "E")) %>%
-        setNames(c(paste0(round(ncvar_get(ncObj, "Y")[KarBoxYMax:KarBoxYMin], 3), "N"), "Longitude")) %>%
-        gather(key = "Latitude", value = "precipitation", -Longitude) %>%
-        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"), 
-               Basin = "Karnali River Basin")
+    KarDataCube <- BoxFXN(nplRBSF, "Karnali River Basin")
     
     # Koshi
-    KoshiBox <- nplWSSF %>%
-        filter(WSH_NME == "Saptakoshi Watershed") %>%
-        extent()
-    
-    KoshBoxXMin <- which.min(abs(KoshiBox[1] - round(ncvar_get(ncObj, "X"), 3)))
-    KoshBoxXMax <- which.min(abs(KoshiBox[2] - round(ncvar_get(ncObj, "X"), 3)))
-    KoshBoxXLen <- KoshBoxXMax - KoshBoxXMin + 1
-    KoshBoxYMin <- which.min(abs(KoshiBox[3] - round(ncvar_get(ncObj, "Y"), 3)))
-    KoshBoxYMax <- which.min(abs(KoshiBox[4] - round(ncvar_get(ncObj, "Y"), 3)))
-    KoshBoxYLen <- KoshBoxYMin - KoshBoxYMax + 1
-    KoshDataCube <- ncvar_get(ncObj, "precipitation", 
-                              start = c(KoshBoxXMin, KoshBoxYMax, 1), 
-                              count = c(KoshBoxXLen, KoshBoxYLen, 1)) %>%
-        data.frame() %>%
-        bind_cols(paste0(round(ncvar_get(ncObj, "X")[KoshBoxXMin:KoshBoxXMax], 3), "E")) %>%
-        setNames(c(paste0(round(ncvar_get(ncObj, "Y")[KoshBoxYMax:KoshBoxYMin], 3), "N"), "Longitude")) %>%
-        gather(key = "Latitude", value = "precipitation", -Longitude) %>%
-        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"), 
-               Basin = "Saptakoshi Watershed")
+    KoshiBox <- BoxFXN(nplWSSF, "Saptakoshi Watershed")
+        
     # close
     nc_close(ncObj)
     # data object
@@ -102,8 +97,8 @@ read_files <- function(filePath, fileName){
 
 
 # chirps data frame
-chirpsData <- list.files(filePath, pattern = "*.nc") %>%
-    map_df(~ read_files(filePath, .)) 
+# chirpsData <- list.files(filePath, pattern = "*.nc") %>%
+#     map_df(~ read_files(filePath, .)) 
 
 # to minimise read time
 chirpsData <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/BasinsCHIRPSdata.csv"))
@@ -111,11 +106,6 @@ chirpsData <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/
 ```
 
 ```{r}
-nplRBSF2 <- nplRBSF %>%
-    filter(Major_Basi %in% "Karnali River Basin")
-nplWSSF2 <- nplWSSF %>%
-    filter(WSH_NME %in% "Saptakoshi Watershed")
-
 chirpsGrid <- st_sf(st_make_grid(nplRBSF, cellsize = 0.05, offset = c(80.05, 26.3), n = c(163, 83)))
 chirpsGrid <- chirpsGrid %>%
     mutate(Centroids = st_centroid(chirpsGrid), 
@@ -181,22 +171,22 @@ plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Saptakoshi Watershed"]
 
 ggplot(data = AggNational2, aes(x = Date, y = rollsum, group = Basin)) + 
     geom_line(aes(colour = Basin)) + 
-    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr2"]), colour = Basin[2])) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr2"]), colour = Basin[1])) + 
     geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr2"]), 
                   label = "RP: 2", vjust = -1)) +
-    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr2"]), colour = Basin[1])) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr2"]), colour = Basin[2])) + 
     geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr2"]), 
                   label = "RP: 2", vjust = -1)) + 
-    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr5"]), colour = Basin[2])) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr5"]), colour = Basin[1])) + 
     geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr5"]), 
                   label = "RP: 5", vjust = -1)) + 
-    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr5"]), colour = Basin[1])) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr5"]), colour = Basin[2])) + 
     geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr5"]), 
                   label = "RP: 5", vjust = -1)) + 
-    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr10"]), colour = Basin[2])) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr10"]), colour = Basin[1])) + 
     geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr10"]), 
                   label = "RP: 10", vjust = -1)) + 
-    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr10"]), colour = Basin[1])) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr10"]), colour = Basin[2])) + 
     geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr10"]), 
                   label = "RP: 10", vjust = -1)) + 
     ggtitle("Maximum 10-day Rolling Sums Per Year with Return Periods") + 
