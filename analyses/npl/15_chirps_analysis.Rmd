@@ -364,11 +364,12 @@ FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggNational3, "AmenDate", "Date"
     #Date of ground truth
     group_by(Basin, AmenDate) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
-
-
+FloodStats <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
 
 # we have to take into account that Flood Data starts earlier than CHIRPS Data.
 ```
@@ -456,9 +457,12 @@ FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggGLOFAS, "AmenDate", "Time") %
     #Date of ground truth
     group_by(Basin, AmenDate) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats2 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats2 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
 
 ```
 
@@ -477,9 +481,13 @@ FloodCheckneg <- summaryFXN(AggGLOFAS, AggNational3, "Time", "Date") %>%
     #Date of ground truth
     group_by(Basin, Time) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats3 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats3 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 ```
 
 # Comparing Water Levels and CHIRPS Event
@@ -532,9 +540,13 @@ FloodCheckneg <- summaryFXN(AggNational3, AggWaterLevel, "Date", "date") %>%
     #Date of ground truth
     group_by(Basin, date) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats4 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats4 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 
 ```
 
@@ -549,9 +561,13 @@ FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggWaterLevel, "AmenDate", "date
     #Date of ground truth
     group_by(Basin, AmenDate) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats5 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats5 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 
 ```
 
@@ -566,9 +582,13 @@ FloodCheckneg <- summaryFXN(AggGLOFAS, AggWaterLevel, "Time", "date") %>%
     #Date of ground truth
     group_by(Basin, date) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats6 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats6 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 
 ```
 
@@ -606,9 +626,13 @@ FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggFlow, "AmenDate", "Dates") %>
     #Date of ground truth
     group_by(Basin, AmenDate) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats7 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats7 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 
 ```
 
@@ -623,9 +647,13 @@ FloodCheckneg <- summaryFXN(AggFlow, AggNational3, "Dates", "Date") %>%
     #Date of ground truth
     group_by(Basin, Dates) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats8 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats8 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 ```
 
 # Discharge Data vs GLOFAS
@@ -638,9 +666,13 @@ FloodCheckneg <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
     #Date of ground truth
     group_by(Basin, Dates) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats9 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats9 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 ```
 
 # Discharge Data vs Water Level
@@ -653,8 +685,12 @@ FloodCheckneg <- summaryFXN(AggFlow, AggWaterLevel, "Dates", "date") %>%
     #Date of ground truth
     group_by(Basin, date) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats10 <- data.frame(FP = sum(FloodCheckpos$TPVals == 0),
-                         FN = sum(FloodCheckneg$TNVals == 0),
-                         TP = sum(FloodCheckneg$TNVals != 0))
+FloodStats10 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
 ```
 
