@@ -47,7 +47,7 @@ plt_floodextent <- ggplot(
       ymin = min_extent,
       ymax = max_extent
     ),
-    fill = "#d7d7d7"
+    fill = "#78D9D1"
   ) +
   geom_line(
     data = line_df,
@@ -55,8 +55,8 @@ plt_floodextent <- ggplot(
       y = flood_extent,
       group = year
     ),
-    lwd = 1,
-    color = "#ef6666"
+    lwd = 1.5,
+    color = "#F2645A"
   ) +
   theme_minimal() +
   scale_y_continuous(
@@ -73,7 +73,9 @@ plt_floodextent <- ggplot(
       label = c(2021:2022, "1998 - 2020")
     ),
     aes(x = x, y = y, label = label),
-    fontface = "bold"
+    fontface = "bold",
+    family = "Source Sans Pro",
+    size = 5
   ) +
   labs(
     x = "Month",
@@ -81,8 +83,34 @@ plt_floodextent <- ggplot(
     title = "Flooded areas around the Sudd wetlands, South Sudan"
   ) +
   theme(
-    text = element_text(family = "Helvetica")
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Source Sans Pro"
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Source Sans Pro"
+    ),
+    legend.text = element_text(
+      size = 12,
+      family = "Source Sans Pro"
+    ),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(fill = "transparent"),
+    strip.text = element_text(
+      size = 16,
+      family = "Source Sans Pro"
+    )
   )
+
 ggsave(file.path(
   data_dir,
   "private",
@@ -90,4 +118,4 @@ ggsave(file.path(
   "ssd",
   "floodscan",
   "ssd_floodscan_roi_perc_flooded_timeseries.png"
-),plot = plt_floodextent, width=7,height=3)
+),plot = plt_floodextent, width=10,height=5)
