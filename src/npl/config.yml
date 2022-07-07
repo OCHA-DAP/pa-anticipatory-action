@@ -67,8 +67,7 @@ glofas:
       lat: 27.05
       lon: 87.15
     # DHM point added later: https://hydrology.gov.np/#/basin/4635?_k=ep79ty
-    # This was done to check the correlation between Kandra in the Mahana basin
-    # and Chisapani in the Karnali basin.
+    # Coordinates are not 0.05 rounded as this point comes from DHM, not GloFAS.
     Kandra:
       lat: 28.7
       lon: 80.9
