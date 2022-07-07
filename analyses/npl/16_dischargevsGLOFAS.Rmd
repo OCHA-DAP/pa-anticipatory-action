@@ -1,0 +1,131 @@
+---
+title: "DischargevsGLOFAS"
+output: md_document
+---
+
+```{r intro, echo=FALSE, warning = FALSE, message=FALSE, results='hide'}
+filePath <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/")
+options(scipen = 100000)
+
+library(tidyverse)
+library(ncdf4)
+library(extRemes)
+
+```
+
+
+```{r}
+# reading in GLOFAS Data
+NPLGLOFASNC <- nc_open(paste0(Sys.getenv("AA_DATA_DIR"),                        "/public/processed/npl/glofas/npl_cems-glofas-historical_v3_incorrect-coords.nc"))
+
+NPLGLOFAS <- tibble(Chatara = ncvar_get(NPLGLOFASNC, "Chatara_v3"),
+                    Chisapani = ncvar_get(NPLGLOFASNC, "Chisapani_v3"),
+                    Time = as.Date("1979-01-01") + (NPLGLOFASNC$dim$time$vals))
+
+nc_close(NPLGLOFASNC)
+
+NPLFlowChatara <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_695 Koshi Chatara.txt"), sep = ",", skip = 21)
+NPLFlowChisapani <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_280 Karnali Chisapani.txt"), sep = ",", skip = 21)
+NPLFlow <- rbind(
+    cbind(NPLFlowChatara, Basin = "Saptakoshi Watershed"),
+    cbind(NPLFlowChisapani, Basin = "Karnali River Basin")
+)
+colnames(NPLFlow)[1:2] <- c("Dates", "Flow")
+NPLFlow <- NPLFlow %>%
+    mutate(Dates = as.Date(Dates, format = "%d/%b/%Y"))
+
+```
+
+```{r}
+# Chatara Station/Saptakoshi Watershed
+NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    filter(Station == "Chatara") %>%
+    ggplot(aes(x = Time, y = GLOFAS)) + 
+    geom_line(colour = "dark blue") + 
+    geom_line(data = NPLFlow[NPLFlow$Basin %in% "Saptakoshi Watershed",], aes(x = Dates, y = Flow), colour = "dark orange") + 
+    ggtitle("Comparison of GLOFAS(blue) and Discharge Data(orange) for Chatara Station/Saptakoshi Watershed")
+
+# Chisapani Station/Karnali River Basin
+NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    filter(Station == "Chisapani") %>%
+    ggplot(aes(x = Time, y = GLOFAS)) + 
+    geom_line(colour = "dark blue") + 
+    geom_line(data = NPLFlow[NPLFlow$Basin %in% "Karnali River Basin",], aes(x = Dates, y = Flow), colour = "dark orange") + 
+    ggtitle("Comparison of GLOFAS(blue) and Discharge Data(orange) for Chisapani Station/Karnali River Basin")
+
+```
+
+# Discharge Data vs GLOFAS
+
+```{r}
+summaryFXN <- function(DF1, DF2, DateCol1, DateCol2){
+    FloodCheck <- DF1 %>%
+        dplyr::select(Basin, {{ DateCol1 }}) %>%
+        full_join(DF2, by = "Basin") 
+    FloodCheck[,"TimeDiff"] <- difftime(FloodCheck[[DateCol1]], FloodCheck[[DateCol2]], units = "days")
+    FloodCheck[,"Check"] <- ifelse(FloodCheck$TimeDiff >= -15 & FloodCheck$TimeDiff <= 15, T, F)
+    
+    return(FloodCheck)
+}
+
+returnValues <- NPLFlow %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                            threshold = 4000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                            threshold = 4000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                             threshold = 4000), return.period = 10))
+AggFlow <- NPLFlow %>%
+    arrange(Dates, Basin) %>%
+    left_join(returnValues, by = "Basin") %>%
+    mutate(thresh2Yr = Flow >= returnyr2) %>%
+    mutate(thresh5Yr = Flow >= returnyr5) %>%
+    mutate(thresh10Yr = Flow >= returnyr10) %>%
+    filter(thresh2Yr)
+```
+
+```{r}
+returnValues2 <- NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    group_by(Station) %>%
+    summarise(returnyr2 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                             threshold = 6000), return.period = 10)) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed"))
+
+AggGLOFAS <- NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    arrange(Time, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    left_join(returnValues2, by = "Basin") %>%
+    mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
+    mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
+    mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
+    filter(thresh2Yr)
+
+```
+
+
+```{r}
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
