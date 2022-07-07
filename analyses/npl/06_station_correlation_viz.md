@@ -217,7 +217,12 @@ for station in stations:
 
 ## Added in 2022
 
-Checking the correlation of a DHM station in the Mahana basin
+The countrty team has proposed adding some municipalities in the 
+Mahana Basin. We want to check if the flood events there could 
+be picked up by the trigger in Chisapani, which is part of the Karnali
+river basin. To do this we check the GloFAS discharge at 
+[Kandra](https://hydrology.gov.np/#/basin/4635?_k=ep79ty) and compare
+to Chispani. 
 
 ```python
 rp_event = 5
@@ -254,9 +259,5 @@ for station, station_small in zip(stations, secondary_stations):
         save_title_hist,
         False)
 
-
-```
-
-```python
 
 ```
