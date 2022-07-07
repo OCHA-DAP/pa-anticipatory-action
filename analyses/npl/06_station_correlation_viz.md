@@ -127,6 +127,8 @@ def visualize_station_overlay(
 #### Investigate relationship between stations with GloFAS water discharge
 
 ```python
+# Choosing use_incorrect_area_coords for now because still using old GloFAS
+# data downloaded non-x.x5 extent coordinates
 ds_glofas_reanalysis = utils.get_glofas_reanalysis(
     country_iso3=parameters.COUNTRY_ISO3, use_incorrect_area_coords=True)
 df_return_period = utils.get_return_periods(ds_glofas_reanalysis, RP_LIST)
