@@ -36,6 +36,8 @@ SHAPEFILE = (
     / "npl_admbnda_nd_20201117_shp.zip!npl_admbnda_adm0_nd_20201117.shp"
 )
 VERSION = 3
+# The data was downloaded incorrectly with non-x.x5 extent coordinates,
+# this flag reproduces this error
 USE_INCORRECT_COORDS = True
 
 logging.basicConfig(level=logging.INFO, force=True)
