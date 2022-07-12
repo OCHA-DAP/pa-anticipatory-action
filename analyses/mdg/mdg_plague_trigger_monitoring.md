@@ -86,7 +86,7 @@ df=plague.load_plague_data(plague_path,keep_cases=incl_cases_class)
 # this is the disaggregated 2012-2016 data
 plague_path_2012_2016_v2 = Path(plague.plague_raw_dir) / "Madagascar_IPM_Plague_cases_Aggregated_historic_2021-10-18.csv"
 df_2012_2016_v2 = plague.load_plague_data(plague_path_2012_2016_v2,
-                                          keep_cases=None,#incl_cases_class,
+                                          keep_cases=incl_cases_class,
                                           delimiter=";")
 
 
