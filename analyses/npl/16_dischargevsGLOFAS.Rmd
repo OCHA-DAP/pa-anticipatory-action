@@ -130,6 +130,8 @@ FloodStats <- FloodCheckpos %>%
 
 ```
 
+# Using 1 in 5 years return period
+
 ```{r}
 AggFlow2 <- NPLFlow %>%
     arrange(Dates, Basin) %>%
@@ -165,3 +167,47 @@ FloodStats2 <- FloodCheckpos %>%
                   summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
 ```
 
+# Filtering for only dates with Discharge Data
+
+```{r}
+returnValues3 <- NPLGLOFAS %>%
+    filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    group_by(Station) %>%
+    summarise(returnyr2 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                             threshold = 6000), return.period = 10)) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed"))
+
+AggGLOFAS2 <- NPLGLOFAS %>%
+    filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    arrange(Time, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    left_join(returnValues3, by = "Basin") %>%
+    mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
+    mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
+    mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
+    filter(thresh5Yr)
+
+```
+```{r}
+FloodCheckpos <- summaryFXN(AggGLOFAS2, AggFlow, "Time", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS2, AggFlow, "Time", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats3 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
