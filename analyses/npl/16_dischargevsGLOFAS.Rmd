@@ -23,8 +23,9 @@ NPLGLOFAS <- tibble(Chatara = ncvar_get(NPLGLOFASNC, "Chatara_v3"),
 
 nc_close(NPLGLOFASNC)
 
-NPLFlowChatara <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_695 Koshi Chatara.txt"), sep = ",", skip = 21)
-NPLFlowChisapani <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_280 Karnali Chisapani.txt"), sep = ",", skip = 21)
+# reading in discharge data
+NPLFlowChatara <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/raw/daily_flow/DFL_695 Koshi Chatara.txt"), sep = ",", skip = 21)
+NPLFlowChisapani <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/raw/daily_flow/DFL_280 Karnali Chisapani.txt"), sep = ",", skip = 21)
 NPLFlow <- rbind(
     cbind(NPLFlowChatara, Basin = "Saptakoshi Watershed"),
     cbind(NPLFlowChisapani, Basin = "Karnali River Basin")
