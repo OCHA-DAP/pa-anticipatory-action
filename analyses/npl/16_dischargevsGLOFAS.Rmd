@@ -67,6 +67,7 @@ NPLGLOFAS %>%
 # Discharge Data vs GLOFAS
 ### Getting the return values for DHM data (1 in 2, 5, and 10 years)
 #### Using Peaks over threshold as we are using daily data. 
+POT was used as we intended to get multiple events in a year. From a visual look of the data, it appears that there may be multiple excess discharge events in a year for example in Chisapani in 2009. To exclude one such extreme event in order to limit the events to one maximum per year for extreme value fitting may not be desired as it may skew the results.
 
 ```{r}
 # summary function
@@ -258,6 +259,6 @@ FloodStats5yr2 <- FloodCheckpos %>%
 
 ```
 
-Both 1 in 2 year and 1 in 5 year return periods do not show a significant pattern in the data. There are drops in the false positive rates when only using dates with overlap. The FN and FP values are still higher than the TP rates. 
+Both 1 in 2 year and 1 in 5 year return periods do not show a significant pattern in the data. There are drops only in the number of false positives when only using dates with overlap as the changes are made only on the GLOFAS data and it is the alternative data set. The FN and FP values are still higher than the TP rates. 
 
 The criterion being that the events must have happened within 15 days of each other, it raises questions on the underlying data and their correlation.
