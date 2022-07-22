@@ -67,7 +67,7 @@ NPLGLOFAS %>%
 # Discharge Data vs GLOFAS
 ### Getting the return values for DHM data (1 in 2, 5, and 10 years)
 #### Using Peaks over threshold as we are using daily data. 
-POT was used as we intended to get multiple events in a year. From a visual look of the data, it appears that there may be multiple excess discharge events in a year for example in Chisapani in 2009. To exclude one such extreme event in order to limit the events to one maximum per year for extreme value fitting may not be desired as it may skew the results.
+POT was used as we intended to get multiple events in a year. From a visual look of the data, it appears that there may be multiple excess discharge events in a year for example in Chisapani in 2009. To exclude one such extreme event in order to limit the events to one maximum per year for extreme value fitting may not be desired as it may skew the results. As such, Generalised Pareto is used over GEV.
 
 ```{r}
 # summary function
