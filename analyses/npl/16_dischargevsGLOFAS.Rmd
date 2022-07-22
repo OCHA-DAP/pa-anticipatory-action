@@ -4,7 +4,6 @@ output: md_document
 ---
 
 ```{r intro, echo=FALSE, warning = FALSE, message=FALSE, results='hide'}
-filePath <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/")
 options(scipen = 100000)
 
 library(tidyverse)
