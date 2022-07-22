@@ -36,6 +36,7 @@ NPLFlow <- NPLFlow %>%
 
 ```
 
+
 ```{r}
 # Chatara Station/Saptakoshi Watershed
 NPLGLOFAS %>%
@@ -60,6 +61,7 @@ NPLGLOFAS %>%
 # Discharge Data vs GLOFAS
 
 ```{r}
+# summary function
 summaryFXN <- function(DF1, DF2, DateCol1, DateCol2){
     FloodCheck <- DF1 %>%
         dplyr::select(Basin, {{ DateCol1 }}) %>%
@@ -70,7 +72,8 @@ summaryFXN <- function(DF1, DF2, DateCol1, DateCol2){
     return(FloodCheck)
 }
 
-returnValues <- NPLFlow %>%
+# return values for 1 in 2, 5 and 10 year period
+returnValuesDHM <- NPLFlow %>%
     group_by(Basin) %>%
     summarise(returnyr2 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
                                             threshold = 4000), return.period = 2), 
@@ -78,9 +81,10 @@ returnValues <- NPLFlow %>%
                                             threshold = 4000), return.period = 5), 
               returnyr10 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
                                              threshold = 4000), return.period = 10))
+# filtering for 1 in 2 year RP
 AggFlow <- NPLFlow %>%
     arrange(Dates, Basin) %>%
-    left_join(returnValues, by = "Basin") %>%
+    left_join(returnValuesDHM, by = "Basin") %>%
     mutate(thresh2Yr = Flow >= returnyr2) %>%
     mutate(thresh5Yr = Flow >= returnyr5) %>%
     mutate(thresh10Yr = Flow >= returnyr10) %>%
@@ -88,7 +92,7 @@ AggFlow <- NPLFlow %>%
 ```
 
 ```{r}
-returnValues2 <- NPLGLOFAS %>%
+returnValuesGlofas <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     group_by(Station) %>%
     summarise(returnyr2 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
@@ -103,7 +107,7 @@ AggGLOFAS <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     arrange(Time, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
-    left_join(returnValues2, by = "Basin") %>%
+    left_join(returnValuesGlofas, by = "Basin") %>%
     mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
     mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
     mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
