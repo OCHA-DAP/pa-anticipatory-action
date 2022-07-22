@@ -3,6 +3,8 @@ title: "DischargevsGLOFAS"
 output: md_document
 ---
 
+## Analysis of Discharge Data (DHM) vs GLOFAS Data
+
 ```{r intro, echo=FALSE, warning = FALSE, message=FALSE, results='hide'}
 options(scipen = 100000)
 
@@ -12,6 +14,7 @@ library(extRemes)
 
 ```
 
+### Reading in the files
 
 ```{r}
 # reading in GLOFAS Data
@@ -36,6 +39,7 @@ NPLFlow <- NPLFlow %>%
 
 ```
 
+# Plotting the 2 time series
 
 ```{r}
 # Chatara Station/Saptakoshi Watershed
@@ -57,8 +61,12 @@ NPLGLOFAS %>%
     ggtitle("Comparison of GLOFAS(blue) and Discharge Data(orange) for Chisapani Station/Karnali River Basin")
 
 ```
+##### The data do not overlap and from a visual standpoint, it appears the time series show some differences for the extreme events.
+
 
 # Discharge Data vs GLOFAS
+### Getting the return values for DHM data (1 in 2, 5, and 10 years)
+#### Using Peaks over threshold as we are using daily data. 
 
 ```{r}
 # summary function
@@ -82,7 +90,7 @@ returnValuesDHM <- NPLFlow %>%
               returnyr10 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
                                              threshold = 4000), return.period = 10))
 # filtering for 1 in 2 year RP
-AggFlow <- NPLFlow %>%
+AggFlow2yr <- NPLFlow %>%
     arrange(Dates, Basin) %>%
     left_join(returnValuesDHM, by = "Basin") %>%
     mutate(thresh2Yr = Flow >= returnyr2) %>%
@@ -91,6 +99,9 @@ AggFlow <- NPLFlow %>%
     filter(thresh2Yr)
 ```
 
+### Getting the return values for GLOFAS data (1 in 2, 5, and 10 years)
+#### Using Peaks over threshold as we are using daily data. 
+ 
 ```{r}
 returnValuesGlofas <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
@@ -103,7 +114,7 @@ returnValuesGlofas <- NPLGLOFAS %>%
                                              threshold = 6000), return.period = 10)) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed"))
 
-AggGLOFAS <- NPLGLOFAS %>%
+AggGLOFAS2yr <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     arrange(Time, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
@@ -115,17 +126,22 @@ AggGLOFAS <- NPLGLOFAS %>%
 
 ```
 
+#### Getting the FP, FN, TP values from the data sets
+
+For FP, we work around the dates for the alternative data set. Checking for which dates show flooding in the alternative data set that do not show up in the ground truth data 
+
+For FN and TP, we work around dates for the ground truth. Checking which dates show no floods and show floods that match up with the alternative data set.
 
 ```{r}
-FloodCheckpos <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+FloodCheckpos <- summaryFXN(AggGLOFAS2yr, AggFlow2yr, "Time", "Dates") %>%
     # Date of data to be checked
     group_by(Basin, Time) %>%
     summarise(TPVals = sum(Check, na.rm = T))
-FloodCheckneg <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+FloodCheckneg <- summaryFXN(AggGLOFAS2yr, AggFlow2yr, "Time", "Dates") %>%
     #Date of ground truth
     group_by(Basin, Dates) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats <- FloodCheckpos %>%
+FloodStats2yr <- FloodCheckpos %>%
     group_by(Basin) %>%
     summarise(FP = sum(TPVals == 0)) %>%
     left_join(FloodCheckneg %>%
@@ -137,33 +153,33 @@ FloodStats <- FloodCheckpos %>%
 # Using 1 in 5 years return period
 
 ```{r}
-AggFlow2 <- NPLFlow %>%
+AggFlow5yr <- NPLFlow %>%
     arrange(Dates, Basin) %>%
-    left_join(returnValues, by = "Basin") %>%
+    left_join(returnValuesDHM, by = "Basin") %>%
     mutate(thresh2Yr = Flow >= returnyr2) %>%
     mutate(thresh5Yr = Flow >= returnyr5) %>%
     mutate(thresh10Yr = Flow >= returnyr10) %>%
     filter(thresh5Yr)
 
-AggGLOFAS2 <- NPLGLOFAS %>%
+AggGLOFAS5yr <- NPLGLOFAS %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     arrange(Time, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
-    left_join(returnValues2, by = "Basin") %>%
+    left_join(returnValuesGlofas, by = "Basin") %>%
     mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
     mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
     mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
     filter(thresh5Yr)
 
-FloodCheckpos <- summaryFXN(AggGLOFAS2, AggFlow2, "Time", "Dates") %>%
+FloodCheckpos <- summaryFXN(AggGLOFAS5yr, AggFlow5yr, "Time", "Dates") %>%
     # Date of data to be checked
     group_by(Basin, Time) %>%
     summarise(TPVals = sum(Check, na.rm = T))
-FloodCheckneg <- summaryFXN(AggGLOFAS2, AggFlow2, "Time", "Dates") %>%
+FloodCheckneg <- summaryFXN(AggGLOFAS5yr, AggFlow5yr, "Time", "Dates") %>%
     #Date of ground truth
     group_by(Basin, Dates) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats2 <- FloodCheckpos %>%
+FloodStats5yr <- FloodCheckpos %>%
     group_by(Basin) %>%
     summarise(FP = sum(TPVals == 0)) %>%
     left_join(FloodCheckneg %>%
@@ -171,10 +187,12 @@ FloodStats2 <- FloodCheckpos %>%
                   summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
 ```
 
-# Filtering for only dates with Discharge Data
+## Filtering for only dates with Discharge Data
+
+The data sets do not overlap exactly and issue is that the extreme events may be in the period they do not overlap.
 
 ```{r}
-returnValues3 <- NPLGLOFAS %>%
+returnValuesGlofas2 <- NPLGLOFAS %>%
     filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     group_by(Station) %>%
@@ -186,28 +204,52 @@ returnValues3 <- NPLGLOFAS %>%
                                              threshold = 6000), return.period = 10)) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed"))
 
-AggGLOFAS2 <- NPLGLOFAS %>%
+AggGLOFAS2yr2 <- NPLGLOFAS %>%
     filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
     pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
     arrange(Time, Station) %>%
     mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
-    left_join(returnValues3, by = "Basin") %>%
+    left_join(returnValuesGlofas2, by = "Basin") %>%
+    mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
+    mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
+    mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
+    filter(thresh2Yr)
+
+FloodCheckpos <- summaryFXN(AggGLOFAS2yr2, AggFlow2yr, "Time", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS2yr2, AggFlow2yr, "Time", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats2yr2 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+AggGLOFAS5yr2 <- NPLGLOFAS %>%
+    filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    arrange(Time, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    left_join(returnValuesGlofas2, by = "Basin") %>%
     mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
     mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
     mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
     filter(thresh5Yr)
 
-```
-```{r}
-FloodCheckpos <- summaryFXN(AggGLOFAS2, AggFlow, "Time", "Dates") %>%
+FloodCheckpos <- summaryFXN(AggGLOFAS5yr2, AggFlow5yr, "Time", "Dates") %>%
     # Date of data to be checked
     group_by(Basin, Time) %>%
     summarise(TPVals = sum(Check, na.rm = T))
-FloodCheckneg <- summaryFXN(AggGLOFAS2, AggFlow, "Time", "Dates") %>%
+FloodCheckneg <- summaryFXN(AggGLOFAS5yr2, AggFlow5yr, "Time", "Dates") %>%
     #Date of ground truth
     group_by(Basin, Dates) %>%
     summarise(TNVals = sum(Check, na.rm = T))
-FloodStats3 <- FloodCheckpos %>%
+FloodStats5yr2 <- FloodCheckpos %>%
     group_by(Basin) %>%
     summarise(FP = sum(TPVals == 0)) %>%
     left_join(FloodCheckneg %>%
@@ -215,3 +257,7 @@ FloodStats3 <- FloodCheckpos %>%
                   summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
 
 ```
+
+Both 1 in 2 year and 1 in 5 year return periods do not show a significant pattern in the data. There are drops in the false positive rates when only using dates with overlap. The FN and FP values are still higher than the TP rates. 
+
+The criterion being that the events must have happened within 15 days of each other, it raises questions on the underlying data and their correlation.
