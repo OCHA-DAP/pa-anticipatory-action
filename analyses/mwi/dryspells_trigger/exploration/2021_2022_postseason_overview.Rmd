@@ -21,6 +21,7 @@ editor_options:
 <br>
 
 ## Executive Summary
+- The predictive and observational triggers were not met during the 2021-2022 season.
 - Assumptions in the Anticipatory Action (AA) trigger for dry spells were borne out in the data from the 2021-2022 rainy season.
 - While no dry spells by the AA definition (and thus no activation) occurred, dry streaks (periods with little to no rain) were frequent.
 - November and December dry streaks were rare and difficult to distinguish from pre-rainy season dry days. The 2021-2022 season suggests that monitoring Nov-Dec dry spells (as currently defined) would at best only result in minimal gain for AA.
@@ -39,7 +40,7 @@ The analysis provides an exploration of the data and an answer to the following 
 * Q3: How much rainfall was typical over 14-day periods during the rainy season?
 
 ## Background
-Malawi implemented a multi-sectorial Anticipation Action Framework for the 2021-2022 rainy season to mitigate the humanitarian impact of dry spells. A trigger mechanism was designed to signal a higher risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region during the months of January - February (at least 7 of the 14 days must have fallen in January or February). Dry spells were defined as periods of at least 14 consecutive days with no more than 2mm of cumulative rain. The ARC2 observational rainfall dataset was used throughout this analysis. During the 2021-2022 monitoring period, the predictive and observational triggers were not met and the framework was not activated.
+Malawi implemented a multi-sectorial Anticipation Action Framework for the 2021-2022 rainy season to mitigate the humanitarian impact of dry spells. A trigger mechanism was designed to signal a higher risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region during the months of January - February (at least 7 of the 14 days must have fallen in January or February). Dry spells were defined as periods of at least 14 consecutive days with no more than 2mm of cumulative rain. The ARC2 observational rainfall dataset was used throughout this analysis. The 2021-2022 monitoring period started in November 2021 and ended in March 2022.
 
 ```{r global-setup, message = F, warning = F, echo = F}
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
@@ -69,6 +70,7 @@ lapply(packages, library, character.only = TRUE)
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shp_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
 postseason_folder_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/2021_2022_postseason/")
+feb_forecast <- paste0(postseason_folder_path, 
 ```
 
 ```{r load_data, include = F}
@@ -82,6 +84,18 @@ dry_days_per_month_r <- rast(paste0(postseason_folder_path, "dry_days_per_month_
 
 nbr_cells <- 343 # nbr of cells in southern region (touching=T)
 ```
+## Trigger Monitoring Results
+
+# Predictive triggers
+The EMCWF forecast produces monthly rainfall estimates for grid cells covering the region. The forecasts report the average rainfall amounts expected in each grid cell with 50% probability (for example, 215mm rainfall.) The expected rainfall amounts for all grids within the Southern Region were averaged. The trigger threshold had been set to 210mm: if the projected rainfall fell below this amount, the trigger would be met.
+
+**Result:** The projected rainfall for the region reached 251mm for January (November forecast) and 220mm for February (December forecast). Neither trigger was therefore met and no activation ensued.
+
+# Observational trigger
+The ARC2 dataset publishes rainfall estimates with a lag of about 2 days. Monitoring began on 24 Dec and ended on 7 March to capture January or February dry spells that would begin or end in those months (but at least 50% of which would occur in January and February.) The observational trigger would be met if 3 districts experienced dry spells (overlapping or sequential events.) The 3-district requirement reflected a 1 in 4 year event.
+
+**Result:** No district experienced a dry spell as defined in the Framework. The longest streak of dry days (with no more than 2mm of cumulative rain) in a district was 9 days. Therefore the trigger was not met and no activation ensued.
+
 
 ## On the Rainy Season
 This section looks at when the rainy season began and ended, and how long it lasted, throughout the Southern Region.
