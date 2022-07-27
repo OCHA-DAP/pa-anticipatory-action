@@ -32,13 +32,7 @@ editor_options:
 
 ***
 ## About this Report
-This report retrospectively examines the rainfall patterns during the months of Nov 2021 through April 2022 to provide climatological context for the evaluation of the performance of the anticipatory action trigger mechanism. Specifically, it determines the onset and offset of the rainy season, the frequency of rainy days, the amount of rainfall received, and the occurrence of dry streaks. 
-
-The analysis provides an exploration of the data and an answer to the following questions, which can speak to the adequacy of the trigger mechanism:
-
-* Q1: Could the trigger have covered December and March dry spells?
-* Q2: How do streaks of dry days compare to periods with little to no cumulative rainfall?
-* Q3: How much rainfall was typical over 14-day periods during the rainy season?
+This report retrospectively examines the rainfall patterns during the months of Nov 2021 through April 2022 to provide climatological context for the 2021-2022 monitoring period for Anticipatory Action (AA). 
 
 ## Background
 Malawi implemented a multi-sectorial Anticipation Action Framework for the 2021-2022 rainy season to mitigate the humanitarian impact of dry spells. A trigger mechanism was designed to signal a higher risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region during the months of January - February (at least 7 of the 14 days must have fallen in January or February). Dry spells were defined as periods of at least 14 consecutive days with no more than 2mm of cumulative rain. The ARC2 observational rainfall dataset was used throughout this analysis. The 2021-2022 monitoring period started in November 2021 and ended in March 2022.
