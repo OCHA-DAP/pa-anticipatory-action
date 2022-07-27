@@ -262,3 +262,67 @@ FloodStats5yr2 <- FloodCheckpos %>%
 Both 1 in 2 year and 1 in 5 year return periods do not show a significant pattern in the data. There are drops only in the number of false positives when only using dates with overlap as the changes are made only on the GLOFAS data and it is the alternative data set. The FN and FP values are still higher than the TP rates. 
 
 The criterion being that the events must have happened within 15 days of each other, it raises questions on the underlying data and their correlation.
+
+### Adding analysis using Annual Maximum Value
+```{r}
+# Flow Data
+NPLFlowAnnualMax <- NPLFlow %>%
+    mutate(Year = substr(Dates, 1, 4)) %>%
+    group_by(Year, Basin) %>%
+    top_n(1, Flow)
+
+returnValuesAnnMaxFlow <- NPLFlowAnnualMax %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = Flow), return.period = 2), 
+              returnyr5 = return.level(fevd(x = Flow), return.period = 5), 
+              returnyr10 = return.level(fevd(x = Flow), return.period = 10))
+
+# GLOFAS Data with date filter
+NPLGFAnnualMax <- NPLGLOFAS %>%
+    filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    mutate(Year = substr(Time, 1, 4)) %>%
+    group_by(Year, Basin) %>%
+    top_n(1, GLOFAS)
+
+returnValuesAnnMaxGF <- NPLGFAnnualMax %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = GLOFAS), return.period = 2), 
+              returnyr5 = return.level(fevd(x = GLOFAS), return.period = 5), 
+              returnyr10 = return.level(fevd(x = GLOFAS), return.period = 10))
+
+ggplot(data = NPLFlowAnnualMax, aes(x = Year, y = Flow, fill = Basin)) + 
+    geom_bar(stat="identity", position = "dodge") + 
+    theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
+    ggtitle("Annual Maximum DHM Data by Basin") +
+    xlab("Year") + 
+    ylab("")
+
+ggplot(data = NPLGFAnnualMax, aes(x = Year, y = GLOFAS, fill = Basin)) + 
+    geom_bar(stat="identity", position = "dodge") + 
+    theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
+    ggtitle("Annual Maximum GLOFAS Data by Basin") +
+    xlab("Year") + 
+    ylab("")
+
+# comparing DHM vs GLOFAS
+FloodCheckpos <- summaryFXN(NPLGFAnnualMax, NPLFlowAnnualMax, "Time", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLGFAnnualMax, NPLFlowAnnualMax, "Time", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStatsAnnualMax <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+
+```
+
+Using the annual maximums results in higher TP values. 
