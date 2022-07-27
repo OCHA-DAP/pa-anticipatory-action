@@ -23,11 +23,12 @@ editor_options:
 ## Executive Summary
 - The predictive and observational triggers were not met during the 2021-2022 season.
 - Assumptions in the Anticipatory Action (AA) trigger for dry spells were borne out in the data from the 2021-2022 rainy season.
-- While no dry spells by the AA definition (and thus no activation) occurred, dry streaks (periods with little to no rain) were frequent.
-- November and December dry streaks were rare and difficult to distinguish from pre-rainy season dry days. The 2021-2022 season suggests that monitoring Nov-Dec dry spells (as currently defined) would at best only result in minimal gain for AA.
-- March dry streaks were frequent and more easily be confirmed as in-season dry periods (especially before 15 March.) The 2021-2022 season suggests that there may be an opportunity to extend the AA monitoring period to include (at least some) March dry spells.
-- Rainfall patterns in the 2021-2022 rainy season suggest that the definition of dry spells used in the trigger may be too restrictive for AA. Extensive analysis would be needed to evaluate and select alternatives.
-- The inferences made on the basis of the 2021-2022 season should be further substantiated with a historical analysis.
+- While no dry spells (by AA definition) occurred, dry days (consecutive or not) with little to no rain were frequent.
+- Long streaks of dry days were infrequent. 
+- November and December dry streaks were rare and difficult to distinguish from pre-rainy season dry days in real-time. 
+- March dry streaks were frequent and easier to confirm as in-season in real-time. 
+- Cumulative rainfall of 2mm or less was very rare for 14-day periods and highly localised when it occurred.
+- Observations from the 2021-2022 season should be further substantiated with a historical analysis before modifications to the trigger mechanism are made.
 
 ***
 ## About this Report
@@ -70,7 +71,6 @@ lapply(packages, library, character.only = TRUE)
 data_dir <- Sys.getenv("AA_DATA_DIR")
 shp_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
 postseason_folder_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/2021_2022_postseason/")
-feb_forecast <- paste0(postseason_folder_path, 
 ```
 
 ```{r load_data, include = F}
