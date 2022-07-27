@@ -277,6 +277,13 @@ returnValuesAnnMaxFlow <- NPLFlowAnnualMax %>%
               returnyr5 = return.level(fevd(x = Flow), return.period = 5), 
               returnyr10 = return.level(fevd(x = Flow), return.period = 10))
 
+NPLFlowAnnualMaxFil <- NPLFlowAnnualMax %>%
+    left_join(returnValuesAnnMaxFlow, by = "Basin") %>%
+    mutate(thresh2Yr = Flow >= returnyr2) %>%
+    mutate(thresh5Yr = Flow >= returnyr5) %>%
+    mutate(thresh10Yr = Flow >= returnyr10) %>%
+    filter(thresh5Yr)
+
 # GLOFAS Data with date filter
 NPLGFAnnualMax <- NPLGLOFAS %>%
     filter(between(Time, min(NPLFlow$Dates), max(NPLFlow$Dates))) %>%
@@ -291,6 +298,13 @@ returnValuesAnnMaxGF <- NPLGFAnnualMax %>%
     summarise(returnyr2 = return.level(fevd(x = GLOFAS), return.period = 2), 
               returnyr5 = return.level(fevd(x = GLOFAS), return.period = 5), 
               returnyr10 = return.level(fevd(x = GLOFAS), return.period = 10))
+
+NPLGFAnnualMaxFil <- NPLGFAnnualMax %>%
+    left_join(returnValuesAnnMaxGF, by = "Basin") %>%
+    mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
+    mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
+    mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
+    filter(thresh5Yr)
 
 ggplot(data = NPLFlowAnnualMax, aes(x = Year, y = Flow, fill = Basin)) + 
     geom_bar(stat="identity", position = "dodge") + 
@@ -307,11 +321,11 @@ ggplot(data = NPLGFAnnualMax, aes(x = Year, y = GLOFAS, fill = Basin)) +
     ylab("")
 
 # comparing DHM vs GLOFAS
-FloodCheckpos <- summaryFXN(NPLGFAnnualMax, NPLFlowAnnualMax, "Time", "Dates") %>%
+FloodCheckpos <- summaryFXN(NPLGFAnnualMaxFil, NPLFlowAnnualMaxFil, "Time", "Dates") %>%
     # Date of data to be checked
     group_by(Basin, Time) %>%
     summarise(TPVals = sum(Check, na.rm = T))
-FloodCheckneg <- summaryFXN(NPLGFAnnualMax, NPLFlowAnnualMax, "Time", "Dates") %>%
+FloodCheckneg <- summaryFXN(NPLGFAnnualMaxFil, NPLFlowAnnualMaxFil, "Time", "Dates") %>%
     #Date of ground truth
     group_by(Basin, Dates) %>%
     summarise(TNVals = sum(Check, na.rm = T))
@@ -325,4 +339,6 @@ FloodStatsAnnualMax <- FloodCheckpos %>%
 
 ```
 
-Using the annual maximums results in higher TP values. 
+Using the annual maximums does not significantly improve the results. The number of true positive values is still quite low while the number of false negative events is higher.
+
+
