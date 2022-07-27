@@ -223,17 +223,19 @@ onset_50perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.
 ```
 
 ## On Rainfall Patterns
-This section examines rainfall patterns.
+This section examines rainfall patterns (when and how much was received where.)
 
 ### Rainy Days
 [DCCMS](https://www.metmalawi.gov.mw/dccms_agromet.php) in its latest bulletins defines "rainy day" has having received at least 3mm of rain. This definition was adopted for this analysis.
 
-The graph on the left (next section below) shows the ratio of rainy days over season duration (ie., as a percentage of days). The yellow-pale green areas received rain on a smaller portion of days compared to the teal-blue areas. Notably, no area received rain on more than `r minmax(static_r[["rainy_ratio"]])[2]`% of days during the rainy season. Thus, dry days were quite common (up to `r 100 - minmax(static_r[["rainy_ratio"]])[1]`% of days in areas with the least rainy days).
+The graph on the left (next section below) shows the ratio of rainy days over season duration (ie., as a percentage of days). The yellow-pale green areas received rain on a smaller portion of days compared to the teal-blue areas. 
+
+Notably, no area received rain on more than `r minmax(static_r[["rainy_ratio"]])[2]`% of days during the rainy season. Thus, dry days were quite common (up to `r 100 - minmax(static_r[["rainy_ratio"]])[1]`% of days in areas with the least rainy days).
 
 ### Rainfall Amounts
 The cumulative amount of rainfall over the duration of the rainy season was computed and is shown on the right below. Darker colours indicate highest rainfall totals. 
 
-There were large variations in amount of rainfall received. Although there is a relation between total rainfall and season duration, and between total rainfall and ratio of dry days, it is not a straightforward one: not all areas with the longest durations or highest ratios of rainy days received the most rain.
+There were large variations in amount of rainfall received. Although there is a relation between total rainfall and season duration, and between total rainfall and ratio of dry days, it is not a straightforward one: areas with the longer season durations or higher ratios of rainy days did not necessarily receive the most rain.
 
 
 ```{r rainy-days-plots}
@@ -271,7 +273,7 @@ plot(southern_shp, add = T)
 
 ### Monthly Patterns
 
-Returning to dry days (ie, with less than 3mm of rain), patterns emerge when their occurrence is examined per calendar month as in the maps below. (Note that the maps include days that preceded or followed season onset or cessation as defined above in order to represent the full calendar month).
+Looking at dry days (ie, with less than 3mm of rain), patterns emerge when their occurrence is examined per calendar month as in the maps below. (Note that the maps include days that preceded or followed season onset or cessation in order to represent the full calendar month).
 
 The months of January and February saw the fewest dry days, although there were numerous dry days in both months (January: `r minmax(dry_days_per_month_r[['jan']])[1]` - `r minmax(dry_days_per_month_r[['jan']])[2]`. February: `r minmax(dry_days_per_month_r[['feb']])[1]` - `r minmax(dry_days_per_month_r[['feb']])[2]` depending on the area). 
 
