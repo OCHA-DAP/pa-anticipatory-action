@@ -92,10 +92,10 @@ The ARC2 dataset publishes rainfall estimates with a lag of about 2 days. Its mo
 
 
 ## On the Rainy Season
-This section looks at when the rainy season began and ended, and how long it lasted, throughout the Southern Region.
+This section looks at when the rainy season began and ended, and how long it lasted throughout the Southern Region.
 
 ### Onset
-Season onset is defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, cited in Kimaro and Sibande 2008).
+Season onset was defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, cited in Kimaro and Sibande 2008).
 
 The map below shows during which week (ie 7-day period) the season began. Beige-brown indicates a November onset date while blue-purple indicates December start dates. The darker colours reflect onset dates later in the month.
 
@@ -121,7 +121,7 @@ onset_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one col
 perc_24dec_onset <- season_dates %>% filter(onset_date <= '2021-12-24') %>% summarise(dec24_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * dec24_onset / nbr_cells, 0)) %>% select(-dec24_onset) %>% as.numeric()
 ```
 
-Across the Southern region, the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season except the northern part of the region, which saw its season begin in later in December. The 2021-2022 trigger assumption that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
+Across the Southern region, the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season except the northern part of the region, which saw its season begin later in December. The 2021-2022 trigger assumption that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
 
 ```{r onset-plot}
 plot(static_r, 
@@ -164,7 +164,7 @@ mar_cessation_area_pct <- season_dates %>%
 ```
 
 
-Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS 2008).
+Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS, cited in Kimaro and Sibande 2008).
 
 The map below shows during which week (ie 7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates an April cessation date. The darker colours reflect cessation dates later in the month.
 
@@ -200,7 +200,7 @@ Season duration is defined as the cessation date minus the onset date, in days.
 
 The map below shows the total duration of the rainy season. Across the Southern region, the rainy season lasted between `r minmax(static_r$duration)[1]` and `r  minmax(static_r$duration)[2]` days. Certain areas may therefore have experienced a season too short for the full growth cycle of maize (defined as a period of 125 days from the onset of rainfall. See FAO 2006).
 
-The northern part of the region experienced a notably short rainy season while the season lasted over 140 days in the central band of the region. The durations would fall within typical values (Shire Valley), be slightly shorter (Machinga Agricultural Department) or slightly longer (Blantyre Agricultural Department) according to a historical analysis reported in Kimaro and Sibande 2008. 
+The northern part of the region experienced a notably shorter rainy season while the season lasted over 140 days in the central band of the region. The durations would fall within typical values (Shire Valley), be slightly shorter (Machinga Agricultural Department) or slightly longer (Blantyre Agricultural Department) than typical according to a historical analysis reported in Kimaro and Sibande 2008. 
 
 ```{r duration-plot}
 plot(static_r, 
