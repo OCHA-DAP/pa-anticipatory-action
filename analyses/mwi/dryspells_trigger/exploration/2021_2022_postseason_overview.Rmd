@@ -375,7 +375,7 @@ plot(southern_shp, add = T)
 
 
 ## On Dry Periods
-Dry days could be interspersed between rainy days, or grouped into streaks of consecutive dry days. A period of dryness could also be defined by the low cumulative rainfall it has received (regardless of the rainy status of individual days composing the period.) Both approaches are examined in this section.
+Dry days can be interspersed between rainy days, or grouped into streaks of consecutive dry days. A period of dryness could be defined by the low cumulative rainfall it has received (regardless of the rainy status of individual days composing the period.) Both approaches are examined in this section for comparison purposes.
 
 Reminder that a dry day can receive up to 3mm of rain while the definition of dry spell used for Anticipatory Action was a 14-day streak with no more than 2mm in total.
 
@@ -399,7 +399,7 @@ plot(static_r,
 plot(southern_shp, add = T)
 ```
 
-Examining how frequent streaks of consecutive dry days were, the maps below show the number of streaks of various durations that were experienced during the 2021-2022 rainy season. It can be seen that streaks were quite frequent and widespread at shorter durations (5 and 7 days) and became increasingly infrequent and localised at longer durations (10 and 14 days).
+The maps below show the number of streaks of various durations that were experienced. It can be seen that streaks were quite frequent and widespread at shorter durations (5 and 7 days) and became increasingly infrequent and localised at longer durations (10+ and 14+ days).
 
 ```{r dry-streak-counts-plot, fig.show="hold", out.width="100%"}
 
@@ -473,9 +473,9 @@ plot(southern_shp, add = T)
 
 
 ### Low-Rainfall Periods
-The definition of dry spell used in AA refers to a period with a low amount of cumulative rainfall. This period is set to be minimally 14 days in duration, regardless of the number of days within the period that were dry. This section examines all 14-day periods during the rainy season (therefore extending beyond the monitoring months for AA) and report on the amount of rainfall they have received.
+This section examines all 14-day periods during the rainy season (therefore extending beyond the monitoring months for the AA observational trigger) and report on the amount of rainfall they have received.
 
-Around `r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`% of 14-day periods across the Southern Region received 2 or less mm of rain during their rainy season. This amount of cumulative rainfall, which is the definition of a dry spell selected for AA, is thus very rare. For comparison, around `r round(100*ecdf(in_season$roll_sum_next_14d)(10), 2)`% received 10 or less millimeters. The graph below shows how frequent was each total rainfall per 14-day period, with the taller bars indicating the more frequent amounts.
+Around `r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`% of 14-day periods across the Southern Region received 2 or less millimeters of rain during their rainy season. This amount of cumulative rainfall, which is the definition of a dry spell selected for AA, is thus very rare. For comparison, around `r round(100*ecdf(in_season$roll_sum_next_14d)(10), 2)`% received 10 or less millimeters. The graph below shows how frequent was each total rainfall per 14-day period, with the taller bars indicating the more frequent amounts.
 
 <br>
 
@@ -529,9 +529,9 @@ in_season %>%
 <br>
 
 ### Timing of Dry Periods
-Dry spells typically damage crops more significantly during the planting and flowering growth phases. While the timing of a dry spell was not included in the 2021-2022 anticipatory action trigger, this analysis sought to determine whether dry periods had occurred around the time of these phases.
+Dry spells damage crops more significantly during the planting and flowering growth phases. While the timing of a dry spell was not included in the 2021-2022 anticipatory action trigger, this analysis sought to determine whether dry periods had occurred around the time of these phases.
 
-Unfortunately, precise data on planting (and/or flowering) dates across the Southern region was not available. Neither was data capturing actual progress of the growing season from which planting or flowering periods could have been derived. Investments in this type of data seem warranted not only for AA but for a better understanding of the impact of dry spells more broadly.
+Unfortunately, precise data on planting (and/or flowering) dates across the Southern region was not available. Neither was data capturing actual progress of the growing season from which planting or flowering periods could have been derived. Investments in this type of data would be warranted not only for AA but for a better understanding of the impact of dry spells more broadly.
 
 ```{r ds-timing}
 #sprouting takes 1 to 2 weeks depending of moisture conditions and the variety of the crop.
