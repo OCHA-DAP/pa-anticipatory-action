@@ -41,6 +41,11 @@ adm3_shp <- subset(adm3_shp_all, adm3_shp_all$ADM1_EN == "Southern")
 static_r <- rast(paste0(postseason_folder_path, "static_r.tif"))
 data <- static_r[["rain_seas_tot"]]
 
+# check cell size and adm expanse
+cellSize(data, unit="km", names="corrected")
+expanse(sr_adm2, unit="km") # summed area in squared km
+expanse(sr_adm1, unit="km")
+
 # compute mean per adm
 adm2_means <- terra::extract(data, sr_adm2, fun = mean)
 sr_adm2$rain_means_adm2 <- as.numeric(adm2_means$rain_seas_tot)
