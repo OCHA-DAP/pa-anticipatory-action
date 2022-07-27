@@ -35,7 +35,7 @@ editor_options:
 This report retrospectively examines the rainfall patterns during the months of Nov 2021 through April 2022 to provide climatological context for the 2021-2022 monitoring period for Anticipatory Action (AA). 
 
 ## Background
-Malawi developed an Anticipation Action Framework to mitigate the humanitarian impact of severe dry spells. A trigger mechanism was designed to signal a high risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region during the months of January and February (at least 7 of the 14 days must have fallen in January or February). Dry spells were defined as periods of at least 14 consecutive days with no more than 2mm of cumulative rain. The 2021-2022 monitoring period started in November 2021 and ended in March 2022. The ARC2 observational rainfall dataset was used throughout this analysis.
+Malawi developed an Anticipation Action Framework (AAF) to mitigate the humanitarian impact of severe dry spells. A trigger mechanism was designed to signal a high risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region during the months of January and February (at least 7 of the 14 days must have fallen in January or February). Dry spells were defined as periods of at least 14 consecutive days with no more than 2mm of cumulative rain. The 2021-2022 monitoring period started in November 2021 and ended in March 2022. The ARC2 observational rainfall dataset was used throughout this analysis.
 
 ```{r global-setup, message = F, warning = F, echo = F}
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
@@ -81,14 +81,14 @@ nbr_cells <- 343 # nbr of cells in southern region (touching=T)
 ## Trigger Monitoring Results
 
 # Predictive triggers
-The EMCWF forecast produces monthly rainfall estimates for grid cells covering the region. The forecasts report the average rainfall amounts expected in each grid cell with 50% probability (for example, 215mm rainfall.) The expected rainfall amounts for all grids within the Southern Region were averaged. The trigger threshold had been set to 210mm: if the projected rainfall fell below this amount, the trigger would be met.
+The selected ECMWF forecast produces monthly rainfall estimates. An average of the expected rainfall amounts for the Southern Region was computed. In the AAF, the trigger threshold had been set to 210mm: if the projected rainfall fell below this amount, the trigger would be met.
 
-**Result:** The projected rainfall for the region reached 251mm for January (November forecast) and 220mm for February (December forecast). Neither trigger was therefore met and no activation ensued.
+**Result:** The projected rainfall for the region reached 251mm for January (November forecast) and 220mm for February (December forecast). Therefore neither trigger was met and there was no activation.
 
 # Observational trigger
-The ARC2 dataset publishes rainfall estimates with a lag of about 2 days. Monitoring began on 24 Dec and ended on 7 March to capture January or February dry spells that would begin or end in those months (but at least 50% of which would occur in January and February.) The observational trigger would be met if 3 districts experienced dry spells (overlapping or sequential events.) The 3-district requirement reflected a 1 in 4 year event.
+The ARC2 dataset publishes rainfall estimates with a lag of about 2 days. Its monitoring began on 24 Dec and ended on 7 March to capture January or February dry spells that would begin or end in those months (at least 7 days of which had to occur in January and February.) In the AAF, the observational trigger was defined to be met if 3 districts experienced dry spells. The 3-district requirement reflect a 1 in 4 year event. (The districts could experience a dry spell simultaneously or sequentially.)
 
-**Result:** No district experienced a dry spell as defined in the Framework. The longest streak of dry days (with no more than 2mm of cumulative rain) in a district was 9 days. Therefore the trigger was not met and no activation ensued.
+**Result:** No district experienced a dry spell as defined in the AAF. The longest streak of dry days (with no more than 2mm of cumulative rain) in a district was 9 days. Therefore the observational trigger was not met and there was no activation.
 
 
 ## On the Rainy Season
