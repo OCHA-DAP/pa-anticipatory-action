@@ -25,10 +25,10 @@ editor_options:
 - Assumptions built into the Anticipatory Action (AA) trigger were consistent with but not fully borne out by the data from the 2021-2022 rainy season.
 - While no dry spells (by the definition in the AAF) occurred, individual dry days were frequent as were periods with little to no rain.
 - Long streaks of consecutive dry days (10 or more) were infrequent and more localised than shorter streaks. 
-- November and December dry streaks were rare and difficult to distinguish from pre-rainy season dry days in real-time. 
-- March dry streaks were frequent and easier to confirm as in-season in real-time. 
+- November and December dry streaks were rare and difficult to distinguish from pre-rainy season dry days in real-time.
+- March dry streaks occurred and could be more easily to confirm as bring in-season in real-time. 
 - Cumulative rainfall of 2mm or less was very rare for 14-day periods and highly localised when it occurred.
-- Observations from the 2021-2022 season should be further substantiated with a historical analysis before modifications to the trigger mechanism are made.
+- Observations from the 2021-2022 season alone are not sufficient to justify modifications to the trigger mechanism. They offer opportunities to discuss how the season was experienced on the ground and to identify lines of research for future improvements.
 
 ***
 ## About this Report
@@ -80,12 +80,12 @@ nbr_cells <- 343 # nbr of cells in southern region (touching=T)
 ```
 ## Trigger Monitoring Results
 
-# Predictive triggers
+### Predictive triggers
 The selected ECMWF forecast produces monthly rainfall estimates. An average of the expected rainfall amounts for the Southern Region was computed. In the AAF, the trigger threshold had been set to 210mm: if the projected rainfall fell below this amount, the trigger would be met.
 
 **Result:** The projected rainfall for the region reached 251mm for January (November forecast) and 220mm for February (December forecast). Therefore neither trigger was met and there was no activation.
 
-# Observational trigger
+### Observational trigger
 The ARC2 dataset publishes rainfall estimates with a lag of about 2 days. Its monitoring began on 24 Dec and ended on 7 March to capture January or February dry spells that would begin or end in those months (at least 7 days of which had to occur in January and February.) In the AAF, the observational trigger was defined to be met if 3 districts experienced dry spells. The 3-district requirement reflect a 1 in 4 year event. (The districts could experience a dry spell simultaneously or sequentially.)
 
 **Result:** No district experienced a dry spell as defined in the AAF. The longest streak of dry days (with no more than 2mm of cumulative rain) in a district was 9 days. Therefore the observational trigger was not met and there was no activation.
@@ -540,10 +540,10 @@ Unfortunately, precise data on planting (and/or flowering) dates across the Sout
 
 ```
 
-## Revisiting trigger assumptions
+## Examining trigger assumptions
 This section explores whether the 2021-2022 season was consistent with assumptions made when the trigger mechanism was designed. 
 
-### A1: Dry spells are difficult to confirm in December and March. 
+### A1: The rainy season will have begun over the Southern Region by 24 Dec.
 
 The Anticipatory Action (AA) trigger focused exclusively on January and February dry spells. Dry spells have historically occurred in December and March however those months were not monitored due to the difficulty in assessing in real-time whether a dry period was a dry spell during the rainy season or a streak of dry days outside of the rainy season. The 2021-2022 trigger assumed that the rainy season would have begun over the Southern Region by 24 Dec.
 
@@ -555,24 +555,24 @@ The implication is that the observational trigger could have been expanded to co
 
 If the observational trigger were to be expanded to include December or March dry spells, it could delay framework activation and activity implementation by several weeks to allow for confirmation that the suspected dry spell was during the rainy season. Of note, a previous historical analysis revealed that very few dry spells occurred in December (2.2% of dry spells between 2000 and 2020) while 26.7% of dry spells were observed in March - a number similar to January.
 
-### A2: Dry spells are better captured as periods of little to no rain rather than streaks of dry days. 
+### A2: Identifying long periods with little to no rain (compared to consecutive dry days) enables anticipatory action against dry spells. 
 
-The trigger mechanism built on extensive work done by the World Food Programme that defined dry spells as a period of minimum of 14 consecutive days with no more than 2mm cumulative rainfall. Alternative definitions found in the scientific literature refer to shorter periods with little rainfall (see A3 below). Other approaches instead define dry spells as streaks of dry days, where each day is allowed up to a certain amount of rainfall (typically 2-4mm). 
+The trigger mechanism built on extensive work done by the World Food Programme that defined dry spells as a period of minimum of 14 consecutive days with no more than 2mm cumulative rainfall. Upon consensus within the pilot group, this definition was selected to enable Anticipatory Action. Alternative definitions found in the scientific literature refer to shorter periods with little rainfall (see A3 below). Other approaches instead define dry spells as streaks of dry days, where each day is allowed up to a certain amount of rainfall (typically 2-4mm). 
 
 Streaks of dry days were common during the 2021-2022 season. Every area in the region experienced a streak of 7+ consecutive dry days and most areas experienced a streak of 10+ days. By contrast, fewer areas (`r round(100*length(cells(static_r[["n_14dplus_streaks"]])) / nrow(season_dates), 1)` % of the region) experienced streaks of 14+ dry days. Streaks of 14+ consecutive dry days were more common than a 14-day period with little to no rainfall because more rainfall is allowed. 
 
 During the 2021-2022 rainy season, a dry period was often interrupted by a single, wetter day. The interruption reset the counter to zero and dry periods with little cumulative rain never reached 14 days. For instance, a 9-day period with no rain was followed by a rainy day and no longer met the AAF definition of a dry spell. The dry period would not have met the definition of a dry spell under a "consecutive dry days" definition either since more than 3mm of rain fell on the interrupting day. These observations from the 2021-2022 underline that erratic rainfall patterns, for instance a single rainy day during a dry period, can obfuscate other patterns. The phenomenon had been noticed in the historical analysis performed during trigger development and should be kept in mind as climate change is expected to make erratic patterns increasingly frequent.
 
-### A3: No more than 2mm of cumulative rainfall over 14+ days in a district is the right type of severe dry spell for AA to target.
+### A3: The selected dry spell duration, rainfall allowance, and geographical spread are identifying shocks that are well-suited for large-scale AA.
 
 The 2021-2022 season analysis revealed that very few (`r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`%) periods received 2mm or less. Even when allowing for 5 times more rainfall than the selected definition for dry spell (ie for 10mm over 14 days), the occurrence of periods with so little rainfall was still significantly less than 5% of the periods during the rainy season. 
 
-Historically however there have been dry spells with no more than 2mm more frequently than this year. This in turn suggests that rains were more evenly spread over the season than in previous years. As a reminder, increasing the 2mm definition threshold would target events more frequent (once every 2 years in the Southern Region) than AA aims to target (once every 3 to 5 years); dry spell duration (14+ days) and geographical coverage (at least 3 districts based on per-district averages) would need to be altered for the definition and/or trigger to respond to more severe dry spells.
+*Historically* however dry spells with no more than 2mm were observed more frequently than in the past year. This suggests that rains were more evenly spread over the season than in typical years. Increasing the 2mm definition threshold would target events more frequent (once every 2 years in the Southern Region) than AA aims to target (once every 3 to 5 years). If rainfall allowance were increased, dry spell duration (14+ days) and geographical coverage (at least 3 districts based on per-district averages) would also need to be altered for the definition and/or trigger to respond to dry spells occurring once every 3 to 5 years. Furthermore a different definition would likely affect how well precipitation forecasts can be used to project the occurrence of dry spells.
 
-This year's patterns also suggest a reduced ability to detect highly localised dry spells when using averages over larger regions such as adm2 (districts), where an area that received rain within the district may cause the district average to be higher than 2mm despite other areas within the district having received no rain. An analytical approach that considers geographical coverage (eg: in number of squared kilometers), rather than an average over a district, may be a promising methodological approach to both detect more localised events and ensure that the events are widespread enough to warrant a large-scale response.
+This year's patterns also suggest a reduced ability to detect highly localised dry spells when using averages over larger regions such as adm2 (districts), where an area that received rain within the district may cause the district average to be higher than 2mm despite other areas within the district having received no rain. An analytical approach that considers geographical coverage (eg: in squared kilometers), rather than an average over a district, may be a promising methodological approach to both detect more localised events and ensure that the events are widespread enough to warrant a large-scale response.
 
-#### Methodological note
-This analysis examined small areas of roughly 10 x 10 km. Patterns can change when computing metrics such as an average over larger areas such as adm2 (district) regions. It analysed ARC2 data in contrast to the historical analysis of dry spells performed during trigger development, which used CHIRPS data. Even a small 1-3mm difference between the two sources is enough to show differential patterns when looking at 2mm thresholds. The analysis looked at a single year and any modifications to triggers should be set based on historical data over longer periods of time, not a single year. 
+#### Methodological notes
+This analysis examined small areas of roughly 10 x 10 km. Patterns can change when computing metrics over larger areas such as adm2 (district) regions. This analysis used ARC2 data while the historical analysis of dry spells performed during trigger development used CHIRPS data. Even a small 1-3mm difference between the two sources could be enough to show differential patterns when looking at 2mm thresholds. Observations derived from this analysis is based on a single year (2021-2022). Any modifications to triggers should be set based on historical data over longer periods of time, not a single year. 
 
 ## References
 FAO (2006). Water and Soil Requirements. Cited in Kimaro and Sibande 2008.
