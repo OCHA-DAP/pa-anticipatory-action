@@ -1,8 +1,34 @@
 """
 Computes the trigger status of the predictive trigger on
 dry spells in Malawi, version1
-Downloads and processes ecmwf seasonal forecast from CDS
-and then computes the trigger status per admin
+This is done for the CDS data as well as the higher resolution data that comes
+directly from ECMWF.
+
+The script includes downloading and processing of the CDS data.
+For the higher resolution data, this is not included. It simply reads the
+latest processed file that is available in the directory.
+To download and process new data directly from ECMWF, the pa-aa-toolbox
+repository currently has to be used.
+Go to `this branch
+<https://github.com/OCHA-DAP/pa-aa-toolbox/tree/feature/ecmwf-seas-realtime>`_
+and run
+
+```
+from aatoolbox.datasources.ecmwf.api_seas5_monthly import EcmwfApi
+pipeline_mwi = Pipeline("mwi")
+mwi_geobb = pipeline_mwi.load_geoboundingbox(
+    from_codab=False, from_config=True)
+ecmwf_api=EcmwfApi(iso3="mwi",geo_bounding_box=mwi_geobb)
+ecmwf_api.download()
+ecmwf_api.process()
+```
+
+Note that once the code in the toolbox is finalized, toolbox can be installed
+in this repository and the code to download data from ECMWF can be
+incorporated in the current script.
+
+Outputs of the CDS data are saved in the public directory, while outputs from
+the higher resolution data are saved in the private directory.
 """
 import logging
 import os
@@ -157,8 +183,8 @@ def _retrieve_forecast(
     :param add_col: additional columns in gdf_bound that should be added to the
     output of compute_stats_admin
     """
-    #downloading is only implemented if source_cds
-    #downloading for source_cds=False is implemented in aa-toolbox
+    # downloading is only implemented if source_cds
+    # downloading for source_cds=False is implemented in aa-toolbox
     if source_cds:
         ecmwf_forecast = ecmwf_seasonal.EcmwfSeasonalForecast(
             use_unrounded_area_coords=use_unrounded_area_coords
@@ -479,7 +505,7 @@ def compute_trigger(
 
 
 def main():
-    download = False
+    download = True
     prob = 0.5
     precip_cap = 210
     adm_level = 1

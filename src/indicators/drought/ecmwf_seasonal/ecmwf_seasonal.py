@@ -3,7 +3,7 @@ combines all dates into one dataframe."""
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import List
 
@@ -55,7 +55,7 @@ class EcmwfSeasonal:
         unroundedly shifted data
         """
         self.year_min = year_min
-        self.year_max = year_max
+        self.year_max = date.today().year if year_max is None else year_max
         self.cds_name = cds_name
         self.dataset = dataset
         self.dataset_variable_name = dataset_variable_name
@@ -235,7 +235,7 @@ class EcmwfSeasonalForecast(EcmwfSeasonal):
     def __init__(self, **kwargs):
         super().__init__(
             year_min=1993,
-            year_max=2021,
+            year_max=None,
             cds_name="seasonal-monthly-single-levels",
             dataset=["monthly_mean"],
             dataset_variable_name="product_type",
