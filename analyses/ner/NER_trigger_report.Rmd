@@ -203,24 +203,12 @@ plotCI(trigger_id = 'framework', metric = 'min', ci_widths_df = 'df_fmwk_min')
 plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful') 
 ```
 
-<br> 
-<br>
-<br>
-
 # Anticipatory Action Trigger Mechanism Report
 
+<p style="color:#007ce1;font-size:22px;text-align:center;"> `r paste0(shock, ' in ', country_name)`</p> 
 <p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
 
 ***
-
-## Targets
-
-<span style="color:#007ce1"> Country: </span> `r paste0("   ", country_name)`
-<br>
-<span style="color:#007ce1"> Hazard: </span> `r shock`
-
-<br>
-
 ## Trigger Mechanism Snapshot
 
 &nbsp;
