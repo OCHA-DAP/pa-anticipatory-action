@@ -87,7 +87,7 @@ monitored_by_c <- 'IRI'
 data_providers <- "Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger."
 
 # Data sources: historical shocks
-hist_shocks_source <- "Compiled by IRI Financial Instruments Team and WFP Niger for 'Reported bad years', and by IRI for precipitation-related records. Partial data available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)."
+hist_shocks_source <- "IRI Financial Instruments Team and WFP Niger. Partial historical data is available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)." # Prompt: The data on historical shocks was provided by..
 
 # Analysis
 analysis <- "The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
@@ -223,10 +223,12 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 ## Data sources
 
 ### Data providers
-`r data_providers`
+`r data_providers` will provide data and/or analytical support.
 
 ### Historical shocks 
-`r hist_shocks_source`
+A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
+
+The data on historical shocks was provided by `r hist_shocks_source`.
 
 ## Trigger Development
 `r analysis`
@@ -255,8 +257,6 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Detections: An activation is expected to occur for X% of the shocks', 
                                        'False Alarms: X% of all activations expected NOT to be followed by a shock', 
                                        'Misses: X% of the time there is a shock, no activation is expected', 
-                                       'Nbr of Historical Shocks', 
-                                       'Historical Period', 
                                        'Activity Package', 
                                        'Funding Amount', 
                                        'Probability of at least one trigger being met', 
@@ -274,7 +274,6 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
-                                     paste0(nbr_hist_shocks, " shocks"),
                                      package_a, 
                                      funding_a, 
                                      "Covers entire framework",  
@@ -292,7 +291,6 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
                                      paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
-                                     paste0(nbr_hist_shocks, " shocks"),
                                      package_b, 
                                      funding_b, 
                                      paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
@@ -310,7 +308,6 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
-                                     paste0(nbr_hist_shocks, " shocks"), 
                                      package_c, 
                                      funding_c, 
                                      "Covers entire framework",
