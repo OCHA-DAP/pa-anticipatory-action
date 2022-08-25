@@ -329,7 +329,7 @@ kbl(framework_df,
   kable_styling(full_width = F) %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:2), extra_css = "line-height: 45px;") %>%
-  column_spec(column = 1, width = "24em", extra_css = "vertical-align: bottom;") %>%
+  column_spec(column = 1, width = "28em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "20em") %>%
   pack_rows("Activation Scenario", start_row = 1, end_row = 2, color = '#1bb580') %>%
   kableExtra::footnote(general = "", general_title = "", symbol = c("A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."))
