@@ -292,8 +292,8 @@ kbl(snapshot_df,
   column_spec(column = c(2:4), width = "20em") %>%
   pack_rows("Description", start_row = 1, end_row = 9, color = '#1bb580') %>%
   pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
-  pack_rows("Trigger Activation", start_row = 14, end_row = 15, color = '#1bb580') %>%
-  kableExtra::footnote(general = "", general_title = "___", symbol = c("Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met."))
+  pack_rows("Programming and Funding", start_row = 14, end_row = 15, color = '#1bb580') %>%
+  kableExtra::footnote(general = "", general_title = "", symbol = c("Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met."))
 
 
 ```
@@ -315,8 +315,8 @@ In case of an activation, additional meteorological data will be shared by the D
 ## Framework Activation
 
 ```{r framework-activation-table}
-framework_df <- data.frame(row_name = c('Probability of at least one trigger being met', 
-                                        'Probability of full framework activation'),
+framework_df <- data.frame(row_name = c('At least one trigger being met (probability in %)', 
+                                        'Full framework activation (probability in %)'),
                            frmwk_stats = c(paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
                                            paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">")))  
 
@@ -326,12 +326,13 @@ kbl(framework_df,
     row.names = FALSE, # omit row numbers
     col.names = c("",""), 
     align = "rc") %>%
+  kable_styling(full_width = F) %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:2), extra_css = "line-height: 45px;") %>%
-  column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
+  column_spec(column = 1, width = "24em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "20em") %>%
   pack_rows("Activation Scenario", start_row = 1, end_row = 2, color = '#1bb580') %>%
-  kableExtra::footnote(general = "", general_title = "___", symbol = c("A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."))
+  kableExtra::footnote(general = "", general_title = "", symbol = c("A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."))
     
 ```
 
