@@ -84,7 +84,7 @@ hist_period_c <- "1991 - 2020"
 monitored_by_c <- 'IRI'
 
 # Data providers
-data_providers <- "Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger."
+data_providers <- "The Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger" # will be followed by "provide data and/or analytical support."
 
 # Data sources: historical shocks
 hist_shocks_source <- "IRI Financial Instruments Team and WFP Niger. Partial historical data is available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)." # Prompt: "The data on historical shocks was provided by.." The text should include the final period.
@@ -303,12 +303,6 @@ kbl(snapshot_df,
 
 &nbsp;
 
-## Monitoring
-
-`r monitoring_process`
-
-&nbsp;
-
 ## Framework Activation
 
 ```{r framework-activation-table}
@@ -335,22 +329,24 @@ kbl(framework_df,
 
 &nbsp;
 
-## Data sources
+## Data Underlying Trigger Mechanism
 
-### Data providers
-`r data_providers` provide data and/or analytical support.
+`r data_providers` provide data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
 
-### Historical shocks 
-A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
-
-The data on historical shocks was provided by `r hist_shocks_source`
-
-## Trigger Development
 `r analysis`
 
 <br>
 
-## Assumptions & Open questions
+## Monitoring Process
+
+`r monitoring_process`
+
+<br>
+
+## Learning Opportunities
+This table summarises the decisions, assumptions, and open questions that arose during trigger development. They are documented for transparency and to inform the learning agenda.
+
+<br>
 
 ```{r learning table}
 
@@ -366,3 +362,4 @@ kbl(learning_table,
 
 ```
 
+&nbsp;
