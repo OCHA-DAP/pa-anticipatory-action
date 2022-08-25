@@ -312,6 +312,18 @@ kbl(snapshot_df,
 
 &nbsp;
 
+## Monitoring
+
+Between January and June inclusively, the FIT team at IRI updates the forecast (Triggers A and B) and the decision tool within Maproom by the 22nd of each month. Within 24 hours of the update, the IRI team notifies the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met.
+
+By 7 August the Direction de la météorologie nationale du Niger will collate the rainfall measurements from the stations specified in the framework for the period 1 June - 31 July, and share them with the IRI FIT team.
+
+By 10 August the IRI FIT team will confirm the number of stations for which complete data is available; select ENACTS (80% or more available) or CHIRP (less than 80% available) accordingly; compute the SPI values and update Maproom. The IRI FIT team will then notify the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met.
+
+In case of an activation, additional meteorological data will be shared by the DMN, the IRI FIT team, and/or Centre for Humanitarian Data to inform response targeting.
+
+&nbsp;
+
 ## Framework Activation
 
 ```{r framework-activation-table}
@@ -337,7 +349,7 @@ kbl(framework_df,
 ## Data sources
 
 ### Data providers
-`r data_providers` will provide data and/or analytical support.
+`r data_providers` provide data and/or analytical support.
 
 ### Historical shocks 
 A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
@@ -348,18 +360,6 @@ The data on historical shocks was provided by `r hist_shocks_source`
 `r analysis`
 
 <br>
-
-## Monitoring
-
-Between January and June inclusively, the FIT team at IRI updates the forecast (Triggers A and B) and the decision tool within Maproom by the 22nd of each month. Within 24 hours of the update, the IRI team notifies the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met.
-
-By 7 August the Direction de la météorologie nationale du Niger will collate the rainfall measurements from the stations specified in the framework for the period 1 June - 31 July, and share them with the IRI FIT team.
-
-By 10 August the IRI FIT team will confirm the number of stations for which complete data is available; select ENACTS (80% or more available) or CHIRP (less than 80% available) accordingly; compute the SPI values and update Maproom. The IRI FIT team will then notify the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met.
-
-In case of an activation, additional meteorological data will be shared by the DMN, the IRI FIT team, and/or Centre for Humanitarian Data to inform response targeting.
-
-&nbsp;
 
 ## Assumptions & Open questions
 
