@@ -258,9 +258,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'False Alarms: X% of all activations expected NOT to be followed by a shock', 
                                        'Misses: X% of the time there is a shock, no activation is expected', 
                                        'Activity Package', 
-                                       'Funding Amount', 
-                                       'Probability of at least one trigger being met', 
-                                       'Probability of full framework activation'),
+                                       'Funding Amount'),
                        trigger_a = c(type_a, 
                                      monitored_area_a,
                                      timepoints_a, 
@@ -275,9 +273,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
                                      package_a, 
-                                     paste0('$', funding_a, 'm'), 
-                                     "Covers entire framework",  
-                                     "Covers entire framework"),
+                                     paste0('$', funding_a, 'm')),
                        trigger_b = c(type_b,
                                      monitored_area_b,
                                      timepoints_b, 
@@ -292,9 +288,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
                                      package_b, 
-                                     paste0('$', funding_b, 'm'), 
-                                     paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
-                                     paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">")),  
+                                     paste0('$', funding_b, 'm')),
                        trigger_c = c(type_c, 
                                      monitored_area_c,
                                      timepoints_c, 
@@ -309,9 +303,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
                                      package_c, 
-                                     paste0('$', funding_c, 'm'), 
-                                     "Covers entire framework",
-                                     "Covers entire framework"))
+                                     paste0('$', funding_c, 'm'))
 
 kbl(snapshot_df,
     format = 'html',
@@ -332,6 +324,22 @@ kbl(snapshot_df,
   kableExtra::footnote(general = "", general_title = "___", symbol = c("Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met."))
 
 
+```
+
+```{r framework-activation-table}
+framework_df <- data.frame(row_name = c('Probability of at least one trigger being met', 
+                                        'Probability of full framework activation'),
+                           frmwk_stats = c(paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
+                                           paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">")))  
+
+kbl(framework_df,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, # omit row numbers
+    col.names = c("","Framework Activation"), 
+    align = "rc") %>%
+  kable_minimal(c("hover"))
+    
 ```
 
 &nbsp;
