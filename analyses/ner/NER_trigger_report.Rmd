@@ -52,7 +52,7 @@ type_a <- 'Predictive' # Predictive or Observational?
 monitored_area_a <- "National"
 timepoints_a<- 'Jan, Feb, Mar' # eg: 'Jan, Feb, Mar'
 package_a <- 'Package 1' # eg: 'Package 1'
-funding_a <- 5.25 # input amount only, no $ sign or 'm' for million
+funding_a <- 5.25 # input number only, no $ sign or 'm' for million. Formatting will be done automatically.
 predicted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep' 
 lead_time_a <- '6-4 months' # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
 data_source_a <- 'IRI flexible seasonal forecast' # name of product + provider
@@ -64,7 +64,7 @@ type_b <- 'Predictive'
 monitored_area_b <- "National"
 timepoints_b <- 'Apr, May, Jun'
 package_b <- 'Package 2'
-funding_b <- 9.5 
+funding_b <- 9.5
 predicted_window_b <- 'Jul-Sep'
 lead_time_b <- '3-1 months'
 data_source_b <- 'IRI flexible seasonal forecast'
@@ -87,7 +87,7 @@ monitored_by_c <- 'IRI'
 data_providers <- "Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger."
 
 # Data sources: historical shocks
-hist_shocks_source <- "IRI Financial Instruments Team and WFP Niger. Partial historical data is available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)." # Prompt: The data on historical shocks was provided by..
+hist_shocks_source <- "IRI Financial Instruments Team and WFP Niger. Partial historical data is available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)." # Prompt: "The data on historical shocks was provided by.." The text should include the final period.
 
 # Analysis
 analysis <- "The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
@@ -207,35 +207,21 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 <br>
 <br>
 
-# Anticipatory Action Trigger 
-# Mechanism Report
+# Anticipatory Action Trigger Mechanism Report
 
 <p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
 
 ***
 
-## Shock
+## Targets
 
 <span style="color:#007ce1"> Country: </span> `r paste0("   ", country_name)`
 <br>
 <span style="color:#007ce1"> Hazard: </span> `r shock`
 
-## Data sources
-
-### Data providers
-`r data_providers` will provide data and/or analytical support.
-
-### Historical shocks 
-A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
-
-The data on historical shocks was provided by `r hist_shocks_source`.
-
-## Trigger Development
-`r analysis`
-
 <br>
 
-# Trigger Mechanism Snapshot
+## Trigger Mechanism Snapshot
 
 &nbsp;
 ```{r metrics definitions}
@@ -253,10 +239,10 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Historical Data Coverage',
                                        'Probability of being met in a given year', 
                                        'Monitored by',
-                                       'Valid Activations: X% of all activations expected to be followed by a shock', 
-                                       'Detections: An activation is expected to occur for X% of the shocks', 
-                                       'False Alarms: X% of all activations expected NOT to be followed by a shock', 
-                                       'Misses: X% of the time there is a shock, no activation is expected', 
+                                       'Valid Activations (X% of all activations expected to be followed by a shock)', 
+                                       'Detections (An activation is expected to occur for X% of the shocks)', 
+                                       'False Alarms (X% of all activations expected NOT to be followed by a shock)', 
+                                       'Misses (X% of the time there is a shock, no activation is expected)', 
                                        'Activity Package', 
                                        'Funding Amount'),
                        trigger_a = c(type_a, 
@@ -273,7 +259,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
                                      package_a, 
-                                     paste0('$', funding_a, 'm')),
+                                     funding_a),
                        trigger_b = c(type_b,
                                      monitored_area_b,
                                      timepoints_b, 
@@ -288,7 +274,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
                                      package_b, 
-                                     paste0('$', funding_b, 'm')),
+                                     funding_b),
                        trigger_c = c(type_c, 
                                      monitored_area_c,
                                      timepoints_c, 
@@ -303,7 +289,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
                                      package_c, 
-                                     paste0('$', funding_c, 'm'))
+                                     funding_c))
 
 kbl(snapshot_df,
     format = 'html',
@@ -312,19 +298,21 @@ kbl(snapshot_df,
     col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
-  row_spec(c(1:5, 10:14), extra_css = "line-height: 25px;") %>%
-  row_spec(c(6:9, 15:17), extra_css = "line-height: 45px;") %>%
-  #column_spec(column = 1, width = "16em", extra_css = "vertical-align: bottom;") %>%
-  column_spec(column = c(2:4), width = "22em") %>%
-  pack_rows("Description", start_row = 1, end_row = 5, color = '#1bb580') %>%
-  pack_rows("Performance", start_row = 5, end_row = 8, color = '#1bb580') %>%
-  pack_rows("Shock", start_row = 9, end_row = 11, color = '#1bb580') %>%
-  pack_rows("Activation", start_row = 12, end_row = 13, color = '#1bb580') %>%
-  pack_rows("Framework Activation", start_row = 15, end_row = 16, colnum = 1, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
+ # row_spec(c(1:9, 14:15), extra_css = "line-height: 25px;") %>%
+#  row_spec(c(10:13), extra_css = "line-height: 45px;") %>%
+ # column_spec(column = 1, width = "16em", extra_css = "vertical-align: bottom;") %>%
+  #column_spec(column = c(2:4), width = "18em") %>%
+  pack_rows("Description", start_row = 1, end_row = 9, color = '#1bb580') %>%
+  pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
+  pack_rows("Trigger Activation", start_row = 14, end_row = 15, color = '#1bb580') %>%
   kableExtra::footnote(general = "", general_title = "___", symbol = c("Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met."))
 
 
 ```
+
+&nbsp;
+
+## Framework Activation
 
 ```{r framework-activation-table}
 framework_df <- data.frame(row_name = c('Probability of at least one trigger being met', 
@@ -336,13 +324,30 @@ kbl(framework_df,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, # omit row numbers
-    col.names = c("","Framework Activation"), 
+    col.names = c("","Framework"), 
     align = "rc") %>%
-  kable_minimal(c("hover"))
+  kable_minimal(c("hover")) %>%
+  pack_rows("Activation Scenario", start_row = 1, end_row = 2, color = '#1bb580') %>%
+  kableExtra::footnote(general = "", general_title = "___", symbol = c("A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."))
     
 ```
 
 &nbsp;
+
+## Data sources
+
+### Data providers
+`r data_providers` will provide data and/or analytical support.
+
+### Historical shocks 
+A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
+
+The data on historical shocks was provided by `r hist_shocks_source`
+
+## Trigger Development
+`r analysis`
+
+<br>
 
 ## Monitoring
 
