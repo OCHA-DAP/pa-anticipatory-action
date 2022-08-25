@@ -44,7 +44,6 @@ country_name <- "Niger"
 shock <- "Drought"
 #shock_return_period <- "~ 1 in 3 years (35%)"
 nbr_hist_shocks <- 9 # X is a number. #NER: Number of bad reported years 
-hist_period <- "1991 - 2021" # eg: 1980 - 2021
 perf_metrics_filename <- "ner_perf_metrics_table_for_template.csv" 
 learning_table_filename <- "ner_learning_table_for_template.csv" 
 
@@ -57,7 +56,8 @@ funding_a <- 5.25 # input amount only, no $ sign or 'm' for million
 predicted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep' 
 lead_time_a <- '6-4 months' # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
 data_source_a <- 'IRI flexible seasonal forecast' # name of product + provider
-monitored_by_a <- 'IRI'
+hist_period_a <- "1991 - 2020" # period for which historical data is available
+monitored_by_a <- 'IRI' # owner of monitoring responsibilities
 
 # trigger B info  
 type_b <- 'Predictive'
@@ -68,6 +68,7 @@ funding_b <- 9.5
 predicted_window_b <- 'Jul-Sep'
 lead_time_b <- '3-1 months'
 data_source_b <- 'IRI flexible seasonal forecast'
+hist_period_b <- "1991 - 2020"
 monitored_by_b <- 'IRI'
 
 # trigger C info  
@@ -79,6 +80,7 @@ funding_c <- 9.5
 predicted_window_c <- 'N/A'
 lead_time_c <- 'N/A'
 data_source_c <- 'ENACTS or CHIRP'
+hist_period_c <- "1991 - 2020"
 monitored_by_c <- 'IRI'
 
 # Data providers
@@ -246,6 +248,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Predicted Period', 
                                        'Lead Time', 
                                        'Data Source',
+                                       'Historical Data Coverage',
                                        'Probability of being met in a given year', 
                                        'Monitored by',
                                        'Valid Activations: X% of all activations expected to be followed by a shock', 
@@ -264,14 +267,14 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      predicted_window_a, 
                                      lead_time_a, 
                                      data_source_a,
+                                     hist_period_a,
                                      'df_a_atv', ##FIX ME WITH VARIABLE
                                      monitored_by_a,
                                      paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
-                                     paste0(nbr_hist_shocks, " shocks"), 
-                                     hist_period, 
+                                     paste0(nbr_hist_shocks, " shocks"),
                                      package_a, 
                                      funding_a, 
                                      "Covers entire framework",  
@@ -282,6 +285,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      predicted_window_b, 
                                      lead_time_b, 
                                      data_source_b,
+                                     hist_period_b,
                                      'df_b_atv', ##FIX ME WITH VARIABLE
                                      monitored_by_b,
                                      paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
@@ -289,7 +293,6 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
                                      paste0(nbr_hist_shocks, " shocks"),
-                                     hist_period, 
                                      package_b, 
                                      funding_b, 
                                      paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
@@ -300,6 +303,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      predicted_window_c, 
                                      lead_time_c, 
                                      data_source_c,
+                                     hist_period_c,
                                      'df_c_atv', ##FIX ME WITH VARIABLE
                                      monitored_by_c,
                                      paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
@@ -307,7 +311,6 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
                                      paste0(nbr_hist_shocks, " shocks"), 
-                                     hist_period, 
                                      package_c, 
                                      funding_c, 
                                      "Covers entire framework",
