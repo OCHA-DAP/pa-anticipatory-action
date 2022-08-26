@@ -30,22 +30,27 @@ editor_options:
 </style>
 
 ```{r README, echo = FALSE, message = FALSE, warning = FALSE}
-### Make sure the performance metrics and learning table files are in the same folder as the Rmd file
-### Create a "plots" folder sister to RMD file
-### Copy into the folder holding the Rmd file the dummy_perf_metrics_table_for_template.csv, dummy_learning_table_for_template.csv files; replace "dummy" with the country's 3-letter code
+### Create a trigger_report folder under DATA_DIR > /public/processed/{country_pcode3}
+### Once generated, copy the perf_metrics_table.csv to the trigger_report folder on DATA_DIR; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+### Create a "plots" folder sister to the RMD file in the country's analyses folder
+
 ### Update the "hard-coded-values" code chunk 
-### Adjust the number of triggers throughout the Rmd, if there are fewer or more than 3 triggers
-### Manually enter the text in this Rmd under Data Sources, Analysis, and Monitoring & Governance sections
+### Adjust the number of triggers throughout the Rmd (template has 3), if there are fewer or more than 3 triggers
+### Adjust the table footnotes as needed
 ### Knit
 ```
 
 ```{r hard-coded-values, echo = FALSE, message = FALSE, warning = FALSE}
 country_name <- "Niger"
+country_pcode3 <- "ner"
 shock <- "Drought"
 #shock_return_period <- "~ 1 in 3 years (35%)"
-nbr_hist_shocks <- 9 # X is a number. #NER: Number of bad reported years 
-perf_metrics_filename <- "ner_perf_metrics_table_for_template.csv" 
-learning_table_filename <- "ner_learning_table_for_template.csv" 
+nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
+
+data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/", country_pcode3,"/trigger_report/")
+perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table.csv")
+learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 
 # trigger A info  
 type_a <- 'Predictive' # Predictive or Observational?
@@ -87,7 +92,7 @@ monitored_by_c <- 'IRI'
 data_providers <- "The Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger" # will be followed by "provide data and/or analytical support."
 
 # Data sources: historical shocks
-hist_shocks_source <- "IRI Financial Instruments Team and WFP Niger. Partial historical data is available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)." # Prompt: "The data on historical shocks was provided by.." The text should include the final period.
+hist_shocks_source <- "IRI Financial Instruments Team and WFP Niger. Partial historical data is available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger)" # Prompt: "The data on historical shocks was provided by.." .
 
 # Analysis
 analysis <- "The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
