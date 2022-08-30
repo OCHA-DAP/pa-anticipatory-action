@@ -36,7 +36,6 @@ editor_options:
 ### Create a "plots" folder sister to the RMD file in the country's analyses folder
 ### Update the "hard-coded-values" code chunk 
 ### Adjust the number of triggers throughout the Rmd (template has 3), if there are fewer or more than 3 triggers
-### Adjust the table footnotes as needed
 ### Knit
 ```
 
@@ -44,12 +43,13 @@ editor_options:
 country_name <- "Niger"
 country_pcode3 <- "ner"
 shock <- "Drought"
-#shock_return_period <- "~ 1 in 3 years (35%)"
 nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
 
 data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/", country_pcode3,"/trigger_report/")
 perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table.csv")
+perf_metrics_per_month_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_per_month.csv") # only applies to triggers with multiple timepoints
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
+ci <- 95 # which confidence intervals are presented? An integer between 0 and 100
 
 # trigger A info  
 type_a <- 'Predictive' # Predictive or Observational?
@@ -86,6 +86,11 @@ lead_time_c <- 'N/A'
 data_source_c <- 'ENACTS or CHIRP'
 hist_period_c <- "1991 - 2020"
 monitored_by_c <- 'IRI'
+
+# Table footnotes
+trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met. See Annex for performance metrics per timepoint."
+
+framework_table_footnote <- "A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."
 
 # Data providers
 data_providers <- "The Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger" # will be followed by "provide data and/or analytical support."
@@ -300,7 +305,7 @@ kbl(snapshot_df,
   pack_rows("Description", start_row = 1, end_row = 9, color = '#1bb580') %>%
   pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
   pack_rows("Programming and Funding", start_row = 14, end_row = 15, color = '#1bb580') %>%
-  kableExtra::footnote(general = "", general_title = "", symbol = c("Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met."))
+  kableExtra::footnote(general = "", general_title = "", symbol = c(trigger_table_footnote))
 
 ```
 
@@ -326,7 +331,7 @@ kbl(framework_df,
   column_spec(column = 1, width = "28em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "20em") %>%
   pack_rows("Activation Scenario", start_row = 1, end_row = 2, color = '#1bb580') %>%
-  kableExtra::footnote(general = "", general_title = "", symbol = c("A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."))
+  kableExtra::footnote(general = "", general_title = "", symbol = c(framework_table_footnote))
     
 ```
 
