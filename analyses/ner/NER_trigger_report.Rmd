@@ -227,7 +227,7 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 ***
 ## Trigger Mechanism Snapshot
 
-<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform `r ci`% of the time. Green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform `r ci`% of the time. Blue confidence intervals refer to activations, green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
 
 &nbsp;
 
@@ -255,7 +255,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      lead_time_a, 
                                      data_source_a,
                                      hist_period_a,
-                                     'df_a_atv', ##FIX ME WITH VARIABLE
+                                     paste0("<img src=plots/trimmed_trigger_a_atv_ci.png"), 
                                      monitored_by_a,
                                      paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
                                      paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
@@ -270,7 +270,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      lead_time_b, 
                                      data_source_b,
                                      hist_period_b,
-                                     'df_b_atv', ##FIX ME WITH VARIABLE
+                                     paste0("<img src=plots/trimmed_trigger_b_atv_ci.png"), 
                                      monitored_by_b,
                                      paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
                                      paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
@@ -285,7 +285,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      lead_time_c, 
                                      data_source_c,
                                      hist_period_c,
-                                     'df_c_atv', ##FIX ME WITH VARIABLE
+                                     paste0("<img src=plots/trimmed_trigger_c_atv_ci.png"),
                                      monitored_by_c,
                                      paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
                                      paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
