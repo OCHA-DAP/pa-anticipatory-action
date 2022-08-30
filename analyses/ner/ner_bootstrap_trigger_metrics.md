@@ -40,8 +40,8 @@ from src.indicators.drought.config import Config
 config=Config()
 iso3="ner"
 country_data_exploration_dir = Path(config.DATA_DIR)/config.PRIVATE_DIR/"exploration"/iso3
-input_path=country_data_exploration_dir/"trigger_performance"/"historical_activations_trigger_v1.csv"
-output_path=country_data_exploration_dir/"trigger_performance"/"perf_metrics_table_for_template.csv"
+trigger_perf_path=country_data_exploration_dir/"trigger_performance"
+input_path=trigger_perf_path/"historical_activations_trigger_v1.csv"
 ```
 
 ```python
@@ -56,13 +56,13 @@ def bootstrap_resample(df, n_bootstrap=1_000):
           "det": calc_det(df_rs.TP,df_rs.FN),
             "mis": calc_mis(df_rs.TP,df_rs.FN),
             "acc": calc_acc(df_rs.TP,df_rs.TN,df_rs.FP,df_rs.FN),
+            "atv": calc_atv(df_rs.TP,df_rs.TN,df_rs.FP,df_rs.FN),
           'nTP': df_rs.TP.sum(),
           'nFP': df_rs.FP.sum(),
           'nFN': df_rs.FN.sum()
       }, ignore_index=True)
     df_results = df_results.dropna()
     return df_results
-
 
 def calc_far(TP,FP):
     return FP/(TP+FP)
@@ -74,10 +74,13 @@ def calc_det(TP,FN):
     return TP/(TP+FN)
 
 def calc_mis(TP,FN):
-    return TP/(TP+FN)
+    return FN/(TP+FN)
 
 def calc_acc(TP,TN,FP,FN):
     return (TP+TN)/(TP+TN+FP+FN)
+
+def calc_atv(TP,TN,FP,FN):
+    return (TP+FP)/(TP+TN+FP+FN)
 ```
 
 ## Load data
@@ -134,7 +137,7 @@ print(f"acc: {calc_acc(df_sum.TP,df_sum.TN,df_sum.FP,df_sum.FN)}")
 ```python
 # Bootstrap resampling
 # 10,000 is better but 1,000 is faster
-df_results = bootstrap_resample(df)#,n_bootstrap=10000)
+df_results = bootstrap_resample(df)
 ```
 
 ```python
@@ -176,25 +179,114 @@ Now that we have seen how it works for one trigger moment, we compute the metric
 and write them to a dataframe. 
 
 ```python
-df_trig_met=pd.DataFrame(columns=["trigger","metric","point","value"])
-metric_list=["far","var","det","mis","acc"]
-for trigger_month in df_all.columns: 
-    #reshape to dataframe with one column per indicator
-    df=df_all[trigger_month].to_frame()
-    for metric in ["FP","TP","TN","FN"]:
-        df[metric]=np.where(df[trigger_month]==metric,1,0)
-    #get the bootstrap results
-    df_results = bootstrap_resample(df,n_bootstrap=10000)
-    for metric in metric_list: 
-        df_trig_met=df_trig_met.append({"metric":metric,"point":"central","value":df_results[metric].median(),"trigger":trigger_month},ignore_index=True)
-        df_trig_met=df_trig_met.append({"metric":metric,"point":"low_end","value":df_results[metric].quantile(0.05),"trigger":trigger_month},ignore_index=True)
-        df_trig_met=df_trig_met.append({"metric":metric,"point":"high_end","value":df_results[metric].quantile(0.95),"trigger":trigger_month},ignore_index=True)
+save_file=True
+metric_list=["far","var","det","mis","acc","atv"]
+for confidence_interval in [0.8,0.9,0.95]:
+    print((1-confidence_interval)/2)
+    print(1-((1-confidence_interval)/2))
+    df_trig_met=pd.DataFrame(columns=["trigger","metric","point","value"])
+    for trigger_month in df_all.columns: 
+        #reshape to dataframe with one column per indicator
+        df=df_all[trigger_month].to_frame()
+        for metric in ["FP","TP","TN","FN"]:
+            df[metric]=np.where(df[trigger_month]==metric,1,0)
+        #get the bootstrap results
+        df_results = bootstrap_resample(df,n_bootstrap=10000)
+        for metric in metric_list: 
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"central","value":df_results[metric].median(),"trigger":trigger_month},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"low_end","value":df_results[metric].quantile((1-confidence_interval)/2),"trigger":trigger_month},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"high_end","value":df_results[metric].quantile(1-((1-confidence_interval)/2)),"trigger":trigger_month},ignore_index=True)
+    if save_file: 
+        df_trig_met["dummy"]=1
+        output_filename=f"perf_metrics_table_for_template_per_month_ci_{confidence_interval}.csv"
+        df_trig_met.to_csv(trigger_perf_path/output_filename,index=False)
+```
+
+### Aggregate months
+There are two funding packages: from Jan-March and from April-Jun. 
+If there is an activation during one of those period, that whole packages is released. 
+And the trigger cannot be reached anymore during the other months of that "package". 
+
+We thus want to know the performance over those two "packages". 
+
+
+
+```python
+#load data of when trigger activated for each month
+df_all=pd.read_csv(input_path,index_col=0)
 ```
 
 ```python
-df_trig_met
+#change df_all to more machine usable format
+df_act=df_all.loc[:,~df_all.columns.str.contains(".1")]
+df_act=df_act.rename(columns={"all-years":"bad-year"})
+df_act=df_act.iloc[1:]
+df_act.index.rename("year",inplace=True)
+df_act.index=df_act.index.astype(int)
 ```
 
 ```python
-df_trig_met.to_csv(output_path,index=False)
+#1 indicates activation or observed bad year (i.e. wanted to activate)
+#0 no activation/no bad year observed
+df_act_num=df_act.replace("bad",True).replace("yes",True).replace(np.nan,False)
+```
+
+```python
+df_act_num.head()
+```
+
+```python
+periods=[["Jan","Feb","Mar"],["Apr","May","June"]]
+```
+
+```python
+save_file=True
+metric_list=["far","var","det","mis","acc","atv"]
+col_obs="bad-year"
+col_act="activation"
+for confidence_interval in [0.8,0.9,0.95]:
+    print((1-confidence_interval)/2)
+    print(1-((1-confidence_interval)/2))
+    df_trig_met=pd.DataFrame(columns=["trigger","metric","point","value"])
+    for period in periods: 
+        #reshape to dataframe with one column per indicator
+        df_sel=df_act_num[["bad-year"]+periods[0]]
+        #take the max over the period
+        #i.e. if activated in one month, that period is activated
+        df_sel["activation"]=df_sel[periods[0]].max(axis=1)
+
+        df_sel["TP"]=np.where((df_sel[col_obs])&(df_sel[col_act]),1,0)
+        df_sel["FP"]=np.where((~df_sel[col_obs])&(df_sel[col_act]),1,0)
+        df_sel["TN"]=np.where((~df_sel[col_obs])&(~df_sel[col_act]),1,0)
+        df_sel["FN"]=np.where((df_sel[col_obs])&(~df_sel[col_act]),1,0)
+        #get the bootstrap results
+        df_results = bootstrap_resample(df_sel,n_bootstrap=10000)
+        for metric in metric_list: 
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"central","value":df_results[metric].median(),"trigger":trigger_month},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"low_end","value":df_results[metric].quantile((1-confidence_interval)/2),"trigger":trigger_month},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"high_end","value":df_results[metric].quantile(1-((1-confidence_interval)/2)),"trigger":trigger_month},ignore_index=True)
+    if save_file: 
+        df_trig_met["dummy"]=1
+        output_filename=f"perf_metrics_table_for_template_per_period_ci_{confidence_interval}.csv"
+        df_trig_met.to_csv(trigger_perf_path/output_filename,index=False)
+```
+
+#### Sanity check values
+
+```python
+df_sel
+```
+
+```python
+df_results
+```
+
+```python
+# Plot distribution
+df_results.hist();
+plt.show()
+```
+
+```python
+
 ```
