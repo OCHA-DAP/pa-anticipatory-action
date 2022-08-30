@@ -365,7 +365,8 @@ kbl(learning_table,
     row.names = FALSE, # omit row numbers
     col.names = c("Decision","Rationale", "Assumption", "Open Question"), 
     align = "llll") %>%
-  kable_minimal(c("hover", "striped"))
+  kable_minimal(c("hover", "striped")) %>%
+  column_spec(column = c(1:4), width = "28em")
 
 ```
 
@@ -373,7 +374,7 @@ kbl(learning_table,
 
 ## Annex
 
-<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics for the predictive triggers per timepoint. </p>
+<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics of the predictive triggers per timepoint. </p>
 
 &nbsp;
 
