@@ -133,9 +133,9 @@ lapply(packages, library, character.only = TRUE)
 ```
 
 ```{r functions}
-computeCIwidths <- function(metric_name, trigger_id) { 
+computeCIwidths <- function(perf_metrics_df, metric_name, trigger_id) { 
 
-  perf_metrics_data %>%
+  perf_metrics_df %>%
   filter(trigger == trigger_id) %>%
   select(-trigger) %>%
   filter(metric == metric_name) %>%
@@ -167,29 +167,29 @@ funding_c <- paste0('$',funding_c,'m')
 ```{r compute-CI-measurements}
 
 # compute width and position of CIs for trigger a
-df_a_var <- computeCIwidths(metric_name = 'var', trigger_id = 'a') # valid activation rate 
-df_a_det <- computeCIwidths(metric_name = 'det', trigger_id = 'a') # detection rate
-df_a_far <- computeCIwidths(metric_name = 'far', trigger_id = 'a') # false alarm rate
-df_a_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'a') # miss rate
-df_a_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
+df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'a') # valid activation rate 
+df_a_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'a') # detection rate
+df_a_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'a') # false alarm rate
+df_a_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'a') # miss rate
+df_a_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
 
 # compute width and position of CIs for trigger b
-df_b_var <- computeCIwidths(metric_name = 'var', trigger_id = 'b') # valid activation rate 
-df_b_det <- computeCIwidths(metric_name = 'det', trigger_id = 'b') # detection rate
-df_b_far <- computeCIwidths(metric_name = 'far', trigger_id = 'b') # false alarm rate
-df_b_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'b') # miss rate
-df_b_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
+df_b_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'b') # valid activation rate 
+df_b_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'b') # detection rate
+df_b_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'b') # false alarm rate
+df_b_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'b') # miss rate
+df_b_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
 
 # compute width and position of CIs for trigger c
-df_c_var <- computeCIwidths(metric_name = 'var', trigger_id = 'c') # valid activation rate 
-df_c_det <- computeCIwidths(metric_name = 'det', trigger_id = 'c') # detection rate
-df_c_far <- computeCIwidths(metric_name = 'far', trigger_id = 'c') # false alarm rate
-df_c_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'c') # miss rate
-df_c_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
+df_c_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'c') # valid activation rate 
+df_c_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'c') # detection rate
+df_c_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'c') # false alarm rate
+df_c_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'c') # miss rate
+df_c_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
 
 # compute width and position of CIs for the framework
-df_fmwk_min <- computeCIwidths(metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
-df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
+df_fmwk_min <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
+df_fmwk_ful <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
 
 ```
 
@@ -377,55 +377,128 @@ kbl(learning_table,
 
 ## Annex
 
-Performance metrics for the predictive triggers reported per timepoint.
+This table reports the performance metrics for the predictive triggers per timepoint.
+
+```{r timepoint-table-setup}
+
+# read in performance metrics file
+perf_metrics_per_month_data <- read.csv(perf_metrics_per_month_filename,
+                              colClasses = c('character', 'character', 'character', 'numeric', 'integer')
+                              )
+
+# format performance metrics values
+perf_metrics_per_month_data$value <- round(100 * perf_metrics_per_month_data$value, 0)
+
+# compute width and position of CIs for trigger at timepoint: Jan
+jan_var <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'var', trigger_id = 'Jan') # valid activation rate 
+jan_det <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'det', trigger_id = 'Jan') # detection rate
+jan_far <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'far', trigger_id = 'Jan') # false alarm rate
+jan_mis <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'mis', trigger_id = 'Jan') # miss rate
+
+# compute width and position of CIs for trigger at timepoint: Feb
+feb_var <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'var', trigger_id = 'Feb') # valid activation rate 
+feb_det <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'det', trigger_id = 'Feb') # detection rate
+feb_far <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'far', trigger_id = 'Feb') # false alarm rate
+feb_mis <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'mis', trigger_id = 'Feb') # miss rate
+
+# compute width and position of CIs for trigger at timepoint: Mar
+mar_var <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'var', trigger_id = 'Mar') # valid activation rate 
+mar_det <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'det', trigger_id = 'Mar') # detection rate
+mar_far <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'far', trigger_id = 'Mar') # false alarm rate
+mar_mis <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'mis', trigger_id = 'Mar') # miss rate
+
+# compute width and position of CIs for trigger at timepoint: Apr
+apr_var <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'var', trigger_id = 'Apr') # valid activation rate 
+apr_det <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'det', trigger_id = 'Apr') # detection rate
+apr_far <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'far', trigger_id = 'Apr') # false alarm rate
+apr_mis <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'mis', trigger_id = 'Apr') # miss rate
+
+# compute width and position of CIs for trigger at timepoint: May
+may_var <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'var', trigger_id = 'May') # valid activation rate 
+may_det <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'det', trigger_id = 'May') # detection rate
+may_far <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'far', trigger_id = 'May') # false alarm rate
+may_mis <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'mis', trigger_id = 'May') # miss rate
+
+# compute width and position of CIs for trigger at timepoint: June
+jun_var <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'var', trigger_id = 'June') # valid activation rate 
+jun_det <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'det', trigger_id = 'June') # detection rate
+jun_far <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'far', trigger_id = 'June') # false alarm rate
+jun_mis <- computeCIwidths(perf_metrics_df = perf_metrics_per_month_data, metric_name = 'mis', trigger_id = 'June') # miss rate
+
+# plot CIs for every timepoint
+plotCI(trigger_id = 'Jan', metric = 'var', ci_widths_df = 'jan_var') 
+plotCI(trigger_id = 'Jan', metric = 'det', ci_widths_df = 'jan_det')
+plotCI(trigger_id = 'Jan', metric = 'far', ci_widths_df = 'jan_far')
+plotCI(trigger_id = 'Jan', metric = 'mis', ci_widths_df = 'jan_mis')
+
+plotCI(trigger_id = 'Feb', metric = 'var', ci_widths_df = 'feb_var') 
+plotCI(trigger_id = 'Feb', metric = 'det', ci_widths_df = 'feb_det')
+plotCI(trigger_id = 'Feb', metric = 'far', ci_widths_df = 'feb_far') 
+plotCI(trigger_id = 'Feb', metric = 'mis', ci_widths_df = 'feb_mis')
+
+plotCI(trigger_id = 'Mar', metric = 'var', ci_widths_df = 'mar_var') 
+plotCI(trigger_id = 'Mar', metric = 'det', ci_widths_df = 'mar_det') 
+plotCI(trigger_id = 'Mar', metric = 'far', ci_widths_df = 'mar_far') 
+plotCI(trigger_id = 'Mar', metric = 'mis', ci_widths_df = 'mar_mis') 
+
+plotCI(trigger_id = 'Apr', metric = 'var', ci_widths_df = 'apr_var') 
+plotCI(trigger_id = 'Apr', metric = 'det', ci_widths_df = 'apr_det') 
+plotCI(trigger_id = 'Apr', metric = 'far', ci_widths_df = 'apr_far') 
+plotCI(trigger_id = 'Apr', metric = 'mis', ci_widths_df = 'apr_mis') 
+
+plotCI(trigger_id = 'May', metric = 'var', ci_widths_df = 'mar_var') 
+plotCI(trigger_id = 'May', metric = 'det', ci_widths_df = 'mar_det') 
+plotCI(trigger_id = 'May', metric = 'far', ci_widths_df = 'mar_far') 
+plotCI(trigger_id = 'May', metric = 'mis', ci_widths_df = 'mar_mis') 
+
+plotCI(trigger_id = 'June', metric = 'var', ci_widths_df = 'jun_var') 
+plotCI(trigger_id = 'June', metric = 'det', ci_widths_df = 'jun_det') 
+plotCI(trigger_id = 'June', metric = 'far', ci_widths_df = 'jun_far') 
+plotCI(trigger_id = 'June', metric = 'mis', ci_widths_df = 'jun_mis') 
+
+```
+
 
 ```{r timepoint-table, include = TRUE}
+timepoint_df <- data.frame(row_name = c('Valid Activations', 
+                                       'Detections', 
+                                       'False Alarms', 
+                                       'Misses'),
+                       trigger_jan = c(paste0("<img src=plots/trimmed_trigger_Jan_var_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Jan_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Jan_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Jan_mis_ci.png")),
+                       trigger_feb = c(paste0("<img src=plots/trimmed_trigger_Feb_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_Feb_det_ci.png"),  
+                                     paste0("<img src=plots/trimmed_trigger_Feb_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Feb_mis_ci.png")),
+                       trigger_mar = c(paste0("<img src=plots/trimmed_trigger_Mar_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_Mar_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Mar_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Mar_mis_ci.png")),
+                       trigger_apr = c(paste0("<img src=plots/trimmed_trigger_Apr_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_Apr_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Apr_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_Apr_mis_ci.png")),
+                       trigger_may = c(paste0("<img src=plots/trimmed_trigger_May_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_May_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_May_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_May_mis_ci.png")),
+                       trigger_jun = c(paste0("<img src=plots/trimmed_trigger_June_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_June_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_June_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_June_mis_ci.png")))
 
-timepoint_df <- data.frame(row_name = c('Valid Activations (X% of all activations expected to be followed by a shock)', 
-                                       'Detections (An activation is expected to occur for X% of the shocks)', 
-                                       'False Alarms (X% of all activations expected NOT to be followed by a shock)', 
-                                       'Misses (X% of the time there is a shock, no activation is expected)'),
-                       trigger_jan = c(paste0("<img src=plots/trimmed_trigger_a_var_ci.png"),  # FIX ME RENAME FILES
-                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png")),
-                       trigger_feb = c(paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
-                                     paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_b_mis_ci.png")),
-                       trigger_mar = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")),
-                       trigger_apr = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")),
-                       trigger_may = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")),
-                       trigger_jun = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"))
-
-kbl(snapshot_df,
+kbl(timepoint_df,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, # omit row numbers
     col.names = c("","January", "February", "March", "April", "May", "June"), 
     align = "rcccccc") %>%
-  kable_minimal(c("hover")) 
-
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
+  column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em") 
 #%>%
-#  row_spec(c(1:9, 14:15), extra_css = "line-height: 25px;") %>%
-#  row_spec(c(10:13), extra_css = "line-height: 45px;") %>%
-#  column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
-#  column_spec(column = c(2:4), width = "20em") %>%
-#  pack_rows("Description", start_row = 1, end_row = 9, color = '#1bb580') %>%
-#  pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
-#  pack_rows("Programming and Funding", start_row = 14, end_row = 15, color = '#1bb580') %>%
-#  kableExtra::footnote(general = "", general_title = "", symbol = c(trigger_table_footnote))
+  #column_spec(column = c(2:4), width = "20em")
 
 ```
