@@ -227,9 +227,9 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 ***
 ## Trigger Mechanism Snapshot
 
-&nbsp;
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform `r ci`% of the time. Green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
 
-This table summarises the definition of the triggers and their performance in signaling the target severe shocks. The performance metrics are presented as `r ci`% confidence intervals to illustrate the inherent uncertainty of these measurements. The coloured graphs represent the ranges within which the trigger will perform `r ci`% of the time.
+&nbsp;
 
 ```{r mechanism-snapshot, include = TRUE}
 
@@ -316,6 +316,10 @@ kbl(snapshot_df,
 
 ## Framework Activation
 
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of a framework activation in a given year under various scenarios.</p>
+
+&nbsp;
+
 ```{r framework-activation-table}
 framework_df <- data.frame(row_name = c('At least one trigger being met (probability in %)', 
                                         'Full framework activation (probability in %)'),
@@ -341,23 +345,15 @@ kbl(framework_df,
 &nbsp;
 
 ## Data Underlying Trigger Mechanism
-
-`r data_providers` provide data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA.
-
-`r analysis`
-
-<br>
+<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` provide data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA. `r analysis` </p>
 
 ## Monitoring Process
-
-`r monitoring_process`
-
-<br>
+<p style="color:black;font-size:16px;text-align:left;"> `r monitoring_process` </p>
 
 ## Learning Opportunities
-This table summarises the decisions, assumptions, and open questions that arose during trigger development. They are documented for transparency and to inform the learning agenda.
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the decisions, assumptions, and open questions that arose during trigger development. They are documented for transparency and to inform the learning agenda.</p>
 
-<br>
+&nbsp;
 
 ```{r learning-table}
 
@@ -377,7 +373,9 @@ kbl(learning_table,
 
 ## Annex
 
-This table reports the performance metrics for the predictive triggers per timepoint.
+<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics for the predictive triggers per timepoint. </p>
+
+&nbsp;
 
 ```{r timepoint-table-setup}
 
