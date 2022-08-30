@@ -316,7 +316,7 @@ kbl(snapshot_df,
 
 ## Framework Activation
 
-<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of a framework activation in a given year under various scenarios.</p>
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of a framework activation in a given year under various scenarios. The estimates are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The graphs show the ranges of probabilities that the scenario is to occur `r ci`% of the time.</p>
 
 &nbsp;
 
