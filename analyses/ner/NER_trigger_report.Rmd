@@ -34,7 +34,6 @@ editor_options:
 ### Once generated, copy the perf_metrics_table.csv to the trigger_report folder on DATA_DIR; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
 ### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
 ### Create a "plots" folder sister to the RMD file in the country's analyses folder
-
 ### Update the "hard-coded-values" code chunk 
 ### Adjust the number of triggers throughout the Rmd (template has 3), if there are fewer or more than 3 triggers
 ### Adjust the table footnotes as needed
@@ -148,6 +147,7 @@ computeCIwidths <- function(metric_name, trigger_id) {
 perf_metrics_data <- read.csv(perf_metrics_filename,
                               colClasses = c('character', 'character', 'character', 'numeric', 'integer')
                               )
+
 # format performance metrics values
 perf_metrics_data$value <- round(100 * perf_metrics_data$value, 0)
 
@@ -222,9 +222,6 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 ## Trigger Mechanism Snapshot
 
 &nbsp;
-```{r metrics definitions}
-
-```
 
 ```{r mechanism snapshot, include = TRUE}
 
@@ -304,7 +301,6 @@ kbl(snapshot_df,
   pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
   pack_rows("Programming and Funding", start_row = 14, end_row = 15, color = '#1bb580') %>%
   kableExtra::footnote(general = "", general_title = "", symbol = c("Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met."))
-
 
 ```
 
