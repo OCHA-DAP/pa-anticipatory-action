@@ -146,8 +146,10 @@ computeCIwidths <- function(metric_name, trigger_id) {
 
 # read in performance metrics file
 perf_metrics_data <- read.csv(perf_metrics_filename,
-                              colClasses = c('character', 'character', 'character', 'integer', 'integer')
+                              colClasses = c('character', 'character', 'character', 'numeric', 'integer')
                               )
+# format performance metrics values
+perf_metrics_data$value <- round(100 * perf_metrics_data$value, 0)
 
 # format funding amounts
 funding_a <- paste0('$',funding_a,'m')
