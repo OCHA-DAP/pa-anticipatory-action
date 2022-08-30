@@ -50,7 +50,7 @@ data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/", coun
 perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table.csv")
 perf_metrics_per_month_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_per_month.csv") # only applies to triggers with multiple timepoints
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
-ci <- 95 # which confidence intervals are presented? An integer between 0 and 100
+ci <- 90 # which confidence intervals are presented? An integer between 0 and 100
 
 # trigger A info  
 type_a <- 'Predictive' # Predictive or Observational?
