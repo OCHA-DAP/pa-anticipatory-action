@@ -36,6 +36,7 @@ editor_options:
 ### Create a "plots" folder sister to the RMD file in the country's analyses folder
 ### Update the "hard-coded-values" code chunk 
 ### Adjust the number of triggers throughout the Rmd (template has 3), if there are fewer or more than 3 triggers
+### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed if there are triggers with multiple activation timepoints
 ### Knit
 ```
 
@@ -146,7 +147,7 @@ computeCIwidths <- function(metric_name, trigger_id) {
 }
 ```
 
-```{r data loading and formatting}
+```{r data-loading-and-formatting}
 
 # read in performance metrics file
 perf_metrics_data <- read.csv(perf_metrics_filename,
@@ -163,7 +164,7 @@ funding_c <- paste0('$',funding_c,'m')
 
 ```
 
-```{r compute CI measurements}
+```{r compute-CI-measurements}
 
 # compute width and position of CIs for trigger a
 df_a_var <- computeCIwidths(metric_name = 'var', trigger_id = 'a') # valid activation rate 
@@ -192,7 +193,7 @@ df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # 
 
 ```
 
-```{r data plotting}
+```{r data-plotting}
 
 source("../country_template/docs/computeCIplots.R")
 
@@ -228,7 +229,9 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 
 &nbsp;
 
-```{r mechanism snapshot, include = TRUE}
+This table summarises the definition of the triggers and their performance in signaling the target severe shocks. The performance metrics are presented as `r ci`% confidence intervals to illustrate the inherent uncertainty of these measurements. The coloured graphs represent the ranges within which the trigger will perform `r ci`% of the time.
+
+```{r mechanism-snapshot, include = TRUE}
 
 snapshot_df <- data.frame(row_name = c('Type', 
                                        'Monitored Area',
@@ -356,7 +359,7 @@ This table summarises the decisions, assumptions, and open questions that arose 
 
 <br>
 
-```{r learning table}
+```{r learning-table}
 
 learning_table <- read.csv(learning_table_filename)
 
@@ -371,3 +374,58 @@ kbl(learning_table,
 ```
 
 &nbsp;
+
+## Annex
+
+Performance metrics for the predictive triggers reported per timepoint.
+
+```{r timepoint-table, include = TRUE}
+
+timepoint_df <- data.frame(row_name = c('Valid Activations (X% of all activations expected to be followed by a shock)', 
+                                       'Detections (An activation is expected to occur for X% of the shocks)', 
+                                       'False Alarms (X% of all activations expected NOT to be followed by a shock)', 
+                                       'Misses (X% of the time there is a shock, no activation is expected)'),
+                       trigger_jan = c(paste0("<img src=plots/trimmed_trigger_a_var_ci.png"),  # FIX ME RENAME FILES
+                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png")),
+                       trigger_feb = c(paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
+                                     paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_mis_ci.png")),
+                       trigger_mar = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")),
+                       trigger_apr = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")),
+                       trigger_may = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")),
+                       trigger_jun = c(paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"))
+
+kbl(snapshot_df,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, # omit row numbers
+    col.names = c("","January", "February", "March", "April", "May", "June"), 
+    align = "rcccccc") %>%
+  kable_minimal(c("hover")) 
+
+#%>%
+#  row_spec(c(1:9, 14:15), extra_css = "line-height: 25px;") %>%
+#  row_spec(c(10:13), extra_css = "line-height: 45px;") %>%
+#  column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
+#  column_spec(column = c(2:4), width = "20em") %>%
+#  pack_rows("Description", start_row = 1, end_row = 9, color = '#1bb580') %>%
+#  pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
+#  pack_rows("Programming and Funding", start_row = 14, end_row = 15, color = '#1bb580') %>%
+#  kableExtra::footnote(general = "", general_title = "", symbol = c(trigger_table_footnote))
+
+```
