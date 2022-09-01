@@ -30,6 +30,8 @@ editor_options:
 </style>
 
 ```{r README, echo = FALSE, message = FALSE, warning = FALSE}
+### NOTE: The template is set up for two 3-timepoint predictive triggers and a 1-timepoint observational trigger
+
 ### Create a trigger_report folder under DATA_DIR > /public/processed/{country_pcode3}
 ### Once generated, copy the perf_metrics_table.csv to the trigger_report folder on DATA_DIR; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
 ### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
@@ -53,6 +55,7 @@ perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 
 # trigger A info  
+name_a <- "Trigger1" # what name is the trigger listed as in the eprf_metrics_table?
 type_a <- 'Predictive' # Predictive or Observational?
 monitored_area_a <- "National"
 timepoints_a<- 'Jan, Feb, Mar' # eg: 'Jan, Feb, Mar'
@@ -65,6 +68,7 @@ hist_period_a <- "1991 - 2020" # period for which historical data is available
 monitored_by_a <- 'IRI' # owner of monitoring responsibilities
 
 # trigger B info  
+name_b <- "Trigger2"
 type_b <- 'Predictive'
 monitored_area_b <- "National"
 timepoints_b <- 'Apr, May, Jun'
@@ -77,6 +81,7 @@ hist_period_b <- "1991 - 2020"
 monitored_by_b <- 'IRI'
 
 # trigger C info  
+name_c <- "Trigger3"
 type_c <- 'Observational'
 monitored_area_c <- "National"
 timepoints_c <- 'Aug'
@@ -89,9 +94,9 @@ hist_period_c <- "1991 - 2020"
 monitored_by_c <- 'IRI'
 
 # Table footnotes
-trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met. See Annex for performance metrics per timepoint."
+trigger_table_footnote <- "Triggers A and B can reach their threshold and activate independently from one another. Trigger C can only activate the framework if Trigger B was not met. See Annex for performance metrics per timepoint."
 
-framework_table_footnote <- "A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."
+framework_table_footnote <- "A full activation is defined as Triggers A and B being met, or as Trigger A and C being met."
 
 # Data providers
 data_providers <- "The Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger" # will be followed by "provide data and/or analytical support."
@@ -167,25 +172,25 @@ funding_c <- paste0('$',funding_c,'m')
 ```{r compute-CI-measurements}
 
 # compute width and position of CIs for trigger a
-df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'a') # valid activation rate 
-df_a_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'a') # detection rate
-df_a_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'a') # false alarm rate
-df_a_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'a') # miss rate
-df_a_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
+df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_a) # valid activation rate 
+df_a_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_a) # detection rate
+df_a_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_a) # false alarm rate
+df_a_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_a) # miss rate
+df_a_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_a) # probability of trigger activation
 
 # compute width and position of CIs for trigger b
-df_b_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'b') # valid activation rate 
-df_b_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'b') # detection rate
-df_b_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'b') # false alarm rate
-df_b_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'b') # miss rate
-df_b_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
+df_b_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_b) # valid activation rate 
+df_b_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_b) # detection rate
+df_b_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_b) # false alarm rate
+df_b_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_b) # miss rate
+df_b_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_b) # probability of trigger activation
 
 # compute width and position of CIs for trigger c
-df_c_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'c') # valid activation rate 
-df_c_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'c') # detection rate
-df_c_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'c') # false alarm rate
-df_c_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'c') # miss rate
-df_c_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
+df_c_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_c) # valid activation rate 
+df_c_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_c) # detection rate
+df_c_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_c) # false alarm rate
+df_c_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_c) # miss rate
+df_c_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_c) # probability of trigger activation
 
 # compute width and position of CIs for the framework
 df_fmwk_min <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
@@ -380,7 +385,6 @@ kbl(learning_table,
 
 ```{r timepoint-table-setup}
 
-
 # compute width and position of CIs for trigger at timepoint: Jan
 jan_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'Jan') # valid activation rate 
 jan_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'Jan') # detection rate
@@ -490,7 +494,5 @@ kbl(timepoint_df,
   kable_minimal(c("hover")) %>%
   row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em") 
-#%>%
-  #column_spec(column = c(2:4), width = "20em")
 
 ```
