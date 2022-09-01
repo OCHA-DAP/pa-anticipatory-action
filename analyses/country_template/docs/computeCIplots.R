@@ -32,6 +32,11 @@ low.x <- ci_df %>% # position of CI's low end
 
 high.x <- below_width + ci_width # position of CI's high end
 
+# compute labels
+low_end_label <- ci_widths_df %>% filter(point == 'low_end') %>% select(value) %>% as.numeric()
+central_label <- ci_widths_df %>% filter(point == 'central') %>% select(value) %>% as.numeric()
+high_end_label <- ci_widths_df %>% filter(point == 'high_end') %>% select(value) %>% as.numeric()
+
 # plot
 ci_color <- ifelse(metric %in% c('var', 'det'), "#1bb580", ifelse(metric %in% c('min', 'ful', 'atv'), "#007ce1" ,"#FF3333")) # select green for detection and valid activation rates, blue for framework probabilities, red for the others
 
@@ -46,7 +51,7 @@ metric_plot <- ci_df %>%
   geom_segment(y = high.x, yend = high.x, x = 0.5, xend = 1.6, color = "#444444", size = 0.5) + # high ci end line
   geom_label(aes(x = 2,
                  y = central.x,
-                 label = central.x,
+                 label = central_label,
                  vjust = 1),
              size = 8, # font size
              nudge_x = 0.1, # bring label closer to graph
@@ -56,7 +61,7 @@ metric_plot <- ci_df %>%
              label.size = NA) + # removes border
   geom_label(aes(x = 2,
                  y = low.x,
-                 label = low.x,
+                 label = low_end_label,
                  vjust = 1),
              size = 7,
              nudge_x = 0,
@@ -65,7 +70,7 @@ metric_plot <- ci_df %>%
              label.size = NA) + # removes border
   geom_label(aes(x = 2,
                  y = high.x,
-                 label = high.x,
+                 label = high_end_label,
                  vjust = 1),
              size = 7,
              nudge_x = 0,
