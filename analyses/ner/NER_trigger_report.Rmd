@@ -46,7 +46,7 @@ country_pcode3 <- "ner"
 shock <- "Drought"
 nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
 
-data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/", country_pcode3,"/trigger_report/")
+data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
 perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table.csv")
 perf_metrics_per_month_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_per_month.csv") # only applies to triggers with multiple timepoints
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
@@ -227,7 +227,7 @@ plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful')
 ***
 ## Trigger Mechanism Snapshot
 
-<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform `r ci`% of the time. Blue confidence intervals refer to activations, green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) that describe the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform `r ci`% of the time. Blue confidence intervals refer to activations, green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
 
 &nbsp;
 
