@@ -179,7 +179,7 @@ Now that we have seen how it works for one trigger moment, we compute the metric
 and write them to a dataframe. 
 
 ```python
-save_file=True
+save_file=False
 metric_list=["far","var","det","mis","acc","atv"]
 for confidence_interval in [0.8,0.9,0.95]:
     print((1-confidence_interval)/2)
@@ -249,6 +249,7 @@ for confidence_interval in [0.8,0.9,0.95]:
     print(1-((1-confidence_interval)/2))
     df_trig_met=pd.DataFrame(columns=["trigger","metric","point","value"])
     for period in periods: 
+        period_str="".join(period)
         #reshape to dataframe with one column per indicator
         df_sel=df_act_num[["bad-year"]+periods[0]]
         #take the max over the period
@@ -260,11 +261,11 @@ for confidence_interval in [0.8,0.9,0.95]:
         df_sel["TN"]=np.where((~df_sel[col_obs])&(~df_sel[col_act]),1,0)
         df_sel["FN"]=np.where((df_sel[col_obs])&(~df_sel[col_act]),1,0)
         #get the bootstrap results
-        df_results = bootstrap_resample(df_sel,n_bootstrap=10000)
+        df_results = bootstrap_resample(df_sel,n_bootstrap=1000)
         for metric in metric_list: 
-            df_trig_met=df_trig_met.append({"metric":metric,"point":"central","value":df_results[metric].median(),"trigger":trigger_month},ignore_index=True)
-            df_trig_met=df_trig_met.append({"metric":metric,"point":"low_end","value":df_results[metric].quantile((1-confidence_interval)/2),"trigger":trigger_month},ignore_index=True)
-            df_trig_met=df_trig_met.append({"metric":metric,"point":"high_end","value":df_results[metric].quantile(1-((1-confidence_interval)/2)),"trigger":trigger_month},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"central","value":df_results[metric].median(),"trigger":period_str},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"low_end","value":df_results[metric].quantile((1-confidence_interval)/2),"trigger":period_str},ignore_index=True)
+            df_trig_met=df_trig_met.append({"metric":metric,"point":"high_end","value":df_results[metric].quantile(1-((1-confidence_interval)/2)),"trigger":period_str},ignore_index=True)
     if save_file: 
         df_trig_met["dummy"]=1
         output_filename=f"perf_metrics_table_for_template_per_period_ci_{confidence_interval}.csv"
@@ -285,6 +286,10 @@ df_results
 # Plot distribution
 df_results.hist();
 plt.show()
+```
+
+```python
+
 ```
 
 ```python
