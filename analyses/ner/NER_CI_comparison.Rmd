@@ -1,5 +1,5 @@
 ---
-title: "NER_CI_comparison"
+title: "NER Confidence Intervals Comparison"
 output: html_document
 date: "2022-08-30"
 ---
@@ -19,6 +19,10 @@ country_name <- "Niger"
 country_pcode3 <- "ner"
 shock <- "Drought"
 data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
+
+name_a <- "Trigger1"
+name_b <- "Trigger2"
+name_c <- "Trigger3"
 
 ```
 
@@ -86,6 +90,11 @@ low.x <- ci_df %>% # position of CI's low end
 
 high.x <- below_width + ci_width # position of CI's high end
 
+# compute labels
+low_end_label <- ci_widths_df %>% filter(point == 'low_end') %>% select(value) %>% as.numeric()
+central_label <- ci_widths_df %>% filter(point == 'central') %>% select(value) %>% as.numeric()
+high_end_label <- ci_widths_df %>% filter(point == 'high_end') %>% select(value) %>% as.numeric()
+
 # plot
 ci_color <- ifelse(metric %in% c('var', 'det'), "#1bb580", ifelse(metric %in% c('min', 'ful', 'atv'), "#007ce1" ,"#FF3333")) # select green for detection and valid activation rates, blue for framework probabilities, red for the others
 
@@ -100,7 +109,7 @@ metric_plot <- ci_df %>%
   geom_segment(y = high.x, yend = high.x, x = 0.5, xend = 1.6, color = "#444444", size = 0.5) + # high ci end line
   geom_label(aes(x = 2,
                  y = central.x,
-                 label = central.x,
+                 label = central_label,
                  vjust = 1),
              size = 8, # font size
              nudge_x = 0.1, # bring label closer to graph
@@ -110,7 +119,7 @@ metric_plot <- ci_df %>%
              label.size = NA) + # removes border
   geom_label(aes(x = 2,
                  y = low.x,
-                 label = low.x,
+                 label = low_end_label,
                  vjust = 1),
              size = 7,
              nudge_x = 0,
@@ -119,7 +128,7 @@ metric_plot <- ci_df %>%
              label.size = NA) + # removes border
   geom_label(aes(x = 2,
                  y = high.x,
-                 label = high.x,
+                 label = high_end_label,
                  vjust = 1),
              size = 7,
              nudge_x = 0,
@@ -158,13 +167,6 @@ magick::image_write(trimmed_metric, path = paste0("plots/trimmed_", trigger_labe
 
 ```
 
-```{r data-loading-and-formatting}
-
-source("../country_template/docs/computeCIplots.R")
-
-```
-
-
 ```{r metrics-80%}
 
 # read in performance metrics file
@@ -178,25 +180,25 @@ perf_metrics_data_80 <- read.csv(perf_metrics_filename_80,
 perf_metrics_data_80$value <- round(100 * perf_metrics_data_80$value, 0)
 
 # compute width and position of CIs for trigger a
-df_a_var_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'var', trigger_id = 'a') # valid activation rate 
-df_a_det_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'det', trigger_id = 'a') # detection rate
-df_a_far_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'far', trigger_id = 'a') # false alarm rate
-df_a_mis_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'mis', trigger_id = 'a') # miss rate
-df_a_atv_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
+df_a_var_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'var', trigger_id = name_a) # valid activation rate 
+df_a_det_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'det', trigger_id = name_a) # detection rate
+df_a_far_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'far', trigger_id = name_a) # false alarm rate
+df_a_mis_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'mis', trigger_id = name_a) # miss rate
+df_a_atv_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'atv', trigger_id = name_a) # probability of trigger activation
 
 # compute width and position of CIs for trigger b
-df_b_var_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'var', trigger_id = 'b') # valid activation rate 
-df_b_det_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'det', trigger_id = 'b') # detection rate
-df_b_far_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'far', trigger_id = 'b') # false alarm rate
-df_b_mis_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'mis', trigger_id = 'b') # miss rate
-df_b_atv_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
+df_b_var_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'var', trigger_id = name_b) # valid activation rate 
+df_b_det_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'det', trigger_id = name_b) # detection rate
+df_b_far_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'far', trigger_id = name_b) # false alarm rate
+df_b_mis_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'mis', trigger_id = name_b) # miss rate
+df_b_atv_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'atv', trigger_id = name_b) # probability of trigger activation
 
 # compute width and position of CIs for trigger c
-df_c_var_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'var', trigger_id = 'c') # valid activation rate 
-df_c_det_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'det', trigger_id = 'c') # detection rate
-df_c_far_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'far', trigger_id = 'c') # false alarm rate
-df_c_mis_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'mis', trigger_id = 'c') # miss rate
-df_c_atv_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
+df_c_var_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'var', trigger_id = name_c) # valid activation rate 
+df_c_det_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'det', trigger_id = name_c) # detection rate
+df_c_far_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'far', trigger_id = name_c) # false alarm rate
+df_c_mis_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'mis', trigger_id = name_c) # miss rate
+df_c_atv_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'atv', trigger_id = name_c) # probability of trigger activation
 
 # compute width and position of CIs for the framework
 df_fmwk_min_80 <- computeCIwidths(perf_metrics_df = perf_metrics_data_80, metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
@@ -237,25 +239,25 @@ perf_metrics_data_90 <- read.csv(perf_metrics_filename_90,
 perf_metrics_data_90$value <- round(100 * perf_metrics_data_90$value, 0)
 
 # compute width and position of CIs for trigger a
-df_a_var_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'var', trigger_id = 'a') # valid activation rate 
-df_a_det_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'det', trigger_id = 'a') # detection rate
-df_a_far_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'far', trigger_id = 'a') # false alarm rate
-df_a_mis_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'mis', trigger_id = 'a') # miss rate
-df_a_atv_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
+df_a_var_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'var', trigger_id = name_a) # valid activation rate 
+df_a_det_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'det', trigger_id = name_a) # detection rate
+df_a_far_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'far', trigger_id = name_a) # false alarm rate
+df_a_mis_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'mis', trigger_id = name_a) # miss rate
+df_a_atv_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'atv', trigger_id = name_a) # probability of trigger activation
 
 # compute width and position of CIs for trigger b
-df_b_var_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'var', trigger_id = 'b') # valid activation rate 
-df_b_det_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'det', trigger_id = 'b') # detection rate
-df_b_far_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'far', trigger_id = 'b') # false alarm rate
-df_b_mis_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'mis', trigger_id = 'b') # miss rate
-df_b_atv_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
+df_b_var_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'var', trigger_id = name_b) # valid activation rate 
+df_b_det_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'det', trigger_id = name_b) # detection rate
+df_b_far_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'far', trigger_id = name_b) # false alarm rate
+df_b_mis_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'mis', trigger_id = name_b) # miss rate
+df_b_atv_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'atv', trigger_id = name_b) # probability of trigger activation
 
 # compute width and position of CIs for trigger c
-df_c_var_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'var', trigger_id = 'c') # valid activation rate 
-df_c_det_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'det', trigger_id = 'c') # detection rate
-df_c_far_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'far', trigger_id = 'c') # false alarm rate
-df_c_mis_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'mis', trigger_id = 'c') # miss rate
-df_c_atv_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
+df_c_var_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'var', trigger_id = name_c) # valid activation rate 
+df_c_det_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'det', trigger_id = name_c) # detection rate
+df_c_far_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'far', trigger_id = name_c) # false alarm rate
+df_c_mis_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'mis', trigger_id = name_c) # miss rate
+df_c_atv_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'atv', trigger_id = name_c) # probability of trigger activation
 
 # compute width and position of CIs for the framework
 df_fmwk_min_90 <- computeCIwidths(perf_metrics_df = perf_metrics_data_90, metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
@@ -297,25 +299,25 @@ perf_metrics_data_95$value <- round(100 * perf_metrics_data_95$value, 0)
 
 
 # compute width and position of CIs for trigger a
-df_a_var_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'var', trigger_id = 'a') # valid activation rate 
-df_a_det_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'det', trigger_id = 'a') # detection rate
-df_a_far_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'far', trigger_id = 'a') # false alarm rate
-df_a_mis_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'mis', trigger_id = 'a') # miss rate
-df_a_atv_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
+df_a_var_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'var', trigger_id = name_a) # valid activation rate 
+df_a_det_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'det', trigger_id = name_a) # detection rate
+df_a_far_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'far', trigger_id = name_a) # false alarm rate
+df_a_mis_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'mis', trigger_id = name_a) # miss rate
+df_a_atv_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'atv', trigger_id = name_a) # probability of trigger activation
 
 # compute width and position of CIs for trigger b
-df_b_var_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'var', trigger_id = 'b') # valid activation rate 
-df_b_det_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'det', trigger_id = 'b') # detection rate
-df_b_far_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'far', trigger_id = 'b') # false alarm rate
-df_b_mis_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'mis', trigger_id = 'b') # miss rate
-df_b_atv_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
+df_b_var_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'var', trigger_id = name_b) # valid activation rate 
+df_b_det_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'det', trigger_id = name_b) # detection rate
+df_b_far_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'far', trigger_id = name_b) # false alarm rate
+df_b_mis_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'mis', trigger_id = name_b) # miss rate
+df_b_atv_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'atv', trigger_id = name_b) # probability of trigger activation
 
 # compute width and position of CIs for trigger c
-df_c_var_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'var', trigger_id = 'c') # valid activation rate 
-df_c_det_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'det', trigger_id = 'c') # detection rate
-df_c_far_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'far', trigger_id = 'c') # false alarm rate
-df_c_mis_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'mis', trigger_id = 'c') # miss rate
-df_c_atv_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
+df_c_var_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'var', trigger_id = name_c) # valid activation rate 
+df_c_det_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'det', trigger_id = name_c) # detection rate
+df_c_far_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'far', trigger_id = name_c) # false alarm rate
+df_c_mis_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'mis', trigger_id = name_c) # miss rate
+df_c_atv_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'atv', trigger_id = name_c) # probability of trigger activation
 
 # compute width and position of CIs for the framework
 df_fmwk_min_95 <- computeCIwidths(perf_metrics_df = perf_metrics_data_95, metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
@@ -343,15 +345,18 @@ plotCI(trigger_id = 'framework', metric = 'min', ci_widths_df = 'df_fmwk_min_95'
 plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful_95', ci = '95') 
 ```
 
+## Trigger Performance
+
+&nbsp;
 
 ```{r mechanism-snapshot, include = TRUE}
 
-snapshot_df <- data.frame(row_name = c('Probability of being met in a given year',  #90% CI
+snapshot_df <- data.frame(row_name = c('Probability of being met in a given year',  # 80% CI
                                        'Valid Activations', 
                                        'Detections', 
                                        'False Alarms', 
                                        'Misses',
-                                       'Probability of being met in a given year',  # 80% CI
+                                       'Probability of being met in a given year',  # 90% CI
                                        'Valid Activations', 
                                        'Detections', 
                                        'False Alarms', 
@@ -361,43 +366,78 @@ snapshot_df <- data.frame(row_name = c('Probability of being met in a given year
                                        'Detections', 
                                        'False Alarms', 
                                        'Misses'),
-                       trigger_a = c(paste0("<img src=plots/trimmed_trigger_a_atv_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png")),
-                       trigger_b = c(paste0("<img src=plots/trimmed_trigger_b_atv_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
-                                     paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_b_mis_ci.png")),
-                       trigger_c = c(paste0("<img src=plots/trimmed_trigger_c_atv_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png")))
+                       trigger_a = c(paste0("<img src=plots/trimmed_trigger_a_atv_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_var_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_det_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_far_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_mis_80_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_a_atv_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_var_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_det_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_far_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_mis_90_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_a_atv_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_var_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_det_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_far_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_a_mis_95_ci.png")),
+                       trigger_b = c(paste0("<img src=plots/trimmed_trigger_b_atv_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_var_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_det_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_far_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_mis_80_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_b_atv_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_var_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_det_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_far_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_mis_90_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_b_atv_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_var_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_det_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_far_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_b_mis_95_ci.png")),
+                       trigger_c = c(paste0("<img src=plots/trimmed_trigger_c_atv_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_var_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_det_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_80_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_80_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_atv_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_var_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_det_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_90_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_90_ci.png"),
+                                     paste0("<img src=plots/trimmed_trigger_c_atv_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_var_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_det_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_far_95_ci.png"), 
+                                     paste0("<img src=plots/trimmed_trigger_c_mis_95_ci.png")))
 
 kbl(snapshot_df,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, # omit row numbers
-    col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
+    col.names = c("", "Trigger A", "Trigger B", "Trigger C"), 
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
-  pack_rows("90% CIs", start_row = 1, end_row = 5, color = '#1bb580') %>%
-  pack_rows("80% CIs", start_row = 6, end_row = 10, color = '#1bb580') %>%
-  pack_rows("95% CIs", start_row = 11, end_row = 15, color = '#1bb580')
+  pack_rows("80% CIs", start_row = 1, end_row = 5, color = '#1bb580') %>%
+  pack_rows("90% CIs", start_row = 6, end_row = 10, color = '#1bb580') %>%
+  pack_rows("95% CIs", start_row = 11, end_row = 15, color = '#1bb580') %>%
+  column_spec(column = 1, width = "22em", extra_css = "vertical-align: bottom;") 
 ```
+
+## Framework Activation
+
+&nbsp;
 
 ```{r framework-activation-table}
 framework_df <- data.frame(row_name = c('At least one trigger being met (probability in %)', 
                                         'Full framework activation (probability in %)'),
-                           frmwk_stats = c(paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  #90%
-                                           paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">"),
-                                           paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"), #80%
-                                           paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),
-                                           paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"), #95%
-                                           paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">")))  
+                           frmwk_stats = c(paste0("<","img src=","plots/trimmed_framework_min_80_ci",".png",">"),  #80%
+                                           paste0("<","img src=","plots/trimmed_framework_ful_80_ci",".png",">"),
+                                           paste0("<","img src=","plots/trimmed_framework_min_90_ci",".png",">"), #90%
+                                           paste0("<","img src=","plots/trimmed_framework_ful_90_ci",".png",">"),
+                                           paste0("<","img src=","plots/trimmed_framework_min_95_ci",".png",">"), #95%
+                                           paste0("<","img src=","plots/trimmed_framework_ful_95_ci",".png",">")))  
 
 kbl(framework_df,
     format = 'html',
@@ -407,6 +447,7 @@ kbl(framework_df,
     align = "rc") %>%
   kable_styling(full_width = F) %>%
   kable_minimal(c("hover")) %>%
-  pack_rows("90% CIs", start_row = 1, end_row = 2, color = '#1bb580') %>%
-  pack_rows("80% CIs", start_row = 3, end_row = 4, color = '#1bb580') %>%
-  pack_rows("95% CIs", start_row = 5, end_row = 6, color = '#1bb580')
+  pack_rows("80% CIs", start_row = 1, end_row = 2, color = '#1bb580') %>%
+  pack_rows("90% CIs", start_row = 3, end_row = 4, color = '#1bb580') %>%
+  pack_rows("95% CIs", start_row = 5, end_row = 6, color = '#1bb580') %>%
+  column_spec(column = 1, width = "28em", extra_css = "vertical-align: bottom;")
