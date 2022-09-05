@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from src.indicators.drought.config import Config
 from src.utils_general.utils import parse_yaml
 
 
@@ -24,7 +25,7 @@ def retrieve_worldpop_dirname():
             return item
 
 
-class Config:
+class ConfigFI(Config):
     # general directories
 
     def __init__(self):
@@ -50,14 +51,14 @@ class Config:
             )
         return self._parameters
 
-    # Data directory paths
-    DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
-    DATA_PUBLIC_DIR = os.path.join(DATA_DIR, "public")
-    DATA_PRIVATE_DIR = os.path.join(DATA_DIR, "private")
-    DATA_PUBLIC_RAW_DIR = os.path.join(DATA_PUBLIC_DIR, "raw")
-    DATA_PRIVATE_RAW_DIR = os.path.join(DATA_PRIVATE_DIR, "raw")
-    DATA_PUBLIC_PROCESSED_DIR = os.path.join(DATA_PUBLIC_DIR, "processed")
-    DATA_PRIVATE_PROCESSED_DIR = os.path.join(DATA_PRIVATE_DIR, "processed")
+    # # Data directory paths
+    # DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
+    # DATA_PUBLIC_DIR = os.path.join(DATA_DIR, "public")
+    # DATA_PRIVATE_DIR = os.path.join(DATA_DIR, "private")
+    # DATA_PUBLIC_RAW_DIR = os.path.join(DATA_PUBLIC_DIR, "raw")
+    # DATA_PRIVATE_RAW_DIR = os.path.join(DATA_PRIVATE_DIR, "raw")
+    # DATA_PUBLIC_PROCESSED_DIR = os.path.join(DATA_PUBLIC_DIR, "processed")
+    # DATA_PRIVATE_PROCESSED_DIR = os.path.join(DATA_PRIVATE_DIR, "processed")
 
     # Shapefiles
     SHAPEFILE_DIR = "cod_ab"
@@ -116,9 +117,10 @@ class Config:
     WORLDPOP_FILENAME = "{iso3}_ppp_{year}_1km_Aggregated_UNadj.tif"
     # this dirname changes with the year, so dynamically retrieve it by
     # using a regex
-    WORLDPOP_FTP_DIRNAME = retrieve_worldpop_dirname()
-    WORLDPOP_BASEURL = f"ftp://ftp.worldpop.org.uk/{WORLDPOP_FTP_DIRNAME}/"
-    WORLDPOP_URL = WORLDPOP_BASEURL + "{year}/{iso3_upper}/{WORLDPOP_FILENAME}"
+    # WORLDPOP_FTP_DIRNAME = retrieve_worldpop_dirname()
+    # WORLDPOP_BASEURL = f"ftp://ftp.worldpop.org.uk/{WORLDPOP_FTP_DIRNAME}/"
+    # WORLDPOP_URL = WORLDPOP_BASEURL +
+    # "{year}/{iso3_upper}/{WORLDPOP_FILENAME}"
 
     # Subnational population
     POPSUBN_DIR = "cod_ps"
