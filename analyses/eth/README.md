@@ -81,4 +81,4 @@ Several parameters from the `config.yml` are used in these scripts so make sure 
 Not all code is working anymore, since changes to the general codebase have
 been implemented after endorsement and monitoring of this trigger.
 Since large changes to a potential revision of this trigger are expected,
-it was not decided to invest in keeping the code up-to-date for now
+it was decided to not invest in keeping the code up-to-date for now
