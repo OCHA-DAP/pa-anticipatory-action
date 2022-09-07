@@ -72,7 +72,7 @@ bm_cm_80_nov <- df %>%
   autoplot(type = "heatmap") +
   labs(title="Confusion matrix, threshold of 80 on November 1")
 
-## END OF YEAR IMPACT
+# # END OF YEAR IMPACT
 
 # What years do we want to define here? 85 seems a reasonable threshold
 # but misses out on 2017 as well as 2001, but has enough instances for
@@ -89,7 +89,7 @@ end_impact %>%
     )
   )
 
-## TEST IMPACT YEARS ACROSS PUB DATE AND THRESHOLDS
+# # TEST IMPACT YEARS ACROSS PUB DATE AND THRESHOLDS
 
 imp_years <- end_impact$year
 list_years <- c(2001, 2004, 2009, 2011, 2017)
@@ -119,7 +119,7 @@ pred_df <- test_df %>%
          pred_fixed = factor(biomasse_anomaly <= threshold_fixed, levels = c(TRUE, FALSE))) %>%
   group_by(dekad)
 
-## COMPARED AGAINST BIOMASSE END OF YEAR
+# # COMPARED AGAINST BIOMASSE END OF YEAR
 
 metrics_df <- bind_rows(metrics(pred_df, drought_biom, pred),
                         precision(pred_df, drought_biom, pred),
@@ -142,7 +142,7 @@ metrics_df %>%
        x = "Date of publication",
        color = "Metric")
 
-## COMPARED AGAINST LIST OF DROUGHT YEARS
+# # COMPARED AGAINST LIST OF DROUGHT YEARS
 
 metrics_df <- bind_rows(metrics(pred_df, drought_list, pred),
                         precision(pred_df, drought_list, pred),
@@ -166,7 +166,7 @@ metrics_df %>%
        color = "Metric")
 
 
-## PLOTTING THE THRESHOLDS
+# # PLOTTING THE THRESHOLDS
 
 pred_df %>%
   ungroup() %>%
@@ -182,7 +182,7 @@ pred_df %>%
        y = "Threshold",
        x = "Date of publication")
 
-## COMPARED AGAINST BIOMASSE, FIXED THRESHOLD
+# # COMPARED AGAINST BIOMASSE, FIXED THRESHOLD
 
 metrics_df <- bind_rows(metrics(pred_df, drought_biom, pred_fixed),
                         precision(pred_df, drought_biom, pred_fixed),
@@ -205,7 +205,7 @@ metrics_df %>%
        x = "Date of publication",
        color = "Metric")
 
-## COMPARED AGAINST DROUGHT LIST, FIXED THRESHOLD
+# # COMPARED AGAINST DROUGHT LIST, FIXED THRESHOLD
 
 metrics_df <- bind_rows(metrics(pred_df, drought_list, pred_fixed),
                         precision(pred_df, drought_list, pred_fixed),
@@ -228,7 +228,7 @@ metrics_df %>%
        x = "Date of publication",
        color = "Metric")
 
-## PLOTTING ALL THE SPECIFIC TN, TP, ... VALUES
+# # PLOTTING ALL THE SPECIFIC TN, TP, ... VALUES
 
 pred_df %>%
   mutate(across(matches("drought|pred"), as.logical)) %>%

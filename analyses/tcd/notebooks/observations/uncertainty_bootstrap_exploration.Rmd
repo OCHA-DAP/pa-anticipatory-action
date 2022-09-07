@@ -1,0 +1,92 @@
+---
+title: "Uncertainty in bootstrapping"
+author: "Seth Caldwell"
+date: "2022-09-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = TRUE, out.width = "100%")
+source("wris_bm_bootstrap.R")
+library(patchwork)
+```
+
+## Biomasse and NDVI in Chad
+
+During the development of the observational triggers in Chad, analysis was done
+to compare the performance of biomasse and NDVI (along with other variables) in
+predicting drought.
+
+```{r, fig.height=6, fig.width=8}
+p_basic
+```
+
+Much of this analysis centered around the setting of thresholds and then
+comparison of performance metrics. Above, we can see a threshold of 12% of the
+total area with anomalous NDVI (the vertical bar), and a horizontal bar of
+cumulative biomasse being <= 80%. The dots represent observed years and respective
+NDVI and biomasse values in those years.
+
+While biomasse performed better than NDVI in general statistics, one of the
+other things noticed about biomasse was that it appeared to have larger margins
+surrounding the points, meaning that the threshold was better able to separate the
+data and potentially less likely to overfit and suffer from high uncertainty.
+
+```{r, fig.height=6, fig.width=12}
+p_bm_margins + p_ndvi_margins + labs(title = "", subtitle = "", y = "", x = "")
+```
+
+However, we lacked a test dataset that could better show the performance of any
+model on data it hasn't trained on, and we didn't have time to explore further.
+Here I explore a potential option that could be used to assess this uncertainty
+when we calculate bootstrap performance.
+
+## Standard deviation
+
+The idea is to simply use the standard deviation of the observed points to
+estimate the uncertainty in our threshold.
+
+```{r, fig.height=6, fig.width=12}
+p_bm_sd + p_ndvi_sd + labs(title = "", subtitle = "", y = "", x = "")
+```
+
+However, we don't want to just look at overlap of points and their standard
+deviation with the potential threshold.
+
+## Bootstrapping
+
+What we can do is bootstrap the points with replacement, but alongside that
+bootstrap also jitter the points to estimate our uncertainty by to each point
+randomly jittering with a normally distributed value around 0 and the observed
+standard deviation, then recalculate our predictions and performance metrics.
+
+This might provide a more realistic point estimate of our performance metrics as
+well as distribution that can be used to compare and select between different
+data sources and also present a more realistic picture in our model cards.
+
+## Results
+
+```{r, fig.height=10, fig.width=14}
+p_uncertainty
+```
+
+Above, we can see that there is a significant drop in performance across various
+metrics using this approach, for both NDVI and biomasse. However, it's hard to
+compare overall using the above plots.
+
+```{r, fig.height=3, fig.width=12}
+p_performance_drop
+```
+
+Now, above, we can see that while there are drops in performance from the blue
+(bootstrapping without uncertainty) and red (bootstrapping with uncertainty),
+this drop is less significant for biomasse compared to NDVI, particularly in
+its accuracy, false alarm rate, and valid activation rate, while both have nearly
+identical performance in detection/miss rates.
+
+From this, we might agree with our original conclusion that the separation of
+the biomasse threshold (similar to how we evaluate SVM performance) is better
+than NDVI and more robust to the uncertainty inherent in the data and our setting
+of the threshold.
+
+
