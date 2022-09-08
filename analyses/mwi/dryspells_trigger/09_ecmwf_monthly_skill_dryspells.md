@@ -52,6 +52,20 @@ mpl.rc('font', **font)
 #### Set config values
 
 ```python
+# ## SETTINGS USED TO PRODUCE CONFUSION MATRICES USED IN DOCUMENTS E.G.
+# #https://ocha-dap.github.io/pa-anticipatory-action/analyses/mwi/docs/mwi_dry_spells_indicator_analyses.html#Correlation_of_forecasts_and_dry_spells
+# source_cds=True #False
+# use_unrounded_area_coords = True #False
+# interpolate=False
+# resolution=None #0.05
+# all_touched=False #True
+
+# #cannot have unrounded area coords when source_cds=False so check and set to False
+# if not source_cds:
+#     use_unrounded_area_coords = False
+```
+
+```python
 source_cds=False
 use_unrounded_area_coords = False
 interpolate=False
@@ -755,6 +769,10 @@ df_pr_ds=compute_miss_false_leadtime(df_ds_for,"dry_spell","for_below_th")
 fig_cm=compute_confusionmatrix_leadtime(df_ds_for,"dry_spell","for_below_th",ylabel="Dry spell",xlabel=f"{int(probability*100)}% probability <={threshold_perc} mm",
                                        figsize=(20,8),colp_num=4)
 # fig_cm.savefig(os.path.join(plots_seasonal_dir,f"mwi_plot_formonth_dsobs_cm_lt123456_th{int(threshold_perc)}_perc_{int(probability*100)}_{adm_str}_{month_str}.png"))
+```
+
+```python
+fig_cm
 ```
 
 ```python
