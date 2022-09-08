@@ -40,12 +40,13 @@ from src.indicators.drought.config import Config
 ```python
 config = Config()
 iso3 = "ner"
+N_SAMPLE = 28  # For the BSRS
 country_data_exploration_dir = (
     Path(config.DATA_DIR) / config.PRIVATE_DIR / "exploration" / iso3
 )
 trigger_perf_path = country_data_exploration_dir / "trigger_performance"
 input_path = trigger_perf_path / "historical_activations_trigger_v1.csv"
-input_path_multi = trigger_perf_path / "historical_activ_multi_bad_years.xlsx"
+input_path_multi = trigger_perf_path / "historical_activ_multi_bad_years.csv"
 ```
 
 ```python
@@ -90,80 +91,60 @@ df_all.index = df_all.index.astype(int)
 ```
 
 ```python
+# Also read in the file with alternative definition
+df_all_alt = pd.read_csv(
+    input_path_multi, usecols=[25, 29, 31, 33], skiprows=1, nrows=28
+)
+df_all_alt.columns = ["year", "Trigger3", "Trigger2", "Trigger1"]
+
+df_all_alt.index = df_all_alt["year"]
+df_all_alt.index.rename("year", inplace=True)
+df_all_alt.index = df_all_alt.index.astype(int)
+df_all_alt = df_all_alt[["Trigger1", "Trigger2", "Trigger3"]]
+```
+
+```python
 # Add min and full
-# For Min, if EITHER trigger 1, trigger 2, or trigger 3 is met,
-# this is counted as "min" being positive.
-# For "ful" the logic is that if EITHER trigger 1 AND trigger 2,
-# OR trigger 1 and trigger 3 are met, there is a full activation.
-df_all["min"] = "TN"
-df_all["full"] = "TN"
+def add_min_and_full(df):
+    # For Min, if EITHER trigger 1, trigger 2, or trigger 3 is met,
+    # this is counted as "min" being positive.
+    # For "ful" the logic is that if EITHER trigger 1 AND trigger 2,
+    # OR trigger 1 and trigger 3 are met, there is a full activation.
+    df["min"] = "TN"
+    df["full"] = "TN"
 
-for tpfp in ["TP", "FP"]:
-    # If there are any TPs / FPs, then min is a TP / FP
-    df_all.loc[
-        (df_all[["Trigger1", "Trigger2", "Trigger3"]] == tpfp).apply(
-            any, axis=1
-        ),
-        "min",
-    ] = tpfp
-    # If T1 & T2, or T1 & T3 met, the it's full
-    df_all.loc[
-        ((df_all["Trigger1"] == tpfp) & (df_all["Trigger2"] == tpfp))
-        | ((df_all["Trigger1"] == tpfp) & (df_all["Trigger3"] == tpfp)),
-        "full",
-    ] = tpfp
+    for tpfp in ["TP", "FP"]:
+        # If there are any TPs / FPs, then min is a TP / FP
+        df.loc[
+            (df[["Trigger1", "Trigger2", "Trigger3"]] == tpfp).apply(
+                any, axis=1
+            ),
+            "min",
+        ] = tpfp
+        # If T1 & T2, or T1 & T3 met, the it's full
+        df.loc[
+            ((df["Trigger1"] == tpfp) & (df["Trigger2"] == tpfp))
+            | ((df["Trigger1"] == tpfp) & (df["Trigger3"] == tpfp)),
+            "full",
+        ] = tpfp
 
-# TO DO: lots of gaps in this logic
-df_all
+    # TO DO: lots of gaps in this logic
+    return df
+```
+
+```python
+df_all = add_min_and_full(df_all)
+df_all_alt = add_min_and_full(df_all_alt)
 ```
 
 ## Calculate base metrics
 
 ```python
-df_base = (
-    df_all.apply(pd.value_counts)
-    .fillna(0)
-    .apply(
-        lambda x: {
-            "far": calc_far(x.TP, x.FP),
-            "var": calc_var(x.TP, x.FP),
-            "det": calc_det(x.TP, x.FN),
-            "mis": calc_mis(x.TP, x.FN),
-            "acc": calc_acc(x.TP, x.TN, x.FP, x.FN),
-            "atv": calc_atv(x.TP, x.TN, x.FP, x.FN),
-            "nTP": x.TP.sum(),
-            "nFP": x.FP.sum(),
-            "nFN": x.FN.sum(),
-        },
-        result_type="expand",
-    )
-    .melt(ignore_index=False)
-    .reset_index()
-    .rename(columns={"index": "metric", "variable": "trigger"})
-    .assign(point="central")
-)
-df_base
-```
-
-## Compute CIs for all trigger moments
-
-
-```python
-# Create a bootstrapped DF
-n_bootstrap = 10_000  # 10,000 takes about 2.5 minutes
-df_all_bootstrap = pd.DataFrame()
-for i in range(n_bootstrap):
-    df_new = (
-        df_all.sample(frac=1, replace=True, random_state=rng.bit_generator)
-        .apply(pd.value_counts)
+def calc_df_base(df):
+    return (
+        df.apply(pd.value_counts)
         .fillna(0)
-    )
-    # Some realizations are missing certain counts
-    for count in ["FN", "FP", "TN", "TP"]:
-        if count not in df_new.index:
-            df_new.loc[count] = 0
-    df_new = (
-        df_new.apply(
+        .apply(
             lambda x: {
                 "far": calc_far(x.TP, x.FP),
                 "var": calc_var(x.TP, x.FP),
@@ -177,31 +158,155 @@ for i in range(n_bootstrap):
             },
             result_type="expand",
         )
+        .melt(ignore_index=False)
         .reset_index()
-        .rename(columns={"index": "metric"})
+        .rename(columns={"index": "metric", "variable": "trigger"})
+        .assign(point="central")
     )
-    df_all_bootstrap = df_all_bootstrap.append(df_new, ignore_index=True)
+
+
+df_base = calc_df_base(df_all)
+df_base_alt = calc_df_base(df_all_alt)
+```
+
+## Compute CIs
+
+
+```python
+df = pd.concat([df_all, df_all_alt])
+df_new = (
+    df.sample(n=N_SAMPLE, replace=True, random_state=rng.bit_generator)
+    .apply(pd.value_counts)
+    .fillna(0)
+)
+df_new
+```
+
+```python
+def get_df_bootstrap(df):
+    # Create a bootstrapped DF
+    n_bootstrap = 100  # 10,000 takes about 2.5 minutes
+    df_all_bootstrap = pd.DataFrame()
+    for i in range(n_bootstrap):
+        df_new = (
+            df.sample(n=N_SAMPLE, replace=True, random_state=rng.bit_generator)
+            .apply(pd.value_counts)
+            .fillna(0)
+        )
+        # Some realizations are missing certain counts
+        for count in ["FN", "FP", "TN", "TP"]:
+            if count not in df_new.index:
+                df_new.loc[count] = 0
+        df_new = (
+            df_new.apply(
+                lambda x: {
+                    "far": calc_far(x.TP, x.FP),
+                    "var": calc_var(x.TP, x.FP),
+                    "det": calc_det(x.TP, x.FN),
+                    "mis": calc_mis(x.TP, x.FN),
+                    "acc": calc_acc(x.TP, x.TN, x.FP, x.FN),
+                    "atv": calc_atv(x.TP, x.TN, x.FP, x.FN),
+                    "nTP": x.TP.sum(),
+                    "nFP": x.FP.sum(),
+                    "nFN": x.FN.sum(),
+                },
+                result_type="expand",
+            )
+            .reset_index()
+            .rename(columns={"index": "metric"})
+        )
+        df_all_bootstrap = df_all_bootstrap.append(df_new, ignore_index=True)
+    return df_all_bootstrap
+
+
+df_all_bootstrap = get_df_bootstrap(df_all)
+df_all_bootstrap_alt = get_df_bootstrap(
+    pd.concat([df_all, df_all_alt], ignore_index=True)
+)
 ```
 
 ```python
 # Calculate the quantiles over the bootstrapped df
-df_grouped = df_all_bootstrap.groupby("metric")
-for ci in [0.8, 0.9, 0.95, 0.99]:
-    df_ci = df_base.copy()
-    points = {"low_end": (1 - ci) / 2, "high_end": 1 - (1 - ci) / 2}
-    for point, ci_val in points.items():
-        df = (
-            df_grouped.quantile(ci_val)
-            .melt(ignore_index=False)
-            .reset_index()
-            .rename(columns={"variable": "trigger"})
-        )
-        df["point"] = point
-        df_ci = df_ci.append(df, ignore_index=True)
-    # Save file
-    output_filename = f"ner_perf_metrics_table_ci_{ci}_v2.csv"
-    df_ci.to_csv(trigger_perf_path / output_filename, index=False)
+def calc_ci(df_bootstrap, df_base, save_filename_suffix=None):
+    df_grouped = df_bootstrap.groupby("metric")
+    for ci in [0.8, 0.9, 0.95, 0.99]:
+        df_ci = df_base.copy()
+        points = {"low_end": (1 - ci) / 2, "high_end": 1 - (1 - ci) / 2}
+        for point, ci_val in points.items():
+            df = (
+                df_grouped.quantile(ci_val)
+                .melt(ignore_index=False)
+                .reset_index()
+                .rename(columns={"variable": "trigger"})
+            )
+            df["point"] = point
+            df_ci = df_ci.append(df, ignore_index=True)
+        # Save file
+        output_filename = f"ner_perf_metrics_table_ci_{ci}_v2"
+        if save_filename_suffix:
+            output_filename += "_" + save_filename_suffix
+        output_filename += ".csv"
+        df_ci.to_csv(trigger_perf_path / output_filename, index=False)
+
+
+calc_ci(df_all_bootstrap, df_base)
+calc_ci(df_all_bootstrap_alt, df_base_alt, "alt")
 ```
+
+## Explore CIs
+
+```python
+df_all_bootstrap_alt[df_all_bootstrap_alt["metric"] == "var"]["August"]
+```
+
+```python
+df_ci = (
+    pd.read_csv(trigger_perf_path / "ner_perf_metrics_table_ci_0.95_v2.csv")
+    .assign(type="normal")
+    .append(
+        pd.read_csv(
+            trigger_perf_path / "ner_perf_metrics_table_ci_0.95_v2_alt.csv"
+        ).assign(type="alt"),
+        ignore_index=True,
+    )
+)
+```
+
+```python
+fig, ax = plt.subplots(figsize=(8, 14))
+df_ci_2 = df_ci[~df_ci["metric"].isin(["nTP", "nFP", "nFN", "nTN"])]
+df_ci_2 = df_ci_2[
+    df_ci_2["trigger"].isin(["Trigger1", "Trigger2", "Trigger3"])
+]
+
+
+for i, (_, group) in enumerate(df_ci_2.groupby(["metric", "trigger"])):
+    ax.fill_betweenx(
+        [i, i + 0.25],
+        x1=group.loc[
+            (group.type == "normal") & (group.point == "low_end"), "value"
+        ],
+        x2=group.loc[
+            (group.type == "normal") & (group.point == "high_end"), "value"
+        ],
+        fc="blue",
+    )
+    ax.fill_betweenx(
+        [i + 0.25, i + 0.5],
+        x1=group.loc[
+            (group.type == "alt") & (group.point == "low_end"), "value"
+        ],
+        x2=group.loc[
+            (group.type == "alt") & (group.point == "high_end"), "value"
+        ],
+        fc="red",
+    )
+    ax.text(0, i, group.metric.iloc[0], size="x-small")
+    ax.text(1, i, group.trigger.iloc[0], size="x-small")
+```
+
+# Appendix
+
 
 ### Example: Aggregate months
 
