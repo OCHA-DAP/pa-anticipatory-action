@@ -3,7 +3,7 @@
 [![Generic badge](https://img.shields.io/badge/STATUS-ENDORSED-%231EBFB3)](https://shields.io/)
 
 Endorsed in Dec 2021 and July 2022. The observational trigger was met and the framework was activated in August 2022.
-Last updated: Sep 2021-2022
+Last updated: Sep 2022
 
 ## Background information
 
