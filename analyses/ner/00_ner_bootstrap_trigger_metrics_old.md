@@ -1,5 +1,7 @@
 ### Confidence interval trigger
 
+Superseded by notebook 01. 
+
 This notebook tests the confidence we have in the performance metrics of the Niger trigger in different months.
 
 More explanation about the idea of bootstrapping can be found [here](https://docs.google.com/presentation/d/1MyyZXg1roeAwmImNUdDtOtuUCVeXBt3jhZGtybxVWYk/edit#slide=id.g102d7723583_0_22).
