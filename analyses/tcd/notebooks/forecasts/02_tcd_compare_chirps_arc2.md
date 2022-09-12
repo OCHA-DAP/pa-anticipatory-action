@@ -4,6 +4,7 @@ This notebook compares the values of observed precipitation as reported by CHIRP
 ```python
 %load_ext autoreload
 %autoreload 2
+%load_ext jupyter_black
 ```
 
 ```python
@@ -120,7 +121,9 @@ arc2 = DrySpells(
     monitoring_start = "2000-01-01",
     monitoring_end = "2021-11-25",
     range_x = ("13E", "25E"),
-    range_y = ("7N", "24N")
+    range_y = ("7N", "24N"),
+    polygon_path = adm2_path,
+    bound_col = "admin2Pcod",
 )
 
 # #download data, only needed if not downloaded yet
@@ -128,7 +131,7 @@ arc2 = DrySpells(
 ```
 
 ```python
-da_arc = arc2.load_raw_data()
+da_arc = arc2.load_raw_data(convert_date=False)
 ```
 
 ```python
@@ -198,7 +201,7 @@ To understand the direction of difference, i.e. whether CHIRPS or ARC2 reports h
 ```python
 df_chirps_yearly=da_chirps_yearly_sel.mean(dim=["longitude","latitude"]).to_dataframe().drop(
     "spatial_ref",axis=1).rename(columns={"precip":"chirps"})
-df_arc_yearly=da_arc_yearly_sel.mean(dim=["x","y"]).to_dataframe().drop("spatial_ref",axis=1).rename(columns={"est_prcp":"arc"})
+df_arc_yearly=da_arc_yearly_sel.mean(dim=["X","Y"]).to_dataframe().drop("spatial_ref",axis=1).rename(columns={"est_prcp":"arc"})
 ```
 
 ```python
