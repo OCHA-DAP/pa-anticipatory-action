@@ -1,16 +1,3 @@
----
-jupytext:
-  formats: ipynb,md:myst
-  text_representation:
-    extension: .md
-    format_name: myst
-    format_version: 0.13
-    jupytext_version: 1.10.3
-kernelspec:
-  display_name: antact
-  language: python
-  name: antact
----
 
 # Observed lower tercile precipitation
 This notebook explores the occurrence of historical below average precipitation in Burkina Faso. The dataset used is CHIRPS. 
@@ -28,6 +15,7 @@ Resources
 ```{code-cell} ipython3
 %load_ext autoreload
 %autoreload 2
+%load_ext jupyter_black
 ```
 
 ```{code-cell} ipython3
@@ -422,7 +410,7 @@ for ry in [3,5]:
 ```
 
 We can also plot only the seasons of interest, which removes the clutter from the above bar plot.  
-We can see that large areas of below average rainfall were more common in the 80s and 90s. In the last 25 years the 5 year return period was only reached once. 
+We can see that large areas of below average rainfall were more common in the 80s and 90s. In the last 25 years the 5 year return period was only reached once.
 
 ```{code-cell} ipython3
 #TODO: the plot should have labels for the return periods lines but cannot get it to work..

@@ -1,0 +1,580 @@
+---
+title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:align; margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:align; margin:10px" />'
+pagetitle: 'Malawi Rains Nov 2021 - April 2022'
+output:
+  html_document:
+    css: ../../../country_template/docs/style.css
+    includes:
+      in_header: ../../../country_template/docs/header.html
+    df_print: paged
+    toc: yes
+    toc_float: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: '4'
+editor_options:
+  chunk_output_type: console
+---
+
+<br> 
+<br>
+
+## Executive Summary
+- The predictive and observational triggers were not met during the 2021-2022 season.
+- Assumptions built into the Anticipatory Action (AA) trigger were consistent with but not fully borne out by the data from the 2021-2022 rainy season.
+- While no dry spells (by the definition in the AAF) occurred, individual dry days were frequent as were periods with little to no rain.
+- Long streaks of consecutive dry days (10 or more) were infrequent and more localised than shorter streaks. 
+- November and December dry streaks were rare and difficult to distinguish from pre-rainy season dry days in real-time.
+- March dry streaks occurred and could be more easily to confirm as bring in-season in real-time. 
+- Cumulative rainfall of 2mm or less was very rare for 14-day periods and highly localised when it occurred.
+- Observations from the 2021-2022 season alone are not sufficient to justify modifications to the trigger mechanism. They offer opportunities to discuss how the season was experienced on the ground and to identify lines of research for future improvements.
+
+***
+## About this Report
+This report retrospectively examines the rainfall patterns during the months of Nov 2021 through April 2022 to provide climatological context for the 2021-2022 monitoring period for Anticipatory Action (AA). 
+
+## Background
+Malawi developed an Anticipation Action Framework (AAF) to mitigate the humanitarian impact of severe dry spells. A trigger mechanism was designed to signal a high risk of dry spells occurring (the **_predictive_** component) and the actual occurrence of a dry spell (the **_observational_** component) within the Southern region during the months of January and February (at least 7 of the 14 days must have fallen in January or February). Dry spells were defined as periods of at least 14 consecutive days with no more than 2mm of cumulative rain. The 2021-2022 monitoring period started in November 2021 and ended in March 2022. The ARC2 observational rainfall dataset was used throughout this analysis.
+
+```{r global-setup, message = F, warning = F, echo = F}
+knitr::opts_chunk$set(echo = FALSE) # do not print code by default
+knitr::opts_chunk$set(include = TRUE) # include chunk output by default
+knitr::opts_chunk$set(message = FALSE) # do not print messages by default
+knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
+
+options(scipen = 999) # turn off scientific notation
+options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
+```
+
+```{r libraries, include = F}
+packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable', 'terra')
+
+# install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages], repos = "https://cran.rstudio.com")
+}
+
+# load libraries 
+lapply(packages, library, character.only = TRUE)
+```
+
+```{r paths}
+data_dir <- Sys.getenv("AA_DATA_DIR")
+shp_path <- paste0(data_dir, "/public/raw/mwi/cod_ab/mwi_adm_nso_20181016_shp")
+postseason_folder_path <- paste0(data_dir, "/public/processed/mwi/dry_spells/2021_2022_postseason/")
+```
+
+```{r load_data, include = F}
+adm3_shp <- vect(paste0(shp_path, "/mwi_admbnda_adm3_nso_20181016.shp"))
+southern_shp <- adm3_shp[adm3_shp$ADM1_EN == 'Southern',]
+season_dates <- readRDS(paste0(postseason_folder_path, "season_dates.RDS"))
+streaks <- readRDS(paste0(postseason_folder_path, "streaks.RDS"))
+in_season <- readRDS(paste0(postseason_folder_path, "in_season.RDS"))
+static_r <- rast(paste0(postseason_folder_path, "static_r.tif"))
+dry_days_per_month_r <- rast(paste0(postseason_folder_path, "dry_days_per_month_r.tif"))
+
+nbr_cells <- 343 # nbr of cells in southern region (touching=T)
+```
+## Trigger Monitoring Results
+
+### Predictive triggers
+The selected ECMWF forecast produces monthly rainfall estimates. An average of the expected rainfall amounts for the Southern Region was computed. In the AAF, the trigger threshold had been set to 210mm: if the projected rainfall fell below this amount, the trigger would be met.
+
+**Result:** The projected rainfall for the region reached 251mm for January (November forecast) and 220mm for February (December forecast). Therefore neither trigger was met and there was no activation.
+
+### Observational trigger
+The ARC2 dataset publishes rainfall estimates with a lag of about 2 days. Its monitoring began on 24 Dec and ended on 7 March to capture January or February dry spells that would begin or end in those months (at least 7 days of which had to occur in January and February.) In the AAF, the observational trigger was defined to be met if 3 districts experienced dry spells. The 3-district requirement reflect a 1 in 4 year event. (The districts could experience a dry spell simultaneously or sequentially.)
+
+**Result:** No district experienced a dry spell as defined in the AAF. The longest streak of dry days (with no more than 2mm of cumulative rain) in a district was 9 days. Therefore the observational trigger was not met and there was no activation.
+
+
+## On the Rainy Season
+This section looks at when the rainy season began and ended, and how long it lasted throughout the Southern Region.
+
+### Onset
+Season onset was defined as the first day of a period after 1 Nov with at least 40mm of rain over 10 days and no 10 consecutive days with less than 2mm of total rain in the following 30 days (DCCMS, cited in Kimaro and Sibande 2008).
+
+The map below shows during which week (ie 7-day period) the season began. Beige-brown indicates a November onset date while blue-purple indicates December start dates. The darker colours reflect onset dates later in the month.
+
+```{r onset-setup}
+onset_max <- minmax(static_r$onset)[2]
+onset_breaks <- seq(0, onset_max + 7, by = 7) # +7 to ensure the max date is included
+onset_labels <-  format(seq(from = as.Date('2021-11-01', format = "%Y-%m-%d"), 
+                     to = as.Date('2021-11-01', format = "%Y-%m-%d") + onset_max + 7, 
+                     by = "7 days"),
+                 format = "%d-%b")
+
+onset_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[5], # one colour per month, darkens later in the month
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[4],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[8],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
+
+perc_24dec_onset <- season_dates %>% filter(onset_date <= '2021-12-24') %>% summarise(dec24_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * dec24_onset / nbr_cells, 0)) %>% select(-dec24_onset) %>% as.numeric()
+```
+
+Across the Southern region, the rainy season onset was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$onset)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + onset_max), "%d %b")`. Most of the Southern region had an early November start to its season except the northern part of the region, which saw its season begin later in December. The 2021-2022 trigger assumption that the rainy season would have begun across the region by 24 Dec was correct for `r perc_24dec_onset`% of the territory.
+
+```{r onset-plot}
+plot(static_r, 
+     "onset", 
+     type = "interval", 
+     breaks = onset_breaks, 
+     main = "Rainy Season Onset",
+     axes = F,
+     plg = list(title = "Week Starting On",
+                legend = onset_labels[-length(onset_labels)]),
+     col = onset_palette[1:(length(onset_labels) - 1)]) 
+plot(southern_shp, add = T)
+
+```
+
+### Cessation
+
+```{r cessation-setup}
+cessation_max <- minmax(static_r$cessation)[2]
+
+cessation_breaks <- seq(134, (cessation_max + 7), by = 7) # +7 to ensure the max date is included. From = 15 Mar ie as.Date(134, origin = "2021-11-01")
+cessation_labels <-  format(seq(from = as.Date('2022-03-15', format = "%Y-%m-%d"), 
+                     to = as.Date('2021-11-01', format = "%Y-%m-%d") + cessation_max + 7, # cessation_max computed in days since 1 Nov
+                     by = "7 days"),
+                 format = "%d-%b")
+
+cessation_palette <- c(RColorBrewer::brewer.pal(n = 10, name = "PuOr")[3], # one colour per month, darkens later in the month
+                       RColorBrewer::brewer.pal(n = 10, name = "PuOr")[2],
+                       RColorBrewer::brewer.pal(n = 10, name = "PuOr")[1], 
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[6],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[7],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[9],
+                   RColorBrewer::brewer.pal(n = 10, name = "PuOr")[10])
+
+mar_cessation_area_pct <- season_dates %>% 
+  filter(cessation_date >= '2022-03-15' & cessation_date < '2022-04-01') %>% 
+  summarise(n = n()) %>% mutate(t = round(100*n/nrow(season_dates), 1)) %>% 
+  select(t) %>% 
+  as.numeric()
+```
+
+
+Season cessation is defined as the last day before a 15-day period after 15 March with 25mm or less of rain (DCCMS, cited in Kimaro and Sibande 2008).
+
+The map below shows during which week (ie 7-day period) the season ended. Beige-brown indicates a March cessation date while blue-purple indicates an April cessation date. The darker colours reflect cessation dates later in the month.
+
+Across the Southern region, rainy season cessation was recorded between `r format((as.Date("2021-11-01") + minmax(static_r$cessation)[1]), "%d %b")` and `r format((as.Date("2021-11-01") + minmax(static_r$cessation)[2]), "%d %b")`. The central band of the Southern region had the latest ending to its season (Apr) while the northern and southern parts of the region saw their season end mid-March.
+
+
+```{r cessation-plot}
+plot(static_r, 
+     "cessation", 
+     type = "interval", 
+     breaks = cessation_breaks, 
+     main = "Rainy Season End",
+     axes = F,
+     plg = list(title = "Week Starting On",
+                legend = cessation_labels[-length(cessation_labels)]),
+     col = cessation_palette[1:(length(cessation_labels) - 1)])
+plot(southern_shp, add = T)
+
+```
+
+
+### Duration
+
+```{r duration-setup}
+duration_max <- minmax(static_r$duration)[2]
+
+duration_breaks <- seq(80, duration_max + 10, by = 10) # + 10 to include upper bound
+
+duration_palette <-  RColorBrewer::brewer.pal(n = 9, name = "YlGnBu")
+
+```
+Season duration is defined as the cessation date minus the onset date, in days.
+
+The map below shows the total duration of the rainy season. Across the Southern region, the rainy season lasted between `r minmax(static_r$duration)[1]` and `r  minmax(static_r$duration)[2]` days. Certain areas may therefore have experienced a season too short for the full growth cycle of maize (defined as a period of 125 days from the onset of rainfall. See FAO 2006).
+
+The northern part of the region experienced a notably shorter rainy season while the season lasted over 140 days in the central band of the region. The durations would fall within typical values (Shire Valley), be slightly shorter (Machinga Agricultural Department) or slightly longer (Blantyre Agricultural Department) than typical according to a historical analysis reported in Kimaro and Sibande 2008. 
+
+```{r duration-plot}
+plot(static_r, 
+     "duration", 
+     type = "interval", 
+     breaks = duration_breaks, 
+     main = "Rainy Season Duration",
+     axes = F,
+     plg = list(title = "In Days"),
+     col = duration_palette[1:(length(duration_breaks) - 1)])
+plot(southern_shp, add = T)
+
+```
+
+```{r q1}
+perc_nov_onset <- season_dates %>% filter(onset_date < '2021-12-01') %>% summarise(nov_onset = as.numeric(n_distinct(cell))) %>% mutate(round(100 * nov_onset / nbr_cells, 0)) %>% select(-nov_onset) %>% as.numeric()
+
+onset_90perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.9))
+onset_50perc_known <- as.numeric(quantile(season_dates$onset_days_since_1nov, 0.5))
+```
+
+## On Rainfall Patterns
+This section examines rainfall patterns (when and how much was received where.)
+
+### Rainy Days
+[DCCMS](https://www.metmalawi.gov.mw/dccms_agromet.php) in its latest bulletins defines "rainy day" has having received at least 3mm of rain. This definition was adopted for this analysis.
+
+The graph on the left (next section below) shows the ratio of rainy days over season duration (ie., as a percentage of days). The yellow-pale green areas received rain on a smaller portion of days compared to the teal-blue areas. 
+
+Notably, no area received rain on more than `r minmax(static_r[["rainy_ratio"]])[2]`% of days during the rainy season. Thus, dry days were quite common (up to `r 100 - minmax(static_r[["rainy_ratio"]])[1]`% of days in areas with the least rainy days).
+
+### Rainfall Amounts
+The cumulative amount of rainfall over the duration of the rainy season was computed and is shown on the right below. Darker colours indicate highest rainfall totals. 
+
+There were large variations in amount of rainfall received. Although there is a relation between total rainfall and season duration, and between total rainfall and ratio of dry days, it is not a straightforward one: areas with the longer season durations or higher ratios of rainy days did not necessarily receive the most rain.
+
+
+```{r rainy-days-plots}
+
+rainy_ratio_labels <- c( "0-20", "21-40", "41-60", "61-80", "81-100")
+  
+rain_seas_tot_min <- plyr::round_any(minmax(static_r[["rain_seas_tot"]])[1], 100, f=floor)
+rain_seas_tot_max <- plyr::round_any(minmax(static_r[["rain_seas_tot"]])[2], 100, f=ceiling)
+rain_seas_tot_breaks <- seq(from = plyr::round_any(rain_seas_tot_min, 100, f=floor), 
+                            to = plyr::round_any(rain_seas_tot_max, 100, f=ceiling), # ceiling ensures max value included
+                            by = 100)
+
+par(mfrow = c(1,2),
+    mar = c(1, 1, 3, 1)) # bottom, left, top, right.
+
+plot(static_r, 
+     "rainy_ratio", 
+     breaks = seq(from = 0, to = 100, by = 20), 
+     main = "Rainy Days \n During Rainy Season",
+     axes = F,
+     plg = list(title = "Rainy Days (%)",
+                legend = rainy_ratio_labels),
+     col = RColorBrewer::brewer.pal(n = 9, name = "YlGnBu"))
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "rain_seas_tot", 
+     breaks = rain_seas_tot_breaks, 
+     main = "Total Rainfall \n During Rainy Season",
+     axes = F,
+     plg = list(title = "Rainfall (mm)"),
+     col = RColorBrewer::brewer.pal(n = 9, name = "Blues"))
+plot(southern_shp, add = T)
+```
+
+### Monthly Patterns
+
+Looking at dry days (ie, with less than 3mm of rain), patterns emerge when their occurrence is examined per calendar month as in the maps below. (Note that the maps include days that preceded or followed season onset or cessation in order to represent the full calendar month).
+
+The months of January and February saw the fewest dry days, although there were numerous dry days in both months (January: `r minmax(dry_days_per_month_r[['jan']])[1]` - `r minmax(dry_days_per_month_r[['jan']])[2]`. February: `r minmax(dry_days_per_month_r[['feb']])[1]` - `r minmax(dry_days_per_month_r[['feb']])[2]` depending on the area). 
+
+Outside of the observational trigger monitoring period, November, December, March and April were similar in the average number of dry days observed across the Southern Region 
+(`r round(as.numeric(global(dry_days_per_month_r[['nov']], mean, na.rm=T)), 1)`, 
+`r round(as.numeric(global(dry_days_per_month_r[['dec']], mean, na.rm=T)), 1)`, 
+`r round(as.numeric(global(dry_days_per_month_r[['mar']], mean, na.rm=T)), 1)`, 
+`r round(as.numeric(global(dry_days_per_month_r[['apr']], mean, na.rm=T)), 1)`, respectively.)
+
+
+```{r dry-days-per-month-plot}
+
+dry_days_per_month_breaks <- seq(from = 0, to = 32, by = 5)
+
+monthly_patterns_col <- rev(RColorBrewer::brewer.pal(n = 6, name = "YlGnBu"))
+
+par(mfrow = c(1,6),
+    mar = c(0, 0, 1.5, 0)) # bottom, left, top, right.
+
+plot(dry_days_per_month_r, 
+     "nov", 
+     main = "Nov",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     col = monthly_patterns_col,
+     alpha = 0.9,
+     legend = "topleft",
+     plg = list(title = "Dry Days", cex = 0.7),
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "dec", 
+     main = "Dec",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = monthly_patterns_col,
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "jan", 
+     main = "Jan",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = monthly_patterns_col,
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "feb", 
+     main = "Feb",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = monthly_patterns_col,
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "mar", 
+     main = "Mar",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = monthly_patterns_col,
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(dry_days_per_month_r, 
+     "apr", 
+     main = "Apr",
+     type = "interval", 
+     breaks = dry_days_per_month_breaks, 
+     axes = F,
+     legend = NULL,
+     col = monthly_patterns_col,
+     alpha = 0.9,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+```
+
+
+## On Dry Periods
+Dry days can be interspersed between rainy days, or grouped into streaks of consecutive dry days. A period of dryness could be defined by the low cumulative rainfall it has received (regardless of the rainy status of individual days composing the period.) Both approaches are examined in this section for comparison purposes.
+
+Reminder that a dry day can receive up to 3mm of rain while the definition of dry spell used for Anticipatory Action was a 14-day streak with no more than 2mm in total.
+
+### Streaks of Dry Days
+Streaks of dry days occurred throughout the region. The longest streak of consecutive dry days during the entire rainy season is represented below. The longest streaks lasted between `r minmax(static_r$max_streak)[1]` and `r minmax(static_r$max_streak)[2]` days.
+
+
+```{r longest-streak-plot, fig.show="hold", out.width="100%"}
+max_streak_breaks <- c(6, 8, 10, 12, 14, 16, 18, 20, 22) # upper value included in range and not lower value (6-8] = 6 excl and 8 included
+max_streak_labels <- c("7-8", "9-10", "11-12", "13-14", "15-16", "17-18", "19-20", "21-22")
+
+max_max_streak <- minmax(static_r$max_streak)[2]
+
+plot(static_r, 
+     "max_streak", 
+     breaks = max_streak_breaks,
+     main = "Longest Streak of Dry Days During Rainy Season",
+     plg = list(title = NULL,
+                legend = max_streak_labels),
+     col = RColorBrewer::brewer.pal(n = 9, name = "YlOrBr"))
+plot(southern_shp, add = T)
+```
+
+The maps below show the number of streaks of various durations that were experienced. It can be seen that streaks were quite frequent and widespread at shorter durations (5 and 7 days) and became increasingly infrequent and localised at longer durations (10+ and 14+ days).
+
+```{r dry-streak-counts-plot, fig.show="hold", out.width="100%"}
+
+# side-by-side of streak counts
+lg_min <- min(minmax(static_r$n_5dplus_streaks)[1],
+               minmax(static_r$n_7dplus_streaks)[1],
+               minmax(static_r$n_10dplus_streaks)[1],
+               minmax(static_r$n_14dplus_streaks)[1])
+
+lg_max <- max(minmax(static_r$n_5dplus_streaks)[2],
+               minmax(static_r$n_7dplus_streaks)[2],
+               minmax(static_r$n_10dplus_streaks)[2],
+               minmax(static_r$n_14dplus_streaks)[2])
+
+nday_streaks_breaks <- seq(lg_min - 1 , lg_max, by = 3) # -1 to include lg_min
+nday_streaks_labels <- c('1-3', '4-6', '7-9', '10-12') # upper value included in range and not lower value (6-8] = 6 excl and 8 included
+
+# plot number of streaks
+par(mfrow = c(1,4),
+    mar = c(1, 1, 2, 1)) # bottom, left, top, right.
+
+plot(static_r, 
+     "n_5dplus_streaks", 
+     main = "5+day Streaks",
+     type = 'interval',
+     breaks = nday_streaks_breaks,
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = 9),
+     legend = "topleft",
+     plg = list(legend = nday_streaks_labels),
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "n_7dplus_streaks", 
+     main = "7+day Streaks",
+     type = 'interval',
+     breaks = nday_streaks_breaks,
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = 9),
+     legend = NULL,
+     mar = NA,
+     cex.main = 1.3, )
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "n_10dplus_streaks", 
+     main = "10+day Streaks",
+     type = 'interval',
+     breaks = nday_streaks_breaks,
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = 9),
+     legend = NULL,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+
+plot(static_r, 
+     "n_14dplus_streaks", 
+     main = "14+day Streaks",
+     type = 'interval',
+     breaks = nday_streaks_breaks,
+     axes = F,
+     col = RColorBrewer::brewer.pal(name = "Oranges", n = 9),
+     legend = NULL,
+     mar = NA,
+     cex.main = 1.3)
+plot(southern_shp, add = T)
+```
+
+
+### Low-Rainfall Periods
+This section examines all 14-day periods during the rainy season (therefore extending beyond the monitoring months for the AA observational trigger) and report on the amount of rainfall they have received.
+
+Around `r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`% of 14-day periods across the Southern Region received 2 or less millimeters of rain during their rainy season. This amount of cumulative rainfall, which is the definition of a dry spell selected for AA, is thus very rare. For comparison, around `r round(100*ecdf(in_season$roll_sum_next_14d)(10), 2)`% received 10 or less millimeters. The graph below shows how frequent was each total rainfall per 14-day period, with the taller bars indicating the more frequent amounts.
+
+<br>
+
+```{r 14d-cum-rainfall}
+  
+in_season$lt5_rollsum14d_bin = ifelse(in_season$roll_sum_next_14d <= 5, 1, 0)
+
+in_season %>%
+  filter(!is.na(roll_sum_next_14d)) %>%
+  ggplot(aes(x=roll_sum_next_14d, fill = lt5_rollsum14d_bin)) +
+    geom_histogram(data=subset(in_season, lt5_rollsum14d_bin==1),
+                   binwidth = 5, 
+                   boundary = 0, # bars are left aligned
+                   fill="deeppink4",
+                   color="#e9ecef", # bar border
+                   alpha=0.9) +
+    geom_histogram(data=subset(in_season, lt5_rollsum14d_bin==0),
+                   binwidth = 5, 
+                   boundary = 0, 
+                   fill="#6BAED6",
+                   color="#e9ecef", 
+                   alpha=0.9) +
+    annotate("text", 
+             label = "Less than\n5mm", 
+             x = 2,
+             y = 1200, 
+             hjust = 0, 
+             vjust = 2, 
+             color = "deeppink4") +
+  annotate("segment", 
+           x = 2, 
+           xend = 2, 
+           y = 450, 
+           yend = 800,
+           color = "deeppink4", 
+           size = 0.6, 
+           linetype='dashed') +
+    ggtitle("Rainfall Amounts in 14-day Periods") +
+  theme_minimal() +
+    theme(
+      plot.title = element_text(size=12, hjust = 0.5, vjust = -2),
+      axis.title.x = element_text(size=10),
+      axis.title.y = element_text(size=10),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank()) +
+  labs(x = "Cumulative Rainfall (mm)",
+       y = "Number of 14-day periods",
+       caption = "A vertical bar covers a 5mm range.")
+```
+
+<br>
+
+### Timing of Dry Periods
+Dry spells damage crops more significantly during the planting and flowering growth phases. While the timing of a dry spell was not included in the 2021-2022 anticipatory action trigger, this analysis sought to determine whether dry periods had occurred around the time of these phases.
+
+Unfortunately, precise data on planting (and/or flowering) dates across the Southern region was not available. Neither was data capturing actual progress of the growing season from which planting or flowering periods could have been derived. Investments in this type of data would be warranted not only for AA but for a better understanding of the impact of dry spells more broadly.
+
+```{r ds-timing}
+#sprouting takes 1 to 2 weeks depending of moisture conditions and the variety of the crop.
+
+#If we talk about maize, between sprouting and flowering the time will be more and less 9 to 11 weeks, but this might vary by location, moisture and the variety (drought tolerant varieties can take even less than 10 weeks).
+
+```
+
+## Examining trigger assumptions
+This section explores whether the 2021-2022 season was consistent with assumptions made when the trigger mechanism was designed. 
+
+### A1: The rainy season will have begun over the Southern Region by 24 Dec.
+
+The Anticipatory Action (AA) trigger focused exclusively on January and February dry spells. Dry spells have historically occurred in December and March however those months were not monitored due to the difficulty in assessing in real-time whether a dry period was a dry spell during the rainy season or a streak of dry days outside of the rainy season. The 2021-2022 trigger assumed that the rainy season would have begun over the Southern Region by 24 Dec.
+
+The data from 2021-2022 confirms the challenge: while `r perc_nov_onset`% of the Southern Region began its rainy season in November, the remaining saw their season begin in December and as late as `r format(as.Date(onset_max, origin = "2021-11-01"), format = "%d %b")`. In detail, 50% of onset dates occurred by `r format(as.Date(onset_50perc_known, origin = "2021-11-01"), format = "%d %b")` and 90%  by `r format(as.Date(onset_90perc_known, origin = "2021-11-01"), format = "%d %b")`. Due to the need for 40 days to pass after the onset date to confirm that the season has begun, it took until `r format(as.Date(onset_max + 30, origin = "2021-11-01"), format = "%d %b")` to ascertain the onset for the entire region. Until then, it would not have been possible to confirm whether a dry period was an in-season dry spell for `r 100 - perc_nov_onset`% of the region. 
+
+As for cessation dates, the Southern Region saw its rainy season end at various times. Specifically, `r mar_cessation_area_pct`% of the Southern Region saw its rainy season end in March (mainly in the northern and southern tips). Any dry period before 15 March by definition must have been during the rainy season (since rainy season cannot end before 15 March) and therefore could be a dry spell. Dry periods starting on or after 15 March could have been during or after the rainy season. It would not have been possible to confirm before April whether the season had ended as the definition requires that a 15-day period after 15 March have passed. In other words, the earliest confirmation of the occurrence of a March dry spell could only have been made after 31 March. 
+
+The implication is that the observational trigger could have been expanded to cover up to 15 March as those dates are surely during the rainy season. Operationally, expansions beyond 15 March would require a time lag of 15 days after the 14th day of a suspected dry spell to verify that it is an in-season dry spell. However, it is likely that most dry periods suspected of being dry spells would end up also meeting the criterion for rainy season cessation and therefore be outside the season. How frequently that may be the case can be verified empirically using historical data.
+
+If the observational trigger were to be expanded to include December or March dry spells, it could delay framework activation and activity implementation by several weeks to allow for confirmation that the suspected dry spell was during the rainy season. Of note, a previous historical analysis revealed that very few dry spells occurred in December (2.2% of dry spells between 2000 and 2020) while 26.7% of dry spells were observed in March - a number similar to January.
+
+### A2: Identifying long periods with little to no rain (compared to consecutive dry days) enables anticipatory action against dry spells. 
+
+The trigger mechanism built on extensive work done by the World Food Programme that defined dry spells as a period of minimum of 14 consecutive days with no more than 2mm cumulative rainfall. Upon consensus within the pilot group, this definition was selected to enable Anticipatory Action. Alternative definitions found in the scientific literature refer to shorter periods with little rainfall (see A3 below). Other approaches instead define dry spells as streaks of dry days, where each day is allowed up to a certain amount of rainfall (typically 2-4mm). 
+
+Streaks of dry days were common during the 2021-2022 season. Every area in the region experienced a streak of 7+ consecutive dry days and most areas experienced a streak of 10+ days. By contrast, fewer areas (`r round(100*length(cells(static_r[["n_14dplus_streaks"]])) / nrow(season_dates), 1)` % of the region) experienced streaks of 14+ dry days. Streaks of 14+ consecutive dry days were more common than a 14-day period with little to no rainfall because more rainfall is allowed. 
+
+During the 2021-2022 rainy season, a dry period was often interrupted by a single, wetter day. The interruption reset the counter to zero and dry periods with little cumulative rain never reached 14 days. For instance, a 9-day period with no rain was followed by a rainy day and no longer met the AAF definition of a dry spell. The dry period would not have met the definition of a dry spell under a "consecutive dry days" definition either since more than 3mm of rain fell on the interrupting day. These observations from the 2021-2022 underline that erratic rainfall patterns, for instance a single rainy day during a dry period, can obfuscate other patterns. The phenomenon had been noticed in the historical analysis performed during trigger development and should be kept in mind as climate change is expected to make erratic patterns increasingly frequent.
+
+### A3: The selected dry spell duration, rainfall allowance, and geographical spread are identifying shocks that are well-suited for large-scale AA.
+
+The 2021-2022 season analysis revealed that very few (`r round(100*ecdf(in_season$roll_sum_next_14d)(2), 2)`%) periods received 2mm or less. Even when allowing for 5 times more rainfall than the selected definition for dry spell (ie for 10mm over 14 days), the occurrence of periods with so little rainfall was still significantly less than 5% of the periods during the rainy season. 
+
+*Historically* however dry spells with no more than 2mm were observed more frequently than in the past year. This suggests that rains were more evenly spread over the season than in typical years. Increasing the 2mm definition threshold would target events more frequent (once every 2 years in the Southern Region) than AA aims to target (once every 3 to 5 years). If rainfall allowance were increased, dry spell duration (14+ days) and geographical coverage (at least 3 districts based on per-district averages) would also need to be altered for the definition and/or trigger to respond to dry spells occurring once every 3 to 5 years. Furthermore a different definition would likely affect how well precipitation forecasts can be used to project the occurrence of dry spells.
+
+This year's patterns also suggest a reduced ability to detect highly localised dry spells when using averages over larger regions such as adm2 (districts), where an area that received rain within the district may cause the district average to be higher than 2mm despite other areas within the district having received no rain. An analytical approach that considers geographical coverage (eg: in squared kilometers), rather than an average over a district, may be a promising methodological approach to both detect more localised events and ensure that the events are widespread enough to warrant a large-scale response.
+
+#### Methodological notes
+This analysis examined small areas of roughly 10 x 10 km. Patterns can change when computing metrics over larger areas such as adm2 (district) regions. This analysis used ARC2 data while the historical analysis of dry spells performed during trigger development used CHIRPS data. Even a small 1-3mm difference between the two sources could be enough to show differential patterns when looking at 2mm thresholds. Observations derived from this analysis is based on a single year (2021-2022). Any modifications to triggers should be set based on historical data over longer periods of time, not a single year. 
+
+## References
+FAO (2006). Water and Soil Requirements. Cited in Kimaro and Sibande 2008.
+
+Kimaro TA and Sibande H. (2008). Trends of rainfall and maize productivity in Malawi. Tanzania Journal of Engineering and Technology. Vol. 31 (No.1)

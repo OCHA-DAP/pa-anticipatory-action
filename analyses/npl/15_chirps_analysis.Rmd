@@ -1,0 +1,696 @@
+---
+title: "Analysing CHIRPS data for Flood Trigger Development"
+output: md_document
+---
+
+## Rainfall Analysis
+
+Reading data from shapefile to get river basin bounds:
+
+```{r intro, echo=FALSE, warning = FALSE, message=FALSE, results='hide'}
+filePath <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/")
+options(scipen = 100000)
+
+# devtools::install_github("RS-eco/processNC")
+    
+# libraries
+library(tidyverse)
+library(sf)
+library(tidyquant)
+library(extRemes)
+
+library(tseries)
+library(ncdf4)
+# library(processNC)
+library(raster)
+
+
+# reading in shapefiles
+temp <- tempfile()
+
+unzip(zipfile = paste0(Sys.getenv("AA_DATA_DIR"), "/public/raw/npl/cod_ab/npl_cod_ab.shp.zip"), exdir = temp)
+
+nplSF <- st_read(temp, layer = "npl_admbnda_districts_nd_20201117")
+
+nplRBSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_River_Basins.shp"))
+
+nplWSSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/shapefiles/Major_watershed.shp"))
+
+# reading in historical floods
+NPLHistFloods <- readxl::read_xlsx(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/unrco/NepalHistoricalFlood1971-2020.xlsx"))
+
+# reading in GLOFAS Data
+NPLGLOFASNC <- nc_open(paste0(Sys.getenv("AA_DATA_DIR"),                        "/public/processed/npl/glofas/npl_cems-glofas-historical_v3_incorrect-coords.nc"))
+
+NPLGLOFAS <- tibble(Chatara = ncvar_get(NPLGLOFASNC, "Chatara_v3"),
+                    Chisapani = ncvar_get(NPLGLOFASNC, "Chisapani_v3"),
+                    Time = as.Date("1979-01-01") + (NPLGLOFASNC$dim$time$vals))
+
+nc_close(NPLGLOFASNC)
+
+NPLWaterLevel <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/waterl_level_procssed.csv"))
+
+NPLFlowChatara <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_695 Koshi Chatara.txt"), sep = ",", skip = 21)
+NPLFlowChisapani <- read.table(paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/npl/dhm/processed/DFL_280 Karnali Chisapani.txt"), sep = ",", skip = 21)
+NPLFlow <- rbind(
+    cbind(NPLFlowChatara, Basin = "Saptakoshi Watershed"),
+    cbind(NPLFlowChisapani, Basin = "Karnali River Basin")
+)
+colnames(NPLFlow)[1:2] <- c("Dates", "Flow")
+NPLFlow <- NPLFlow %>%
+    mutate(Dates = as.Date(Dates, format = "%d/%b/%Y"))
+
+# subsetting shapefiles
+nplRBSF2 <- nplRBSF %>%
+    filter(Major_Basi %in% "Karnali River Basin")
+nplWSSF2 <- nplWSSF %>%
+    filter(WSH_NME %in% "Saptakoshi Watershed")
+
+# box subset function
+BoxFXN <- function(shapeFile, basin){
+    BasinBox <- shapeFile %>%
+        filter({if("Major_Basi" %in% names(.)) Major_Basi else WSH_NME} == basin) %>%
+        extent()
+    
+    BoxXMin <- which.min(abs(BasinBox[1] - round(ncvar_get(ncObj, "X"), 3)))
+    BoxXMax <- which.min(abs(BasinBox[2] - round(ncvar_get(ncObj, "X"), 3)))
+    BoxXLen <- BoxXMax - BoxXMin + 1
+    BoxYMin <- which.min(abs(BasinBox[3] - round(ncvar_get(ncObj, "Y"), 3)))
+    BoxYMax <- which.min(abs(BasinBox[4] - round(ncvar_get(ncObj, "Y"), 3)))
+    BoxYLen <- BoxYMin - BoxYMax + 1
+    DataCube <- ncvar_get(ncObj, "precipitation", 
+                             start = c(BoxXMin, BoxYMax, 1), 
+                             count = c(BoxXLen, BoxYLen, 1)) %>%
+        data.frame() %>%
+        bind_cols(paste0(round(ncvar_get(ncObj, "X")[BoxXMin:BoxXMax], 3), "E")) %>%
+        setNames(c(paste0(round(ncvar_get(ncObj, "Y")[BoxYMax:BoxYMin], 3), "N"), "Longitude")) %>%
+        gather(key = "Latitude", value = "precipitation", -Longitude) %>%
+        mutate(Date = as.Date(str_extract(ncObj$filename,"(?<=daily_).+(?=_r0.05)"), format = "%Y_%m_%d"), 
+               Basin = basin)
+    return(DataCube)
+}
+
+# function for reading in files 
+read_files <- function(filePath, fileName){
+    ncObj <- nc_open(paste0(filePath, fileName))
+    # Karnali
+    KarDataCube <- BoxFXN(nplRBSF, "Karnali River Basin")
+    
+    # Koshi
+    KoshiBox <- BoxFXN(nplWSSF, "Saptakoshi Watershed")
+        
+    # close
+    nc_close(ncObj)
+    # data object
+    return(bind_rows(KarDataCube, KoshDataCube))
+}
+
+
+# chirps data frame
+# chirpsData <- list.files(filePath, pattern = "*.nc") %>%
+#     map_df(~ read_files(filePath, .)) 
+
+# to minimise read time
+chirpsData <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), "/public/processed/npl/chirps/BasinsCHIRPSdata.csv"))
+
+```
+
+```{r}
+chirpsGrid <- st_sf(st_make_grid(nplRBSF, cellsize = 0.05, offset = c(80.05, 26.3), n = c(163, 83)))
+chirpsGrid <- chirpsGrid %>%
+    mutate(Centroids = st_centroid(chirpsGrid), 
+           Long = round(st_coordinates(Centroids)[,1], 3),
+           Lat = paste0(round(st_coordinates(Centroids)[,2], 3), "N"), 
+           Coords = paste0(Long, "E", Lat))
+
+chirpsData <- chirpsData %>%
+    mutate(Coords = paste0(Longitude, "E", Latitude))
+
+# Karnali
+KarnaliGrids <- st_intersection(chirpsGrid, nplRBSF2)
+KarnaliCHIRPS <- chirpsData %>%
+    filter(Coords %in% KarnaliGrids$Coords)
+
+# Koshi
+KoshiGrids <- st_intersection(chirpsGrid, nplWSSF2)
+KoshiCHIRPS <- chirpsData %>%
+    filter(Coords %in% KoshiGrids$Coords)
+
+chirpsData2 <- bind_rows(KarnaliCHIRPS, KoshiCHIRPS)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+# rolling sum
+# aggregate all grids into one and find mean
+# rolling sum is assigned to last day of window
+n = 10
+AggNational <- chirpsData2 %>%
+    group_by(Date, Basin) %>%
+    summarise(rfe = mean(precipitation)) %>%
+    group_by(Basin) %>%
+    mutate(rollsum = c(rep(0, n-1), rollapplyr(rfe, n, sum))) %>%
+    ungroup()
+    
+# getting top month every year
+AggNational2 <- AggNational %>%
+    mutate(Year = substr(Date, 1, 4)) %>%
+    group_by(Year, Basin) %>%
+    top_n(1, rollsum)
+
+ggplot(data = AggNational2, aes(x = Year, y = rollsum, fill = Basin)) + 
+    geom_bar(stat="identity", position = "dodge") + 
+    theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
+    ggtitle("CHIRPS Maximum 10-day Rolling Sum of Precipitation with the Associated Month") +
+    xlab("Month") + 
+    ylab("Maximum 10-day Rolling Sum(mm)")
+
+# checking for stationarity
+
+adf.test(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"]) # reject H0 and say series is stationary at alpha = 0.05
+adf.test(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"]) # reject H0 and say series is stationary at alpha = 0.05
+
+returnValues2 <- AggNational2 %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = rollsum), return.period = 2), 
+              returnyr5 = return.level(fevd(x = rollsum), return.period = 5), 
+              returnyr10 = return.level(fevd(x = rollsum), return.period = 10))
+
+plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Karnali River Basin"]))
+plot(fevd(x = AggNational2$rollsum[AggNational2$Basin == "Saptakoshi Watershed"]))
+
+ggplot(data = AggNational2, aes(x = Date, y = rollsum, group = Basin)) + 
+    geom_line(aes(colour = Basin)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr2"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr2"]), 
+                  label = "RP: 2", vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr2"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr2"]), 
+                  label = "RP: 2", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr5"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr5"]), 
+                  label = "RP: 5", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr5"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr5"]), 
+                  label = "RP: 5", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[2,"returnyr10"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[2,"returnyr10"]), 
+                  label = "RP: 10", vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues2[1,"returnyr10"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues2[1,"returnyr10"]), 
+                  label = "RP: 10", vjust = -1)) + 
+    ggtitle("Maximum 10-day Rolling Sums Per Year with Return Periods") + 
+    ylab("Rolling Sums(mm)")
+
+# extracting the return period
+mrlplot(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"], main="Mean Residual Life Plot: Karnali River Basin")
+mrlplot(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"], main="Mean Residual Life Plot: Saptakoshi Watershed")
+
+threshrange.plot(AggNational$rollsum[AggNational$Basin == "Karnali River Basin"], r = c(0, 100), nint = 25)
+threshrange.plot(AggNational$rollsum[AggNational$Basin == "Saptakoshi Watershed"], r = c(0, 150), nint = 25)
+
+returnValues <- AggNational %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
+                                            threshold = 25), return.period = 2), 
+              returnyr5 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
+                                            threshold = 25), return.period = 5), 
+              returnyr10 = return.level(fevd(x = rollsum, method = "MLE", type="GP", 
+                                             threshold = 25), return.period = 10))
+
+ggplot(data = AggNational, aes(x = Date, y = rollsum, group = Basin)) + 
+    geom_line(aes(colour = Basin)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues[1,"returnyr2"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[1,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues[1,"returnyr2"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues[2,"returnyr2"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[2,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues[2,"returnyr2"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues[1,"returnyr5"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[1,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues[1,"returnyr5"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues[2,"returnyr5"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[2,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues[2,"returnyr5"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues[1,"returnyr10"]), colour = Basin[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[1,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues[1,"returnyr10"]))), 
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues[2,"returnyr10"]), colour = Basin[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues[2,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues[2,"returnyr10"]))),
+                  vjust = -1)) + 
+    ggtitle("10-day Rolling Sums with Return Periods in Years") + 
+    ylab("Rolling Sums(mm)")
+
+```
+
+```{r}
+# comparing historical values with return values
+# dates where value was exceeded
+AggNational3 <- AggNational %>%
+    arrange(Date, Basin) %>%
+    left_join(returnValues, by = "Basin") %>%
+    mutate(thresh2Yr = rollsum >= returnyr2) %>%
+    mutate(thresh5Yr = rollsum >= returnyr5) %>%
+    mutate(thresh10Yr = rollsum >= returnyr10) %>%
+    filter(thresh2Yr) %>%
+    group_by(Basin) %>%
+    arrange(Basin, Date) %>%
+    # remove if consecutive
+    mutate(notConsecutive = c(T, diff(Date) != 1), 
+           maxRolWindow = ave(rollsum, cumsum(notConsecutive), FUN = max)) %>%
+    filter(rollsum == maxRolWindow)
+
+# write.csv(AggNational3, "C:/Users/pauni/Desktop/Work/OCHA/Nepal/Rolling Sums Exceeding 2year return level.csv", row.names = F)
+
+# summary(ecdf(unique(NPLHistFloods$`Affected Family`)))
+NPLHistFloodsWorst <- NPLHistFloods %>%
+    filter(`Affected Family` >= 10 | `Estimated Loss` >= 50000)
+
+
+unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Name` %in% nplSF$DIST_EN)])
+
+```
+
+There are 3 districts in the Historical Floods file not found in the shapefile. On further inspection, there seems to be very slight differences in the name that can be explained by data entry. Changing Makwanpur to Makawanpur, Dhanusa to Dhanusha and Kavrepalanchok to Kabhrepalanchok:
+
+```{r}
+NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
+    mutate(`District Name` = str_replace_all(`District Name`, "Makwanpur", "Makawanpur"), 
+           `District Name` = str_replace_all(`District Name`, "Dhanusa", "Dhanusha"),
+           `District Name` = str_replace_all(`District Name`, "Kavrepalanchok", "Kabhrepalanchok"))
+unique(NPLHistFloodsWorst$`District Name`[which(!NPLHistFloodsWorst$`District Name` %in% nplSF$DIST_EN)])
+
+```
+
+Trying to clean up the dates in the Historical Floods Data:
+ - Replacing the day column with 0 values with 1 
+ - Creating Date column from Year, Month and Amended Day column
+
+```{r}
+NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
+    mutate(DayVal = str_replace_all(Day, "0", "1"), 
+           AmenDate = as.Date(paste0(Year, "-", Month, "-", DayVal)))
+```
+
+Checking which districts are in which water basins:
+
+```{r}
+KarnalioverlapVals <- st_intersection(nplRBSF2, nplSF)$DIST_EN
+KoshioverlapVals <- st_intersection(nplWSSF2, nplSF)$DIST_EN
+
+```
+
+There are 24 districts that overlap with the Karnali river basin and 4 districts that overlap with the Saptakoshi watershed.
+
+Filtering the Historical Flood Data using these districts:
+
+```{r}
+NPLHistFloodsWorst <- NPLHistFloodsWorst %>%
+    mutate(Basin = ifelse(`District Name` %in% KarnalioverlapVals, "Karnali River Basin", 
+                          ifelse(`District Name` %in% KoshioverlapVals, "Saptakoshi Watershed", "Other"))) %>%
+    filter(Basin %in% c("Karnali River Basin", "Saptakoshi Watershed"))
+    
+unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Karnali River Basin"])
+unique(NPLHistFloodsWorst$`District Name`[NPLHistFloodsWorst$Basin == "Saptakoshi Watershed"])
+
+```
+
+There is data for 22 districts for the Karnali River Basin and data for 4 districts for the Saptakoshi watershed.
+
+Comparing the data for the 2 river basins:
+
+```{r}
+# joining the two dataframes using full join
+CompleteDF <- NPLHistFloodsWorst %>% 
+    dplyr::select(Basin, AmenDate) %>%
+    full_join(AggNational3, by = "Basin") %>%
+    # rain event happens before flood event
+    mutate(TimeDiff = difftime(AmenDate, Date, units = "days"), 
+           WeekDiff = difftime(AmenDate, Date, units = "weeks")) %>%
+    # for each reported date of flooding which was the closest excess rainfall event
+    group_by(AmenDate) %>%
+    filter(TimeDiff >= 0 & TimeDiff <= 30) %>%
+    slice(which.min(TimeDiff))
+
+```
+
+The analysis shows that one of the flood events were preceded by some extreme rainfall events for the Karnali water basin. A negative time difference value shows that the flooding occurred before the rain event. 
+
+# Comparing Actual Flood Event and CHIRPS Extreme Rainfall Event
+
+```{r}
+# finding false positives
+# flood event did not occur but there was an extreme rainfall event
+summaryFXN <- function(DF1, DF2, DateCol1, DateCol2){
+    FloodCheck <- DF1 %>%
+        dplyr::select(Basin, {{ DateCol1 }}) %>%
+        full_join(DF2, by = "Basin") 
+    FloodCheck[,"TimeDiff"] <- difftime(FloodCheck[[DateCol1]], FloodCheck[[DateCol2]], units = "days")
+    FloodCheck[,"Check"] <- ifelse(FloodCheck$TimeDiff >= 0 & FloodCheck$TimeDiff <= 30, T, F)
+    
+    return(FloodCheck)
+}
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggNational3, "AmenDate", "Date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggNational3, "AmenDate", "Date") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+# we have to take into account that Flood Data starts earlier than CHIRPS Data.
+```
+
+
+# Comparing Actual Flood Event and GLOFAS Event
+
+```{r}
+# matching Chisapani to Karnali and Chatara to Saptakoshi
+ggplot(NPLGLOFAS, aes(x = Time)) + 
+    geom_line(aes(y = Chisapani)) + 
+    geom_line(aes(y = Chatara), color = "blue") + 
+    ggtitle("Nepal GLOFAS Data: Chisapani(in black) and Chatara(in blue)") +
+    ylab("GLOFAS")
+
+# mrlplot(NPLGLOFAS$Chisapani, main="Mean Residual Life Plot: Chisapani")
+# mrlplot(NPLGLOFAS$Chatara, main="Mean Residual Life Plot: Chatara")
+
+# threshrange.plot(NPLGLOFAS$Chisapani, r = c(0, 10000), nint = 20)
+# threshrange.plot(NPLGLOFAS$Chatara, r = c(0, 10000), nint = 20)
+
+returnValues3 <- NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    group_by(Station) %>%
+    summarise(returnyr2 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                            threshold = 6000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = GLOFAS, method = "MLE", type="GP", 
+                                             threshold = 6000), return.period = 10)) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed"))
+
+
+NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    ggplot(aes(x = Time, y = GLOFAS, group = Station)) + 
+    geom_line(aes(colour = Station)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues3[1,"returnyr2"]), colour = Station[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[1,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues3[1,"returnyr2"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues3[2,"returnyr2"]), colour = Station[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[2,"returnyr2"]), 
+                  label = paste0("RP: 2-", round(as.numeric(returnValues3[2,"returnyr2"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues3[1,"returnyr5"]), colour = Station[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[1,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues3[1,"returnyr5"]))),
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues3[2,"returnyr5"]), colour = Station[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[2,"returnyr5"]), 
+                  label = paste0("RP: 5-", round(as.numeric(returnValues3[2,"returnyr5"]))),
+                  vjust = -1)) + 
+    geom_hline(aes(yintercept = as.numeric(returnValues3[1,"returnyr10"]), colour = Station[1])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[1,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues3[1,"returnyr10"]))), 
+                  vjust = -1)) +
+    geom_hline(aes(yintercept = as.numeric(returnValues3[2,"returnyr10"]), colour = Station[2])) + 
+    geom_text(aes(as.Date("1980-01-01"), as.numeric(returnValues3[2,"returnyr10"]), 
+                  label = paste0("RP: 10-", round(as.numeric(returnValues3[2,"returnyr10"]))),
+                  vjust = -1)) + 
+    ggtitle("GLOFAS with Return Periods in Years") + 
+    ylab("GLOFAS")
+
+
+AggGLOFAS <- NPLGLOFAS %>%
+    pivot_longer(cols = starts_with("C"), names_to = "Station", values_to = "GLOFAS") %>%
+    arrange(Time, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    left_join(returnValues3, by = "Basin") %>%
+    mutate(thresh2Yr = GLOFAS >= returnyr2) %>%
+    mutate(thresh5Yr = GLOFAS >= returnyr5) %>%
+    mutate(thresh10Yr = GLOFAS >= returnyr10) %>%
+    filter(thresh2Yr)
+
+
+# finding false positives
+# flood event did not occur but there was a GLOFAS event
+# assumption is that on-the-ground is recorded on the day of or before GLOFAS records an event
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggGLOFAS, "AmenDate", "Time") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggGLOFAS, "AmenDate", "Time") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats2 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
+
+# Comparing GLOFAS Events and CHIRPS Events
+
+```{r}
+
+# finding false positives
+# flood event did not occur but there was a GLOFAS event
+# assumption is that CHIRPS event occurs before GLOFAS records an event
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggNational3, "Time", "Date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggNational3, "Time", "Date") %>%
+    #Date of ground truth
+    group_by(Basin, Time) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats3 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
+
+# Comparing Water Levels and CHIRPS Event
+
+```{r}
+ggplot(NPLWaterLevel, aes(x = date)) + 
+    geom_line(aes(y = Chisapani)) + 
+    geom_line(aes(y = Chatara), color = "blue") + 
+    ggtitle("Nepal Water Level Data: Chisapani(in black) and Chatara(in blue)") +
+    ylab("Water Level")
+
+returnValues4 <- tibble(Station = c("Chatara", "Chisapani"), 
+                        Basin = c("Saptakoshi Watershed", "Karnali River Basin"),
+                        returnyr2 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
+                                                        threshold = 6, na.action = na.remove), 
+                                                   return.period = 2), 
+                                      return.level(fevd(x = NPLWaterLevel$Chisapani, method = "MLE",
+                                                        type="GP", threshold = 9.5, na.action = na.remove), 
+                                                   return.period = 2)),
+                        returnyr5 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
+                                                        threshold = 6, na.action = na.remove), 
+                                                   return.period = 5), 
+                                      return.level(fevd(x = NPLWaterLevel$Chisapani, method = "MLE",
+                                                        type="GP", threshold = 9.5, na.action = na.remove), 
+                                                   return.period = 5)),
+                        returnyr10 = c(return.level(fevd(x = NPLWaterLevel$Chatara, method = "MLE", type="GP", 
+                                                        threshold = 6, na.action = na.remove), 
+                                                   return.period = 10), 
+                                      return.level(fevd(x = NPLWaterLevel$Chisapani, method = "MLE",
+                                                        type="GP", threshold = 9.5, na.action = na.remove), 
+                                                   return.period = 10)))
+    
+    
+AggWaterLevel <- NPLWaterLevel %>%
+    dplyr::select(date, Chatara, Chisapani) %>%
+    pivot_longer(cols = c("Chatara", "Chisapani"), names_to = "Station", values_to = "WaterLevel") %>%
+    arrange(date, Station) %>%
+    mutate(Basin = ifelse(Station == "Chisapani", "Karnali River Basin", "Saptakoshi Watershed")) %>%
+    left_join(returnValues4, by = "Basin") %>%
+    mutate(thresh2Yr = WaterLevel >= returnyr2) %>%
+    mutate(thresh5Yr = WaterLevel >= returnyr5) %>%
+    mutate(thresh10Yr = WaterLevel >= returnyr10) %>%
+    filter(thresh2Yr)
+
+FloodCheckpos <- summaryFXN(AggNational3, AggWaterLevel, "Date", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggNational3, AggWaterLevel, "Date", "date") %>%
+    #Date of ground truth
+    group_by(Basin, date) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats4 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+
+```
+
+# Comparing Water Levels and Actual Events
+
+```{r}
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggWaterLevel, "AmenDate", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggWaterLevel, "AmenDate", "date") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats5 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+
+```
+
+# Comparing Water Levels and GLOFAS
+
+```{r}
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggWaterLevel, "Time", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggWaterLevel, "Time", "date") %>%
+    #Date of ground truth
+    group_by(Basin, date) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats6 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+
+```
+
+# Discharge Data vs Historical Floods
+
+```{r}
+ggplot(data = NPLFlow, aes(x = Dates, y = Flow, group = Basin)) + 
+    geom_line(aes(colour = Basin)) + 
+    theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1)) + 
+    ggtitle("River Discharge for the Chatara and Chisapani Stations") +
+    xlab("Dates") + 
+    ylab("River Discharge(m/s)")
+
+returnValues5 <- NPLFlow %>%
+    group_by(Basin) %>%
+    summarise(returnyr2 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                            threshold = 4000), return.period = 2), 
+              returnyr5 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                            threshold = 4000), return.period = 5), 
+              returnyr10 = return.level(fevd(x = Flow, method = "MLE", type="GP", 
+                                             threshold = 4000), return.period = 10))
+AggFlow <- NPLFlow %>%
+    arrange(Dates, Basin) %>%
+    left_join(returnValues5, by = "Basin") %>%
+    mutate(thresh2Yr = Flow >= returnyr2) %>%
+    mutate(thresh5Yr = Flow >= returnyr5) %>%
+    mutate(thresh10Yr = Flow >= returnyr10) %>%
+    filter(thresh2Yr)
+
+FloodCheckpos <- summaryFXN(NPLHistFloodsWorst, AggFlow, "AmenDate", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Dates) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(NPLHistFloodsWorst, AggFlow, "AmenDate", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, AmenDate) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats7 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+
+```
+
+
+# Discharge Data vs CHIRPS
+```{r}
+FloodCheckpos <- summaryFXN(AggFlow, AggNational3, "Dates", "Date") %>%
+    # Date of data to be checked
+    group_by(Basin, Date) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggFlow, AggNational3, "Dates", "Date") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats8 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
+
+# Discharge Data vs GLOFAS
+```{r}
+FloodCheckpos <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+    # Date of data to be checked
+    group_by(Basin, Time) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggGLOFAS, AggFlow, "Time", "Dates") %>%
+    #Date of ground truth
+    group_by(Basin, Dates) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats9 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
+
+# Discharge Data vs Water Level
+```{r}
+FloodCheckpos <- summaryFXN(AggFlow, AggWaterLevel, "Dates", "date") %>%
+    # Date of data to be checked
+    group_by(Basin, Dates) %>%
+    summarise(TPVals = sum(Check, na.rm = T))
+FloodCheckneg <- summaryFXN(AggFlow, AggWaterLevel, "Dates", "date") %>%
+    #Date of ground truth
+    group_by(Basin, date) %>%
+    summarise(TNVals = sum(Check, na.rm = T))
+FloodStats10 <- FloodCheckpos %>%
+    group_by(Basin) %>%
+    summarise(FP = sum(TPVals == 0)) %>%
+    left_join(FloodCheckneg %>%
+                  group_by(Basin) %>%
+                  summarise(FN = sum(TNVals == 0), TP = sum(TNVals != 0)), by = "Basin")
+
+```
+
