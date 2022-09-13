@@ -162,6 +162,9 @@ perf_metrics_data <- read.csv(perf_metrics_filename,
 # format performance metrics values
 perf_metrics_data$value <- round(100 * perf_metrics_data$value, 0)
 
+# add dummy variable for plotting CIs
+perf_metrics_data$dummy <- 1
+
 # format funding amounts
 funding_a <- paste0('$',funding_a,'m')
 funding_b <- paste0('$',funding_b,'m')
@@ -193,8 +196,8 @@ df_c_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = '
 df_c_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_c) # probability of trigger activation
 
 # compute width and position of CIs for the framework
-df_fmwk_min <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
-df_fmwk_ful <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
+df_fmwk_min <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'framework-min') # prob minimum framework activation 
+df_fmwk_ful <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'framework-full') # prob full framework activation 
 
 ```
 
