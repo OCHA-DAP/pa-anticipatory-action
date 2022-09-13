@@ -16,13 +16,13 @@ definition of droubt, and how that changes the CIs.
 ```
 
 ```python
-import pandas as pd
-import numpy as np
-
 from pathlib import Path
 import os
 import sys
+import math
 
+import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 ```
 
@@ -181,6 +181,7 @@ df_base_alt = calc_df_base(df_all_alt)
 ```python
 n_bootstrap = 10_000  # 10,000 takes about 2.5 minutes
 
+
 def get_df_bootstrap(df, n_bootstrap=1_000):
     # Create a bootstrapped DF
     df_all_bootstrap = pd.DataFrame()
@@ -250,7 +251,7 @@ def calc_ci(
     df_bootstrap, df_base, replace_fn_metrics=False, save_filename_suffix=None
 ):
     df_grouped = df_bootstrap.groupby("metric")
-    for ci in [0.8, 0.9, 0.95, 0.99]:
+    for ci in [0.68, 0.95]:
         df_ci = df_base.copy()
         points = {"low_end": (1 - ci) / 2, "high_end": 1 - (1 - ci) / 2}
         for point, ci_val in points.items():
@@ -263,7 +264,7 @@ def calc_ci(
             df["point"] = point
             df_ci = df_ci.append(df, ignore_index=True)
         # Special case for trigger1 mis and det
-        if replace_fn_metrics:
+        if replace_fn_metrics and math.isclose(ci, 0.95):
             df_ci.loc[
                 (df_ci.metric == "det")
                 & (df_ci.trigger == "Trigger1")
@@ -338,4 +339,8 @@ for i, (_, group) in enumerate(df_ci_2.groupby(["metric", "trigger"])):
     )
     ax.text(0, i, group.metric.iloc[0], size="x-small")
     ax.text(1, i, group.trigger.iloc[0], size="x-small")
+```
+
+```python
+
 ```
