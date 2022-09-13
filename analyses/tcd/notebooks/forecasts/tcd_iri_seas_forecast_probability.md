@@ -22,8 +22,15 @@ import numpy as np
 import xarray as xr
 from dateutil.relativedelta import relativedelta
 import hvplot.xarray
+from pathlib import Path
+import sys
+import os
 
-#TODO: update to using toolbox, but toolbox seems broken atm..
+path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
+sys.path.append(path_mod)
+from src.indicators.drought.config import Config
+
+# TODO: update to using toolbox, but need to upgrade hxl version for that..
 from src.indicators.drought.iri_rainfallforecast import get_iri_data
 ```
 
@@ -33,6 +40,10 @@ from src.indicators.drought.iri_rainfallforecast import get_iri_data
 We load all IRI data and plot the distribution of below average probabilities. 
 We see that the median lies around 34% and the values are not normally distributed. 
 We don't see large differences in the distributions between leadtimes
+
+```python
+config = Config()
+```
 
 ```python
 # C indicates the tercile (below-average, normal, or above-average).
