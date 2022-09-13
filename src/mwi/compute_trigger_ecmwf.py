@@ -23,6 +23,11 @@ ecmwf_api.download()
 ecmwf_api.process()
 ```
 
+To access the ECMWF API, you need an authorized account.
+More information on the ECMWF API and how to initialize the usage,
+can be found
+`here <https://www.ecmwf.int/en/forecasts/access-forecasts/ecmwf-web-api>`_
+
 Note that once the code in the toolbox is finalized, toolbox can be installed
 in this repository and the code to download data from ECMWF can be
 incorporated in the current script.

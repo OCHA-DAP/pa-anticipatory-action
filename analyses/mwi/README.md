@@ -61,9 +61,15 @@ Other data sources that were explored are ENSO and CHIRPSGEFS. References to the
 
 ### Reproducing this analysis
 
-The code to compute the predictive trigger can be found in `src/mwi/compute_trigger_ecmwf.py`. 
-This script computes the trigger for the original as well as lower resolution forecasts. Note that the script automatically downloads the lower resolutoin forecasts. To download the original forecasts, a script has to be run 
-in the aa-toolbox [aa-toolbox repository](https://github.com/OCHA-DAP/pa-aa-toolbox/tree/feature/ecmwf-seas-realtime). More details on this are provided in the docstring of the `src/mwi/compute_trigger_ecmwf.py` script. 
+The code to compute the predictive trigger can be found in `src/mwi/compute_trigger_ecmwf.py`.
+This script computes the trigger for the original as well as lower resolution forecasts.
+Note that the script automatically downloads the lower resolution forecasts from CDS.
+But to do so, you need to set-up your CDS account for which instructions can be found [here](https://cds.climate.copernicus.eu/api-how-to).
+
+Downloading of the original forecasts is not implemented here but in the aa-toolbox repository.
+[This script](https://github.com/OCHA-DAP/pa-aa-toolbox/tree/feature/ecmwf-seas-realtime) in that repository downloads this data.
+More details on how to get the original forecast are provided in the docstring of the `src/mwi/compute_trigger_ecmwf.py` script. Note
+that you need a separate account for the API of the original data.
 
 The code to compute the observational trigger can be found in `analyses/mwi/dryspells_trigger/15_mwi_obs_trigger_monitoring.md`
 
