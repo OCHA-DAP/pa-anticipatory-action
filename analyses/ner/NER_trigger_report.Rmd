@@ -51,7 +51,7 @@ nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years
 ci <- 95 # which confidence intervals are presented? An integer between 0 and 100
 
 data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
-perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_", ci / 100, ".csv")
+perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 
 # trigger A info  
@@ -156,7 +156,7 @@ computeCIwidths <- function(perf_metrics_df, metric_name, trigger_id) {
 
 # read in performance metrics file
 perf_metrics_data <- read.csv(perf_metrics_filename,
-                              colClasses = c('character', 'character', 'character', 'numeric', 'integer')
+                              colClasses = c('character', 'character', 'numeric', 'character')
                               )
 
 # format performance metrics values
