@@ -94,8 +94,11 @@ data_source_c <- 'ENACTS or CHIRP'
 hist_period_c <- "1991 - 2020"
 monitored_by_c <- 'IRI'
 
+# activation timepoints for triggers with multiple timepoints ONLY
+atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June")
+  
 # Compile list of triggers to be included in the report (exclude framework-full and framework-min)
-trigger_list <- c(name_a, name_b, name_c, "Jan", "Feb", "Mar", "Apr", "May", "June")
+trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
 
 # Table footnotes
 trigger_table_footnote <- "Triggers A and B can reach their threshold and activate independently from one another. Trigger C can only activate the framework if Trigger B was not met. See Annex for performance metrics per timepoint."
@@ -182,25 +185,26 @@ framework_triggers_list <- c("framework-min", "framework-full")
 segment_dim_summary <- data.frame(trigger_id = NA, metric_name = NA, segment = NA, lo_end = NA, hi_end = NA)
   
 # Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
-for (metric in metrics_list) {
+for(trigger in trigger_list) {
+  for (metric in metrics_list) {
   
-# produce segment_dimensions and plots for triggers 
-output <- plotCI(trigger_id = "Trigger2", 
-                 metric_name = metric)
-
-# save plot as png
-filename <- paste0('Trigger2', "_", metric, "_ci.png")
-png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
-print(output$plot)
-dev.off()
+  # produce segment_dimensions and plots for triggers 
+  output <- plotCI(trigger_id = trigger, 
+                   metric_name = metric)
   
-# save segment_dimensions in summary
-segment_dim_temp <- data.frame(trigger_id = 'Trigger2', metric_name = metric, output$segment_dims)
+  # save plot as png
+  filename <- paste0(trigger, "_", metric, "_ci.png")
+  png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
+  print(output$plot)
+  dev.off()
+    
+  # save segment_dimensions in summary
+  segment_dim_temp <- data.frame(trigger_id = trigger_id, metric_name = metric, output$segment_dims)
+    
+  segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
   
-segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
-
+  }
 }
-
 
 # compute width and position of CIs for trigger a
 df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_a) 
