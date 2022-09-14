@@ -422,107 +422,35 @@ kbl(learning_table,
 
 &nbsp;
 
-```{r timepoint-table-setup}
-
-# compute width and position of CIs for trigger at timepoint: Jan
-jan_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'Jan') # valid activation rate 
-jan_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'Jan') # detection rate
-jan_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'Jan') # false alarm rate
-jan_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'Jan') # miss rate
-
-# compute width and position of CIs for trigger at timepoint: Feb
-feb_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'Feb') # valid activation rate 
-feb_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'Feb') # detection rate
-feb_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'Feb') # false alarm rate
-feb_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'Feb') # miss rate
-
-# compute width and position of CIs for trigger at timepoint: Mar
-mar_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'Mar') # valid activation rate 
-mar_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'Mar') # detection rate
-mar_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'Mar') # false alarm rate
-mar_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'Mar') # miss rate
-
-# compute width and position of CIs for trigger at timepoint: Apr
-apr_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'Apr') # valid activation rate 
-apr_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'Apr') # detection rate
-apr_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'Apr') # false alarm rate
-apr_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'Apr') # miss rate
-
-# compute width and position of CIs for trigger at timepoint: May
-may_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'May') # valid activation rate 
-may_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'May') # detection rate
-may_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'May') # false alarm rate
-may_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'May') # miss rate
-
-# compute width and position of CIs for trigger at timepoint: June
-jun_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = 'June') # valid activation rate 
-jun_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = 'June') # detection rate
-jun_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = 'June') # false alarm rate
-jun_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = 'June') # miss rate
-
-# plot CIs for every timepoint
-plotCI(trigger_id = 'Jan', metric = 'var', ci_widths_df = 'jan_var') 
-plotCI(trigger_id = 'Jan', metric = 'det', ci_widths_df = 'jan_det')
-plotCI(trigger_id = 'Jan', metric = 'far', ci_widths_df = 'jan_far')
-plotCI(trigger_id = 'Jan', metric = 'mis', ci_widths_df = 'jan_mis')
-
-plotCI(trigger_id = 'Feb', metric = 'var', ci_widths_df = 'feb_var') 
-plotCI(trigger_id = 'Feb', metric = 'det', ci_widths_df = 'feb_det')
-plotCI(trigger_id = 'Feb', metric = 'far', ci_widths_df = 'feb_far') 
-plotCI(trigger_id = 'Feb', metric = 'mis', ci_widths_df = 'feb_mis')
-
-plotCI(trigger_id = 'Mar', metric = 'var', ci_widths_df = 'mar_var') 
-plotCI(trigger_id = 'Mar', metric = 'det', ci_widths_df = 'mar_det') 
-plotCI(trigger_id = 'Mar', metric = 'far', ci_widths_df = 'mar_far') 
-plotCI(trigger_id = 'Mar', metric = 'mis', ci_widths_df = 'mar_mis') 
-
-plotCI(trigger_id = 'Apr', metric = 'var', ci_widths_df = 'apr_var') 
-plotCI(trigger_id = 'Apr', metric = 'det', ci_widths_df = 'apr_det') 
-plotCI(trigger_id = 'Apr', metric = 'far', ci_widths_df = 'apr_far') 
-plotCI(trigger_id = 'Apr', metric = 'mis', ci_widths_df = 'apr_mis') 
-
-plotCI(trigger_id = 'May', metric = 'var', ci_widths_df = 'mar_var') 
-plotCI(trigger_id = 'May', metric = 'det', ci_widths_df = 'mar_det') 
-plotCI(trigger_id = 'May', metric = 'far', ci_widths_df = 'mar_far') 
-plotCI(trigger_id = 'May', metric = 'mis', ci_widths_df = 'mar_mis') 
-
-plotCI(trigger_id = 'June', metric = 'var', ci_widths_df = 'jun_var') 
-plotCI(trigger_id = 'June', metric = 'det', ci_widths_df = 'jun_det') 
-plotCI(trigger_id = 'June', metric = 'far', ci_widths_df = 'jun_far') 
-plotCI(trigger_id = 'June', metric = 'mis', ci_widths_df = 'jun_mis') 
-
-```
-
-
 ```{r timepoint-table, include = TRUE}
 timepoint_df <- data.frame(row_name = c('Valid Activations', 
                                        'Detections', 
                                        'False Alarms', 
                                        'Misses'),
-                       trigger_jan = c(paste0("<img src=plots/trimmed_trigger_Jan_var_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Jan_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Jan_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Jan_mis_ci.png")),
-                       trigger_feb = c(paste0("<img src=plots/trimmed_trigger_Feb_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_Feb_det_ci.png"),  
-                                     paste0("<img src=plots/trimmed_trigger_Feb_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Feb_mis_ci.png")),
-                       trigger_mar = c(paste0("<img src=plots/trimmed_trigger_Mar_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_Mar_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Mar_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Mar_mis_ci.png")),
-                       trigger_apr = c(paste0("<img src=plots/trimmed_trigger_Apr_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_Apr_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Apr_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_Apr_mis_ci.png")),
-                       trigger_may = c(paste0("<img src=plots/trimmed_trigger_May_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_May_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_May_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_May_mis_ci.png")),
-                       trigger_jun = c(paste0("<img src=plots/trimmed_trigger_June_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_June_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_June_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_June_mis_ci.png")))
+                       trigger_jan = c(paste0("<img src=plots/trimmed_Jan_var.png"), 
+                                     paste0("<img src=plots/trimmed_Jan_det.png"), 
+                                     paste0("<img src=plots/trimmed_Jan_far.png"), 
+                                     paste0("<img src=plots/trimmed_Jan_mis.png")),
+                       trigger_feb = c(paste0("<img src=plots/trimmed_Feb_var.png"),
+                                     paste0("<img src=plots/trimmed_Feb_det.png"),  
+                                     paste0("<img src=plots/trimmed_Feb_far.png"), 
+                                     paste0("<img src=plots/trimmed_Feb_mis.png")),
+                       trigger_mar = c(paste0("<img src=plots/trimmed_Mar_var.png"),
+                                     paste0("<img src=plots/trimmed_Mar_det.png"), 
+                                     paste0("<img src=plots/trimmed_Mar_far.png"), 
+                                     paste0("<img src=plots/trimmed_Mar_mis.png")),
+                       trigger_apr = c(paste0("<img src=plots/trimmed_Apr_var.png"),
+                                     paste0("<img src=plots/trimmed_Apr_det.png"), 
+                                     paste0("<img src=plots/trimmed_Apr_far.png"), 
+                                     paste0("<img src=plots/trimmed_Apr_mis.png")),
+                       trigger_may = c(paste0("<img src=plots/trimmed_May_var.png"),
+                                     paste0("<img src=plots/trimmed_May_det.png"), 
+                                     paste0("<img src=plots/trimmed_May_far.png"), 
+                                     paste0("<img src=plots/trimmed_May_mis.png")),
+                       trigger_jun = c(paste0("<img src=plots/trimmed_June_var.png"),
+                                     paste0("<img src=plots/trimmed_June_det.png"), 
+                                     paste0("<img src=plots/trimmed_June_far.png"), 
+                                     paste0("<img src=plots/trimmed_June_mis.png")))
 
 kbl(timepoint_df,
     format = 'html',
