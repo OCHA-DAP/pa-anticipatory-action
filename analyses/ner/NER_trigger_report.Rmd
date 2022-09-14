@@ -36,17 +36,9 @@ editor_options:
 ### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
 ### Create a "plots" folder sister to the RMD file in the country's `analyses` folder
 ### Update the "hard-coded-values" code chunk below
-### If there are fewer or more than 3 triggers: Adjust the number of triggers throughout the Rmd (template has 3)
+### If there are fewer or more than 3 triggers: Adjust the number of triggers throughout the Rmd (in the snapshot table and framework table)
 ### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed 
 ### Knit
-```
-
-```{r paths}
-data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
-perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
-perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
-learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
-
 ```
 
 ```{r hard-coded-values, echo = FALSE, message = FALSE, warning = FALSE}
@@ -144,6 +136,14 @@ lapply(packages, library, character.only = TRUE)
 
 ```
 
+
+```{r paths}
+data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
+perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
+perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
+learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
+```
+
 ```{r functions}
 source("../country_template/docs/plotCIs.R")
 ```
@@ -154,9 +154,11 @@ source("../country_template/docs/plotCIs.R")
 perf_metrics_95_data <- read.csv(perf_metrics_95_filename,
                               colClasses = c('character', 'character', 'numeric', 'character')
                               )
+
 perf_metrics_68_data <- read.csv(perf_metrics_68_filename,
                               colClasses = c('character', 'character', 'numeric', 'character')
                               )
+
 # format performance metrics values
 perf_metrics_95_data$value <- round(100 * perf_metrics_95_data$value, 0)
 perf_metrics_68_data$value <- round(100 * perf_metrics_68_data$value, 0)
@@ -269,7 +271,7 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "segment_dim_summ
 ***
 ## Trigger Mechanism Snapshot
 
-<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) that describe the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform `r ci`% of the time. Blue confidence intervals refer to activations, green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) that describe the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform 95% of the time. Blue confidence intervals refer to activations, green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
 
 &nbsp;
 
@@ -298,11 +300,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      data_source_a,
                                      hist_period_a,
                                      monitored_by_a,
-                                     paste0("<img src=plots/trimmed_trigger_a_atv_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger1_atv.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger1_var.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger1_det.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger1_far.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger1_mis.png"), 
                                      package_a, 
                                      funding_a),
                        trigger_b = c(type_b,
@@ -313,11 +315,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      data_source_b,
                                      hist_period_b,
                                      monitored_by_b,
-                                     paste0("<img src=plots/trimmed_trigger_b_atv_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
-                                     paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger2_atv.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger2_var.png"),
+                                     paste0("<img src=plots/trimmed_Trigger2_det.png"),  
+                                     paste0("<img src=plots/trimmed_Trigger2_far.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger2_mis.png"), 
                                      package_b, 
                                      funding_b),
                        trigger_c = c(type_c, 
@@ -328,11 +330,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      data_source_c,
                                      hist_period_c,
                                      monitored_by_c,
-                                     paste0("<img src=plots/trimmed_trigger_c_atv_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger3_atv.png"),
+                                     paste0("<img src=plots/trimmed_Trigger3_var.png"),
+                                     paste0("<img src=plots/trimmed_Trigger3_det.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger3_far.png"), 
+                                     paste0("<img src=plots/trimmed_Trigger3_mis.png"), 
                                      package_c, 
                                      funding_c))
 
@@ -358,7 +360,7 @@ kbl(snapshot_df,
 
 ## Framework Activation
 
-<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of a framework activation in a given year under various scenarios. The estimates are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The graphs show the ranges of probabilities that the scenario is to occur `r ci`% of the time.</p>
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of a framework activation in a given year under various scenarios. The estimates are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The graphs show the ranges of probabilities that the scenario is to occur 95% of the time.</p>
 
 &nbsp;
 
