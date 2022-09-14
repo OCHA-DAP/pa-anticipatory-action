@@ -21,7 +21,7 @@ plotCI <- function(trigger_id, metric_name) {
   segment_dimensions[which(segment_dimensions$segment == 'seg_above_95'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value']
 
   # plot all segments
-  ci_color <- ifelse(metric_name %in% c('var', 'det'), "#1bb580", ifelse(metric == 'atv', "#007ce1" ,"#FF3333")) # select green for detection and valid activation rates, blue for activation probs, red for error metrics
+  ci_color <- ifelse(metric_name %in% c('var', 'det'), "#1bb580", ifelse(metric_name == 'atv', "#007ce1" ,"#FF3333")) # select green for detection and valid activation rates, blue for activation probs, red for error metrics
   ci_color_pale <- alpha(ci_color, 0.7)
 
   central.x <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] # value of central value of 95% confidence interval
@@ -63,6 +63,24 @@ plotCI <- function(trigger_id, metric_name) {
                  color = "black",
                  fill = "white",
                  label.size = NA) +
+    geom_label(aes(x = segment_dimensions[which(segment_dimensions$segment == 'seg_below_95'), 'hi_end'],
+                   y = 0,
+                   label = segment_dimensions[which(segment_dimensions$segment == 'seg_below_95'), 'hi_end'],
+                   vjust = -0.1),
+               size = 4,
+               nudge_x = 0,
+               color = "black",
+               fill = alpha('white', 0.2),
+               label.size = NA) +
+    geom_label(aes(x = segment_dimensions[which(segment_dimensions$segment == 'seg_above_95'), 'lo_end'],
+                   y = 0,
+                   label = segment_dimensions[which(segment_dimensions$segment == 'seg_above_95'), 'lo_end'],
+                   vjust = -0.1),
+               size = 4,
+               nudge_x = 0,
+               color = "black",
+               fill = alpha('white', 0.2),
+               label.size = NA) +
   theme_economist_white(base_size = 11,
                         base_family = "sans",
                         gray_bg = F,
