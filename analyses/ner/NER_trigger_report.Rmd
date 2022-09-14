@@ -175,11 +175,10 @@ funding_c <- paste0('$',funding_c,'m')
 
 ```
 
-```{r plot-CIs}
+```{r trigger-CIs}
 
 # Compile list of metrics to be included in the report
 metrics_list <- c('atv', 'det', 'far', 'mis', 'var') # trigger activation prob, detection rate, false alarm rate, miss rate, valid activation rate 
-framework_triggers_list <- c("framework-min", "framework-full")
 
 # Create a record of segment dimensions
 segment_dim_summary <- data.frame(trigger_id = NA, metric_name = NA, segment = NA, lo_end = NA, hi_end = NA)
@@ -198,8 +197,8 @@ for(trigger in trigger_list) {
   print(output$plot)
   dev.off()
     
-  # save segment_dimensions in summary
-  segment_dim_temp <- data.frame(trigger_id = trigger_id, metric_name = metric, output$segment_dims)
+  # add segment_dimensions to summary dataframe
+  segment_dim_temp <- data.frame(trigger_id = trigger, metric_name = metric, output$segment_dims)
     
   segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
   
@@ -207,57 +206,46 @@ for(trigger in trigger_list) {
 }
 
 
-# compute width and position of CIs for trigger a
-df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_a) 
-df_a_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_a) # detection rate
-df_a_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_a) # false alarm rate
-df_a_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_a) # miss rate
-df_a_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_a) # probability of trigger activation
 
-# compute width and position of CIs for trigger b
-df_b_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_b) # valid activation rate 
-df_b_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_b) # detection rate
-df_b_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_b) # false alarm rate
-df_b_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_b) # miss rate
-df_b_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_b) # probability of trigger activation
 
-# compute width and position of CIs for trigger c
-df_c_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_c) # valid activation rate 
-df_c_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_c) # detection rate
-df_c_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_c) # false alarm rate
-df_c_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_c) # miss rate
-df_c_atv <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = name_c) # probability of trigger activation
-
-# compute width and position of CIs for the framework
-df_fmwk_min <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'framework-min') # prob minimum framework activation 
-df_fmwk_ful <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'atv', trigger_id = 'framework-full') # prob full framework activation 
 
 ```
 
-```{r data-plotting}
+```{r framework-CIs}
+
+framework_triggers_list <- c("framework-min", "framework-full")
+
+# Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
+
+  for(trigger in framework_triggers_list) {
+  
+  # produce segment_dimensions and plots for triggers 
+  output <- plotCI(trigger_id = trigger, 
+                   metric_name = 'atv')
+  
+  # save plot as png
+  filename <- paste0(trigger, "_", metric, "_ci.png")
+  png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
+  print(output$plot)
+  dev.off()
+    
+  # add segment_dimensions to summary dataframe
+  segment_dim_temp <- data.frame(trigger_id = trigger, metric_name = 'atv', output$segment_dims)
+    
+  segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
+  
+}
+
+# remove empty first row of segment_dim_summary
+segment_dim_summary <- slice(segment_dim_summary, -1)
+```
+
+```{r file-formatting-and-saving}
+# trim plots
 
 
-
-plotCI(trigger_id = 'a', metric = 'var', ci_widths_df = 'df_a_var') 
-plotCI(trigger_id = 'a', metric = 'det', ci_widths_df = 'df_a_det')
-plotCI(trigger_id = 'a', metric = 'far', ci_widths_df = 'df_a_far')
-plotCI(trigger_id = 'a', metric = 'mis', ci_widths_df = 'df_a_mis')
-plotCI(trigger_id = 'a', metric = 'atv', ci_widths_df = 'df_a_atv')
-
-plotCI(trigger_id = 'b', metric = 'var', ci_widths_df = 'df_b_var') 
-plotCI(trigger_id = 'b', metric = 'det', ci_widths_df = 'df_b_det')
-plotCI(trigger_id = 'b', metric = 'far', ci_widths_df = 'df_b_far') 
-plotCI(trigger_id = 'b', metric = 'mis', ci_widths_df = 'df_b_mis')
-plotCI(trigger_id = 'b', metric = 'atv', ci_widths_df = 'df_b_atv')
-
-plotCI(trigger_id = 'c', metric = 'var', ci_widths_df = 'df_c_var') 
-plotCI(trigger_id = 'c', metric = 'det', ci_widths_df = 'df_c_det') 
-plotCI(trigger_id = 'c', metric = 'far', ci_widths_df = 'df_c_far') 
-plotCI(trigger_id = 'c', metric = 'mis', ci_widths_df = 'df_c_mis') 
-plotCI(trigger_id = 'c', metric = 'atv', ci_widths_df = 'df_c_atv')
-
-plotCI(trigger_id = 'framework', metric = 'min', ci_widths_df = 'df_fmwk_min') 
-plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful') 
+# save segment_dim_summary as csv
+write.csv(segment_dim_summary, file = paste0(data_folder_path, "segment_dim_summary.csv"))
 ```
 
 # Anticipatory Action Trigger Mechanism Report
