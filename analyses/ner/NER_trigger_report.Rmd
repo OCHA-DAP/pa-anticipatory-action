@@ -51,7 +51,8 @@ nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years
 ci <- 95 # which confidence intervals are presented? An integer between 0 and 100
 
 data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
-perf_metrics_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
+perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
+perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 
 # trigger A info  
@@ -154,16 +155,23 @@ computeCIwidths <- function(perf_metrics_df, metric_name, trigger_id) {
 
 ```{r data-loading-and-formatting}
 
-# read in performance metrics file
-perf_metrics_data <- read.csv(perf_metrics_filename,
+# read in performance metrics files
+perf_metrics_95_data <- read.csv(perf_metrics_95_filename,
                               colClasses = c('character', 'character', 'numeric', 'character')
                               )
-
+perf_metrics_68_data <- read.csv(perf_metrics_68_filename,
+                              colClasses = c('character', 'character', 'numeric', 'character')
+                              )
 # format performance metrics values
-perf_metrics_data$value <- round(100 * perf_metrics_data$value, 0)
+perf_metrics_95_data$value <- round(100 * perf_metrics_95_data$value, 0)
+perf_metrics_68_data$value <- round(100 * perf_metrics_68_data$value, 0)
 
-# add dummy variable for plotting CIs
-perf_metrics_data$dummy <- 1
+# uniquely identify point labels
+perf_metrics_95_data$upoint <- paste0(perf_metrics_95_data$point, "_95")
+perf_metrics_68_data$upoint <- paste0(perf_metrics_68_data$point, "_68")
+
+# combine datasets
+perf_metrics_data <- rbind(perf_metrics_95_data, perf_metrics_68_data)
 
 # format funding amounts
 funding_a <- paste0('$',funding_a,'m')
