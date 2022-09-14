@@ -352,7 +352,8 @@ kbl(snapshot_df,
   pack_rows("Description", start_row = 1, end_row = 9, color = '#1bb580') %>%
   pack_rows("Performance", start_row = 10, end_row = 13, color = '#1bb580') %>%
   pack_rows("Programming and Funding", start_row = 14, end_row = 15, color = '#1bb580') %>%
-  kableExtra::footnote(general = "", general_title = trigger_table_footnote)
+  kableExtra::footnote(general_title = "Note",
+                       general = "trigger_table_footnote")
 
 ```
 
@@ -382,7 +383,8 @@ kbl(framework_df,
   column_spec(column = 1, width = "28em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "20em") %>%
   pack_rows("Activation Scenario", start_row = 1, end_row = 2, color = '#1bb580') %>%
-  kableExtra::footnote(general = "", general_title = framework_table_footnote)
+  kableExtra::footnote(general_title = "Note",
+                       general = framework_table_footnote)
     
 ```
 
