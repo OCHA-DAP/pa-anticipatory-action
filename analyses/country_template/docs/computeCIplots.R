@@ -1,36 +1,62 @@
-plotCI <- function(trigger_id, metric, ci_widths_df) {
+plotCI <- function(trigger_id, metric_name) {
 
-ci_widths_df <- get(ci_widths_df)
+  # create df to receive individual segment dimensions
+  segment_dimensions <- data.frame(segment = c('seg_below_95', 'seg_95to68', 'seg_68', 'seg_68to95', 'seg_above_95'),
+                                   lo_end = c(0,NA,NA,NA,NA),
+                                   hi_end = c(NA,NA,NA,NA,100))
+  segment_dimensions$segment <- factor(segment_dimensions$segment, levels = c('seg_below_95', 'seg_95to68', 'seg_68', 'seg_68to95', 'seg_above_95'), ordered = TRUE)
 
-ci_df <- ci_widths_df %>%
-  filter(point %in% c('below_ci', 'ci', 'above_ci')) %>%
-  mutate(point = factor(point, levels = c('above_ci', 'ci', 'below_ci'), ordered = TRUE))
+  # select performance metrics for this trigger_id and metric_name
+  perf_metrics_sub <- perf_metrics_data %>%
+    filter(trigger == trigger_id & metric == metric_name))
 
-# extract width of segments
-below_width <- ci_df %>%
-  filter(point == 'below_ci') %>%
-  select(value) %>%
-  as.numeric()
+  # compute segment low/high end values
+  segment_dimensions[which(segment_dimensions$segment == 'seg_below_95'), 'hi_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'low_end_95'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_95to68'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'low_end_95'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_95to68'), 'hi_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'low_end_68'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'low_end_68'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'hi_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_68'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_68to95'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_68'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_68to95'), 'hi_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value']
+  segment_dimensions[which(segment_dimensions$segment == 'seg_above_95'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value']
 
-ci_width <- ci_df %>%
-  filter(point == 'ci') %>%
-  select(value) %>%
-  as.numeric()
+  # plot all segments
+  ci_color <- ifelse(metric %in% c('var', 'det'), "#1bb580", ifelse(metric %in% c('min', 'ful', 'atv'), "#007ce1" ,"#FF3333")) # select green for detection and valid activation rates, blue for framework probabilities, red for the others
+  ci_color_pale <- alpha(ci_color, 0.7)
 
-# compute position of value labels (low end, central estimate, high end)
-central.x <- ci_df %>% # estimate (midpoint of CI)
-  filter(point == 'ci') %>%
-  mutate(ci_midpoint = value / 2,
-         x_position = below_width + ci_midpoint) %>%
-  select(x_position) %>%
-  as.numeric()
+  central.x <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] # value of central value of 95% confidence interval
 
-low.x <- ci_df %>% # position of CI's low end
-  filter(point == 'below_ci') %>%
-  select(value) %>%
-  as.numeric()
+  #p <-
+    ggplot(segment_dimensions, aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
+    geom_rect(aes(fill = segment), colour = NA) +
+    scale_fill_manual(values=c('seg_below_95' = 'azure2',
+                               'seg_95to68' = ci_color_pale,
+                               'seg_68' = ci_color,
+                               'seg_68to95' = ci_color_pale,
+                               'seg_above_95' = 'azure2')) +
+    xlim(0, 100) +
+    geom_segment(y = 0, yend = 1, x = central.x, xend = central.x, color = "#444444", size = 0.75) + # central estimate line. Size refers to line thickness
+    geom_label(aes(x = central.x,
+                   y = 1.2,
+                   label = central.x,
+                   vjust = 1),
+               size = 8, # font size
+               nudge_x = 0.1, # bring label closer to graph
+               color = "black",
+               fill = "white",
+               fontface = 'bold',
+               label.size = NA)  # removes border
 
-high.x <- below_width + ci_width # position of CI's high end
+
+    geom_text(
+      aes(x=low_end, y=0, label=low_end),
+      size = 4, vjust = 0, hjust = 0, nudge_x = -2) +
+    geom_text(
+      aes(x=median_x, y=0.5, label=median_x),
+      size = 8, vjust = 0, hjust = 0, nudge_x = 0)
+
+
+
 
 # compute labels
 low_end_label <- ci_widths_df %>% filter(point == 'low_end') %>% select(value) %>% as.numeric()
