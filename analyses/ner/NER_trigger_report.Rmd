@@ -94,6 +94,9 @@ data_source_c <- 'ENACTS or CHIRP'
 hist_period_c <- "1991 - 2020"
 monitored_by_c <- 'IRI'
 
+# Compile list of triggers to be included in the report (exclude framework-full and framework-min)
+trigger_list <- c(name_a, name_b, name_c, "Jan", "Feb", "Mar", "Apr", "May", "June")
+
 # Table footnotes
 trigger_table_footnote <- "Triggers A and B can reach their threshold and activate independently from one another. Trigger C can only activate the framework if Trigger B was not met. See Annex for performance metrics per timepoint."
 
@@ -139,18 +142,7 @@ lapply(packages, library, character.only = TRUE)
 ```
 
 ```{r functions}
-computeCIwidths <- function(perf_metrics_df, metric_name, trigger_id) { 
-
-  perf_metrics_df %>%
-  filter(trigger == trigger_id) %>%
-  select(-trigger) %>%
-  filter(metric == metric_name) %>%
-  pivot_wider(names_from = point, values_from = value) %>%
-  mutate(below_ci = low_end,  # width between zero and low end of CI
-         ci = high_end - low_end,# width of CI
-         above_ci = 100 - high_end) %>% # width between high_end of CI and 100
-  pivot_longer(!c('metric','dummy'), names_to = 'point', values_to = 'value')
-}
+source("../country_template/docs/plotCIs.R")
 ```
 
 ```{r data-loading-and-formatting}
@@ -180,10 +172,38 @@ funding_c <- paste0('$',funding_c,'m')
 
 ```
 
-```{r compute-CI-measurements}
+```{r plot-CIs}
+
+# Compile list of metrics to be included in the report
+metrics_list <- c('atv', 'det', 'far', 'mis', 'var') # trigger activation prob, detection rate, false alarm rate, miss rate, valid activation rate 
+framework_triggers_list <- c("framework-min", "framework-full")
+
+# Create a record of segment dimensions
+segment_dim_summary <- data.frame(trigger_id = NA, metric_name = NA, segment = NA, lo_end = NA, hi_end = NA)
+  
+# Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
+for (metric in metrics_list) {
+  
+# produce segment_dimensions and plots for triggers 
+output <- plotCI(trigger_id = "Trigger2", 
+                 metric_name = metric)
+
+# save plot as png
+filename <- paste0('Trigger2', "_", metric, "_ci.png")
+png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
+print(output$plot)
+dev.off()
+  
+# save segment_dimensions in summary
+segment_dim_temp <- data.frame(trigger_id = 'Trigger2', metric_name = metric, output$segment_dims)
+  
+segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
+
+}
+
 
 # compute width and position of CIs for trigger a
-df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_a) # valid activation rate 
+df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_a) 
 df_a_det <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'det', trigger_id = name_a) # detection rate
 df_a_far <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'far', trigger_id = name_a) # false alarm rate
 df_a_mis <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'mis', trigger_id = name_a) # miss rate
@@ -211,7 +231,7 @@ df_fmwk_ful <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name 
 
 ```{r data-plotting}
 
-source("../country_template/docs/computeCIplots.R")
+
 
 plotCI(trigger_id = 'a', metric = 'var', ci_widths_df = 'df_a_var') 
 plotCI(trigger_id = 'a', metric = 'det', ci_widths_df = 'df_a_det')
