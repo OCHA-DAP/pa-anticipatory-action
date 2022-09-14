@@ -32,14 +32,21 @@ editor_options:
 ```{r README, echo = FALSE, message = FALSE, warning = FALSE}
 ### NOTE: The template is set up for two 3-timepoint predictive triggers and a 1-timepoint observational trigger
 
-### Create a trigger_report folder under DATA_DIR > /public/processed/{country_pcode3}
-### Once generated, copy the perf_metrics_table.csv to the trigger_report folder on DATA_DIR; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+### Create a trigger_report folder under DATA_DIR > /private/exploration/{country_pcode3/trigger_performance}
 ### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
-### Create a "plots" folder sister to the RMD file in the country's analyses folder
-### Update the "hard-coded-values" code chunk 
-### Adjust the number of triggers throughout the Rmd (template has 3), if there are fewer or more than 3 triggers
-### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed if there are triggers with multiple activation timepoints
+### Create a "plots" folder sister to the RMD file in the country's `analyses` folder
+### Update the "hard-coded-values" code chunk below
+### If there are fewer or more than 3 triggers: Adjust the number of triggers throughout the Rmd (template has 3)
+### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed 
 ### Knit
+```
+
+```{r paths}
+data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
+perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
+perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
+learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
+
 ```
 
 ```{r hard-coded-values, echo = FALSE, message = FALSE, warning = FALSE}
@@ -47,13 +54,6 @@ country_name <- "Niger"
 country_pcode3 <- "ner"
 shock <- "Drought"
 nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
-
-ci <- 95 # which confidence intervals are presented? An integer between 0 and 100
-
-data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
-perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
-perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
-learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 
 # trigger A info  
 name_a <- "Trigger1" # what name is the trigger listed as in the eprf_metrics_table?
@@ -205,6 +205,7 @@ for(trigger in trigger_list) {
   
   }
 }
+
 
 # compute width and position of CIs for trigger a
 df_a_var <- computeCIwidths(perf_metrics_df = perf_metrics_data, metric_name = 'var', trigger_id = name_a) 
