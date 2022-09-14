@@ -224,7 +224,7 @@ framework_triggers_list <- c("framework-min", "framework-full")
                    metric_name = 'atv')
   
   # save plot as png
-  filename <- paste0(trigger, "_", metric, "_ci.png")
+  filename <- paste0(trigger, "_", metric, ".png")
   png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
   print(output$plot)
   dev.off()
