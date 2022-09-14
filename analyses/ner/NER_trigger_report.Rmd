@@ -368,8 +368,8 @@ kbl(snapshot_df,
 ```{r framework-activation-table}
 framework_df <- data.frame(row_name = c('At least one trigger being met (probability in %)', 
                                         'Full framework activation (probability in %)'),
-                           frmwk_stats = c(paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
-                                           paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">")))  
+                           frmwk_stats = c(paste0("<","img src=","plots/trimmed_framework-min_atv",".png",">"),  
+                                           paste0("<","img src=","plots/trimmed_framework-full_atv",".png",">")))  
 
 kbl(framework_df,
     format = 'html',
@@ -390,8 +390,8 @@ kbl(framework_df,
 
 &nbsp;
 
-## Data Underlying Trigger Mechanism
-<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` provide data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA. `r analysis` </p>
+## Technical Team
+<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` have provided data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA. `r analysis` </p>
 
 ## Monitoring Process
 <p style="color:black;font-size:16px;text-align:left;"> `r monitoring_process` </p>
