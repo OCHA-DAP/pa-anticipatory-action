@@ -195,7 +195,7 @@ for(trigger in trigger_list) {
   
   # save plot as png
   filename <- paste0(trigger, "_", metric, ".png")
-  png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
+  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
   print(output$plot)
   dev.off()
     
@@ -223,7 +223,7 @@ for(trigger in framework_triggers_list) {
   
   # save plot as png
   filename <- paste0(trigger, "_atv.png")
-  png(filename = paste0("plots/", filename), width = 815, height = 410, units = "px")
+  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
   print(output$plot)
   dev.off()
     
@@ -244,14 +244,14 @@ plots_to_trim <- list.files(path = "./plots")
 # trim plots
 for (filename in plots_to_trim) {
 
-# read in the image
-original_plot <- magick::image_read(paste0("plots/", filename))
+  # read in the image
+  original_plot <- magick::image_read(paste0("plots/", filename))
   
-# trim the image
-trimmed_plot <- magick::image_trim(original_plot)
-
-# save trimmed plot
-magick::image_write(trimmed_plot, path = paste0("plots/trimmed_", filename), format = "png")
+  # trim the image
+  trimmed_plot <- magick::image_trim(original_plot)
+  
+  # save trimmed plot
+  magick::image_write(trimmed_plot, path = paste0("plots/trimmed_", filename), format = "png")
 
 }
 
@@ -259,7 +259,7 @@ magick::image_write(trimmed_plot, path = paste0("plots/trimmed_", filename), for
 segment_dim_summary <- slice(segment_dim_summary, -1)
 
 # save segment_dim_summary as csv
-write.csv(segment_dim_summary, file = paste0(data_folder_path, "segment_dim_summary.csv"))
+write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_dim_summary.csv"))
 
 ```
 
@@ -345,7 +345,7 @@ kbl(snapshot_df,
     col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
-  row_spec(c(1:9, 14:15), extra_css = "line-height: 25px;") %>%
+  row_spec(c(1:9, 14:15), extra_css = "line-height: 30px;") %>%
   row_spec(c(10:13), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
   column_spec(column = c(2:4), width = "20em") %>%
@@ -462,6 +462,5 @@ kbl(timepoint_df,
     align = "rcccccc") %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
-  column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em") 
-
+  column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
 ```

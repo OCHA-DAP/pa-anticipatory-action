@@ -33,14 +33,14 @@ plotCI <- function(trigger_id, metric_name) {
                                'seg_68' = ci_color,
                                'seg_68to95' = ci_color_pale,
                                'seg_above_95' = 'azure2')) +
+    ylim(0, 10) +
     xlim(0, 100) +
     geom_segment(y = 0, yend = 1, x = central.x, xend = central.x, color = "#444444", size = 0.75) + # central estimate line. Size refers to line thickness
     geom_label(aes(x = central.x,
-                   y = 1.2,
+                   y = 1,
                    label = central.x,
-                   vjust = 1),
-               size = 8, # font size
-               nudge_x = 0.1, # bring label closer to graph
+                   vjust = -0.1),
+               size = 5, # font size
                color = "black",
                fill = "white",
                fontface = 'bold',
@@ -49,7 +49,7 @@ plotCI <- function(trigger_id, metric_name) {
                      y = 1,
                      label = segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'lo_end'],
                      vjust = -0.1),
-                 size = 5,
+                 size = 4,
                  nudge_x = 0,
                  color = "black",
                  fill = "white",
@@ -58,7 +58,7 @@ plotCI <- function(trigger_id, metric_name) {
                      y = 1,
                      label = segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'hi_end'],
                      vjust = -0.1),
-                 size = 5,
+                 size = 4,
                  nudge_x = 0,
                  color = "black",
                  fill = "white",
@@ -67,7 +67,7 @@ plotCI <- function(trigger_id, metric_name) {
                    y = 0,
                    label = segment_dimensions[which(segment_dimensions$segment == 'seg_below_95'), 'hi_end'],
                    vjust = -0.1),
-               size = 4,
+               size = 3,
                nudge_x = 0,
                color = "black",
                fill = alpha('white', 0.2),
@@ -76,7 +76,7 @@ plotCI <- function(trigger_id, metric_name) {
                    y = 0,
                    label = segment_dimensions[which(segment_dimensions$segment == 'seg_above_95'), 'lo_end'],
                    vjust = -0.1),
-               size = 4,
+               size = 3,
                nudge_x = 0,
                color = "black",
                fill = alpha('white', 0.2),
