@@ -36,15 +36,6 @@ plotCI <- function(trigger_id, metric_name) {
     ylim(0, 10) +
     xlim(0, 100) +
     geom_segment(y = 0, yend = 1, x = central.x, xend = central.x, color = "#444444", size = 0.75) + # central estimate line. Size refers to line thickness
-    geom_label(aes(x = central.x,
-                   y = 1,
-                   label = central.x,
-                   vjust = -0.1),
-               size = 5, # font size
-               color = "black",
-               fill = "white",
-               fontface = 'bold',
-               label.size = NA) + # removes border
     geom_label(aes(x = segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'lo_end'],
                      y = 1,
                      label = segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'lo_end'],
@@ -53,7 +44,7 @@ plotCI <- function(trigger_id, metric_name) {
                  nudge_x = 0,
                  color = "black",
                  fill = "white",
-                 label.size = NA) +
+                 label.size = NA) + # removes border
     geom_label(aes(x = segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'hi_end'],
                      y = 1,
                      label = segment_dimensions[which(segment_dimensions$segment == 'seg_68'), 'hi_end'],
@@ -80,6 +71,15 @@ plotCI <- function(trigger_id, metric_name) {
                nudge_x = 0,
                color = "black",
                fill = alpha('white', 0.2),
+               label.size = NA) +
+    geom_label(aes(x = central.x,
+                   y = 1,
+                   label = central.x,
+                   vjust = -0.1),
+               size = 5, # font size
+               color = "black",
+               fill = "white",
+               fontface = 'bold',
                label.size = NA) +
   theme_economist_white(base_size = 11,
                         base_family = "sans",
