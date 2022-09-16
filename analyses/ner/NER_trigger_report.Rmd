@@ -273,6 +273,7 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_d
 <p style="color:black;font-size:16px;text-align:left;"> The estimates are shown as ranges called confidence intervals that reflect the impact that data limitations (small or incomplete datasets, errors or imprecision in measurements, divergences between data sources) can have on the accuracy of performance estimates. Confidence intervals can inform decision-making by illustrating the most likely performance levels and by providing bounds for the plausible although unlikely extremes.</p> 
 
 <br>
+
 * <p style="color:black;font-size:16px;text-align:left;"> The <span style="font-weight: bold;">central value</span> is the most likely performance; </p>
 * <p style="color:black;font-size:16px;text-align:left;"> Most often the trigger will perform within the <span style="font-weight: bold;">darker range</span> (68% of the time);</p>
 * <p style="color:black;font-size:16px;text-align:left;"> There is high confidence that the trigger will perform within the <span style="font-weight: bold;">full coloured range</span> (95% of the time).</p> 
