@@ -31,6 +31,7 @@ editor_options:
 
 ```{r README, echo = FALSE, message = FALSE, warning = FALSE}
 ### NOTE: The template is set up for two 3-timepoint predictive triggers and a 1-timepoint observational trigger
+### NOTE: Performance metrics and their CIs should have been generated separately before the trigger report can be produced.
 
 ### Create a trigger_report folder under DATA_DIR > /private/exploration/{country_pcode3/trigger_performance}
 ### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
@@ -48,13 +49,13 @@ shock <- "Drought"
 nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
 
 # trigger A info  
-name_a <- "Trigger1" # what name is the trigger listed as in the eprf_metrics_table?
+name_a <- "Trigger1" # what name is the trigger listed as in the perf_metrics_table.csv files?
 type_a <- 'Predictive' # Predictive or Observational?
 monitored_area_a <- "National"
 timepoints_a<- 'Jan, Feb, Mar' # eg: 'Jan, Feb, Mar'
 package_a <- 'Package 1' # eg: 'Package 1'
 funding_a <- 5.25 # input number only, no $ sign or 'm' for million. Formatting will be done automatically.
-predicted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep' 
+targeted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
 lead_time_a <- '6-4 months' # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
 data_source_a <- 'IRI flexible seasonal forecast' # name of product + provider
 hist_period_a <- "1991 - 2020" # period for which historical data is available
@@ -67,7 +68,7 @@ monitored_area_b <- "National"
 timepoints_b <- 'Apr, May, Jun'
 package_b <- 'Package 2'
 funding_b <- 9.5
-predicted_window_b <- 'Jul-Sep'
+targeted_window_b <- 'Jul-Sep'
 lead_time_b <- '3-1 months'
 data_source_b <- 'IRI flexible seasonal forecast'
 hist_period_b <- "1991 - 2020"
@@ -80,7 +81,7 @@ monitored_area_c <- "National"
 timepoints_c <- 'Aug'
 package_c <- 'Package 2'
 funding_c <- 9.5
-predicted_window_c <- 'N/A'
+targeted_window_c <- 'Jun-Jul'
 lead_time_c <- 'N/A'
 data_source_c <- 'ENACTS or CHIRP'
 hist_period_c <- "1991 - 2020"
@@ -93,9 +94,9 @@ atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June")
 trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
 
 # Table footnotes
-trigger_table_footnote <- "Triggers A and B can reach their threshold and activate independently from one another. Trigger C can only activate the framework if Trigger B was not met. See Annex for performance metrics per timepoint."
+trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met. See Annex for performance metrics per timepoint."
 
-framework_table_footnote <- "A full activation is defined as Triggers A and B being met, or as Trigger A and C being met."
+framework_table_footnote <- "A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."
 
 # Data providers
 data_providers <- "The Direction de la météorologie nationale du Niger, IRI Columbia University, World Food Programme Niger" # will be followed by "provide data and/or analytical support."
@@ -214,7 +215,6 @@ for(trigger in trigger_list) {
 framework_triggers_list <- c("framework-min", "framework-full")
 
 # Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
-
 for(trigger in framework_triggers_list) {
   
   # produce segment_dimensions and plots for triggers 
@@ -264,14 +264,21 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_d
 ```
 
 # Anticipatory Action Trigger Mechanism Report
-
 <p style="color:#007ce1;font-size:22px;text-align:center;"> `r paste0(shock, ' in ', country_name)`</p> 
 <p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
 
-***
 ## Trigger Mechanism Snapshot
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the trigger mechanism and its performance in signaling severe shocks. It presents estimates of the likelihood that the threshold would be met in a given year as well as how often the trigger is expected to correctly recommend an activation or non-activation.</p> 
 
-<p style="color:black;font-size:16px;text-align:left;"> This table summarises the definition of the triggers and their performance in offering a reliable signal of the targeted severe shocks. The performance metrics are presented as ranges (called confidence intervals) that describe the inherent uncertainty of the measurements. The coloured graphs show the ranges within which the triggers will perform 95% of the time. Blue confidence intervals refer to activations, green confidence intervals represent desired outcomes while red confidence intervals represent undesired outcomes or errors. </p>
+<p style="color:black;font-size:16px;text-align:left;"> The estimates are shown as ranges called confidence intervals that reflect the impact that data limitations (small or incomplete datasets, errors or imprecision in measurements, divergences between data sources) can have on the accuracy of performance estimates. Confidence intervals can inform decision-making by illustrating the most likely performance levels and by providing bounds for the plausible although unlikely extremes.</p> 
+
+<br>
+* <p style="color:black;font-size:16px;text-align:left;"> The <span style="font-weight: bold;">central value</span> is the most likely performance; </p>
+* <p style="color:black;font-size:16px;text-align:left;"> Most often the trigger will perform within the <span style="font-weight: bold;">darker range</span> (68% of the time);</p>
+* <p style="color:black;font-size:16px;text-align:left;"> There is high confidence that the trigger will perform within the <span style="font-weight: bold;">full coloured range</span> (95% of the time).</p> 
+
+<br>
+<p style="color:black;font-size:16px;text-align:left;"> Confidence intervals in <span style="color: blue;">blue</span> represent activation likelihood, those in <span style="color: green;">green</span> represent desired outcomes (valid (non-)activations) and those in <span style="color: red;">red</span> represent undesired outcomes or errors.</p>
 
 &nbsp;
 
@@ -280,7 +287,7 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_d
 snapshot_df <- data.frame(row_name = c('Type', 
                                        'Monitored Area',
                                        'Activation Timepoints', 
-                                       'Predicted Period', 
+                                       'Target Period', 
                                        'Lead Time', 
                                        'Data Source',
                                        'Historical Data Coverage',
@@ -295,7 +302,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                        trigger_a = c(type_a, 
                                      monitored_area_a,
                                      timepoints_a, 
-                                     predicted_window_a, 
+                                     targeted_window_a, 
                                      lead_time_a, 
                                      data_source_a,
                                      hist_period_a,
@@ -310,7 +317,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                        trigger_b = c(type_b,
                                      monitored_area_b,
                                      timepoints_b, 
-                                     predicted_window_b, 
+                                     targeted_window_b, 
                                      lead_time_b, 
                                      data_source_b,
                                      hist_period_b,
@@ -325,7 +332,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                        trigger_c = c(type_c, 
                                      monitored_area_c,
                                      timepoints_c, 
-                                     predicted_window_c, 
+                                     targeted_window_c, 
                                      lead_time_c, 
                                      data_source_c,
                                      hist_period_c,
@@ -342,7 +349,7 @@ kbl(snapshot_df,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, # omit row numbers
-    col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
+    col.names = c("","Trigger 1", "Trigger 2", "Trigger 3"), 
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:9, 14:15), extra_css = "line-height: 30px;") %>%
@@ -360,7 +367,6 @@ kbl(snapshot_df,
 &nbsp;
 
 ## Framework Activation
-
 <p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of a framework activation in a given year under various scenarios. The estimates are presented as ranges (called confidence intervals) to illustrate the inherent uncertainty of the measurements. The graphs show the ranges of probabilities that the scenario is to occur 95% of the time.</p>
 
 &nbsp;
@@ -391,7 +397,7 @@ kbl(framework_df,
 &nbsp;
 
 ## Technical Team
-<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` have provided data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. The shocks reached the level of severity targeted with AA. `r analysis` </p>
+<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` have provided data and/or analytical support. The data on historical shocks was provided by `r hist_shocks_source`. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. `r analysis` </p>
 
 ## Monitoring Process
 <p style="color:black;font-size:16px;text-align:left;"> `r monitoring_process` </p>
@@ -419,8 +425,7 @@ kbl(learning_table,
 &nbsp;
 
 ## Annex
-
-<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics of the predictive triggers per timepoint. </p>
+<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics per activation timepoint for the triggers that have more than one opportunities for activation.</p>
 
 &nbsp;
 
