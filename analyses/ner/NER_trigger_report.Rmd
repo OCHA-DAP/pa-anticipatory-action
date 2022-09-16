@@ -239,7 +239,7 @@ for(trigger in framework_triggers_list) {
 ```{r file-formatting-and-saving}
 
 # list plots to be trimmed
-plots_to_trim <- list.files(path = "./plots")
+plots_to_trim <- grep(list.files(path="./plots"), pattern='trimmed_', invert=TRUE, value=TRUE) # excludes 'trimmed_' graphs, which will be overwritten
 
 # trim plots
 for (filename in plots_to_trim) {
