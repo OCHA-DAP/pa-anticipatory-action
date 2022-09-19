@@ -7,30 +7,10 @@ directly from ECMWF.
 The script includes downloading and processing of the CDS data.
 For the higher resolution data, this is not included. It simply reads the
 latest processed file that is available in the directory.
-To download and process new data directly from ECMWF, the pa-aa-toolbox
-repository currently has to be used.
-Go to `this branch
-<https://github.com/OCHA-DAP/pa-aa-toolbox/tree/feature/ecmwf-seas-realtime>`_
-and run
-
-```
-from aatoolbox.datasources.ecmwf.api_seas5_monthly import EcmwfApi
-pipeline_mwi = Pipeline("mwi")
-mwi_geobb = pipeline_mwi.load_geoboundingbox(
-    from_codab=False, from_config=True)
-ecmwf_api=EcmwfApi(iso3="mwi",geo_bounding_box=mwi_geobb)
-ecmwf_api.download()
-ecmwf_api.process()
-```
-
-To access the ECMWF API, you need an authorized account.
-More information on the ECMWF API and how to initialize the usage,
-can be found
-`here <https://www.ecmwf.int/en/forecasts/access-forecasts/ecmwf-web-api>`_
-
-Note that once the code in the toolbox is finalized, toolbox can be installed
-in this repository and the code to download data from ECMWF can be
-incorporated in the current script.
+To download and process new data directly from ECMWF, the
+get_ecmwf_high_resolution.py script can be used. Note that before running that
+you manually need to copy the data from the AWS bucket to the relevant folder
+(see script for more instructions.
 
 Outputs of the CDS data are saved in the public directory, while outputs from
 the higher resolution data are saved in the private directory.
@@ -115,6 +95,8 @@ def _get_output_path_metrics(
         / "predictive_trigger"
     )
     filename = f"{iso3}_predictive_trigger_{target_year}{target_month}"
+    if source_cds:
+        filename += "_cds"
     if use_unrounded_area_coords:
         filename += "_unrounded-coords"
     if all_touched:
@@ -510,9 +492,12 @@ def compute_trigger(
 
 
 def main():
-    download = True
+    download = False
+    # min probability of being <= precip_cap
     prob = 0.5
+    # trigger should be below precip_cap to be reached
     precip_cap = 210
+    # admin level trigger is computed at
     adm_level = 1
     adm_bound_path = (
         Path(COUNTRY_DATA_RAW_DIR)
@@ -520,12 +505,19 @@ def main():
         / PARAMETERS[f"path_admin{adm_level}_shp"]
     )
     gdf_adm = gpd.read_file(adm_bound_path)
+    # dates to compute the trigger metrics for
+    # you want to change these every year
+    # metrics are automatically computed for all available leadtimes that
+    # predict the target_date
     target_dates = [
         date(year=2022, month=1, day=1),
         date(year=2022, month=2, day=1),
     ]
     # run all different combinations of methods and dates that we
-    # want to know
+    # want to know. For the official monitoring the settings are:
+    # source_cds=False, use_unrounded_area_coords_list=False, all_touched=False
+
+    # whether data is from CDS (lower resolution) or ECMWF directly
     for source_cds in [True, False]:
         for target_date in target_dates:
             # when use_unrounded_area_coords=True,
@@ -536,6 +528,8 @@ def main():
             if source_cds:
                 use_unrounded_area_coords_list = [True, False]
             else:
+                # for the higher resolution data (not cds) there is no option
+                # to interpolate coordinates (which is good)
                 use_unrounded_area_coords_list = [False]
             for use_unrounded_area_coords in use_unrounded_area_coords_list:
                 compute_trigger(
@@ -578,6 +572,10 @@ def main():
                         ]
                     ),
                 )
+            # run with resolution =0.05. Which basically means we cut the
+            # original resolution in many pieces and then take the mini cells
+            # with their centre in thre region, i.e. it is an approximation to
+            # a weighted average
             compute_trigger(
                 COUNTRY_ISO3,
                 gdf_adm=gdf_adm,
@@ -591,6 +589,8 @@ def main():
                 all_touched=False,
             )
 
+            # include all cells touching the region instead of only the cells
+            # within the region
             compute_trigger(
                 COUNTRY_ISO3,
                 gdf_adm=gdf_adm,
