@@ -234,9 +234,9 @@ It's employing the
 in the case when we don't have any FNs, i.e. for Trigger1.
 
 For the detection rate (DR), we can calculate the CI as follows:
-1. Using the rule of 3, we know our sample could have up to 10% FNs (to 95% confidence)
+1. Using the rule of 3, we know our sample could have up to 3/n = 3/28 = 10% FNs (to 95% confidence)
 2. Therefore we just calculate the DR with this as a bound. We use the rate of TPs in 
-   the sample (9/28 = 0.3) and then use 0.1 for FNs from the step above. 
+   the sample (9/28 = 0.32) and then use 0.1 for FNs from the step above. 
    And end up with 75% as a lower bound.
 
 A symmetric argument can be made for the MR (upper bound 25%). 
@@ -245,10 +245,21 @@ Of course this doesn't take into account that there is also an
 uncertainty around the rate of TPs.
 
 
+
+We also want the 68% confidence interval. Generalizing the rule of three:
+
+$(1-p)^n = (1 - CI)$
+
+$p = 1 - (1 - CI)^{1/n}$
+
+So for n=28 and a CI of 68%, we have up to 4% FNs, and get a lower bound for the CI of $ 0.32 / [0.32 + 0.04] = 0.89%$
+
 ```python
+replacement_metrics = {0.68: 0.89, 0.95: 0.75}
+
 # Calculate the quantiles over the bootstrapped df
 def calc_ci(
-    df_bootstrap, df_base, replace_fn_metrics=False, save_filename_suffix=None
+    df_bootstrap, df_base, replace_fn_metrics=None, save_filename_suffix=None
 ):
     df_grouped = df_bootstrap.groupby("metric")
     for ci in [0.68, 0.95]:
@@ -264,19 +275,21 @@ def calc_ci(
             df["point"] = point
             df_ci = df_ci.append(df, ignore_index=True)
         # Special case for trigger1 mis and det
-        if replace_fn_metrics and math.isclose(ci, 0.95):
+        if replace_fn_metrics:
             df_ci.loc[
                 (df_ci.metric == "det")
                 & (df_ci.trigger == "Trigger1")
                 & (df_ci.point == "low_end"),
                 "value",
-            ] = 0.75
+            ] = replacement_metrics[ci]
             df_ci.loc[
                 (df_ci.metric == "mis")
                 & (df_ci.trigger == "Trigger1")
                 & (df_ci.point == "high_end"),
                 "value",
-            ] = 0.25
+            ] = (
+                1 - replacement_metrics[ci]
+            )
         # Save file
         output_filename = f"ner_perf_metrics_table_ci_{ci}"
         if save_filename_suffix:
