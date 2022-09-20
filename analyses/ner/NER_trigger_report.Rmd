@@ -239,7 +239,10 @@ for(trigger in framework_triggers_list) {
 ```{r file-formatting-and-saving}
 
 # list plots to be trimmed
-plots_to_trim <- grep(list.files(path="./plots"), pattern='trimmed_', invert=TRUE, value=TRUE) # excludes 'trimmed_' graphs, which will be overwritten
+plots_to_trim <- grep(list.files(path = "./plots"), 
+                      pattern = 'trimmed_', 
+                      invert = TRUE, 
+                      value = TRUE) # excludes 'trimmed_' graphs, which will be overwritten
 
 # trim plots
 for (filename in plots_to_trim) {
@@ -478,3 +481,17 @@ kbl(timepoint_df,
   row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
 ```
+
+```{r move-plots-out-of-repo}
+
+# list all plots in code repo
+plots_to_move <- list.files(path = "./plots", full.names = TRUE)
+
+# copy to Data folder repo
+file.copy(from = plots_to_move, to = paste0(data_folder_path, "plots/"))
+
+# delete plots in repo folder
+file.remove(plots_to_move)
+
+```
+
