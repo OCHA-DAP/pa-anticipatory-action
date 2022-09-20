@@ -94,7 +94,7 @@ atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June")
 trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
 
 # Table footnotes
-trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met. See Annex for performance metrics per timepoint."
+trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only activate the framework if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger 3 performance assessed by comparing SPI-based activations with historical bad years."
 
 framework_table_footnote <- "A full activation is defined as Triggers 1 and 2 being met, or as Trigger 1 and 3 being met."
 
