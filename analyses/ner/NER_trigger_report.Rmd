@@ -482,16 +482,3 @@ kbl(timepoint_df,
   column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
 ```
 
-```{r move-plots-out-of-repo}
-
-# list all plots in code repo
-plots_to_move <- list.files(path = "./plots", full.names = TRUE)
-
-# copy to Data folder repo
-file.copy(from = plots_to_move, to = paste0(data_folder_path, "plots/"))
-
-# delete plots in repo folder
-file.remove(plots_to_move)
-
-```
-
