@@ -7,6 +7,7 @@ The framework was developed using one predictive trigger value for both the mont
 The analysis is done on the Southern Region and the dry spell definition is 14 days with at most 2mm of rain.
 
 
+
 ```python
 from importlib import reload
 from pathlib import Path
@@ -107,108 +108,6 @@ def miss_rate(fn,tp,epsilon):
 def false_alarm_rate(fp,tp,epsilon):
     return fp/(tp+fp+epsilon)*100
 
-def compute_miss_false_leadtime(df,target_var,predict_var):
-    df_pr=pd.DataFrame(list(df.leadtime.unique()),columns=["leadtime"]).set_index('leadtime')
-    #TODO: also account for different adm1's
-    a="Southern"
-    for i, m in enumerate(df.sort_values(by="leadtime").leadtime.unique()):
-        y_target =    df.loc[df.leadtime==m,target_var]
-        y_predicted = df.loc[df.leadtime==m,predict_var]
-        
-        cm = confusion_matrix(y_target=y_target, 
-                              y_predicted=y_predicted)
-
-        tn,fp,fn,tp=cm.flatten()
-        df_pr.loc[m,["month_ds"]] = det_rate(tp,fn,epsilon)
-        df_pr.loc[m,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
-        df_pr.loc[m,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
-        df_pr.loc[m,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
-        df_pr.loc[m,["tn","tp","fp","fn"]]=tn,tp,fp,fn
-    df_pr=df_pr.reset_index()
-    return df_pr
-```
-
-
-```python
-def compute_confusionmatrix_leadtime(df,target_var,predict_var, ylabel,xlabel,colp_num=3,title=None,figsize=(15,8)):
-    #number of dates with observed dry spell overlapping with forecasted per month
-    num_plots = len(df.leadtime.unique())
-    if num_plots==1:
-        colp_num=1
-    rows = math.ceil(num_plots / colp_num)
-    position = range(1, num_plots + 1)
-    fig=plt.figure(figsize=figsize)
-    for i, m in enumerate(df.sort_values(by="leadtime").leadtime.unique()):
-        ax = fig.add_subplot(rows,colp_num,i+1)
-        y_target =    df.loc[df.leadtime==m,target_var]
-        y_predicted = df.loc[df.leadtime==m,predict_var]
-        cm = confusion_matrix(y_target=y_target, 
-                              y_predicted=y_predicted)
-
-        plot_confusion_matrix(conf_mat=cm,show_absolute=True,show_normed=True,axis=ax,class_names=["No","Yes"])
-        ax.set_ylabel(ylabel)
-        ax.set_xlabel(xlabel)
-        ax.set_title(f"Leadtime={m}")
-    if title is not None:
-        fig.suptitle(title)
-    fig.tight_layout()
-    return fig
-```
-
-
-```python
-def label_ds(row,obs_col,for_col):
-    if row[obs_col]==1 and row[for_col]==1:
-        return 3
-    elif row[obs_col]==1:
-        return 2
-    elif row[for_col]==1:
-        return 1
-    else:
-        return 0
-    
-def refactor_data_hm(df,obs_col,for_col):
-    #we have a R script to plot heatmaps nicely, so refactor the df to the expected format of that R script
-    #convert monthly dates to dateranges with an entry per day
-    df["first_date"]=pd.to_datetime(df.date)
-    df["last_date"]=df.date.dt.to_period("M").dt.to_timestamp("M")
-
-    df_obs=df[df[obs_col]==1]
-    df_obs_res=df_obs.reset_index(drop=True)
-    a = [pd.date_range(*r, freq='D') for r in df_obs_res[['first_date', 'last_date']].values]
-    #join the daterange with the adm1, which create a column per date, then stack to have each adm1-date combination
-    #not really needed now cause only one adm1, but for future compatability
-    df_obs_daterange=df_obs_res[["pcode"]].join(pd.DataFrame(a)).set_index(["pcode"]).stack().droplevel(-1).reset_index()
-    df_obs_daterange.rename(columns={0:"date"},inplace=True)
-    #all dates in this dataframe had an observed below threshold monthly precipitation, so add that information
-    df_obs_daterange[obs_col]=1
-
-    df_for=df[df[for_col]==1]
-    df_for_res=df_for.reset_index(drop=True)
-    a = [pd.date_range(*r, freq='D') for r in df_for_res[['first_date', 'last_date']].values]
-    #join the daterange with the adm1, which create a column per date, then stack to have each adm1-date combination
-    #not really needed now cause only one adm1, but for future compatability
-    df_for_daterange=df_for_res[["pcode"]].join(pd.DataFrame(a)).set_index(["pcode"]).stack().droplevel(-1).reset_index()
-    df_for_daterange.rename(columns={0:"date"},inplace=True)
-    #all dates in this dataframe had an forecasted below threshold monthly precipitation, so add that information
-    df_for_daterange[for_col]=1
-
-    #merge the observed and forecasted daterange
-    df_daterange_comb=df_obs_daterange.merge(df_for_daterange,on=["date","pcode"],how="outer")
-
-    df_alldatesrange=pd.DataFrame(list(itertools.product(pd.date_range("2000-01-01","2020-12-31",freq="D"),df.pcode.unique())),columns=['date','pcode'])
-    df_alldatesrange_sel=df_alldatesrange[df_alldatesrange.date.dt.month.isin(sel_months)]
-
-    df_daterange_comb=df_daterange_comb.merge(df_alldatesrange_sel,on=["date","pcode"],how="right")
-
-    df_daterange_comb[obs_col]=df_daterange_comb[obs_col].replace(np.nan,0)
-    df_daterange_comb[for_col]=df_daterange_comb[for_col].replace(np.nan,0)
-
-    #encode dry spells and whether it was none, only observed, only forecasted, or both
-    #R visualization code is expecting the column "dryspell_match"
-    df_daterange_comb["dryspell_match"]=df_daterange_comb.apply(lambda row:label_ds(row,obs_col,for_col),axis=1)
-    
-    return df_daterange_comb
 ```
 
 
@@ -245,6 +144,7 @@ def load_dryspell_data(ds_path,min_ds_days_month=7,min_adm_ds_month=3,ds_adm_col
 ### Load the forecast data
 
 
+
 ```python
 start_year=2000
 end_year=2020
@@ -279,7 +179,7 @@ start_rainy_seas=10
 #this is done because it can start during one year and continue the next calendar year
 #we therefore prefer to group by rainy season instead of by calendar year
 df_for["season_approx"]=np.where(df_for.date.dt.month>=start_rainy_seas,df_for.date.dt.year,df_for.date.dt.year-1)
-df_for
+# df_for.head(10)
 ```
 
 ### Adding Region and Months
@@ -289,206 +189,143 @@ df_for
 Unsure why the threshold of 210mm cannot be replicated.
 
 
+
+```python
+def trigger_fxn(sel_adm, sel_months, sel_leadtime):
+    seas_years=range(start_year,end_year)
+    adm_str="".join([a.lower() for a in sel_adm])
+    month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
+    lt_str="".join([str(l) for l in sel_leadtime])
+
+    #for this analysis we are only interested in the southern region during a few months that the dry spells have the biggest impact
+    #df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))&(df_for.leadtime.isin(sel_leadtime))]
+    df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))]
+    df_for_sel
+
+    #load the monthly precipitation data
+    df_obs_month=pd.read_csv(monthly_precip_path,parse_dates=["date"])
+    df_obs_month["date_month"]=df_obs_month.date.dt.to_period("M")
+    df_obs_month["season_approx"]=np.where(df_obs_month.date.dt.month>=10,df_obs_month.date.dt.year,df_obs_month.date.dt.year-1)
+
+    #select relevant admins and months
+    df_obs_month_sel=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))&(df_obs_month.date.dt.month.isin(sel_months))&(df_obs_month.season_approx.isin(seas_years))]
+    df_ds=load_dryspell_data(all_dry_spells_list_path)
+    probability=0.5
+    #compute the value for which x% of members forecasts the precipitation to be below or equal to that value
+    df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
+    df_for_quant["date_month"]=df_for_quant.date.dt.to_period("M")
+    df_for_quant[["date","leadtime",aggr_meth]].head()
+
+    # df_for_quant=df_for_quant[df_for_quant['leadtime'] <= 1]
+    #include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
+    df_ds_for=df_ds.merge(df_for_quant,how="right",on=["ADM1_EN","date_month"])
+    df_ds_for.loc[:,"dry_spell"]=df_ds_for.dry_spell.replace(np.nan,0).astype(int)
+    #extract month and names for plotting
+    df_ds_for["month"]=df_ds_for.date_month.dt.month
+    df_ds_for["month_name"]=df_ds_for.month.apply(lambda x: calendar.month_name[x])
+    df_ds_for["month_abbr"]=df_ds_for.month.apply(lambda x: calendar.month_abbr[x])
+    df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("dry_spell",ascending=True)
+    #compute tp,tn,fp,fn per threshold
+    y_target =  df_ds_for.dry_spell
+    threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for_labels[aggr_meth].max()%10,10)
+    df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
+    #to prevent division by zero
+    epsilon=0.00001
+    for t in threshold_list:
+        y_predicted = np.where(df_ds_for[aggr_meth]<=t,1,0)
+
+        cm = confusion_matrix(y_target=y_target, 
+                            y_predicted=y_predicted)
+        tn,fp,fn,tp=cm.flatten()
+        df_pr_th.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
+        df_pr_th.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
+        df_pr_th.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
+        df_pr_th.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
+        df_pr_th.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
+    df_pr_th=df_pr_th.reset_index()
+    print("point of intersection")
+    #this is across all leadtimes, so might not be the best point for leadtimes of interest
+    #df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
+    threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
+    return(threshold_perc)
+```
+
+
 ```python
 #define areas, months, years, and leadtimes of interest for the trigger
 sel_adm=["Southern"]
 sel_months=[1,2]
-seas_years=range(start_year,end_year)
 sel_leadtime=[3]
 
-adm_str="".join([a.lower() for a in sel_adm])
-month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
-lt_str="".join([str(l) for l in sel_leadtime])
-
-#for this analysis we are only interested in the southern region during a few months that the dry spells have the biggest impact
-#df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))&(df_for.leadtime.isin(sel_leadtime))]
-df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))]
-df_for_sel
+trigger_fxn(sel_adm, sel_months, sel_leadtime)
 ```
 
+    point of intersection
+    
 
-```python
-
-#load the monthly precipitation data
-df_obs_month=pd.read_csv(monthly_precip_path,parse_dates=["date"])
-df_obs_month["date_month"]=df_obs_month.date.dt.to_period("M")
-df_obs_month["season_approx"]=np.where(df_obs_month.date.dt.month>=10,df_obs_month.date.dt.year,df_obs_month.date.dt.year-1)
-
-#select relevant admins and months
-df_obs_month_sel=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))&(df_obs_month.date.dt.month.isin(sel_months))&(df_obs_month.season_approx.isin(seas_years))]
-df_ds=load_dryspell_data(all_dry_spells_list_path)
-probability=0.5
-#compute the value for which x% of members forecasts the precipitation to be below or equal to that value
-df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
-df_for_quant["date_month"]=df_for_quant.date.dt.to_period("M")
-df_for_quant[["date","leadtime",aggr_meth]].head()
-
-```
+    C:\Users\pauni\AppData\Local\Temp\ipykernel_9256\255868419.py:22: FutureWarning: Dropping invalid columns in DataFrameGroupBy.quantile is deprecated. In a future version, a TypeError will be raised. Before calling .quantile, select only columns which should be valid for the function.
+      df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
+    
 
 
-```python
-# df_for_quant=df_for_quant[df_for_quant['leadtime'] <= 1]
-#include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
-df_ds_for=df_ds.merge(df_for_quant,how="right",on=["ADM1_EN","date_month"])
-df_ds_for.loc[:,"dry_spell"]=df_ds_for.dry_spell.replace(np.nan,0).astype(int)
-#extract month and names for plotting
-df_ds_for["month"]=df_ds_for.date_month.dt.month
-df_ds_for["month_name"]=df_ds_for.month.apply(lambda x: calendar.month_name[x])
-df_ds_for["month_abbr"]=df_ds_for.month.apply(lambda x: calendar.month_abbr[x])
-df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("dry_spell",ascending=True)
-#compute tp,tn,fp,fn per threshold
-y_target =  df_ds_for.dry_spell
-threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for_labels[aggr_meth].max()%10,10)
-df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
-#to prevent division by zero
-epsilon=0.00001
-for t in threshold_list:
-    y_predicted = np.where(df_ds_for[aggr_meth]<=t,1,0)
 
-    cm = confusion_matrix(y_target=y_target, 
-                          y_predicted=y_predicted)
-    tn,fp,fn,tp=cm.flatten()
-    df_pr_th.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
-    df_pr_th.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
-    df_pr_th.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
-    df_pr_th.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
-    df_pr_th.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
-df_pr_th=df_pr_th.reset_index()
-print("point of intersection")
-#this is across all leadtimes, so might not be the best point for leadtimes of interest
-#df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
-threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
-threshold_perc
-```
+
+    230.0
+
+
 
 #### For January
 
 It is not possible to compute the thresholds separately with confidence without understanding why the 210mm threshold is not replicable.
 
 
+
 ```python
 #define areas, months, years, and leadtimes of interest for the trigger
 sel_adm=["Southern"]
 sel_months=[1]
-seas_years=range(start_year,end_year)
 sel_leadtime=[3]
 
-adm_str="".join([a.lower() for a in sel_adm])
-month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
-lt_str="".join([str(l) for l in sel_leadtime])
-
-#for this analysis we are only interested in the southern region during a few months that the dry spells have the biggest impact
-#df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))&(df_for.leadtime.isin(sel_leadtime))]
-df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))]
-
-#load the monthly precipitation data
-df_obs_month=pd.read_csv(monthly_precip_path,parse_dates=["date"])
-df_obs_month["date_month"]=df_obs_month.date.dt.to_period("M")
-df_obs_month["season_approx"]=np.where(df_obs_month.date.dt.month>=10,df_obs_month.date.dt.year,df_obs_month.date.dt.year-1)
-
-#select relevant admins and months
-df_obs_month_sel=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))&(df_obs_month.date.dt.month.isin(sel_months))&(df_obs_month.season_approx.isin(seas_years))]
-df_ds=load_dryspell_data(all_dry_spells_list_path)
-probability=0.5
-#compute the value for which x% of members forecasts the precipitation to be below or equal to that value
-df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
-df_for_quant["date_month"]=df_for_quant.date.dt.to_period("M")
-df_for_quant[["date","leadtime",aggr_meth]].head()
-# df_for_quant=df_for_quant[df_for_quant['leadtime'] <= 1]
-#include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
-df_ds_for=df_ds.merge(df_for_quant,how="right",on=["ADM1_EN","date_month"])
-df_ds_for.loc[:,"dry_spell"]=df_ds_for.dry_spell.replace(np.nan,0).astype(int)
-#extract month and names for plotting
-df_ds_for["month"]=df_ds_for.date_month.dt.month
-df_ds_for["month_name"]=df_ds_for.month.apply(lambda x: calendar.month_name[x])
-df_ds_for["month_abbr"]=df_ds_for.month.apply(lambda x: calendar.month_abbr[x])
-df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("dry_spell",ascending=True)
-#compute tp,tn,fp,fn per threshold
-y_target =  df_ds_for.dry_spell
-threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for_labels[aggr_meth].max()%10,10)
-df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
-#to prevent division by zero
-epsilon=0.00001
-for t in threshold_list:
-    y_predicted = np.where(df_ds_for[aggr_meth]<=t,1,0)
-
-    cm = confusion_matrix(y_target=y_target, 
-                          y_predicted=y_predicted)
-    tn,fp,fn,tp=cm.flatten()
-    df_pr_th.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
-    df_pr_th.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
-    df_pr_th.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
-    df_pr_th.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
-    df_pr_th.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
-df_pr_th=df_pr_th.reset_index()
-print("point of intersection")
-#this is across all leadtimes, so might not be the best point for leadtimes of interest
-#df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
-threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
-threshold_perc
+trigger_fxn(sel_adm, sel_months, sel_leadtime)
 ```
 
+    point of intersection
+    
+
+    C:\Users\pauni\AppData\Local\Temp\ipykernel_9256\255868419.py:22: FutureWarning: Dropping invalid columns in DataFrameGroupBy.quantile is deprecated. In a future version, a TypeError will be raised. Before calling .quantile, select only columns which should be valid for the function.
+      df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
+    
+
+
+
+
+    240.0
+
+
+
 #### For February
+
 
 
 ```python
 #define areas, months, years, and leadtimes of interest for the trigger
 sel_adm=["Southern"]
 sel_months=[2]
-seas_years=range(start_year,end_year)
 sel_leadtime=[3]
 
-adm_str="".join([a.lower() for a in sel_adm])
-month_str="".join([calendar.month_abbr[m].lower() for m in sel_months])
-lt_str="".join([str(l) for l in sel_leadtime])
-
-#for this analysis we are only interested in the southern region during a few months that the dry spells have the biggest impact
-#df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))&(df_for.leadtime.isin(sel_leadtime))]
-df_for_sel=df_for[(df_for.ADM1_EN.isin(sel_adm))&(df_for.date.dt.month.isin(sel_months))&(df_for.season_approx.isin(seas_years))]
-
-#load the monthly precipitation data
-df_obs_month=pd.read_csv(monthly_precip_path,parse_dates=["date"])
-df_obs_month["date_month"]=df_obs_month.date.dt.to_period("M")
-df_obs_month["season_approx"]=np.where(df_obs_month.date.dt.month>=10,df_obs_month.date.dt.year,df_obs_month.date.dt.year-1)
-
-#select relevant admins and months
-df_obs_month_sel=df_obs_month[(df_obs_month.ADM1_EN.isin(sel_adm))&(df_obs_month.date.dt.month.isin(sel_months))&(df_obs_month.season_approx.isin(seas_years))]
-df_ds=load_dryspell_data(all_dry_spells_list_path)
-probability=0.5
-#compute the value for which x% of members forecasts the precipitation to be below or equal to that value
-df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
-df_for_quant["date_month"]=df_for_quant.date.dt.to_period("M")
-df_for_quant[["date","leadtime",aggr_meth]].head()
-# df_for_quant=df_for_quant[df_for_quant['leadtime'] <= 1]
-#include all dates present in the observed rainfall df but not in the dry spell list, i.e. where no dryspells were observed, by merging outer
-df_ds_for=df_ds.merge(df_for_quant,how="right",on=["ADM1_EN","date_month"])
-df_ds_for.loc[:,"dry_spell"]=df_ds_for.dry_spell.replace(np.nan,0).astype(int)
-#extract month and names for plotting
-df_ds_for["month"]=df_ds_for.date_month.dt.month
-df_ds_for["month_name"]=df_ds_for.month.apply(lambda x: calendar.month_name[x])
-df_ds_for["month_abbr"]=df_ds_for.month.apply(lambda x: calendar.month_abbr[x])
-df_ds_for_labels=df_ds_for.replace({"dry_spell":{0:"no",1:"yes"}}).sort_values("dry_spell",ascending=True)
-#compute tp,tn,fp,fn per threshold
-y_target =  df_ds_for.dry_spell
-threshold_list=np.arange(0,df_ds_for[aggr_meth].max() - df_ds_for_labels[aggr_meth].max()%10,10)
-df_pr_th=pd.DataFrame(threshold_list,columns=["threshold"]).set_index('threshold')
-#to prevent division by zero
-epsilon=0.00001
-for t in threshold_list:
-    y_predicted = np.where(df_ds_for[aggr_meth]<=t,1,0)
-
-    cm = confusion_matrix(y_target=y_target, 
-                          y_predicted=y_predicted)
-    tn,fp,fn,tp=cm.flatten()
-    df_pr_th.loc[t,["month_ds"]]= det_rate(tp,fn,epsilon)
-    df_pr_th.loc[t,["month_no_ds"]]= tn_rate(tn,fp,epsilon)
-    df_pr_th.loc[t,["month_miss_rate"]]= miss_rate(fn,tp,epsilon)
-    df_pr_th.loc[t,["month_false_alarm_rate"]]= false_alarm_rate(fp,tp,epsilon)
-    df_pr_th.loc[t,["tn","tp","fp","fn"]]=tn,tp,fp,fn
-df_pr_th=df_pr_th.reset_index()
-print("point of intersection")
-#this is across all leadtimes, so might not be the best point for leadtimes of interest
-#df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1)
-threshold_perc=df_pr_th[df_pr_th.month_ds>=df_pr_th.month_no_ds].head(1).threshold.values[0]
-threshold_perc
+trigger_fxn(sel_adm, sel_months, sel_leadtime)
 ```
+
+    point of intersection
+    
+
+    C:\Users\pauni\AppData\Local\Temp\ipykernel_9256\255868419.py:22: FutureWarning: Dropping invalid columns in DataFrameGroupBy.quantile is deprecated. In a future version, a TypeError will be raised. Before calling .quantile, select only columns which should be valid for the function.
+      df_for_quant=df_for_sel.groupby(["date","ADM1_EN","leadtime"],as_index=False).quantile(probability)
+    
+
+
+
+
+    220.0
+
+
