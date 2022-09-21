@@ -383,10 +383,12 @@ kbl(snapshot_df,
 activation_df <- data.frame(row_name = c(paste0('Partial framework', footnote_marker_number(1)), 
                                         paste0('Full framework', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
-                                        paste0('Package 2 only', footnote_marker_number(4))),
+                                        paste0('Package 2 only', footnote_marker_number(4)),
+                                        paste0('None', footnote_marker_number(5))),
                            atv_stats = c("<img src=plots/trimmed_framework-min_atv.png>",  
                                            "<img src=plots/trimmed_framework-full_atv.png>",
                                            "<img src=plots/trimmed_Trigger1_atv.png>", ##FIX ME
+                                           "<img src=plots/trimmed_framework-min_atv.png>", ##FIX ME
                                            "<img src=plots/trimmed_framework-min_atv.png>"))  ##FIX ME
 
 kbl(activation_df,
@@ -406,7 +408,8 @@ kbl(activation_df,
                        number = c("Partial activation: At least one trigger being met",
                         paste0("Full activation: ", full_atv_definition), 
                         paste0("Package 1 activation: ", package1_atv_definition),
-                        paste0("Package 2 activation: ", package2_atv_definition))) 
+                        paste0("Package 2 activation: ", package2_atv_definition),
+                        "No activation: None of the packages are activated.")) 
 
 
 
