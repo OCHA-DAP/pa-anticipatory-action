@@ -375,18 +375,18 @@ kbl(snapshot_df,
 &nbsp;
 
 ## Activation Scenarios
-<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur most years (darker coloured band, 68% of the time) and the most or least likely that a scenario is to occur (full coloured band, 95% of the time).</p>
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur (darker coloured band, 68% of years) as well as the highest and lowest probability that a scenario will occur (full coloured band, 95% of years).</p>
 
 &nbsp;
 
 ```{r activation-table}
 activation_df <- data.frame(row_name = c(paste0('Partial framework', footnote_marker_number(1)), 
-                                        paste0('Full framework' , footnote_marker_number(2)),
+                                        paste0('Full framework', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
                                         paste0('Package 2 only', footnote_marker_number(4))),
                            atv_stats = c("<img src=plots/trimmed_framework-min_atv.png>",  
                                            "<img src=plots/trimmed_framework-full_atv.png>",
-                                           "<img src=plots/trimmed_Trigger1_atv.png>", 
+                                           "<img src=plots/trimmed_Trigger1_atv.png>", ##FIX ME
                                            "<img src=plots/trimmed_framework-min_atv.png>"))  ##FIX ME
 
 kbl(activation_df,
