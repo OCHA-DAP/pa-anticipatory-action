@@ -389,16 +389,23 @@ activation_df <- data.frame(row_name = c(paste0('Partial or full framework', foo
                                          "<img src=plots/trimmed_framework-full_atv.png>",
                                          "<img src=plots/trimmed_Trigger1_atv.png>", ##FIX ME
                                          "<img src=plots/trimmed_framework-min_atv.png>", ##FIX ME
-                                         "<img src=plots/trimmed_framework-min_atv.png>"))  ##FIX ME
+                                         "<img src=plots/trimmed_framework-min_atv.png>"),##FIX ME
+                           yearly_dist = c("",
+                                           "Sum up to 100% in a given year",
+                                           "Sum up to 100% in a given year",
+                                           "Sum up to 100% in a given year",
+                                           "Sum up to 100% in a given year"))
 
 kbl(activation_df,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, 
-    col.names = c("",""), 
-    align = "rl") %>%
+    col.names = c("","", ""), 
+    align = "rlc") %>%
   kable_styling(full_width = FALSE) %>%
   kable_minimal(c("hover")) %>%
+  column_spec(column = 3, width = "10em", color = "#007ce1") %>% 
+  collapse_rows(columns = 3, valign = "middle") %>%
   row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, width = "20em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "22em") %>%
@@ -409,8 +416,7 @@ kbl(activation_df,
                         paste0("Full activation: ", full_atv_definition), 
                         paste0("Package 1 activation: ", package1_atv_definition),
                         paste0("Package 2 activation: ", package2_atv_definition),
-                        "No activation: None of the packages are activated.")) 
-
+                        "No activation: None of the packages are activated."))
 
 
 
