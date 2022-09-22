@@ -96,7 +96,7 @@ trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
 # Table footnotes
 trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger 3 performance assessed by comparing SPI-based activations with historical bad years."
 
-full_atv_definition <- "A full activation is defined as Triggers 1 and 2 being met, or as Triggers 1 and 3 being met."
+full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met."
 package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
 package2_atv_definition <- "Package 2 is activated when Trigger 2 or Trigger 3 is met."
 activation_table_footnote <-  "" # additional notes, if needed
@@ -172,7 +172,24 @@ perf_metrics_95_data$upoint <- paste0(perf_metrics_95_data$point, "_95")
 perf_metrics_68_data$upoint <- paste0(perf_metrics_68_data$point, "_68")
 
 # combine datasets
-perf_metrics_data <- rbind(perf_metrics_95_data, perf_metrics_68_data)
+perf_metrics_data <- rbind(perf_metrics_95_data, perf_metrics_68_data) %>%
+                      select(-point) # remove non-unique point identifier
+
+# create & append framework-none metrics
+framework_min_metrics <- perf_metrics_data %>%
+                            filter(trigger == 'framework-min' & metric == 'atv') %>%
+                            mutate(value = 100 - value)
+
+framework_none_metrics <- data.frame(metric = 'atv', trigger = 'framework-none', value = NA, upoint = c('central_95', 'low_end_95', 'high_end_95', 'central_68', 'low_end_68', 'high_end_68'))
+
+framework_none_metrics$value[framework_none_metrics$upoint == 'central_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'central_95']
+framework_none_metrics$value[framework_none_metrics$upoint == 'low_end_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'high_end_95']
+framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'low_end_95']
+framework_none_metrics$value[framework_none_metrics$upoint == 'central_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'central_68']
+framework_none_metrics$value[framework_none_metrics$upoint == 'low_end_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'high_end_68']
+framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'low_end_68']
+
+perf_metrics_data <- rbind(perf_metrics_data, framework_none_metrics)
 
 # format funding amounts
 funding_a <- paste0('$',funding_a,'m')
@@ -215,7 +232,7 @@ for(trigger in trigger_list) {
 
 ```{r framework-CIs}
 
-framework_triggers_list <- c("framework-min", "framework-full")
+framework_triggers_list <- c("framework-min", "framework-full", "framework-p1", "framework-p2", "framework-none")
 
 # Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
 for(trigger in framework_triggers_list) {
@@ -379,17 +396,17 @@ kbl(snapshot_df,
 
 &nbsp;
 
-```{r activation-table}
-activation_df <- data.frame(row_name = c(paste0('Partial or full framework', footnote_marker_number(1)), 
-                                        paste0('Full framework', footnote_marker_number(2)),
+```{r framework-activation-table}
+activation_df <- data.frame(row_name = c(paste0('Any', footnote_marker_number(1)), 
+                                        paste0('Full', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
                                         paste0('Package 2 only', footnote_marker_number(4)),
                                         paste0('None', footnote_marker_number(5))),
                            atv_stats = c("<img src=plots/trimmed_framework-min_atv.png>",  
                                          "<img src=plots/trimmed_framework-full_atv.png>",
-                                         "<img src=plots/trimmed_Trigger1_atv.png>", ##FIX ME
-                                         "<img src=plots/trimmed_framework-min_atv.png>", ##FIX ME
-                                         "<img src=plots/trimmed_framework-min_atv.png>"),##FIX ME
+                                         "<img src=plots/trimmed_framework-p1_atv.png>", 
+                                         "<img src=plots/trimmed_framework-p2_atv.png>", 
+                                         "<img src=plots/trimmed_framework-none_atv.png>"),
                            yearly_dist = c("",
                                            "Sum up to 100% in a given year",
                                            "Sum up to 100% in a given year",
@@ -406,17 +423,17 @@ kbl(activation_df,
   kable_minimal(c("hover")) %>%
   column_spec(column = 3, width = "10em", color = "#007ce1") %>% 
   collapse_rows(columns = 3, valign = "middle") %>%
-  row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
+  row_spec(c(1:5), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, width = "20em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "22em") %>%
   pack_rows("Activation Scenario (probability in %)", start_row = 1, end_row = 2, color = '#1bb580') %>%
   kableExtra::footnote(general_title = "Notes",
                        general = activation_table_footnote,
-                       number = c("Partial activation: At least one trigger being met",
-                        paste0("Full activation: ", full_atv_definition), 
-                        paste0("Package 1 activation: ", package1_atv_definition),
-                        paste0("Package 2 activation: ", package2_atv_definition),
-                        "No activation: None of the packages are activated."))
+                       number = c("At least one trigger is met.",
+                        full_atv_definition, 
+                        package1_atv_definition,
+                        package2_atv_definition,
+                        "No trigger is met."))
 
 
 
