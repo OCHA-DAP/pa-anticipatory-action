@@ -109,7 +109,11 @@ def add_min_and_full(df):
     # OR trigger 1 and trigger 3 are met, there is a full activation.
     df["framework-min"] = "TN"
     df["framework-full"] = "TN"
+    df["framework-p1"] = "TN"
+    df["framework-p2"] = "TN"
+
     df["bad_year"] = df["Trigger1"].isin(["TP", "FN"])
+
     df["min_activation"] = (
         df["Trigger1"].isin(["TP", "FP"])
         | df["Trigger2"].isin(["TP", "FP"])
@@ -120,8 +124,16 @@ def add_min_and_full(df):
     ) | (
         (df["Trigger1"].isin(["TP", "FP"]) & df["Trigger3"].isin(["TP", "FP"]))
     )
+    df["p1_activation"] = (
+        df["Trigger1"].isin(["TP", "FP"])
+        & df["Trigger2"].isin(["TN", "FN"])
+        & df["Trigger3"].isin(["TN", "FN"])
+    )
+    df["p2_activation"] = df["Trigger1"].isin(["TN", "FN"]) & (
+        df["Trigger2"].isin(["TP", "FP"]) | df["Trigger3"].isin(["TP", "FP"])
+    )
 
-    for activation_type in ["min", "full"]:
+    for activation_type in ["min", "full", "p1", "p2"]:
         df.loc[
             df["bad_year"] & df[f"{activation_type}_activation"],
             f"framework-{activation_type}",
@@ -135,7 +147,16 @@ def add_min_and_full(df):
             f"framework-{activation_type}",
         ] = "FP"
 
-    df = df.drop(["bad_year", "min_activation", "full_activation"], axis=1)
+    df = df.drop(
+        [
+            "bad_year",
+            "min_activation",
+            "full_activation",
+            "p1_activation",
+            "p2_activation",
+        ],
+        axis=1,
+    )
     return df
 ```
 
@@ -352,8 +373,4 @@ for i, (_, group) in enumerate(df_ci_2.groupby(["metric", "trigger"])):
     )
     ax.text(0, i, group.metric.iloc[0], size="x-small")
     ax.text(1, i, group.trigger.iloc[0], size="x-small")
-```
-
-```python
-
 ```
