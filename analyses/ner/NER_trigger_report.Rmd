@@ -298,7 +298,7 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_d
 <br>
 
 * <p style="color:black;font-size:16px;text-align:left;"> The <span style="font-weight: bold;">central value</span> is the most likely performance; </p>
-* <p style="color:black;font-size:16px;text-align:left;"> Most often the trigger will perform within the <span style="font-weight: bold;">darker range</span> (68% of the time);</p>
+* <p style="color:black;font-size:16px;text-align:left;"> Most often the trigger will perform within the <span style="font-weight: bold;">darker inner range</span> (68% of the time);</p>
 * <p style="color:black;font-size:16px;text-align:left;"> There is high confidence that the trigger will perform within the <span style="font-weight: bold;">full coloured range</span> (95% of the time).</p> 
 
 <br>
@@ -392,7 +392,7 @@ kbl(snapshot_df,
 &nbsp;
 
 ## Activation Scenarios
-<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur (darker coloured band, 68% of years) as well as the highest and lowest probability that a scenario will occur (full coloured band, 95% of years).</p>
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur (<span style="color:  #007ce1;">darker inner band</span>, 68% of years) as well as the highest and lowest probability that a scenario will occur (<span style="color:  `r alpha("#007ce1", 0.7)`;">full coloured band</span>, 95% of years).</p>
 
 &nbsp;
 
