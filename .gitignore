@@ -38,6 +38,7 @@ __MACOSX/
 .RData
 .Ruserdata
 .Renviron
+.Rprofile
 
 # pycharm
 .idea
