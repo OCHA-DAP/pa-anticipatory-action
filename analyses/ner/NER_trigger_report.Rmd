@@ -299,7 +299,7 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_d
 * <p style="color:black;font-size:16px;text-align:left;"> There is high confidence that the trigger will perform within the <span style="font-weight: bold;">full coloured range</span> (95% of the time).</p> 
 
 <br>
-<p style="color:black;font-size:16px;text-align:left;"> Confidence intervals in <span style="color: blue;font-weight: bold;">blue</span> represent activation likelihood, those in <span style="color: green;font-weight: bold;">green</span> represent desired outcomes (valid non-activations/activations) and those in <span style="color: red;font-weight: bold;">red</span> represent undesired outcomes or errors.</p>
+<p style="color:black;font-size:16px;text-align:left;"> Confidence intervals in <span style="color: blue;font-weight: bold;">blue</span> represent activation likelihood, those in <span style="color: green;font-weight: bold;">green</span> represent desired outcomes (valid non-activations/activations) and those in <span style="color: red;font-weight: bold;"dou>red</span> represent undesired outcomes or errors.</p>
 
 &nbsp;
 
