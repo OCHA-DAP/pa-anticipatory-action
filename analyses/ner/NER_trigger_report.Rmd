@@ -283,9 +283,39 @@ write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_d
 
 ```
 
+```{r key-messages-metrics}
+any_atv_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'atv') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+
+any_atv_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'atv') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
+
+#any_det_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+any_det_low_end_68 <- 89 # manual overwrite using the rule of three
+
+#any_det_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
+any_det_high_end_68 <- 100 # manual overwrite using the rule of three
+
+any_far_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'far') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+
+any_far_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'far') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
+
+mitigation_warranted <- ifelse(any_far_low_end_68 >= 40, "Mitigation is recommended to minimise the negative impact of a false alarm due to its moderate to high likelihood.", "")
+
+```
+
 # Anticipatory Action Trigger Mechanism Report
 <p style="color:#007ce1;font-size:22px;text-align:center;"> `r paste0(shock, ' in ', country_name)`</p> 
 <p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
+
+## Key Messages
+
+* <p style="color:black;font-size:16px;text-align:left;"> There is a `r paste0(any_atv_low_end_68, ' - ', any_atv_high_end_68)`% chance that an activation will occur in a given year.</p>
+* <p style="color:black;font-size:16px;text-align:left;"> At least some activities are expected to be implemented ahead of `r paste0(any_det_low_end_68, ' - ', any_det_high_end_68)`% of shocks.</p>
+* <p style="color:black;font-size:16px;text-align:left;"> The risk of a false alarm stands at `r paste0(any_far_low_end_68, ' - ', any_far_high_end_68)`% of activations.</p>
+* <p style="color:black;font-size:16px;text-align:left;"> The mechanism is optimised to reduce the risk of failing to activate when there is a shock, at the cost of having false alarms. `r mitigation_warranted `</p>
+
+&nbsp;
+
+_________
 
 ## Trigger Mechanism Snapshot
 <p style="color:black;font-size:16px;text-align:left;"> This table summarises the trigger mechanism and its performance in signaling severe shocks. It presents estimates of the likelihood that the threshold would be met in a given year as well as how often the trigger is expected to correctly recommend an activation or non-activation.</p> 
