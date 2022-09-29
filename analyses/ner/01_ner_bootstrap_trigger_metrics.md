@@ -252,12 +252,13 @@ In the loop below there is an extra piece of code
 that shouldn't be used generally.
 It's employing the 
 [rule of three](https://en.wikipedia.org/wiki/Rule_of_three_(statistics))
-in the case when we don't have any FNs, i.e. for Trigger1.
+in the case when we don't have any FNs, i.e. for `Trigger1` and `framework-min`.
 
 For the detection rate (DR), we can calculate the CI as follows:
 1. Using the rule of 3, we know our sample could have up to 3/n = 3/28 = 10% FNs (to 95% confidence)
 2. Therefore we just calculate the DR with this as a bound. We use the rate of TPs in 
-   the sample (9/28 = 0.32) and then use 0.1 for FNs from the step above. 
+   the sample, which happens to be 9/28 = 0.32 for both `Trigger1` and
+   `framework-min`, and then use 0.1 for FNs from the step above. 
    And end up with 75% as a lower bound.
 
 A symmetric argument can be made for the MR (upper bound 25%). 
@@ -271,7 +272,7 @@ We also want the 68% confidence interval. Generalizing the rule of three:
 
 $(1-p)^n = (1 - CI)$
 
-$p = 1 - (1 - CI)^{1/n}$
+$p = 1 - (1 - CI)^{1/n}$A
 
 So for n=28 and a CI of 68%, we have up to 4% FNs, and get a lower bound for the CI of $ 0.32 / [0.32 + 0.04] = 0.89%$
 
@@ -299,13 +300,13 @@ def calc_ci(
         if replace_fn_metrics:
             df_ci.loc[
                 (df_ci.metric == "det")
-                & (df_ci.trigger == "Trigger1")
+                & (df_ci.trigger.isin(["Trigger1", "framework-min"]))
                 & (df_ci.point == "low_end"),
                 "value",
             ] = replacement_metrics[ci]
             df_ci.loc[
                 (df_ci.metric == "mis")
-                & (df_ci.trigger == "Trigger1")
+                & (df_ci.trigger.isin(["Trigger1", "framework-min"]))
                 & (df_ci.point == "high_end"),
                 "value",
             ] = (
