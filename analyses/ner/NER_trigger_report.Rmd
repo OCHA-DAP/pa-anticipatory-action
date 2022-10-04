@@ -146,6 +146,8 @@ learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_t
 ```
 
 ```{r functions}
+source("../country_template/docs/plotATV.R")
+source("../country_template/docs/plotTradeoffs.R")
 source("../country_template/docs/plotCIs.R")
 ```
 
@@ -195,13 +197,27 @@ funding_c <- paste0('$',funding_c,'m')
 
 ```
 
+```{r atv-CIs}
+
+# Create a CI visual for atv for each trigger + activation timepoint
+
+for(trigger in trigger_list) {
+
+  # produce segment_dimensions and plots for triggers 
+  output <- plotAtvCI(trigger_id = trigger)
+  
+  # save plot as png
+  filename <- paste0(trigger, "_atv.png")
+  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
+  print(output$plot)
+  dev.off()
+
+```
+
 ```{r trigger-CIs}
 
 # Compile list of metrics to be included in the report
-metrics_list <- c('atv', 'det', 'far', 'mis', 'var') # trigger activation prob, detection rate, false alarm rate, miss rate, valid activation rate 
-
-# Create a record of segment dimensions
-segment_dim_summary <- data.frame(trigger_id = NA, metric_name = NA, segment = NA, lo_end = NA, hi_end = NA)
+metrics_list <- c('det', 'far', 'mis', 'var') # trigger activation prob, detection rate, false alarm rate, miss rate, valid activation rate 
   
 # Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
 for(trigger in trigger_list) {
@@ -216,11 +232,6 @@ for(trigger in trigger_list) {
   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
   print(output$plot)
   dev.off()
-    
-  # add segment_dimensions to summary dataframe
-  segment_dim_temp <- data.frame(trigger_id = trigger, metric_name = metric, output$segment_dims)
-    
-  segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
   
   }
 }
