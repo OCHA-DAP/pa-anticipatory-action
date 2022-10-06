@@ -1,9 +1,6 @@
 plotTradeoffCI <- function(trigger_id, metric_name) {
 
   # subset performance metrics data for the trigger
-
-  #metrics <- if(trigger_id %in% trigger_list) c('var', 'det') else 'atv'
-
   perf_metrics_sub <- perf_metrics_data %>%
     filter(trigger == trigger_id & metric == metric_name)
 
