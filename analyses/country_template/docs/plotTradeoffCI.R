@@ -30,7 +30,7 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
   left_colour <- ifelse(metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
   right_colour <- ifelse(metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
 
-  tradeoff_bar <- seg_dims %>%
+  p <- seg_dims %>%
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
   geom_rect(aes(fill = segment), colour = NA) +
   scale_fill_manual(values=c('seg_below_95' = left_colour,
@@ -92,5 +92,5 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank())
 
-return(tradeoff_bar)
+  return(list(plot = p, segment_dims = seg_dims))
 }
