@@ -8,7 +8,7 @@
                                      hi_end = c(NA,NA,NA,NA,100))
     segment_dimensions$segment <- factor(segment_dimensions$segment, levels = c('seg_below_95', 'seg_95to68', 'seg_68', 'seg_68to95', 'seg_above_95'), ordered = TRUE)
 
-    # select performance metrics for this trigger_id
+    # subset performance metrics for this trigger_id
     perf_metrics_sub <- perf_metrics_data %>%
       filter(trigger == trigger_id & metric == 'atv')
 
