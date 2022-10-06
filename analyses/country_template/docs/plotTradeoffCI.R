@@ -69,18 +69,18 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
                              angle = 20,
                              ends = "first",
                              type = "closed")) +
-  geom_text(y = 0.5,
-            x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value'] + ((100-perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value'])/2),
+  geom_label(y = 0.5,
+              x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value']/2,
+              label = left_label,
+              size = 4,
+              color = left_colour,
+              fill = alpha('white', 0.3)) +
+  geom_label(y = 0.5,
+            x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] + (100 - perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'])/2,
             label = right_label,
             size = 4,
-            # fontface = "bold",
-            color = "white") +
-  geom_text(y = 0.5,
-            x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'low_end_95'), 'value']/2,
-            label = left_label,
-            size = 4,
-            # fontface = "bold",
-            color = "white") +
+            color = right_colour,
+            fill = alpha('white', 0.3)) +
   theme_economist_white(base_size = 11,
                         base_family = "sans",
                         gray_bg = F,
