@@ -30,14 +30,17 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
                        ifelse(metric_name == 'det', 'Detections',
                               ifelse(metric_name == 'atv', 'Any', "error")))
 
+  left_colour <- ifelse(metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
+  right_colour <- ifelse(metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
+
   tradeoff_bar <- seg_dims %>%
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
   geom_rect(aes(fill = segment), colour = NA) +
-  scale_fill_manual(values=c('seg_below_95' = '#1bb580',
+  scale_fill_manual(values=c('seg_below_95' = left_colour,
                              'seg_95to68' = alpha('grey', 0.7),
                              'seg_68' = 'grey',
                              'seg_68to95' = alpha('grey', 0.7),
-                             'seg_above_95' = '#FF3333')) +
+                             'seg_above_95' = right_colour)) +
   ylim(0, 10) +
   xlim(0, 100) +
   geom_segment(y = -0.5, # central line
@@ -50,7 +53,7 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
                yend = 0.5,
                x = 0,
                xend = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] - 0.5,
-               color = "#1bb580",
+               color = left_colour,
                size = 1,
                arrow = arrow(length = unit(0.1, "in"),
                              angle = 20,
@@ -60,7 +63,7 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
                yend = 0.5,
                x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] + 0.5,
                xend = 100,
-               color = "#FF3333",
+               color = right_colour,
                size = 1,
                arrow = arrow(length = unit(0.1, "in"),
                              angle = 20,
