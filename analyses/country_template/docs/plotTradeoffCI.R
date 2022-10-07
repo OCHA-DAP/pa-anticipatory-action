@@ -1,8 +1,11 @@
-plotTradeoffCI <- function(trigger_id, metric_name) {
+## Generates plots for each metric against its opposite (VAR vs FAR, DET vs MIS) to show the tradeoff between the pair elements.
+## Also plots the framework activation likelihood bar for Any vs None scenarios
+
+plotTradeoffCI <- function(trigger_id, left_metric_name) {
 
   # subset performance metrics data for the trigger
   perf_metrics_sub <- perf_metrics_data %>%
-    filter(trigger == trigger_id & metric == metric_name)
+    filter(trigger == trigger_id & metric == left_metric_name)
 
    # Create df with segment widths for double-metric bars
   seg_dims <- data.frame(segment = c('seg_below_95', 'seg_95to68', 'seg_68', 'seg_68to95', 'seg_above_95'),
@@ -20,15 +23,15 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
   seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value']
 
   # plot bar
-  right_label <- ifelse(metric_name == 'var', 'False alarms',
-                        ifelse(metric_name == 'det', 'Misses',
-                               ifelse(metric_name == 'atv', 'None', "error")))
-  left_label <- ifelse(metric_name == 'var', 'Valid',
-                       ifelse(metric_name == 'det', 'Detections',
-                              ifelse(metric_name == 'atv', 'Any', "error")))
+  right_label <- ifelse(left_metric_name == 'var', 'False alarms',
+                        ifelse(left_metric_name == 'det', 'Misses',
+                               ifelse(left_metric_name == 'atv', 'None', "error")))
+  left_label <- ifelse(left_metric_name == 'var', 'Valid',
+                       ifelse(left_metric_name == 'det', 'Detections',
+                              ifelse(left_metric_name == 'atv', 'Any', "error")))
 
-  left_colour <- ifelse(metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
-  right_colour <- ifelse(metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
+  left_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
+  right_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
 
   p <- seg_dims %>%
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
@@ -67,13 +70,15 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
                              ends = "first",
                              type = "closed")) +
   geom_label(y = 0.5,
-              x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value']/2,
+             x = 1,
+              hjust = "inward",
               label = left_label,
               size = 4,
               color = left_colour,
               fill = alpha('white', 0.3)) +
   geom_label(y = 0.5,
-            x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] + (100 - perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'])/2,
+            x = 99,
+            hjust = "inward",
             label = right_label,
             size = 4,
             color = right_colour,
@@ -92,5 +97,5 @@ plotTradeoffCI <- function(trigger_id, metric_name) {
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank())
 
-  return(list(plot = p, segment_dims = seg_dims))
+  return(list(p = p, seg_dims = seg_dims))
 }
