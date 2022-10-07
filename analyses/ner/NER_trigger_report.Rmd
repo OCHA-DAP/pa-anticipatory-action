@@ -122,7 +122,7 @@ options(scipen = 999) # turn off scientific notation
 options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
-```{r libraries, include = FALSE}
+```{r libraries, include = FALSE, warning = FALSE}
 packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
 
 # install packages not yet installed
@@ -146,8 +146,8 @@ learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_t
 ```
 
 ```{r functions}
-source("../country_template/docs/plotATV.R")
-source("../country_template/docs/plotTradeoffs.R")
+source("../country_template/docs/plotAtvCI.R")
+source("../country_template/docs/plotTradeoffCI.R")
 source("../country_template/docs/plotCIs.R")
 ```
 
@@ -209,58 +209,102 @@ for(trigger in trigger_list) {
   # save plot as png
   filename <- paste0(trigger, "_atv.png")
   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
-  print(output$plot)
+  print(output$p)
+  dev.off()
+}
+
+```
+
+```{r tradeoff-CIs}
+
+# Tradeoff CIs for individual triggers
+
+for(trigger in c(name_a, name_b, name_c)) {
+  for (metric in c('var', 'det')) {
+  
+  output <- plotTradeoffCI(trigger_id = trigger, 
+                   left_metric_name = metric)
+  
+  # save plot as png
+  filename <- paste0(trigger, "_", metric, "_tradeoff_bar.png")
+  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
+  print(output$p)
+  dev.off()
+  }
+}
+  
+# Tradeoff CI for activation scenarios
+
+  output <- plotTradeoffCI(trigger_id = "framework-min", 
+                   left_metric_name = "atv")
+  
+  # save plot as png
+  filename <- paste0("framework-min_atv_tradeoff_bar.png")
+  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
+  print(output$p)
   dev.off()
 
 ```
 
 ```{r trigger-CIs}
 
-# Compile list of metrics to be included in the report
-metrics_list <- c('det', 'far', 'mis', 'var') # trigger activation prob, detection rate, false alarm rate, miss rate, valid activation rate 
-  
-# Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
+# Plot top/bottom CIs for individual triggers (var, det, far, mis)
 for(trigger in trigger_list) {
-  for (metric in metrics_list) {
+  for (metric in c('var', 'det')) {
   
   # produce segment_dimensions and plots for triggers 
   output <- plotCI(trigger_id = trigger, 
-                   metric_name = metric)
+                   left_metric_name = metric)
+
+  # save plots as png's
+  top_p_filename <- paste0(trigger, "_", metric, "_top_p.png")
+  png(filename = paste0("plots/", top_p_filename), width = 500, height = 400, units = "px")
+  print(output$top_p)
   
-  # save plot as png
-  filename <- paste0(trigger, "_", metric, ".png")
-  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
-  print(output$plot)
+  bottom_p_filename <- paste0(trigger, "_", metric, "_bottom_p.png")
+  png(filename = paste0("plots/", bottom_p_filename), width = 500, height = 400, units = "px")
+  print(output$bottom_p)
   dev.off()
-  
   }
 }
 
+# Plot top/bottom CIs for activation scenarios
+output <- plotCI(trigger_id = "framework-min", "atv")
+
+ top_p_filename <- paste0("framework-min_atv_top_p.png")
+  png(filename = paste0("plots/", top_p_filename), width = 683, height = 318, units = "px")
+  print(output$top_p)
+  dev.off()
+  
+  bottom_p_filename <- paste0("framework-min_atv_bottom_p.png")
+  png(filename = paste0("plots/", bottom_p_filename), width = 683, height = 318, units = "px")
+  print(output$bottom_p)
+  dev.off()
 ```
 
-```{r framework-CIs}
-
-framework_triggers_list <- c("framework-min", "framework-full", "framework-p1", "framework-p2", "framework-none")
-
-# Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
-for(trigger in framework_triggers_list) {
-  
-  # produce segment_dimensions and plots for triggers 
-  output <- plotCI(trigger_id = trigger, 
-                   metric_name = 'atv')
-  
-  # save plot as png
-  filename <- paste0(trigger, "_atv.png")
-  png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
-  print(output$plot)
-  dev.off()
-    
-  # add segment_dimensions to summary dataframe
-  segment_dim_temp <- data.frame(trigger_id = trigger, metric_name = 'atv', output$segment_dims)
-    
-  segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
-  
-}
+# ```{r framework-CIs}
+# 
+# framework_triggers_list <- c("framework-min", "framework-full", "framework-p1", "framework-p2", "framework-none")
+# 
+# # Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
+# for(trigger in framework_triggers_list) {
+#   
+#   # produce segment_dimensions and plots for triggers 
+#   output <- plotCI(trigger_id = trigger, 
+#                    left_metric_name = 'atv')
+#   
+#   # save plot as png
+#   filename <- paste0(trigger, "_atv.png")
+#   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
+#   print(output$plot)
+#   dev.off()
+#     
+#   # add segment_dimensions to summary dataframe
+#  # segment_dim_temp <- data.frame(trigger_id = trigger, metric_name = 'atv', output$segment_dims)
+#     
+#   #segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
+#   
+# }
 
 ```
 
@@ -287,10 +331,10 @@ for (filename in plots_to_trim) {
 }
 
 # remove empty first row of segment_dim_summary
-segment_dim_summary <- slice(segment_dim_summary, -1)
+#segment_dim_summary <- slice(segment_dim_summary, -1)
 
 # save segment_dim_summary as csv
-write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_dim_summary.csv"))
+#write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_dim_summary.csv"))
 
 ```
 
