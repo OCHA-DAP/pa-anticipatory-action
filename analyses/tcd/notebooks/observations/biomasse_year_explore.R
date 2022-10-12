@@ -52,12 +52,6 @@ df %>%
             ymax = Inf,
             xmin = -Inf,
             xmax = Inf) +
-  geom_text(data = data.frame(year = 2022),
-            label = str_wrap("2017 not localized drought, just less severe compared to other years", 20),
-            x = 17,
-            y = 15,
-            size = 3,
-            fontface = "bold") +
   geom_sf(aes(fill = value)) +
   facet_wrap(~year, labeller = as_labeller(\(x, y) c(1999:2021, ""))) +
   theme_void() +
