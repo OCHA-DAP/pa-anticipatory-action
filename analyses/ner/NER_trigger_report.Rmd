@@ -95,7 +95,7 @@ trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
 scenario_list <- c("framework-full", "framework-p1", "framework-p2") # exclude framework-none and framework-any
 
 # Table footnotes
-trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys."
+trigger_table_footnote <- "Expected cost computed using most likely probability of activation (central value). Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys."
 
 full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met."
 package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
@@ -191,9 +191,14 @@ framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_68'] <- 
 perf_metrics_data <- rbind(perf_metrics_data, framework_none_metrics)
 
 # format funding amounts
-funding_a <- paste0('$',funding_a,'m')
-funding_b <- paste0('$',funding_b,'m')
-funding_c <- paste0('$',funding_c,'m')
+funding_a_formatted <- paste0('$',funding_a,'m')
+funding_b_formatted <- paste0('$',funding_b,'m')
+funding_c_formatted <- paste0('$',funding_c,'m')
+
+# expected cost amounts (probability of activation multiplied by funding amount)
+expected_cost_a <- paste0('$', round(funding_a * (perf_metrics_data %>% filter(trigger == name_a & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
+expected_cost_b <- paste0('$', round(funding_b * (perf_metrics_data %>% filter(trigger == name_b & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
+expected_cost_c <- paste0('$', round(funding_c * (perf_metrics_data %>% filter(trigger == name_c & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
 
 ```
 
@@ -333,6 +338,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Activity Package', 
                                        'Funding Amount',
                                        'Probability of being met in a given year', 
+                                       'Expected Cost',
                                        'Activations', 
                                        'Shocks'),
                        trigger_a = c(type_a, 
@@ -344,8 +350,9 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_a,
                                      monitored_by_a,
                                      package_a, 
-                                     funding_a,
+                                     funding_a_formatted,
                                      "<img src=plots/trimmed_Trigger1_atv.png>",
+                                     expected_cost_a,
                                      "<img src=plots/trimmed_Trigger1_var_tradeoff_bar.png>", 
                                      "<img src=plots/trimmed_Trigger1_det_tradeoff_bar.png>"),
                        trigger_b = c(type_b,
@@ -357,8 +364,9 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_b,
                                      monitored_by_b,
                                      package_b, 
-                                     funding_b,
+                                     funding_b_formatted,
                                      "<img src=plots/trimmed_Trigger2_atv.png>", 
+                                     expected_cost_b,
                                      "<img src=plots/trimmed_Trigger2_var_tradeoff_bar.png>",
                                      "<img src=plots/trimmed_Trigger2_det_tradeoff_bar.png>"),
                        trigger_c = c(type_c, 
@@ -370,8 +378,9 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_c,
                                      monitored_by_c,
                                      package_c, 
-                                     funding_c,
+                                     funding_c_formatted,
                                     "<img src=plots/trimmed_Trigger3_atv.png>", 
+                                    expected_cost_c,
                                      "<img src=plots/trimmed_Trigger3_var_tradeoff_bar.png>",
                                      "<img src=plots/trimmed_Trigger3_det_tradeoff_bar.png>"))
 
@@ -382,13 +391,13 @@ kbl(snapshot_df,
     col.names = c("","Trigger 1", "Trigger 2", "Trigger 3"), 
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
-  row_spec(c(1:11), extra_css = "line-height: 30px;") %>%
-  row_spec(c(12:13), extra_css = "line-height: 80px;") %>%
+  row_spec(c(1:12), extra_css = "line-height: 30px;") %>%
+  row_spec(c(13:14), extra_css = "line-height: 80px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
   column_spec(column = c(2:4), width = "28em") %>%
   pack_rows("Description", start_row = 1, end_row = 8, color = '#1bb580') %>%
-  pack_rows("Programming and Funding", start_row = 9, end_row = 11, color = '#1bb580') %>%
-  pack_rows("Performance", start_row = 12, end_row = 13
+  pack_rows("Programming and Funding", start_row = 9, end_row = 12, color = '#1bb580') %>%
+  pack_rows("Performance", start_row = 13, end_row = 14
             , color = '#1bb580') %>%
   kableExtra::footnote(general_title = "Notes",
                        general = trigger_table_footnote)
