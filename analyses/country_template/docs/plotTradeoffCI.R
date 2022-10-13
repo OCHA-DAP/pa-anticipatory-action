@@ -49,12 +49,6 @@ p <- seg_dims %>%
                              'seg_above_95' = right_colour)) +
   ylim(-1, 9) +
   xlim(0, 100) +
-  geom_segment(y = -0.5, # central line
-               yend = 1.5,
-               x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'],
-               xend = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'],
-               color = "#444444",
-               size = 0.75) +
   geom_segment(y = 0.5, # left arrow
                yend = 0.5,
                x = 0,
@@ -98,6 +92,7 @@ p <- seg_dims %>%
                size = 4,
                nudge_x = 0,
                color = bottom_colour,
+               fontface = 'bold',
                fill = NA,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
@@ -107,6 +102,7 @@ p <- seg_dims %>%
                size = 4,
                nudge_x = 0,
                color = bottom_colour,
+               fontface = 'bold',
                fill = NA,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
@@ -128,10 +124,11 @@ p <- seg_dims %>%
     geom_label(aes(x = central.x,
                    y = -1,
                    label = 100 - central.x,
-                   vjust = 0),
+                   vjust = -0.1),
                size = 5,
                color = bottom_colour,
                fontface = 'bold',
+               fill = "white",
                label.size = NA) +
 
   # top values
@@ -142,6 +139,7 @@ p <- seg_dims %>%
                  size = 4,
                  nudge_x = 0,
                  color = top_colour,
+                 fontface = 'bold',
                  label.size = NA) + # removes border
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
                      y = 1.1,
@@ -150,6 +148,7 @@ p <- seg_dims %>%
                  size = 4,
                  nudge_x = 0,
                  color = top_colour,
+                 fontface = 'bold',
                  label.size = NA) +
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
                      y = 1,
@@ -170,11 +169,19 @@ p <- seg_dims %>%
       geom_label(aes(x = central.x,
                      y = 1.3,
                      label = central.x,
-                     vjust = 0.2),
+                     vjust = 0.25),
                  size = 5,
                  color = top_colour,
                  fontface = 'bold',
+                 fill = "white",
                  label.size = NA) +
+  # central line
+  geom_segment(y = -0.2, # central line
+               yend = 1.2,
+               x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'],
+               xend = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'],
+               color = "#444444",
+               size = 0.75) +
   # theme
   theme_economist_white(base_size = 11,
                         base_family = "sans",
