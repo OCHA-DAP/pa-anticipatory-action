@@ -33,8 +33,8 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
   left_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
   top_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
 
-  right_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
-  bottom_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
+  right_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', 'black')
+  bottom_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', 'black')
 
   central.x <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] # value of central value of 95% confidence interval
 
