@@ -484,9 +484,9 @@ kbl(learning_table,
 
 &nbsp;
 
-```{r timepoint-table, include = TRUE}
+```{r timepoint-tables, include = TRUE}
 
-timepoint_df <- data.frame(row_name = c('Triggering Prob.',
+timepoint_df1 <- data.frame(row_name = c('Triggering Prob.',
                                         'Activations', 
                                        'Shocks'),
                        trigger_jan = c("<img src=plots/trimmed_Jan_atv.png>",
@@ -497,7 +497,11 @@ timepoint_df <- data.frame(row_name = c('Triggering Prob.',
                                      "<img src=plots/trimmed_Feb_det_tradeoff_bar.png>"),
                        trigger_mar = c("<img src=plots/trimmed_Mar_atv.png>", 
                                      "<img src=plots/trimmed_Mar_var_tradeoff_bar.png>", 
-                                     "<img src=plots/trimmed_Mar_det_tradeoff_bar.png>"),
+                                     "<img src=plots/trimmed_Mar_det_tradeoff_bar.png>"))
+
+timepoint_df2 <- data.frame(row_name = c('Triggering Prob.',
+                                        'Activations', 
+                                       'Shocks'),
                        trigger_apr = c("<img src=plots/trimmed_Apr_atv.png>",
                                      "<img src=plots/trimmed_Apr_var_tradeoff_bar.png>", 
                                      "<img src=plots/trimmed_Apr_det_tradeoff_bar.png>"),
@@ -508,12 +512,26 @@ timepoint_df <- data.frame(row_name = c('Triggering Prob.',
                                      "<img src=plots/trimmed_June_var_tradeoff_bar.png>", 
                                      "<img src=plots/trimmed_June_det_tradeoff_bar.png>"))
 
-kbl(timepoint_df,
+kbl(timepoint_df1,
     format = 'html',
     escape = FALSE,
-    row.names = FALSE, # omit row numbers
-    col.names = c("","January", "February", "March", "April", "May", "June"), 
-    align = "rcccccc") %>%
+    row.names = FALSE, 
+    col.names = c("","January", "February", "March"), 
+    align = "rccc") %>%
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:3), extra_css = "line-height: 60px;") %>%
+  column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
+```
+
+&nbsp;
+
+```{r timpoint_table2}
+kbl(timepoint_df2,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, 
+    col.names = c("","April", "May", "June"), 
+    align = "rccc") %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:3), extra_css = "line-height: 60px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
