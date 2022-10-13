@@ -148,7 +148,6 @@ learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_t
 ```{r functions}
 source("../country_template/docs/plotAtvCI.R")
 source("../country_template/docs/plotTradeoffCI.R")
-source("../country_template/docs/plotCIs.R")
 ```
 
 ```{r data-loading-and-formatting}
@@ -244,42 +243,6 @@ for(trigger in c(name_a, name_b, name_c)) {
   print(output$p)
   dev.off()
 
-```
-
-```{r trigger-CIs, eval=FALSE}
-# 
-# # Plot top/bottom CIs for individual triggers (var, det, far, mis)
-# for(trigger in trigger_list) {
-#   for (metric in c('var', 'det')) {
-#   
-#   # produce segment_dimensions and plots for triggers 
-#   output <- plotCI(trigger_id = trigger, 
-#                    left_metric_name = metric)
-# 
-#   # save plots as png's
-#   top_p_filename <- paste0(trigger, "_", metric, "_top_p.png")
-#   png(filename = paste0("plots/", top_p_filename), width = 500, height = 400, units = "px")
-#   print(output$top_p)
-#   
-#   bottom_p_filename <- paste0(trigger, "_", metric, "_bottom_p.png")
-#   png(filename = paste0("plots/", bottom_p_filename), width = 500, height = 400, units = "px")
-#   print(output$bottom_p)
-#   dev.off()
-#   }
-# }
-# 
-# # Plot top/bottom CIs for activation scenarios
-# output <- plotCI(trigger_id = "framework-min", "atv")
-# 
-#  top_p_filename <- paste0("framework-min_atv_top_p.png")
-#   png(filename = paste0("plots/", top_p_filename), width = 683, height = 318, units = "px")
-#   print(output$top_p)
-#   dev.off()
-#   
-#   bottom_p_filename <- paste0("framework-min_atv_bottom_p.png")
-#   png(filename = paste0("plots/", bottom_p_filename), width = 683, height = 318, units = "px")
-#   print(output$bottom_p)
-#   dev.off()
 ```
 
 ```{r file-formatting-and-saving}
@@ -419,7 +382,7 @@ kbl(snapshot_df,
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:10), extra_css = "line-height: 30px;") %>%
-  row_spec(c(11:13), extra_css = "line-height: 45px;") %>%
+  row_spec(c(11:13), extra_css = "line-height: 55px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
   column_spec(column = c(2:4), width = "28em") %>%
   pack_rows("Description", start_row = 1, end_row = 8, color = '#1bb580') %>%
