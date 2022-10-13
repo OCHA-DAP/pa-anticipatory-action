@@ -37,7 +37,8 @@ editor_options:
 ### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
 ### Create a "plots" folder sister to the RMD file in the country's `analyses` folder
 ### Update the "hard-coded-values" code chunk below
-### If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.)
+### If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.) 
+### Review, adjust or remove the country-specific code chunk
 ### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed 
 ### Knit
 ```
@@ -201,6 +202,17 @@ expected_cost_b <- paste0('$', round(funding_b * (perf_metrics_data %>% filter(t
 expected_cost_c <- paste0('$', round(funding_c * (perf_metrics_data %>% filter(trigger == name_c & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
 
 ```
+
+```{r NER-specific}
+
+hist_act <- read.csv(paste0(data_folder_path, "historical_activations_trigger_v1.csv"))
+p2_pred <- sum(hist_act$Trigger2 == 'yes') # count activations of T2 (prediction-based activation of Package 2)
+p2_obs <- sum(hist_act$Trigger3 == 'yes' & hist_act$Trigger2 == '') # count activations of T3 when T2 was not met (observation-based activation of Package 2)
+p2_tot <- sum(hist_act$Trigger3 == 'yes' | hist_act$Trigger2 == 'yes') # count activations of P2
+
+package2_atv_definition <- paste0(package2_atv_definition, " Historically P2 disbursement was triggered by the predictive trigger (Trigger 2) ", round(100*p2_pred/p2_tot, 0),"% of the time and by the observational trigger (Trigger 3) ", round(100*p2_obs/p2_tot, 0), "% of the time.")
+```
+
 
 ```{r atv-CIs}
 
@@ -401,17 +413,13 @@ kbl(snapshot_df,
             , color = '#1bb580') %>%
   kableExtra::footnote(general_title = "Notes",
                        general = trigger_table_footnote)
-# (X% of all activations expected to be followed by a shock)
-  #'Detections (An activation is expected to occur for X% of the shocks)', 
-   #                                    'False Alarms (X% of all activations expected NOT to be followed by a shock)', 
-    #                                   'Misses (X% of the time there is a shock, no activation is expected)')
 
 ```
 
 &nbsp;
 
 ## Activation Scenarios
-<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur (<span style="color:  #007ce1;">darker inner band</span>, 68% of years) as well as the highest and lowest probability that a scenario will occur (<span style="color:  `r alpha("#007ce1", 0.7)`;">full coloured band</span>, 95% of years).</p>
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur (<span style="color:  #007ce1;">darker inner band</span>, 68% of years) as well as the highest and lowest probability that a scenario is to occur (<span style="color:  `r alpha("#007ce1", 0.7)`;">full coloured band</span>, 95% of years).</p>
 
 &nbsp;
 
@@ -436,16 +444,14 @@ kbl(activation_df,
   row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, width = "20em", extra_css = "vertical-align: bottom;") %>%
   column_spec(column = 2, width = "22em") %>%
-  pack_rows("Activation Scenario (probability in %)", start_row = 1, end_row = 2, color = '#1bb580') %>%
+  pack_rows("Activations", start_row = 1, end_row = 2, color = '#1bb580') %>%
+  pack_rows("Disbursement Scenario Breakdown", 2, 4, color = 'black') %>%
   kableExtra::footnote(general_title = "Notes",
                        general = activation_table_footnote,
-                       number = c("At least one trigger is met.",
+                       number = c("Any: At least one trigger is met. None: No trigger is met.",
                         full_atv_definition, 
                         package1_atv_definition,
                         package2_atv_definition))
-# "No trigger is met."
-
-
 
 ```
 
