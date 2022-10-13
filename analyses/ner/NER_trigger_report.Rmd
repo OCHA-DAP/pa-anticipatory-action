@@ -224,7 +224,7 @@ for(trigger in c(trigger_list, scenario_list)) {
 
 # Tradeoff CIs for individual triggers
 
-for(trigger in c(name_a, name_b, name_c)) {
+for(trigger in c(trigger_list)) {
   for (metric in c('var', 'det')) {
   
   output <- plotTradeoffCI(trigger_id = trigger, 
@@ -390,7 +390,7 @@ kbl(snapshot_df,
     row.names = FALSE, # omit row numbers
     col.names = c("","Trigger 1", "Trigger 2", "Trigger 3"), 
     align = "rccc") %>%
-  kable_minimal(c("hover")) %>%
+  kable_minimal(c("hover", "striped")) %>%
   row_spec(c(1:12), extra_css = "line-height: 30px;") %>%
   row_spec(c(13:14), extra_css = "line-height: 80px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
@@ -487,40 +487,26 @@ kbl(learning_table,
 ```{r timepoint-table, include = TRUE}
 
 timepoint_df <- data.frame(row_name = c('Triggering Prob.',
-                                        'Valid Activations', 
-                                       'Detections', 
-                                       'False Alarms', 
-                                       'Misses'),
+                                        'Activations', 
+                                       'Shocks'),
                        trigger_jan = c("<img src=plots/trimmed_Jan_atv.png>",
-                                     "<img src=plots/trimmed_Jan_var.png>", 
-                                     "<img src=plots/trimmed_Jan_det.png>", 
-                                     "<img src=plots/trimmed_Jan_far.png>", 
-                                     "<img src=plots/trimmed_Jan_mis.png>"),
+                                     "<img src=plots/trimmed_Jan_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_Jan_det_tradeoff_bar.png>"),
                        trigger_feb = c("<img src=plots/trimmed_Feb_atv.png>",
-                                     "<img src=plots/trimmed_Feb_var.png>",
-                                     "<img src=plots/trimmed_Feb_det.png>",  
-                                     "<img src=plots/trimmed_Feb_far.png>", 
-                                     "<img src=plots/trimmed_Feb_mis.png>"),
+                                     "<img src=plots/trimmed_Feb_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_Feb_det_tradeoff_bar.png>"),
                        trigger_mar = c("<img src=plots/trimmed_Mar_atv.png>", 
-                                     "<img src=plots/trimmed_Mar_var.png>",
-                                     "<img src=plots/trimmed_Mar_det.png>", 
-                                     "<img src=plots/trimmed_Mar_far.png>", 
-                                     "<img src=plots/trimmed_Mar_mis.png>"),
+                                     "<img src=plots/trimmed_Mar_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_Mar_det_tradeoff_bar.png>"),
                        trigger_apr = c("<img src=plots/trimmed_Apr_atv.png>",
-                                     "<img src=plots/trimmed_Apr_var.png>",
-                                     "<img src=plots/trimmed_Apr_det.png>", 
-                                     "<img src=plots/trimmed_Apr_far.png>", 
-                                     "<img src=plots/trimmed_Apr_mis.png>"),
+                                     "<img src=plots/trimmed_Apr_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_Apr_det_tradeoff_bar.png>"),
                        trigger_may = c("<img src=plots/trimmed_May_atv.png>",
-                                    "<img src=plots/trimmed_May_var.png>",
-                                     "<img src=plots/trimmed_May_det.png>", 
-                                     "<img src=plots/trimmed_May_far.png>", 
-                                     "<img src=plots/trimmed_May_mis.png>"),
+                                     "<img src=plots/trimmed_May_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_May_det_tradeoff_bar.png>"),
                        trigger_jun = c("<img src=plots/trimmed_June_atv.png>",
-                                     "<img src=plots/trimmed_June_var.png>",
-                                     "<img src=plots/trimmed_June_det.png>", 
-                                     "<img src=plots/trimmed_June_far.png>", 
-                                     "<img src=plots/trimmed_June_mis.png>"))
+                                     "<img src=plots/trimmed_June_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_June_det_tradeoff_bar.png>"))
 
 kbl(timepoint_df,
     format = 'html',
@@ -529,7 +515,7 @@ kbl(timepoint_df,
     col.names = c("","January", "February", "March", "April", "May", "June"), 
     align = "rcccccc") %>%
   kable_minimal(c("hover")) %>%
-  row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
+  row_spec(c(1:3), extra_css = "line-height: 60px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
 ```
 
