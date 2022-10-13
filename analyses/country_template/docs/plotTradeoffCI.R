@@ -22,7 +22,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
   seg_dims[which(seg_dims$segment == 'seg_68to95'), 'hi_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value']
   seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'] <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'high_end_95'), 'value']
 
-  # plot bar
+  # Create labels
   right_label <- ifelse(left_metric_name == 'var', 'False alarms',
                         ifelse(left_metric_name == 'det', 'Misses',
                                ifelse(left_metric_name == 'atv', 'None', "error")))
@@ -33,7 +33,12 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
   left_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
   right_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
 
-  p <- seg_dims %>%
+  central.x <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] # value of central value of 95% confidence interval
+
+  # plot
+  #p <-
+
+    seg_dims %>%
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
   geom_rect(aes(fill = segment), colour = NA) +
   scale_fill_manual(values=c('seg_below_95' = left_colour,
@@ -41,7 +46,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                              'seg_68' = 'grey',
                              'seg_68to95' = alpha('grey', 0.7),
                              'seg_above_95' = right_colour)) +
-  ylim(0, 10) +
+  ylim(-1, 9) +
   xlim(0, 100) +
   geom_segment(y = -0.5, # central line
                yend = 1.5,
@@ -69,20 +74,105 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                              angle = 20,
                              ends = "first",
                              type = "closed")) +
-  geom_label(y = 0.5,
+  geom_label(y = 0.5, # left metric name
              x = 1,
               hjust = "inward",
               label = left_label,
               size = 4,
               color = left_colour,
               fill = alpha('white', 0.3)) +
-  geom_label(y = 0.5,
+  geom_label(y = 0.5, # right metric name
             x = 99,
             hjust = "inward",
             label = right_label,
             size = 4,
             color = right_colour,
             fill = alpha('white', 0.3)) +
+      # bottom values
+    geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
+                   y = -0.7,
+                   label = 100 - seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
+                   vjust = 0),
+               size = 4,
+               nudge_x = 0,
+               color = "#FF3333",
+               fill = NA,
+               label.size = NA) +
+    geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
+                   y = -0.7,
+                   label = 100 -seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
+                   vjust = 0),
+               size = 4,
+               nudge_x = 0,
+               color = "#FF3333",
+               fill = NA,
+               label.size = NA) +
+    geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
+                   y = -0.7,
+                   label = 100 - seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
+                   vjust = 0),
+               size = 4,
+               nudge_x = 0,
+               color = "#FF3333",
+               label.size = NA) +
+    geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
+                   y = -0.7,
+                   label = 100 - seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
+                   vjust = 0),
+               size = 4,
+               nudge_x = 0,
+               color = "#FF3333",
+               label.size = NA) +
+    geom_label(aes(x = central.x,
+                   y = -1,
+                   label = 100 - central.x,
+                   vjust = 0),
+               size = 5,
+               color = "#FF3333",
+               fontface = 'bold',
+               label.size = NA) +
+  # top values
+      geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
+                     y = 1.1,
+                     label = seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
+                     vjust = 0),
+                 size = 4,
+                 nudge_x = 0,
+                 color = "#1bb580",
+                 label.size = NA) + # removes border
+      geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
+                     y = 1.1,
+                     label = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
+                     vjust = 0),
+                 size = 4,
+                 nudge_x = 0,
+                 color = "#1bb580",
+                 label.size = NA) +
+      geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
+                     y = 1,
+                     label = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
+                     vjust = 0),
+                 size = 4,
+                 nudge_x = 0,
+                 color = "#1bb580",
+                 label.size = NA) +
+      geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
+                     y = 1,
+                     label = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
+                     vjust = 0),
+                 size = 4,
+                 nudge_x = 0,
+                 color = "#1bb580",
+                 label.size = NA) +
+      geom_label(aes(x = central.x,
+                     y = 1.3,
+                     label = central.x,
+                     vjust = 0.2),
+                 size = 5,
+                 color = "#1bb580",
+                 fontface = 'bold',
+                 label.size = NA) +
+  # theme
   theme_economist_white(base_size = 11,
                         base_family = "sans",
                         gray_bg = F,
