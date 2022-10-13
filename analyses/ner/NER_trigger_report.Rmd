@@ -246,66 +246,40 @@ for(trigger in c(name_a, name_b, name_c)) {
 
 ```
 
-```{r trigger-CIs}
-
-# Plot top/bottom CIs for individual triggers (var, det, far, mis)
-for(trigger in trigger_list) {
-  for (metric in c('var', 'det')) {
-  
-  # produce segment_dimensions and plots for triggers 
-  output <- plotCI(trigger_id = trigger, 
-                   left_metric_name = metric)
-
-  # save plots as png's
-  top_p_filename <- paste0(trigger, "_", metric, "_top_p.png")
-  png(filename = paste0("plots/", top_p_filename), width = 500, height = 400, units = "px")
-  print(output$top_p)
-  
-  bottom_p_filename <- paste0(trigger, "_", metric, "_bottom_p.png")
-  png(filename = paste0("plots/", bottom_p_filename), width = 500, height = 400, units = "px")
-  print(output$bottom_p)
-  dev.off()
-  }
-}
-
-# Plot top/bottom CIs for activation scenarios
-output <- plotCI(trigger_id = "framework-min", "atv")
-
- top_p_filename <- paste0("framework-min_atv_top_p.png")
-  png(filename = paste0("plots/", top_p_filename), width = 683, height = 318, units = "px")
-  print(output$top_p)
-  dev.off()
-  
-  bottom_p_filename <- paste0("framework-min_atv_bottom_p.png")
-  png(filename = paste0("plots/", bottom_p_filename), width = 683, height = 318, units = "px")
-  print(output$bottom_p)
-  dev.off()
-```
-
-# ```{r framework-CIs}
+```{r trigger-CIs, eval=FALSE}
 # 
-# framework_triggers_list <- c("framework-min", "framework-full", "framework-p1", "framework-p2", "framework-none")
-# 
-# # Create a CI visual + segment_dimension dataframe for all metrics, for each trigger
-# for(trigger in framework_triggers_list) {
+# # Plot top/bottom CIs for individual triggers (var, det, far, mis)
+# for(trigger in trigger_list) {
+#   for (metric in c('var', 'det')) {
 #   
 #   # produce segment_dimensions and plots for triggers 
 #   output <- plotCI(trigger_id = trigger, 
-#                    left_metric_name = 'atv')
+#                    left_metric_name = metric)
+# 
+#   # save plots as png's
+#   top_p_filename <- paste0(trigger, "_", metric, "_top_p.png")
+#   png(filename = paste0("plots/", top_p_filename), width = 500, height = 400, units = "px")
+#   print(output$top_p)
 #   
-#   # save plot as png
-#   filename <- paste0(trigger, "_atv.png")
-#   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
-#   print(output$plot)
+#   bottom_p_filename <- paste0(trigger, "_", metric, "_bottom_p.png")
+#   png(filename = paste0("plots/", bottom_p_filename), width = 500, height = 400, units = "px")
+#   print(output$bottom_p)
 #   dev.off()
-#     
-#   # add segment_dimensions to summary dataframe
-#  # segment_dim_temp <- data.frame(trigger_id = trigger, metric_name = 'atv', output$segment_dims)
-#     
-#   #segment_dim_summary <- dplyr::bind_rows(segment_dim_summary, segment_dim_temp)
-#   
+#   }
 # }
-
+# 
+# # Plot top/bottom CIs for activation scenarios
+# output <- plotCI(trigger_id = "framework-min", "atv")
+# 
+#  top_p_filename <- paste0("framework-min_atv_top_p.png")
+#   png(filename = paste0("plots/", top_p_filename), width = 683, height = 318, units = "px")
+#   print(output$top_p)
+#   dev.off()
+#   
+#   bottom_p_filename <- paste0("framework-min_atv_bottom_p.png")
+#   png(filename = paste0("plots/", bottom_p_filename), width = 683, height = 318, units = "px")
+#   print(output$bottom_p)
+#   dev.off()
 ```
 
 ```{r file-formatting-and-saving}
@@ -329,12 +303,6 @@ for (filename in plots_to_trim) {
   magick::image_write(trimmed_plot, path = paste0("plots/trimmed_", filename), format = "png")
 
 }
-
-# remove empty first row of segment_dim_summary
-#segment_dim_summary <- slice(segment_dim_summary, -1)
-
-# save segment_dim_summary as csv
-#write.csv(segment_dim_summary, file = paste0(data_folder_path, "report_segment_dim_summary.csv"))
 
 ```
 
@@ -401,10 +369,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Activity Package', 
                                        'Funding Amount',
                                        'Probability of being met in a given year', 
-                                       'Valid Activations (X% of all activations expected to be followed by a shock)', 
-                                       'Detections (An activation is expected to occur for X% of the shocks)', 
-                                       'False Alarms (X% of all activations expected NOT to be followed by a shock)', 
-                                       'Misses (X% of the time there is a shock, no activation is expected)'),
+                                       'Activations', 
+                                       'Shocks'),
                        trigger_a = c(type_a, 
                                      monitored_area_a,
                                      timepoints_a, 
@@ -416,10 +382,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_a, 
                                      funding_a,
                                      "<img src=plots/trimmed_Trigger1_atv.png>",
-                                     "<img src=plots/trimmed_Trigger1_var.png>", 
-                                     "<img src=plots/trimmed_Trigger1_det.png>", 
-                                     "<img src=plots/trimmed_Trigger1_far.png>", 
-                                     "<img src=plots/trimmed_Trigger1_mis.png>"),
+                                     "<img src=plots/trimmed_Trigger1_var_tradeoff_bar.png>", 
+                                     "<img src=plots/trimmed_Trigger1_det_tradeoff_bar.png>"),
                        trigger_b = c(type_b,
                                      monitored_area_b,
                                      timepoints_b, 
@@ -431,10 +395,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      package_b, 
                                      funding_b,
                                      "<img src=plots/trimmed_Trigger2_atv.png>", 
-                                     "<img src=plots/trimmed_Trigger2_var.png>",
-                                     "<img src=plots/trimmed_Trigger2_det.png>",  
-                                     "<img src=plots/trimmed_Trigger2_far.png>", 
-                                     "<img src=plots/trimmed_Trigger2_mis.png>"),
+                                     "<img src=plots/trimmed_Trigger2_var_tradeoff_bar.png>",
+                                     "<img src=plots/trimmed_Trigger2_det_tradeoff_bar.png>"),
                        trigger_c = c(type_c, 
                                      monitored_area_c,
                                      timepoints_c, 
@@ -445,11 +407,9 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      monitored_by_c,
                                      package_c, 
                                      funding_c,
-                                     "<img src=plots/trimmed_Trigger3_atv.png>",
-                                     "<img src=plots/trimmed_Trigger3_var.png>",
-                                     "<img src=plots/trimmed_Trigger3_det.png>", 
-                                     "<img src=plots/trimmed_Trigger3_far.png>", 
-                                     "<img src=plots/trimmed_Trigger3_mis.png>"))
+                                    "<img src=plots/trimmed_Trigger3_atv.png>", 
+                                     "<img src=plots/trimmed_Trigger3_var_tradeoff_bar.png>",
+                                     "<img src=plots/trimmed_Trigger3_det_tradeoff_bar.png>"))
 
 kbl(snapshot_df,
     format = 'html',
@@ -459,15 +419,19 @@ kbl(snapshot_df,
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:10), extra_css = "line-height: 30px;") %>%
-  row_spec(c(11:15), extra_css = "line-height: 45px;") %>%
+  row_spec(c(11:13), extra_css = "line-height: 45px;") %>%
   column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
-  column_spec(column = c(2:4), width = "22em") %>%
+  column_spec(column = c(2:4), width = "28em") %>%
   pack_rows("Description", start_row = 1, end_row = 8, color = '#1bb580') %>%
   pack_rows("Programming and Funding", start_row = 9, end_row = 10, color = '#1bb580') %>%
-  pack_rows("Performance", start_row = 11, end_row = 15
+  pack_rows("Performance", start_row = 11, end_row = 13
             , color = '#1bb580') %>%
   kableExtra::footnote(general_title = "Notes",
                        general = trigger_table_footnote)
+# (X% of all activations expected to be followed by a shock)
+  #'Detections (An activation is expected to occur for X% of the shocks)', 
+   #                                    'False Alarms (X% of all activations expected NOT to be followed by a shock)', 
+    #                                   'Misses (X% of the time there is a shock, no activation is expected)')
 
 ```
 
