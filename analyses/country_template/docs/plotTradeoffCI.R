@@ -28,7 +28,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                                ifelse(left_metric_name == 'atv', 'None', "error")))
   left_label <- ifelse(left_metric_name == 'var', 'Valid',
                        ifelse(left_metric_name == 'det', 'Detections',
-                              ifelse(left_metric_name == 'atv', 'Any', "error")))
+                              ifelse(left_metric_name == 'atv', 'At least one', "error")))
 
   left_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
   top_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
