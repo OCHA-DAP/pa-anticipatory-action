@@ -86,7 +86,7 @@ p <- seg_dims %>%
 
   # bottom values
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
-                   y = -0.7,
+                   y = -0.5,
                    label = 100 - seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
                    vjust = 0),
                size = 4,
@@ -96,7 +96,7 @@ p <- seg_dims %>%
                fill = NA,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
-                   y = -0.7,
+                   y = -0.5,
                    label = 100 -seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
                    vjust = 0),
                size = 4,
@@ -106,7 +106,7 @@ p <- seg_dims %>%
                fill = NA,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
-                   y = -0.7,
+                   y = -0.5,
                    label = 100 - seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
                    vjust = 0),
                size = 4,
@@ -114,7 +114,7 @@ p <- seg_dims %>%
                color = bottom_colour,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
-                   y = -0.7,
+                   y = -0.5,
                    label = 100 - seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
                    vjust = 0),
                size = 4,
@@ -122,9 +122,9 @@ p <- seg_dims %>%
                color = bottom_colour,
                label.size = NA) +
     geom_label(aes(x = central.x,
-                   y = -1,
+                   y = -0.5,
                    label = 100 - central.x,
-                   vjust = -0.1),
+                   vjust = 0.25),
                size = 5,
                color = bottom_colour,
                fontface = 'bold',
@@ -151,7 +151,7 @@ p <- seg_dims %>%
                  fontface = 'bold',
                  label.size = NA) +
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
-                     y = 1,
+                     y = 1.1,
                      label = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
                      vjust = 0),
                  size = 4,
@@ -159,7 +159,7 @@ p <- seg_dims %>%
                  color = top_colour,
                  label.size = NA) +
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
-                     y = 1,
+                     y = 1.1,
                      label = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
                      vjust = 0),
                  size = 4,
@@ -167,9 +167,9 @@ p <- seg_dims %>%
                  color = top_colour,
                  label.size = NA) +
       geom_label(aes(x = central.x,
-                     y = 1.3,
+                     y = 1.1,
                      label = central.x,
-                     vjust = 0.25),
+                     vjust = -0.2),
                  size = 5,
                  color = top_colour,
                  fontface = 'bold',
