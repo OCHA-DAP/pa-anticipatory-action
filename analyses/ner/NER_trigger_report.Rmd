@@ -227,7 +227,7 @@ for(trigger in c(trigger_list, scenario_list)) {
   filename <- paste0(trigger, "_atv.png")
   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
   print(output$p)
-  dev.off()
+  invisible(dev.off())
 }
 
 ```
@@ -246,7 +246,7 @@ for(trigger in c(trigger_list)) {
   filename <- paste0(trigger, "_", metric, "_tradeoff_bar.png")
   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
   print(output$p)
-  dev.off()
+  invisible(dev.off())
   }
 }
   
@@ -259,7 +259,7 @@ for(trigger in c(trigger_list)) {
   filename <- paste0("framework-min_atv_tradeoff_bar.png")
   png(filename = paste0("plots/", filename), width = 500, height = 400, units = "px")
   print(output$p)
-  dev.off()
+  invisible(dev.off())
 
 ```
 
