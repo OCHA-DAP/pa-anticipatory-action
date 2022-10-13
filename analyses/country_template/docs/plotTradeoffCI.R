@@ -1,5 +1,5 @@
-## Generates plots for each metric against its opposite (VAR vs FAR, DET vs MIS) to show the tradeoff between the pair elements.
-## Also plots the framework activation likelihood bar for Any vs None scenarios
+## Generates plots for each metric against its opposite (VAR vs FAR, DET vs MIS) to show the tradeoff between the paired elements.
+## Also plots the framework activation likelihood bar for Any vs None scenarios.
 
 plotTradeoffCI <- function(trigger_id, left_metric_name) {
 
