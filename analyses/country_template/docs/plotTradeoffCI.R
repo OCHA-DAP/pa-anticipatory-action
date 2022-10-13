@@ -31,14 +31,15 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                               ifelse(left_metric_name == 'atv', 'Any', "error")))
 
   left_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
+  top_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
+
   right_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#FF3333', '#007ce1')
+  bottom_colour <- ifelse(left_metric_name %in% c('var', 'det'), '#1bb580', '#007ce1')
 
   central.x <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] # value of central value of 95% confidence interval
 
   # plot
-  #p <-
-
-    seg_dims %>%
+p <- seg_dims %>%
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
   geom_rect(aes(fill = segment), colour = NA) +
   scale_fill_manual(values=c('seg_below_95' = left_colour,
@@ -88,14 +89,15 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
             size = 4,
             color = right_colour,
             fill = alpha('white', 0.3)) +
-      # bottom values
+
+  # bottom values
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
                    y = -0.7,
                    label = 100 - seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
                    vjust = 0),
                size = 4,
                nudge_x = 0,
-               color = "#FF3333",
+               color = bottom_colour,
                fill = NA,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
@@ -104,7 +106,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                    vjust = 0),
                size = 4,
                nudge_x = 0,
-               color = "#FF3333",
+               color = bottom_colour,
                fill = NA,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
@@ -113,7 +115,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                    vjust = 0),
                size = 4,
                nudge_x = 0,
-               color = "#FF3333",
+               color = bottom_colour,
                label.size = NA) +
     geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
                    y = -0.7,
@@ -121,16 +123,17 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                    vjust = 0),
                size = 4,
                nudge_x = 0,
-               color = "#FF3333",
+               color = bottom_colour,
                label.size = NA) +
     geom_label(aes(x = central.x,
                    y = -1,
                    label = 100 - central.x,
                    vjust = 0),
                size = 5,
-               color = "#FF3333",
+               color = bottom_colour,
                fontface = 'bold',
                label.size = NA) +
+
   # top values
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'lo_end'],
                      y = 1.1,
@@ -138,7 +141,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                      vjust = 0),
                  size = 4,
                  nudge_x = 0,
-                 color = "#1bb580",
+                 color = top_colour,
                  label.size = NA) + # removes border
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_68'), 'hi_end'],
                      y = 1.1,
@@ -146,7 +149,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                      vjust = 0),
                  size = 4,
                  nudge_x = 0,
-                 color = "#1bb580",
+                 color = top_colour,
                  label.size = NA) +
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_below_95'), 'hi_end'],
                      y = 1,
@@ -154,7 +157,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                      vjust = 0),
                  size = 4,
                  nudge_x = 0,
-                 color = "#1bb580",
+                 color = top_colour,
                  label.size = NA) +
       geom_label(aes(x = seg_dims[which(seg_dims$segment == 'seg_above_95'), 'lo_end'],
                      y = 1,
@@ -162,14 +165,14 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
                      vjust = 0),
                  size = 4,
                  nudge_x = 0,
-                 color = "#1bb580",
+                 color = top_colour,
                  label.size = NA) +
       geom_label(aes(x = central.x,
                      y = 1.3,
                      label = central.x,
                      vjust = 0.2),
                  size = 5,
-                 color = "#1bb580",
+                 color = top_colour,
                  fontface = 'bold',
                  label.size = NA) +
   # theme
