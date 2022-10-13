@@ -210,7 +210,7 @@ p2_pred <- sum(hist_act$Trigger2 == 'yes') # count activations of T2 (prediction
 p2_obs <- sum(hist_act$Trigger3 == 'yes' & hist_act$Trigger2 == '') # count activations of T3 when T2 was not met (observation-based activation of Package 2)
 p2_tot <- sum(hist_act$Trigger3 == 'yes' | hist_act$Trigger2 == 'yes') # count activations of P2
 
-package2_atv_definition <- paste0(package2_atv_definition, " Historically Package 2 disbursement was triggered by the predictive trigger (Trigger 2) ", round(100*p2_pred/p2_tot, 0),"% of the time and by the observational trigger (Trigger 3) ", round(100*p2_obs/p2_tot, 0), "% of the time.")
+package2_atv_definition <- paste0(package2_atv_definition, " Historically Package 2 disbursement (", p2_tot, " instances) was triggered by the predictive trigger (Trigger 2) ", round(100*p2_pred/p2_tot, 0),"% of the time and by the observational trigger (Trigger 3) ", round(100*p2_obs/p2_tot, 0), "% of the time.")
 ```
 
 
