@@ -98,7 +98,7 @@ scenario_list <- c("framework-full", "framework-p1", "framework-p2") # exclude f
 # Table footnotes
 trigger_table_footnote <- "Expected cost computed using most likely probability of activation (central value). Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys."
 
-full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met."
+full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met, and both packages are disbursed."
 package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
 package2_atv_definition <- "Package 2 is activated when Trigger 2 or Trigger 3 is met."
 activation_table_footnote <-  "" # additional notes, if needed
@@ -424,7 +424,7 @@ kbl(snapshot_df,
 &nbsp;
 
 ```{r framework-activation-table}
-activation_df <- data.frame(row_name = c(paste0('Disbursements', footnote_marker_number(1)), 
+activation_df <- data.frame(row_name = c(paste0('Yearly Disbursements', footnote_marker_number(1)), 
                                         paste0('Full', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
                                         paste0('Package 2 only', footnote_marker_number(4))),
