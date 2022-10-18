@@ -405,7 +405,7 @@ kbl(snapshot_df,
   kable_minimal(c("hover", "striped")) %>%
   row_spec(c(1:12), extra_css = "line-height: 30px;") %>%
   row_spec(c(13:14), extra_css = "line-height: 85px;") %>%
-  column_spec(column = 1, extra_css = "vertical-align: bottom;") %>%
+  column_spec(column = 1, extra_css = "vertical-align: middle;") %>%
   column_spec(column = c(2:4), width = "28em") %>%
   pack_rows("Description", start_row = 1, end_row = 8, color = '#1bb580') %>%
   pack_rows("Programming and Funding", start_row = 9, end_row = 12, color = '#1bb580') %>%
@@ -442,7 +442,7 @@ kbl(activation_df,
   kable_styling(full_width = FALSE) %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
-  column_spec(column = 1, width = "20em", extra_css = "vertical-align: bottom;") %>%
+  column_spec(column = 1, width = "20em", extra_css = "vertical-align: middle;") %>%
   column_spec(column = 2, width = "22em") %>%
   pack_rows("Activations", start_row = 1, end_row = 2, color = '#1bb580') %>%
   pack_rows("Disbursement Scenario Breakdown", 2, 4, color = 'black') %>%
@@ -526,7 +526,7 @@ kbl(timepoint_df1,
     align = "rccc") %>%
   kable_minimal(c("hover")) %>%
   row_spec(c(1:3), extra_css = "line-height: 60px;") %>%
-  column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
+  column_spec(column = 1, extra_css = "vertical-align: middle;", width = "10em")
 ```
 
 &nbsp;
