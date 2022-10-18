@@ -40,13 +40,14 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
 
   # plot
 p <-  seg_dims %>%
+
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
   geom_rect(aes(fill = segment), colour = NA) +
-  scale_fill_manual(values=c('seg_below_95' = left_colour,
+  scale_fill_manual(values=c('seg_below_95' = 'azure2',
                              'seg_95to68' = alpha('grey', 0.7),
                              'seg_68' = 'grey',
                              'seg_68to95' = alpha('grey', 0.7),
-                             'seg_above_95' = right_colour)) +
+                             'seg_above_95' = 'azure2')) +
   ylim(-1, 9) +
   xlim(0, 100) +
   # left arrow
