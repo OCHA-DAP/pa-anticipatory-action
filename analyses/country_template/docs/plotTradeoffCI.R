@@ -53,7 +53,7 @@ p <-  seg_dims %>%
   geom_segment(y = 1.2,
                yend = 1.2,
                x = 0,
-               xend = 10,
+               xend = 5,
                color = left_colour,
                size = 1,
                arrow = arrow(length = unit(0.1, "in"),
@@ -63,7 +63,7 @@ p <-  seg_dims %>%
     # right arrow
     geom_segment(y = -0.2,
                yend = -0.2,
-               x = 90,
+               x = 95,
                xend = 100,
                color = right_colour,
                size = 1,
