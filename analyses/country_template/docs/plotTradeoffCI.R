@@ -39,7 +39,7 @@ plotTradeoffCI <- function(trigger_id, left_metric_name) {
   central.x <- perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] # value of central value of 95% confidence interval
 
   # plot
-p <- seg_dims %>%
+p <-  seg_dims %>%
   ggplot(aes(xmin = lo_end, xmax = hi_end, ymin = 0, ymax = 1)) +
   geom_rect(aes(fill = segment), colour = NA) +
   scale_fill_manual(values=c('seg_below_95' = left_colour,
@@ -49,19 +49,23 @@ p <- seg_dims %>%
                              'seg_above_95' = right_colour)) +
   ylim(-1, 9) +
   xlim(0, 100) +
-  geom_segment(y = 0.5, # left arrow
-               yend = 0.5,
+  # left arrow
+  geom_segment(y = 1.2,
+               yend = 1.2,
                x = 0,
-               xend = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] - 0.5,
+               #xend = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] - 0.5,
+               xend = 10,
                color = left_colour,
                size = 1,
                arrow = arrow(length = unit(0.1, "in"),
                              angle = 20,
                              ends = "last",
                              type = "closed")) +
-  geom_segment(y = 0.5, # right arrow
-               yend = 0.5,
-               x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] + 0.5,
+    # right arrow
+    geom_segment(y = -0.2,
+               yend = -0.2,
+              # x = perf_metrics_sub[which(perf_metrics_sub$upoint == 'central_95'), 'value'] + 0.5,
+               x = 90,
                xend = 100,
                color = right_colour,
                size = 1,
@@ -69,14 +73,16 @@ p <- seg_dims %>%
                              angle = 20,
                              ends = "first",
                              type = "closed")) +
-  geom_label(y = 0.5, # left metric name
+    # left metric name
+    geom_label(y = 1.7,
              x = 1,
               hjust = "inward",
               label = left_label,
               size = 4,
               color = left_colour,
               fill = alpha('white', 0.3)) +
-  geom_label(y = 0.5, # right metric name
+    # right metric name
+  geom_label(y = -0.7,
             x = 99,
             hjust = "inward",
             label = right_label,
