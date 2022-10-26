@@ -44,9 +44,11 @@ editor_options:
 ### Create a "plots" folder sister to the RMD file in the country's `analyses` folder
 
 ## PREPARE THE REPORT
-### Update the "hard-coded-values" code chunk below
+### Update the "hard-coded-values" code chunk
+### Remove or adjust the "country-specific" chunk (chunk 8) as needed
 ### If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.)
-### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed 
+### Update the tables esp filenames and column names (Chunk 14 and 15)
+### Adjust the Annex as needed (number of timepoints or column labels) or remove it altogether if no trigger has more than 1 activation timepoint
 ### Knit
 ```
 
@@ -163,38 +165,47 @@ perf_metrics_95_data <- read.csv(perf_metrics_95_filename,
 perf_metrics_68_data <- read.csv(perf_metrics_68_filename,
                               colClasses = c('character', 'character', 'numeric', 'character')
                               )
+
 # format performance metrics values
 perf_metrics_95_data$value <- round(100 * perf_metrics_95_data$value, 0)
 perf_metrics_68_data$value <- round(100 * perf_metrics_68_data$value, 0)
+
 # uniquely identify point labels
 perf_metrics_95_data$upoint <- paste0(perf_metrics_95_data$point, "_95")
 perf_metrics_68_data$upoint <- paste0(perf_metrics_68_data$point, "_68")
+
 # combine datasets
 perf_metrics_data <- rbind(perf_metrics_95_data, perf_metrics_68_data) %>%
                       select(-point) # remove non-unique point identifier
+
 # create & append framework-none metrics
 framework_min_metrics <- perf_metrics_data %>%
                             filter(trigger == 'framework-min' & metric == 'atv') %>%
                             mutate(value = 100 - value)
+
 framework_none_metrics <- data.frame(metric = 'atv', trigger = 'framework-none', value = NA, upoint = c('central_95', 'low_end_95', 'high_end_95', 'central_68', 'low_end_68', 'high_end_68'))
+
 framework_none_metrics$value[framework_none_metrics$upoint == 'central_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'central_95']
 framework_none_metrics$value[framework_none_metrics$upoint == 'low_end_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'high_end_95']
 framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'low_end_95']
 framework_none_metrics$value[framework_none_metrics$upoint == 'central_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'central_68']
 framework_none_metrics$value[framework_none_metrics$upoint == 'low_end_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'high_end_68']
 framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'low_end_68']
+
 perf_metrics_data <- rbind(perf_metrics_data, framework_none_metrics)
+
 # format funding amounts
 funding_a_formatted <- paste0('$',funding_a,'m')
 funding_b_formatted <- paste0('$',funding_b,'m')
 funding_c_formatted <- paste0('$',funding_c,'m')
+
 # expected cost amounts (probability of activation multiplied by funding amount)
 expected_cost_a <- paste0('$', round(funding_a * (perf_metrics_data %>% filter(trigger == name_a & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
 expected_cost_b <- paste0('$', round(funding_b * (perf_metrics_data %>% filter(trigger == name_b & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
 expected_cost_c <- paste0('$', round(funding_c * (perf_metrics_data %>% filter(trigger == name_c & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
 ```
 
-```{r NER-specific}
+```{r country-specific}
 hist_act <- read.csv(paste0(data_folder_path, "historical_activations_trigger_v1.csv"))
 p2_pred <- sum(hist_act$Trigger2 == 'yes') # count activations of T2 (prediction-based activation of Package 2)
 p2_obs <- sum(hist_act$Trigger3 == 'yes' & hist_act$Trigger2 == '') # count activations of T3 when T2 was not met (observation-based activation of Package 2)
