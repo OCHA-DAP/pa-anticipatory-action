@@ -32,10 +32,18 @@ editor_options:
 ```{r README, echo = FALSE, message = FALSE, warning = FALSE}
 ### NOTE: The template is set up for two 3-timepoint predictive triggers and a 1-timepoint observational trigger
 ### NOTE: Performance metrics and their CIs should have been generated separately before the trigger report can be produced.
+### NOTE: A "trigger" is tied to a funding+activity package and therefore can include multiple timepoints.
 
+## ON DATA FOLDER ON GDRIVE
 ### Create a trigger_report folder under DATA_DIR > /private/exploration/{country_pcode3/trigger_performance}
-### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter pcode for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+### Save `{country_iso3_code}_perf_metrics_table_ci_0.68.csv` and `{country_iso3_code}_perf_metrics_table_ci_0.95.csv` in the trigger_report folder on DATA_DIR
+### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter code for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+
+## IN PA-ANTICIPATORY-ACTION
+### Make sure a country-specific RProj file exists that is child to the country folder under `pa-anticipatory-action/analyses/`
 ### Create a "plots" folder sister to the RMD file in the country's `analyses` folder
+
+## PREPARE THE REPORT
 ### Update the "hard-coded-values" code chunk below
 ### If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.)
 ### Remove the Annex if no trigger has more than 1 activation timepoint or adjust the Annex as needed 
@@ -43,68 +51,69 @@ editor_options:
 ```
 
 ```{r hard-coded-values, echo = FALSE, message = FALSE, warning = FALSE}
-country_name <- "Niger"
-country_pcode3 <- "ner"
-shock <- "Drought"
-nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
+country_name <- "" # eg: Niger
+country_pcode3 <- "" # eg: ner
+shock <- "" # eg: Drought
+nbr_hist_shocks <- 1 # Is a number eg: 1
 
 # trigger A info  
-name_a <- "Trigger1" # what name is the trigger listed as in the perf_metrics_table.csv files?
-type_a <- 'Predictive' # Predictive or Observational?
-monitored_area_a <- "National"
-timepoints_a<- 'Jan, Feb, Mar' # eg: 'Jan, Feb, Mar'
-package_a <- 'Package 1' # eg: 'Package 1'
-funding_a <- 5.25 # input number only, no $ sign or 'm' for million. Formatting will be done automatically.
-targeted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
-lead_time_a <- '6-4 months' # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
-data_source_a <- 'IRI flexible seasonal forecast' # name of product + provider
-hist_period_a <- "1991 - 2020" # period for which historical data is available
-monitored_by_a <- 'IRI' # owner of monitoring responsibilities
+name_a <- "" # what name is the trigger listed as in the perf_metrics_table.csv files?
+type_a <- "" # Predictive or Observational?
+monitored_area_a <- "" # eg: National
+timepoints_a<- "" # eg: 'Jan, Feb, Mar'
+package_a <- "" # eg: 'Package 1'
+funding_a <- 5.25 # eg: 5.25. Input number only, no $ sign or 'm' for million. Formatting will be done automatically.
+targeted_window_a <- "" # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
+lead_time_a <- "" # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
+data_source_a <- "" # name of product + provider, eg: IRI tercile seasonal forecast
+hist_period_a <- "" # period for which historical data is available eg: 1991 - 2020
+monitored_by_a <- "" # owner of monitoring responsibilities eg: CHD
 
 # trigger B info  
-name_b <- "Trigger2"
-type_b <- 'Predictive'
-monitored_area_b <- "National"
-timepoints_b <- 'Apr, May, Jun'
-package_b <- 'Package 2'
-funding_b <- 9.5
-targeted_window_b <- 'Jul-Sep'
-lead_time_b <- '3-1 months'
-data_source_b <- 'IRI flexible seasonal forecast'
-hist_period_b <- "1991 - 2020"
-monitored_by_b <- 'IRI'
+name_b <- ""
+type_b <- ""
+monitored_area_b <- ""
+timepoints_b <- ""
+package_b <- ""
+funding_b <- 5.25
+targeted_window_b <- ""
+lead_time_b <- ""
+data_source_b <- ""
+hist_period_b <- ""
+monitored_by_b <- ""
 
 # trigger C info  
-name_c <- "Trigger3"
-type_c <- 'Observational'
-monitored_area_c <- "National"
-timepoints_c <- 'Aug'
-package_c <- 'Package 2'
-funding_c <- 9.5
-targeted_window_c <- 'Jun-Jul'
-lead_time_c <- 'N/A'
-data_source_c <- 'ENACTS or CHIRP'
-hist_period_c <- "1991 - 2020"
-monitored_by_c <- 'IRI'
+name_c <- ""
+type_c <- ""
+monitored_area_c <- ""
+timepoints_c <- ""
+package_c <- ""
+funding_c <- 5.25
+targeted_window_c <- ""
+lead_time_c <- ""
+data_source_c <- ""
+hist_period_c <- ""
+monitored_by_c <- ""
 
 # activation timepoints for triggers with multiple timepoints ONLY
-atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June")
+atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June") # 3-letter months. Should match names in the performance metrics CSV file
   
-# Compile list of triggers to be included in the report (exclude framework-full and framework-min)
+# Compile list of triggers and trigger activation timepoints to be included in the report (exclude framework-full and framework-min)
 trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
 
-# Table footnotes
-trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys."
+## UPDATE ALL BELOW FOLLOWING THE TEMPLATES PROVIDED AS GUIDES FOR WHAT TO INCLUDE
 
-full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met."
-package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
-package2_atv_definition <- "Package 2 is activated when Trigger 2 or Trigger 3 is met."
+# Table footnotes
+trigger_table_footnote <- "Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys." 
+
+full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met." 
+package1_atv_definition <- "Package 1 is activated when Trigger 1 is met." 
+package2_atv_definition <- "Package 2 is activated when Trigger 2 or Trigger 3 is met." 
 activation_table_footnote <-  "" # additional notes, if needed
 
-# Data providers
-data_providers <- "The Département de la statistique du Niger, the Direction de la météorologie nationale du Niger, IRI Columbia University, the World Food Programme, and the Food and Agriculture Orgnization" # will be followed by "provide data and/or analytical support."
+# Technical Team section (data_providers & analysis combined into a single paragraph)
+data_providers <- "The Département de la statistique du Niger, the Direction de la météorologie nationale du Niger, IRI Columbia University, the World Food Programme, and the Food and Agriculture Orgnization" # will be followed by "provided data and/or analytical support." 
 
-# Analysis
 analysis <- "Historical data and analysis are available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger). The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
 
 # Monitoring process
