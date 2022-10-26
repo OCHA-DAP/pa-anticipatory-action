@@ -262,6 +262,7 @@ plots_to_trim <- grep(list.files(path = "./plots"),
                       invert = TRUE, 
                       value = TRUE) # excludes 'trimmed_' graphs, which will be overwritten
 # trim plots
+
 for (filename in plots_to_trim) {
   # read in the image
   original_plot <- magick::image_read(paste0("plots/", filename))
@@ -277,10 +278,8 @@ for (filename in plots_to_trim) {
 ```{r key-messages-metrics}
 any_atv_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'atv') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
 any_atv_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'atv') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
-#any_det_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
-any_det_low_end_68 <- 89 # manual overwrite using the rule of three
-#any_det_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
-any_det_high_end_68 <- 100 # manual overwrite using the rule of three
+any_det_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+any_det_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
 any_far_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'far') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
 any_far_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'far') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
 mitigation_warranted <- ifelse(any_far_low_end_68 >= 40, "Mitigation is recommended to minimise the negative impact of a false alarm due to its moderate to high likelihood.", "")
@@ -472,7 +471,7 @@ kbl(learning_table,
 
 &nbsp;
 
-```{r timepoint-tables, include = TRUE}
+```{r timepoint-table, include = TRUE}
 timepoint_df1 <- data.frame(row_name = c('Prob. being met (%)',
                                         'All Activations (%)', 
                                        'All Shocks (%)'),
