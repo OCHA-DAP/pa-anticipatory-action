@@ -65,7 +65,8 @@ calc_metrics <- function(df, pred, true, group = NULL) {
       far = 1 - var,
       det = recall_vec({{ true }}, {{ pred }}),
       mis = 1 - det,
-      acc = accuracy_vec({{ true }}, {{ pred }})
+      acc = accuracy_vec({{ true }}, {{ pred }}),
+      atv = sum({{ pred }} == TRUE) / n()
     )
 }
 
@@ -103,14 +104,27 @@ df_t3_95 <- bootstrapped_metrics %>%
     trigger = "Trigger3"
   ) %>%
   pivot_longer(
-    var:acc,
+    var:atv,
     names_to = "metric"
   ) %>%
   select(
     metric, trigger, value, point
   ) 
 
+# Saving in Trigger 1 and 2 metrics
+# Calculated in `tcd_iri_seas_forecast_probability.md`
+
+df_t12 <- data.frame(
+  metric = "atv",
+  trigger = c("Trigger1", "Trigger2", "Trigger1-2"),
+  value = c(0.070746, 0.079827, 0.111824),
+  point = "central"
+)
+
 df_t3_95 %>%
+  bind_rows(
+    df_t12
+  ) %>%
   write_csv(
     file.path(
       metrics_dir,
@@ -130,7 +144,7 @@ df_t3_68 <- bootstrapped_metrics %>%
     trigger = "Trigger3"
   ) %>%
   pivot_longer(
-    var:acc,
+    var:atv,
     names_to = "metric"
   ) %>%
   select(
