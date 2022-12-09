@@ -96,7 +96,7 @@ trigger_list <- c(name_c) # limited due to issues with historical data in Trigge
 scenario_list <- c() # No scenarios given limits of data
 
 # Table footnotes
-trigger_table_footnote <- "Expected cost computed using most likely probability of activation (central value). All triggers can reach their threshold and activate independently from one another. Triggers 1 and 2 did not have sufficient data for testing performance on Chad, but likelihood of activation tested on global data. Trigger 3 performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence reviewed from historical CERF allocations, FEWS NET reports, EM-DAT data, World Bank statistics and the 2015 and 2017 multi-risk contingency plans for Chad."
+trigger_table_footnote <- "Expected annual cost computed using most likely probability of activation (central value). All triggers can reach their threshold and activate independently from one another. Triggers 1 and 2 did not have sufficient data for testing performance on Chad, but likelihood of activation tested on global data. Trigger 3 performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence reviewed from historical CERF allocations, FEWS NET reports, EM-DAT data, World Bank statistics and the 2015 and 2017 multi-risk contingency plans for Chad."
 
 full_atv_definition <- "A full activation occurs when all three triggers met and all packages are disbursed."
 package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
@@ -328,7 +328,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Activity Package', 
                                        'Probability of being met in a given year', 
                                        'Funding Amount',
-                                       'Expected Cost*',
+                                       'Expected Annual Cost',
                                        'All Activations (%)', 
                                        'All Shocks (%)'),
                        trigger_a = c(type_a, 
