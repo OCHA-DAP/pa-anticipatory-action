@@ -71,7 +71,7 @@ timepoints_b <- 'May, Jun'
 package_b <- 'Package 2'
 funding_b <- 1.66
 targeted_window_b <- 'Jul-Sep'
-lead_time_b <- '2-1'
+lead_time_b <- '2-1 months'
 data_source_b <- 'IRI seasonal forecast'
 trigger_b <- '42.5% below average probability'
 hist_period_b <- "2018 - Present"
