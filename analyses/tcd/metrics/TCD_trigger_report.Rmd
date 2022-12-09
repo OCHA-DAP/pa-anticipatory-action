@@ -70,7 +70,7 @@ monitored_area_b <- "Central Chad"
 timepoints_b <- 'May, Jun'
 package_b <- 'Package 2'
 funding_b <- 1.66
-targeted_window_b <- 'Apr-Sep'
+targeted_window_b <- 'Jul-Sep'
 lead_time_b <- '2-1'
 data_source_b <- 'IRI seasonal forecast'
 trigger_b <- '42.5% below average probability'
@@ -328,7 +328,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Activity Package', 
                                        'Probability of being met in a given year', 
                                        'Funding Amount',
-                                       'Expected Cost',
+                                       'Expected Cost*',
                                        'All Activations (%)', 
                                        'All Shocks (%)'),
                        trigger_a = c(type_a, 
