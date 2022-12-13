@@ -46,7 +46,7 @@ gdf_adm3 = gpd.read_file(Path(
 
 gdf_adm3 = gdf_adm3[gdf_adm3.ADM1_PCODE == "MW3"]
 
-MONITORING_START = "2022-01-07"
+MONITORING_START = "2023-01-07"
 MONITORING_END = date.today()
 RANGE_X = ("32E", "36E")
 RANGE_Y = ("20S", "5S")
@@ -160,11 +160,3 @@ plt.title(f"Cumulative rainfall from {arc2_centr.date_min}")
 ```
 
 And lastly, how many days total in each admin 2, over our monitoring period, have had cumulative sums under our threshold. Let's just look at the centroid method for easier visualization.
-
-```python
-arc2_centr.find_longest_runs()
-```
-
-```python
-
-```
