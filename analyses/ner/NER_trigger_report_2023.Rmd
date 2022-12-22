@@ -92,7 +92,8 @@ monitored_by_c <- 'IRI'
 atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June")
   
 # Compile list of triggers to be included in the report
-trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
+#trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
+trigger_list <- c(name_a, name_b, name_c) # simplified for 2023 comparison
 scenario_list <- c("framework-full", "framework-p1", "framework-p2") # exclude framework-none and framework-any
 
 # Table footnotes
@@ -262,7 +263,7 @@ for(trigger in c(trigger_list)) {
 ```{r file-formatting-and-saving}
 
 # list plots to be trimmed
-plots_to_trim <- grep(list.files(path = "./plots/2023"), 
+plots_to_trim <- grep(list.files(path = "./plots/2023/"), 
                       pattern = 'trimmed_', 
                       invert = TRUE, 
                       value = TRUE) # excludes 'trimmed_' graphs, which will be overwritten
@@ -271,13 +272,13 @@ plots_to_trim <- grep(list.files(path = "./plots/2023"),
 for (filename in plots_to_trim) {
 
   # read in the image
-  original_plot <- magick::image_read(paste0("plots/", filename))
+  original_plot <- magick::image_read(paste0("plots/2023/", filename))
   
   # trim the image
   trimmed_plot <- magick::image_trim(original_plot)
   
   # save trimmed plot
-  magick::image_write(trimmed_plot, path = paste0("plots/trimmed_", filename), format = "png")
+  magick::image_write(trimmed_plot, path = paste0("plots/2023/trimmed_", filename), format = "png")
 
 }
 
@@ -369,11 +370,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_a,
                                      monitored_by_a,
                                      package_a, 
-                                     "<img src=plots/trimmed_Trigger1_atv.png>",
+                                     "<img src=plots/2023/trimmed_Trigger1_atv.png>",
                                      funding_a_formatted,
                                      expected_cost_a,
-                                     "<img src=plots/trimmed_Trigger1_var_tradeoff_bar.png>", 
-                                     "<img src=plots/trimmed_Trigger1_det_tradeoff_bar.png>"),
+                                     "<img src=plots/2023/trimmed_Trigger1_var_tradeoff_bar.png>", 
+                                     "<img src=plots/2023/trimmed_Trigger1_det_tradeoff_bar.png>"),
                        trigger_b = c(type_b,
                                      monitored_area_b,
                                      timepoints_b, 
@@ -383,11 +384,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_b,
                                      monitored_by_b,
                                      package_b, 
-                                     "<img src=plots/trimmed_Trigger2_atv.png>", 
+                                     "<img src=plots/2023/trimmed_Trigger2_atv.png>", 
                                      funding_b_formatted,
                                      expected_cost_b,
-                                     "<img src=plots/trimmed_Trigger2_var_tradeoff_bar.png>",
-                                     "<img src=plots/trimmed_Trigger2_det_tradeoff_bar.png>"),
+                                     "<img src=plots/2023/trimmed_Trigger2_var_tradeoff_bar.png>",
+                                     "<img src=plots/2023/trimmed_Trigger2_det_tradeoff_bar.png>"),
                        trigger_c = c(type_c, 
                                      monitored_area_c,
                                      timepoints_c, 
@@ -397,11 +398,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_c,
                                      monitored_by_c,
                                      package_c, 
-                                    "<img src=plots/trimmed_Trigger3_atv.png>", 
+                                    "<img src=plots/2023/trimmed_Trigger3_atv.png>", 
                                      funding_c_formatted,
                                      expected_cost_c,
-                                     "<img src=plots/trimmed_Trigger3_var_tradeoff_bar.png>",
-                                     "<img src=plots/trimmed_Trigger3_det_tradeoff_bar.png>"))
+                                     "<img src=plots/2023/trimmed_Trigger3_var_tradeoff_bar.png>",
+                                     "<img src=plots/2023/trimmed_Trigger3_det_tradeoff_bar.png>"))
 
 kbl(snapshot_df,
     format = 'html',
@@ -435,10 +436,10 @@ activation_df <- data.frame(row_name = c(paste0('Yearly Disbursements', footnote
                                         paste0('Full', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
                                         paste0('Package 2 only', footnote_marker_number(4))),
-                           atv_stats = c("<img src=plots/trimmed_framework-min_atv_tradeoff_bar.png>",  
-                                         "<img src=plots/trimmed_framework-full_atv.png>",
-                                         "<img src=plots/trimmed_framework-p1_atv.png>", 
-                                         "<img src=plots/trimmed_framework-p2_atv.png>"))
+                           atv_stats = c("<img src=plots/2023/trimmed_framework-min_atv_tradeoff_bar.png>",  
+                                         "<img src=plots/2023/trimmed_framework-full_atv.png>",
+                                         "<img src=plots/2023/trimmed_framework-p1_atv.png>", 
+                                         "<img src=plots/2023/trimmed_framework-p2_atv.png>"))
 
 kbl(activation_df,
     format = 'html',
@@ -492,12 +493,12 @@ kbl(learning_table,
 
 &nbsp;
 
-## Annex
-<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics per activation timepoint for the triggers that have more than one opportunities for activation.</p>
 
 &nbsp;
 
-```{r timepoint-tables, include = TRUE}
+```{r timepoint-tables, include = FALSE, eval = FALSE}
+## Annex (lines 495-497)
+#<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics per activation timepoint for #the triggers that have more than one opportunities for activation.</p>
 
 timepoint_df1 <- data.frame(row_name = c('Prob. being met (%)',
                                         'All Activations (%)', 
@@ -538,7 +539,7 @@ kbl(timepoint_df1,
 
 &nbsp;
 
-```{r timpoint_table2}
+```{r timpoint_table2, eval = F, include=FALSE}
 kbl(timepoint_df2,
     format = 'html',
     escape = FALSE,
