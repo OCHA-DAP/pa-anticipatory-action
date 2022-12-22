@@ -68,6 +68,7 @@ funding_a <- 5.25 # eg: 5.25. Input number only, no $ sign or 'm' for million. F
 targeted_window_a <- "" # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
 lead_time_a <- "" # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
 data_source_a <- "" # name of product + provider, eg: IRI tercile seasonal forecast
+threshold_a <- "" # eg: "35% of worst years"
 hist_period_a <- "" # period for which historical data is available eg: 1991 - 2020
 monitored_by_a <- "" # owner of monitoring responsibilities eg: CHD
 
@@ -81,6 +82,7 @@ funding_b <- 5.25
 targeted_window_b <- ""
 lead_time_b <- ""
 data_source_b <- ""
+threshold_b <- ""
 hist_period_b <- ""
 monitored_by_b <- ""
 
@@ -94,6 +96,7 @@ funding_c <- 5.25
 targeted_window_c <- ""
 lead_time_c <- ""
 data_source_c <- ""
+threshold_c <- ""
 hist_period_c <- ""
 monitored_by_c <- ""
 
@@ -331,6 +334,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Target Period', 
                                        'Lead Time', 
                                        'Data Source',
+                                       'Threshold',
                                        'Historical Data Coverage',
                                        'Monitored by',
                                        'Activity Package', 
@@ -345,6 +349,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      targeted_window_a, 
                                      lead_time_a, 
                                      data_source_a,
+                                     threshold_a,
                                      hist_period_a,
                                      monitored_by_a,
                                      package_a, 
@@ -359,6 +364,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      targeted_window_b, 
                                      lead_time_b, 
                                      data_source_b,
+                                     threshold_b,
                                      hist_period_b,
                                      monitored_by_b,
                                      package_b, 
@@ -373,6 +379,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      targeted_window_c, 
                                      lead_time_c, 
                                      data_source_c,
+                                     threshold_c,
                                      hist_period_c,
                                      monitored_by_c,
                                      package_c, 
