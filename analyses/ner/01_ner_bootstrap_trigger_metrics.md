@@ -44,6 +44,9 @@ country_data_exploration_dir = (
 trigger_perf_path = country_data_exploration_dir / "trigger_performance"
 input_path = trigger_perf_path / "historical_activations_trigger_v1.csv"
 input_path_multi = trigger_perf_path / "historical_activ_multi_bad_years.csv"
+input_path_update = (
+    trigger_perf_path / "historical_activations_2023_methodology.csv"
+)
 ```
 
 ```python
@@ -76,9 +79,6 @@ def calc_atv(TP, TN, FP, FN):
 ```python
 # load data of when trigger activated for each month
 df_all = pd.read_csv(input_path, index_col=0)
-```
-
-```python
 # change df_all to more machine usable format
 df_all = df_all.loc[:, df_all.columns.str.endswith(".1")]
 df_all = df_all.iloc[1:]
@@ -98,6 +98,24 @@ df_all_alt.index = df_all_alt["year"]
 df_all_alt.index.rename("year", inplace=True)
 df_all_alt.index = df_all_alt.index.astype(int)
 df_all_alt = df_all_alt[["Trigger1", "Trigger2", "Trigger3"]]
+```
+
+```python
+# Finally, read in the update
+df_all_update = pd.read_csv(
+    input_path_update, index_col=0, skiprows=1, skipfooter=4
+)
+
+# change df_all to more machine usable format
+df_all_update = df_all_update.loc[:, df_all_update.columns.str.endswith(".1")]
+df_all_update = df_all_update.loc[
+    :, df_all_update.columns.str.startswith("Trigger")
+]
+df_all_update = df_all_update.iloc[1:]
+df_all_update = df_all_update.rename(index={"2021*": "2021"})
+df_all_update.columns = df_all_update.columns.str[:-2]
+df_all_update.index.rename("year", inplace=True)
+df_all_update.index = df_all_update.index.astype(int)
 ```
 
 ```python
@@ -163,6 +181,7 @@ def add_min_and_full(df):
 ```python
 df_all = add_min_and_full(df_all)
 df_all_alt = add_min_and_full(df_all_alt)
+df_all_update = add_min_and_full(df_all_update)
 ```
 
 ## Calculate base metrics
@@ -195,12 +214,13 @@ def calc_df_base(df):
 
 df_base = calc_df_base(df_all)
 df_base_alt = calc_df_base(df_all_alt)
+df_base_update = calc_df_base(df_all_update)
 ```
 
 ## Bootstrap
 
 ```python
-n_bootstrap = 10_000  # 10,000 takes about 2.5 minutes
+n_bootstrap = 10_000  # 10,000 takes about 5 minutes
 
 
 def get_df_bootstrap(df, n_bootstrap=1_000):
@@ -242,6 +262,7 @@ df_all_bootstrap = get_df_bootstrap(df_all, n_bootstrap)
 df_all_bootstrap_alt = get_df_bootstrap(
     pd.concat([df_all, df_all_alt], ignore_index=True), n_bootstrap
 )
+df_all_bootstrap_update = get_df_bootstrap(df_all_update, n_bootstrap)
 ```
 
 ## Compute CIs
@@ -326,6 +347,7 @@ calc_ci(df_all_bootstrap, df_base, replace_fn_metrics=True)
 # Really the base should be some combination of
 # both df_base and df_base_alt.
 calc_ci(df_all_bootstrap_alt, df_base_alt, save_filename_suffix="alt")
+calc_ci(df_all_bootstrap_update, df_base_update, save_filename_suffix="update")
 ```
 
 ## Explore CIs
