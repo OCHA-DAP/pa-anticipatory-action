@@ -133,14 +133,8 @@ options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
 ```{r libraries, include = FALSE, warning = FALSE}
-packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
-# install packages not yet installed
-installed_packages <- packages %in% rownames(installed.packages())
-if (any(installed_packages == FALSE)) {
-  install.packages(packages[!installed_packages])
-}
-# load libraries 
-lapply(packages, library, character.only = TRUE)
+# install, load libraries
+pacman::p_load(tidyverse, ggthemes, kableExtra, knitr, flextable)
 ```
 
 
