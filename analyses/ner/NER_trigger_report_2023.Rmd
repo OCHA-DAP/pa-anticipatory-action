@@ -125,25 +125,16 @@ options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
 ```{r libraries, include = FALSE, warning = FALSE}
-packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
-
-# install packages not yet installed
-installed_packages <- packages %in% rownames(installed.packages())
-
-if (any(installed_packages == FALSE)) {
-  install.packages(packages[!installed_packages])
-}
-
-# load libraries 
-lapply(packages, library, character.only = TRUE)
+# install, load libraries
+pacman::p_load(tidyverse, ggthemes, kableExtra, knitr, flextable)
 
 ```
 
 
 ```{r paths}
 data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
-#perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
-#perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
+# paths
+folder_2023 <- paste0(data_folder_path, "2023/")
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 explanatory_ci_plot_path <- ("../country_template/docs/explanatory_ci.png")
 
@@ -210,7 +201,7 @@ expected_cost_c <- paste0('$', round(funding_c * (perf_metrics_data %>% filter(t
 
 ```{r NER-specific}
 
-hist_act <- read.csv(paste0(data_folder_path, "historical_activations_trigger_v1.csv"))
+hist_act <- read.csv(paste0(data_folder_path, "historical_activations_2023_methodology.csv"))
 p2_pred <- sum(hist_act$Trigger2 == 'yes') # count activations of T2 (prediction-based activation of Package 2)
 p2_obs <- sum(hist_act$Trigger3 == 'yes' & hist_act$Trigger2 == '') # count activations of T3 when T2 was not met (observation-based activation of Package 2)
 p2_tot <- sum(hist_act$Trigger3 == 'yes' | hist_act$Trigger2 == 'yes') # count activations of P2
