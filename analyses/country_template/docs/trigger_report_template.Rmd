@@ -134,6 +134,68 @@ monitoring_process <- "Between January and June inclusively, the FIT team at IRI
   
 ```
 
+```{r hard-coded-values-ner, echo = FALSE, message = FALSE, warning = FALSE}
+country_name <- "Niger"
+country_pcode3 <- "ner"
+shock <- "Drought"
+nbr_hist_shocks <- 9 # X is a number. #NER: Number of reported bad years 
+# trigger A info  
+name_a <- "Trigger1" # what name is the trigger listed as in the perf_metrics_table.csv files?
+type_a <- 'Predictive' # Predictive or Observational?
+monitored_area_a <- "National"
+timepoints_a<- 'Jan, Feb, Mar' # eg: 'Jan, Feb, Mar'
+package_a <- 'Package 1' # eg: 'Package 1'
+funding_a <- 5.25 # input number only, no $ sign or 'm' for million. Formatting will be done automatically.
+targeted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
+lead_time_a <- '6-4 months' # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
+data_source_a <- 'IRI flexible seasonal forecast' # name of product + provider
+hist_period_a <- "1991 - 2020" # period for which historical data is available
+monitored_by_a <- 'IRI' # owner of monitoring responsibilities
+# trigger B info  
+name_b <- "Trigger2"
+type_b <- 'Predictive'
+monitored_area_b <- "National"
+timepoints_b <- 'Apr, May, Jun'
+package_b <- 'Package 2'
+funding_b <- 9.5
+targeted_window_b <- 'Jul-Sep'
+lead_time_b <- '3-1 months'
+data_source_b <- 'IRI flexible seasonal forecast'
+hist_period_b <- "1991 - 2020"
+monitored_by_b <- 'IRI'
+# trigger C info  
+name_c <- "Trigger3"
+type_c <- 'Observational'
+monitored_area_c <- "National"
+timepoints_c <- 'Aug'
+package_c <- 'Package 2'
+funding_c <- 9.5
+targeted_window_c <- 'Jun-Jul'
+lead_time_c <- 'N/A'
+data_source_c <- 'ENACTS or CHIRP'
+hist_period_c <- "1991 - 2020"
+monitored_by_c <- 'IRI'
+# activation timepoints for triggers with multiple timepoints ONLY
+atv_timepoints <- c("Jan", "Feb", "Mar", "Apr", "May", "June")
+  
+# Compile list of triggers to be included in the report
+trigger_list <- c(name_a, name_b, name_c)
+scenario_list <- c("framework-full", "framework-p1", "framework-p2") # exclude framework-none and framework-any
+# Table footnotes
+trigger_table_footnote <- "Expected cost computed using most likely probability of activation (central value). Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys."
+full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met, and both packages are disbursed."
+package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
+package2_atv_definition <- "Package 2 is activated when Trigger 2 or Trigger 3 is met."
+activation_table_footnote <-  "" # additional notes, if needed
+# Data providers
+data_providers <- "The Département de la statistique du Niger, the Direction de la météorologie nationale du Niger, IRI Columbia University, the World Food Programme, and the Food and Agriculture Orgnization" # will be followed by "provide data and/or analytical support."
+# Analysis
+analysis <- "Historical data and analysis are available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger). The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
+# Monitoring process
+monitoring_process <- "Between January and June inclusively, the FIT team at IRI updates the forecast (Triggers 1 and 2) and the decision tool within Maproom by the 22nd of each month. Within 24 hours of the update, the IRI team notifies the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met. By 7 August the Direction de la météorologie nationale du Niger will collate the rainfall measurements from the stations specified in the framework for the period 1 June - 31 July, and share them with the IRI FIT team. By 10 August the IRI FIT team will confirm the number of stations for which complete data is available; select ENACTS (80% or more available) or CHIRP (less than 80% available) accordingly; compute the SPI values and update Maproom. The IRI FIT team will then notify the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met. In case of an activation, additional meteorological data will be shared by the DMN, the IRI FIT team, and/or Centre for Humanitarian Data to inform response targeting."
+  
+```
+
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = TRUE) # include chunk output by default
@@ -227,7 +289,7 @@ package2_atv_definition <- paste0(package2_atv_definition, " Historically Packag
 ```
 
 
-```{r atv-CIs, eval = FALSE}
+```{r atv-CIs}
 # Create a CI visual for atv for each trigger, activation timepoint, and activation scenario beside None and Any
 
 for(trigger in c(trigger_list, scenario_list)) {
@@ -243,7 +305,7 @@ for(trigger in c(trigger_list, scenario_list)) {
 }
 ```
 
-```{r tradeoff-CIs, eval = FALSE}
+```{r tradeoff-CIs}
 # Tradeoff CIs for individual triggers
 
 for(trigger in c(trigger_list)) {
@@ -271,7 +333,7 @@ for(trigger in c(trigger_list)) {
   invisible(dev.off())
 ```
 
-```{r file-formatting-and-saving, eval =FALSE}
+```{r file-formatting-and-saving}
 # list plots to be trimmed
 plots_to_trim <- grep(list.files(path = plots_folder_path), 
                       pattern = 'trimmed_', 
@@ -287,7 +349,7 @@ for (filename in plots_to_trim) {
   trimmed_plot <- magick::image_trim(original_plot)
   
   # save trimmed plot
-  magick::image_write(trimmed_plot, path = paste0(plots_folder_path, filename), format = "png")
+  magick::image_write(trimmed_plot, path = paste0(plots_folder_path, "trimmed_", filename), format = "png")
 }
 ```
 
