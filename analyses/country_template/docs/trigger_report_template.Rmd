@@ -425,11 +425,37 @@ trigger1_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigge
 trigger2_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_det_tradeoff_bar.png")
 trigger3_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_det_tradeoff_bar.png")
 
-# framework activations plots
+# framework activation plots
 fmwk_min_png_link <- paste0(data_folder_path, "plots/trimmed_framework-min_atv_tradeoff_bar.png")
 fmwk_full_png_link <- paste0(data_folder_path, "plots/trimmed_framework-full_atv.png")
 fmwk_p1_png_link <- paste0(data_folder_path, "plots/trimmed_framework-p1_atv.png")
 fmwk_p2_png_link <- paste0(data_folder_path, "plots/trimmed_framework-p2_atv.png")
+
+# Timepoint activation plots
+jan_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Jan_atv.png")
+jan_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Jan_var_tradeoff_bar.png")
+jan_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Jan_det_tradeoff_bar.png")
+
+feb_atv_png_link <- paste0(data_folder_path, "plots/trimmed_feb_atv.png")
+feb_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_feb_var_tradeoff_bar.png")
+feb_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_feb_det_tradeoff_bar.png")
+
+mar_atv_png_link <- paste0(data_folder_path, "plots/trimmed_mar_atv.png")
+mar_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_mar_var_tradeoff_bar.png")
+mar_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_mar_det_tradeoff_bar.png")
+
+apr_atv_png_link <- paste0(data_folder_path, "plots/trimmed_apr_atv.png")
+apr_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_apr_var_tradeoff_bar.png")
+apr_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_apr_det_tradeoff_bar.png")
+
+may_atv_png_link <- paste0(data_folder_path, "plots/trimmed_may_atv.png")
+may_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_may_var_tradeoff_bar.png")
+may_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_may_det_tradeoff_bar.png")
+
+jun_atv_png_link <- paste0(data_folder_path, "plots/trimmed_jun_atv.png")
+jun_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_jun_var_tradeoff_bar.png")
+jun_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_jun_det_tradeoff_bar.png")
+
 
 ```
 
@@ -585,31 +611,38 @@ kbl(learning_table,
 
 &nbsp;
 
-```{r timepoint-table, include = TRUE, eval=F}
+```{r timepoint-table, include = TRUE}
+
+
+jun_atv_png_link <- 
+jun_var_tradeoff_png_link 
+jun_det_tradeoff_png_link <- 
+  
 timepoint_df1 <- data.frame(row_name = c('Prob. being met (%)',
                                         'All Activations (%)', 
                                        'All Shocks (%)'),
-                       trigger_jan = c(paste0("<img src=", plots_folder_path, "trimmed_Jan_atv.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Jan_var_tradeoff_bar.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Jan_det_tradeoff_bar.png>")),
-                       trigger_feb = c(paste0("<img src=", plots_folder_path, "trimmed_Feb_atv.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Feb_var_tradeoff_bar.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Feb_det_tradeoff_bar.png>")),
-                       trigger_mar = c(paste0("<img src=", plots_folder_path, "trimmed_Mar_atv.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Mar_var_tradeoff_bar.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Mar_det_tradeoff_bar.png>")))
+                       trigger_jan = c(pandoc.image.return(jan_atv_png_link),
+                                       pandoc.image.return(jan_var_tradeoff_png_link),
+                                       pandoc.image.return(jan_det_tradeoff_png_link)),
+                       trigger_feb = c(pandoc.image.return(feb_atv_png_link),
+                                       pandoc.image.return(feb_var_tradeoff_png_link),
+                                       pandoc.image.return(feb_det_tradeoff_png_link)),
+                       trigger_mar = c(pandoc.image.return(mar_atv_png_link),
+                                       pandoc.image.return(mar_var_tradeoff_png_link),
+                                       pandoc.image.return(mar_det_tradeoff_png_link)))
+
 timepoint_df2 <- data.frame(row_name = c('Prob. being met (%)',
                                         'All Activations (%)', 
                                        'All Shocks (%)'),
-                       trigger_apr = c(paste0("<img src=", plots_folder_path, "trimmed_Apr_atv.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Apr_var_tradeoff_bar.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_Apr_det_tradeoff_bar.png>")),
-                       trigger_may = c(paste0("<img src=", plots_folder_path, "trimmed_May_atv.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_May_var_tradeoff_bar.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_May_det_tradeoff_bar.png>")),
-                       trigger_jun = c(paste0("<img src=", plots_folder_path, "trimmed_June_atv.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_June_var_tradeoff_bar.png>"),
-                                       paste0("<img src=", plots_folder_path, "trimmed_June_det_tradeoff_bar.png>")))
+                       trigger_apr = c(pandoc.image.return(apr_atv_png_link),
+                                       pandoc.image.return(apr_var_tradeoff_png_link),
+                                       pandoc.image.return(apr_det_tradeoff_png_link)),
+                       trigger_may = c(pandoc.image.return(may_atv_png_link),
+                                       pandoc.image.return(may_var_tradeoff_png_link),
+                                       pandoc.image.return(may_det_tradeoff_png_link)),
+                       trigger_jun = c(pandoc.image.return(jun_atv_png_link),
+                                       pandoc.image.return(jun_var_tradeoff_png_link),
+                                       pandoc.image.return(jun_det_tradeoff_png_link)))
 kbl(timepoint_df1,
     format = 'html',
     escape = FALSE,
