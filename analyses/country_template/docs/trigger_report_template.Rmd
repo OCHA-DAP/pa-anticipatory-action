@@ -425,6 +425,12 @@ trigger1_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigge
 trigger2_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_det_tradeoff_bar.png")
 trigger3_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_det_tradeoff_bar.png")
 
+# framework activations plots
+fmwk_min_png_link <- paste0(data_folder_path, "plots/trimmed_framework-min_atv_tradeoff_bar.png")
+fmwk_full_png_link <- paste0(data_folder_path, "plots/trimmed_framework-full_atv.png")
+fmwk_p1_png_link <- paste0(data_folder_path, "plots/trimmed_framework-p1_atv.png")
+fmwk_p2_png_link <- paste0(data_folder_path, "plots/trimmed_framework-p2_atv.png")
+
 ```
 
 
@@ -516,15 +522,15 @@ kbl(snapshot_df,
 
 &nbsp;
 
-```{r framework-activation-table, eval = FALSE}
+```{r framework-activation-table}
 activation_df <- data.frame(row_name = c(paste0('Yearly Disbursements', footnote_marker_number(1)), 
                                         paste0('Full', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
                                         paste0('Package 2 only', footnote_marker_number(4))),
-                           atv_stats = c(paste0("<img src=", plots_folder_path, "trimmed_framework-min_atv_tradeoff_bar.png>"),
-                                         paste0("<img src=", plots_folder_path, "trimmed_framework-full_atv.png>"),
-                                         paste0("<img src=", plots_folder_path, "trimmed_framework-p1_atv.png>"),
-                                         paste0("<img src=", plots_folder_path, "trimmed_framework-p2_atv.png>")))
+                           atv_stats = c(pandoc.image.return(fmwk_min_png_link),
+                                         pandoc.image.return(fmwk_full_png_link),
+                                         pandoc.image.return(fmwk_p1_png_link),
+                                         pandoc.image.return(fmwk_p2_png_link)))
 
 kbl(activation_df,
     format = 'html',
