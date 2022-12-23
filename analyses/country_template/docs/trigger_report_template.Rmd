@@ -1,23 +1,28 @@
 ---
-title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left;margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left;margin:10px" />'
-pagetitle: 'AA Trigger Report'
+title: "<img src=\"https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX\"
+  style=\"height:40px;float:left;margin:10px\" /><img src=\"https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW\"
+  style=\"height:50px;float:left;margin:10px\" />"
+pagetitle: AA Trigger Report
 output:
   html_document:
-    css: ../country_template/docs/style.css
+    css: style.css
     includes:
-      in_header: ../country_template/docs/header.html
+      in_header: header.html
     toc: no
     toc_float: yes
     toc_depth: '4'
     df_print: paged
   html_notebook:
-    css: ../country_template/docs/style.css
+    css: style.css
     includes:
-      in_header: ../country_template/docs/header.html
+      in_header: header.html
     toc: no
     toc_float: yes
     toc_depth: '4'
     df_print: paged
+  pdf_document:
+    toc: no
+    toc_depth: '4'
 editor_options:
   chunk_output_type: console
 ---
@@ -30,31 +35,34 @@ editor_options:
 </style>
 
 ```{r README, echo = FALSE, message = FALSE, warning = FALSE}
+
 ### NOTE: The template is set up for two 3-timepoint predictive triggers and a 1-timepoint observational trigger
 ### NOTE: Performance metrics and their CIs should have been generated separately before the trigger report can be produced.
 ### NOTE: A "trigger" is tied to a funding+activity package and therefore can include multiple timepoints.
 
 ## ON DATA FOLDER ON GDRIVE
-### Create a trigger_report folder under DATA_DIR > /private/exploration/{country_pcode3/trigger_performance}
-### Create a "plots" folder under `trigger_performance`
-### Save `{country_iso3_code}_perf_metrics_table_ci_0.68.csv` and `{country_iso3_code}_perf_metrics_table_ci_0.95.csv` in the trigger_report folder on DATA_DIR
-### Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter code for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+# Create a trigger_report folder under DATA_DIR > /private/exploration/{country_pcode3/trigger_performance}
+# Create a "plots" folder under `trigger_performance`
+# Save `{country_iso3_code}_perf_metrics_table_ci_0.68.csv` and `{country_iso3_code}_perf_metrics_table_ci_0.95.csv` in the trigger_report folder on DATA_DIR
+# Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter code for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
 
-## IN PA-ANTICIPATORY-ACTION
-### Make sure a country-specific RProj file exists that is child to the country folder under `pa-anticipatory-action/analyses/`
+## IN GITHUB REPO
+# Make sure a country-specific RProj file exists that is child to the country folder under `pa-anticipatory-action/analyses/` or at the top level in a project-specific repo
+# Copy these files from country_template/docs to a folder `docs` in a sister position to the Rproj file and in which the Rmd lives: header.html, style.css, plotAtvCI.R, explanatory_ci.png, plotTradeoffCI.R
+
 
 ## PREPARE THE REPORT
-### Update the "hard-coded-values" code chunk
-### Remove or adjust the "country-specific" chunk (chunk 8) as needed
-### If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.)
-### Update the tables esp filenames and column names (Chunk 14 and 15)
-### Adjust the Annex as needed (number of timepoints or column labels) or remove it altogether if no trigger has more than 1 activation timepoint
-### Knit
+# Update the "hard-coded-values" code chunk
+# Remove or adjust the "country-specific" chunk (chunk 8) as needed
+# If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.)
+# Update the tables esp filenames and column names (Chunk 14 and 15)
+# Adjust the Annex as needed (number of timepoints or column labels) or remove it altogether if no trigger has more than 1 activation timepoint
+# Knit
 ```
 
 ```{r hard-coded-values, echo = FALSE, message = FALSE, warning = FALSE}
-country_name <- "" # eg: Niger
-country_pcode3 <- "" # eg: ner
+country_name <- "Niger" # eg: Niger
+country_pcode3 <- "ner" # eg: ner
 shock <- "" # eg: Drought
 nbr_hist_shocks <- 1 # Is a number eg: 1
 
@@ -137,22 +145,28 @@ options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 
 ```{r libraries, include = FALSE, warning = FALSE}
 # install, load libraries
-pacman::p_load(tidyverse, ggthemes, kableExtra, knitr, flextable)
+pacman::p_load(tidyverse, here, ggthemes, kableExtra, knitr, flextable, pander)
 ```
 
 
 ```{r paths}
-data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
-plots_folder_path <- paste0(data_folder_path, "plots/")
-perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
-perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
+# Data paths
+data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/2023/") ## FIX ME: REMOVE 2023 level
+plots_folder_path <- paste0(data_folder_path, "plots/") 
+#perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
+perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95_update.csv") ## FIX ME: REMOVE ME
+#perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
+perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68_update.csv") # FIX ME: REMOVE ME
 learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
-explanatory_ci_plot_path <- ("../country_template/docs/explanatory_ci.png")
+
+# pa-anticipatory-action repo paths
+explanatory_ci_plot_path <- here("docs", "explanatory_ci.png") # here = returns path of Rmd
+
 ```
 
 ```{r functions}
-source("../country_template/docs/plotAtvCI.R")
-source("../country_template/docs/plotTradeoffCI.R")
+source(here("docs", "plotAtvCI.R"))
+source(here("docs", "plotTradeoffCI.R"))
 ```
 
 ```{r data-loading-and-formatting}
@@ -204,7 +218,8 @@ expected_cost_c <- paste0('$', round(funding_c * (perf_metrics_data %>% filter(t
 ```
 
 ```{r country-specific}
-hist_act <- read.csv(paste0(data_folder_path, "historical_activations_trigger_v1.csv"))
+#hist_act <- read.csv(paste0(data_folder_path, "historical_activations_trigger_v1.csv")) 
+hist_act <- read.csv(paste0(data_folder_path, "historical_activations_2023_methodology.csv")) ## FIX ME: REMOVE ME
 p2_pred <- sum(hist_act$Trigger2 == 'yes') # count activations of T2 (prediction-based activation of Package 2)
 p2_obs <- sum(hist_act$Trigger3 == 'yes' & hist_act$Trigger2 == '') # count activations of T3 when T2 was not met (observation-based activation of Package 2)
 p2_tot <- sum(hist_act$Trigger3 == 'yes' | hist_act$Trigger2 == 'yes') # count activations of P2
@@ -212,7 +227,7 @@ package2_atv_definition <- paste0(package2_atv_definition, " Historically Packag
 ```
 
 
-```{r atv-CIs}
+```{r atv-CIs, eval = FALSE}
 # Create a CI visual for atv for each trigger, activation timepoint, and activation scenario beside None and Any
 
 for(trigger in c(trigger_list, scenario_list)) {
@@ -228,7 +243,7 @@ for(trigger in c(trigger_list, scenario_list)) {
 }
 ```
 
-```{r tradeoff-CIs}
+```{r tradeoff-CIs, eval = FALSE}
 # Tradeoff CIs for individual triggers
 
 for(trigger in c(trigger_list)) {
@@ -256,7 +271,7 @@ for(trigger in c(trigger_list)) {
   invisible(dev.off())
 ```
 
-```{r file-formatting-and-saving}
+```{r file-formatting-and-saving, eval =FALSE}
 # list plots to be trimmed
 plots_to_trim <- grep(list.files(path = plots_folder_path), 
                       pattern = 'trimmed_', 
@@ -327,7 +342,8 @@ explanatory_ci
 <p style="color:black;font-size:16px;text-align:left;"> This table summarises the trigger mechanism and its performance in signaling severe shocks. It presents estimates of the likelihood that the threshold would be met in a given year as well as how often the trigger is expected to correctly recommend an activation or non-activation.</p> 
 
 &nbsp;
-```{r mechanism-snapshot, include = TRUE}
+
+```{r mechanism-snapshot, include = TRUE, eval = FALSE}
 snapshot_df <- data.frame(row_name = c('Type', 
                                        'Monitored Area',
                                        'Activation Timepoints', 
@@ -387,7 +403,8 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      funding_c_formatted,
                                      expected_cost_c,
                                      paste0("<img src=", plots_folder_path, "trimmed_Trigger3_var_tradeoff_bar.png>"),
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger3_det_tradeoff_bar.png>"))
+                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger3_det_tradeoff_bar.png>")))
+
 kbl(snapshot_df,
     format = 'html',
     escape = FALSE,
@@ -414,7 +431,7 @@ kbl(snapshot_df,
 
 &nbsp;
 
-```{r framework-activation-table}
+```{r framework-activation-table, eval = FALSE}
 activation_df <- data.frame(row_name = c(paste0('Yearly Disbursements', footnote_marker_number(1)), 
                                         paste0('Full', footnote_marker_number(2)),
                                         paste0('Package 1 only', footnote_marker_number(3)),
@@ -422,7 +439,8 @@ activation_df <- data.frame(row_name = c(paste0('Yearly Disbursements', footnote
                            atv_stats = c(paste0("<img src=", plots_folder_path, "trimmed_framework-min_atv_tradeoff_bar.png>"),
                                          paste0("<img src=", plots_folder_path, "trimmed_framework-full_atv.png>"),
                                          paste0("<img src=", plots_folder_path, "trimmed_framework-p1_atv.png>"),
-                                         paste0("<img src=", plots_folder_path, "trimmed_framework-p2_atv.png>"))
+                                         paste0("<img src=", plots_folder_path, "trimmed_framework-p2_atv.png>")))
+
 kbl(activation_df,
     format = 'html',
     escape = FALSE,
@@ -476,7 +494,7 @@ kbl(learning_table,
 
 &nbsp;
 
-```{r timepoint-table, include = TRUE}
+```{r timepoint-table, include = TRUE, eval=F}
 timepoint_df1 <- data.frame(row_name = c('Prob. being met (%)',
                                         'All Activations (%)', 
                                        'All Shocks (%)'),
@@ -514,7 +532,7 @@ kbl(timepoint_df1,
 
 &nbsp;
 
-```{r timpoint_table2}
+```{r timpoint_table2, eval =F}
 kbl(timepoint_df2,
     format = 'html',
     escape = FALSE,
