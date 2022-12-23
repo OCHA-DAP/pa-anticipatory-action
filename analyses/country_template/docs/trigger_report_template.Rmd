@@ -76,7 +76,7 @@ funding_a <- 5.25 # eg: 5.25. Input number only, no $ sign or 'm' for million. F
 targeted_window_a <- "" # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
 lead_time_a <- "" # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
 data_source_a <- "" # name of product + provider, eg: IRI tercile seasonal forecast
-threshold_a <- "" # eg: "35% of worst years"
+threshold_a <- "" # eg: "35% of driest years"
 hist_period_a <- "" # period for which historical data is available eg: 1991 - 2020
 monitored_by_a <- "" # owner of monitoring responsibilities eg: CHD
 
@@ -193,6 +193,10 @@ data_providers <- "The Département de la statistique du Niger, the Direction de
 analysis <- "Historical data and analysis are available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger). The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
 # Monitoring process
 monitoring_process <- "Between January and June inclusively, the FIT team at IRI updates the forecast (Triggers 1 and 2) and the decision tool within Maproom by the 22nd of each month. Within 24 hours of the update, the IRI team notifies the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met. By 7 August the Direction de la météorologie nationale du Niger will collate the rainfall measurements from the stations specified in the framework for the period 1 June - 31 July, and share them with the IRI FIT team. By 10 August the IRI FIT team will confirm the number of stations for which complete data is available; select ENACTS (80% or more available) or CHIRP (less than 80% available) accordingly; compute the SPI values and update Maproom. The IRI FIT team will then notify the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met. In case of an activation, additional meteorological data will be shared by the DMN, the IRI FIT team, and/or Centre for Humanitarian Data to inform response targeting."
+
+threshold_a <- "35% of driest years"
+threshold_b <- "35% of driest years"
+threshold_c <- "35% of driest years"
   
 ```
 
@@ -405,7 +409,26 @@ explanatory_ci
 
 &nbsp;
 
-```{r mechanism-snapshot, include = TRUE, eval = FALSE}
+```{r image-links}
+# atv plots
+trigger1_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger1_atv.png")
+trigger2_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_atv.png")
+trigger3_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_atv.png")
+
+# var tradeoff plots
+trigger1_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger1_var_tradeoff_bar.png")
+trigger2_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_var_tradeoff_bar.png")
+trigger3_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_var_tradeoff_bar.png")
+
+# det tradeoff plots
+trigger1_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger1_det_tradeoff_bar.png")
+trigger2_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_det_tradeoff_bar.png")
+trigger3_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_det_tradeoff_bar.png")
+
+```
+
+
+```{r mechanism-snapshot, include = TRUE}
 snapshot_df <- data.frame(row_name = c('Type', 
                                        'Monitored Area',
                                        'Activation Timepoints', 
@@ -431,11 +454,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_a,
                                      monitored_by_a,
                                      package_a, 
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger1_atv.png>"),
+                                     pandoc.image.return(trigger1_atv_png_link),
                                      funding_a_formatted,
                                      expected_cost_a,
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger1_var_tradeoff_bar.png>"),
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger1_det_tradeoff_bar.png>")),
+                                     pandoc.image.return(trigger1_var_tradeoff_png_link),
+                                     pandoc.image.return(trigger1_det_tradeoff_png_link)),
                        trigger_b = c(type_b,
                                      monitored_area_b,
                                      timepoints_b, 
@@ -446,11 +469,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_b,
                                      monitored_by_b,
                                      package_b, 
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger2_atv.png>"),
+                                     pandoc.image.return(trigger2_atv_png_link),
                                      funding_b_formatted,
                                      expected_cost_b,
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger2_var_tradeoff_bar.png>"),
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger2_det_tradeoff_bar.png>")),
+                                     pandoc.image.return(trigger2_var_tradeoff_png_link),
+                                     pandoc.image.return(trigger2_det_tradeoff_png_link)),
                        trigger_c = c(type_c, 
                                      monitored_area_c,
                                      timepoints_c, 
@@ -461,11 +484,11 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      hist_period_c,
                                      monitored_by_c,
                                      package_c, 
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger3_atv.png>"),
+                                     pandoc.image.return(trigger3_atv_png_link),
                                      funding_c_formatted,
                                      expected_cost_c,
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger3_var_tradeoff_bar.png>"),
-                                     paste0("<img src=", plots_folder_path, "trimmed_Trigger3_det_tradeoff_bar.png>")))
+                                     pandoc.image.return(trigger3_var_tradeoff_png_link),
+                                     pandoc.image.return(trigger3_det_tradeoff_png_link)))
 
 kbl(snapshot_df,
     format = 'html',
