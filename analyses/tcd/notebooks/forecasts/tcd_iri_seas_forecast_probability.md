@@ -48,7 +48,7 @@ config = Config()
 ```python
 # C indicates the tercile (below-average, normal, or above-average).
 # F indicates the publication month, and L the leadtime
-ds_iri = get_iri_data(config, download=False)
+ds_iri = get_iri_data(config, download=True)
 ds_iri = ds_iri.rio.write_crs("EPSG:4326", inplace=True)
 da_iri = ds_iri.prob
 da_iri_bavg = da_iri.sel(C=0).drop("spatial_ref", axis=1)
@@ -123,6 +123,8 @@ df_bavg["meet_thresh"] = np.where(df_bavg.prob >= thresh, True, False)
 ```python
 # get sum of leadtimes that predict above the threshold
 # for the given predicted period and coordinates
+# This sums up, for each coordinate, the # of forecast
+# lead times where thesholds are met
 df_bavg_group_thresh = df_bavg.groupby(
     ["pred_month", "latitude", "longitude"], as_index=False
 ).meet_thresh.sum()

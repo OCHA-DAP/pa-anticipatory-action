@@ -52,7 +52,7 @@ pred_df <- mutate(
 #### METRICS ####
 #################
 
-# generate metrics for months July to December
+# generate metrics for September
 # only looking at data from the 2nd dekad of
 # each month, which is roughly available from
 # the first of the next month

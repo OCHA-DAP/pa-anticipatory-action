@@ -58,8 +58,8 @@ package_a <- 'Package 1' # eg: 'Package 1'
 funding_a <- 3.71 # input number only, no $ sign or 'm' for million. Formatting will be done automatically.
 targeted_window_a <- 'Jul-Sep' # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
 lead_time_a <- '4-3 months' # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
-data_source_a <- 'IRI seasonal forecast' # name of product + provider
-trigger_a <- '42.5% below average probability'
+data_source_a <- 'IRI tercile seasonal forecast' # name of product + provider
+threshold_a <- '42.5% below average probability'
 hist_period_a <- "2018 - present" # period for which historical data is available
 monitored_by_a <- 'CHD' # owner of monitoring responsibilities
 
@@ -72,8 +72,8 @@ package_b <- 'Package 2'
 funding_b <- 1.66
 targeted_window_b <- 'Jul-Sep'
 lead_time_b <- '2-1 months'
-data_source_b <- 'IRI seasonal forecast'
-trigger_b <- '42.5% below average probability'
+data_source_b <- 'IRI tercile seasonal forecast'
+threshold_b <- '42.5% below average probability'
 hist_period_b <- "2018 - Present"
 monitored_by_b <- 'CHD'
   
@@ -82,12 +82,12 @@ name_c <- "Trigger3"
 type_c <- 'Observational'
 monitored_area_c <- "Central Chad"
 timepoints_c <- 'Sep'
-package_c <- 'Package 2'
+package_c <- 'Package 3'
 funding_c <- 4.63
 targeted_window_c <- 'Apr-Sep'
 lead_time_c <- 'N/A'
 data_source_c <- 'Biomass'
-trigger_c <- 'Seasonal anomaly below 80%'
+threshold_c <- 'Seasonal anomaly below 80%'
 hist_period_c <- "2000 - Present"
 monitored_by_c <- 'CHD'
 
@@ -96,7 +96,7 @@ trigger_list <- c(name_c) # limited due to issues with historical data in Trigge
 scenario_list <- c() # No scenarios given limits of data
 
 # Table footnotes
-trigger_table_footnote <- "Expected annual cost computed using most likely probability of activation (central value). All triggers can reach their threshold and activate independently from one another. Triggers 1 and 2 did not have sufficient data for testing performance on Chad, but likelihood of activation tested on global data. Trigger 3 performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence reviewed from historical CERF allocations, FEWS NET reports, EM-DAT data, World Bank statistics and the 2015 and 2017 multi-risk contingency plans for Chad."
+trigger_table_footnote <- "Expected annual cost computed using most likely probability of activation (central value). All triggers can reach their threshold and activate independently from one another. Triggers 1 and 2 did not have sufficient data for testing performance on Chad, but likelihood of activation was estimated based on all available global data, not just forecasts for Chad. The estimated likelihood of activation for these triggers is low, as thresholds were set based on IRI bins for reporting that require a high probability of below average precipitation. This ensures activation only when the forecast is quite certain of below average precipitation, and thus the low likelihood of activation. Trigger 3 performance was assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence reviewed from historical CERF allocations, FEWS NET reports, EM-DAT data, World Bank statistics and the 2015 and 2017 multi-risk contingency plans for Chad."
 
 full_atv_definition <- "A full activation occurs when all three triggers met and all packages are disbursed."
 package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
@@ -137,7 +137,6 @@ if (any(installed_packages == FALSE)) {
 
 # load libraries 
 lapply(packages, library, character.only = TRUE)
-
 ```
 
 
@@ -277,8 +276,8 @@ mitigation_warranted <- ifelse(t3_far_low_end_68 >= 40, "Mitigation is recommend
 <p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
 
 ## Key Messages
-* <span style="color: blue;">LIMITED HISTORICAL DATA</span> <p style="color:black;font-size:16px;text-align:left;"> Triggers 1 and 2 rely on the IRI seasonal forecast, with limited data from 2018 to today. Likelihood of activation estimated based on global data, for Triggers 1 and 2 together, but not together with Trigger 3, and no performance metrics are calculated.</p>
-* <span style="color: blue;">ACTIVATION</span> <p style="color:black;font-size:16px;text-align:left;"> There is a `r paste0(t3_atv_low_end_68, ' - ', t3_atv_high_end_68)`% chance that Trigger 3 will activate in a given year. Globally, thresholds are met for Trigger 1 or 2 `r t12_atv_central`% of the time, however there is high uncertainty on how frequently this would occur in `r country_name`.</p>
+* <span style="color: blue;">LIMITED HISTORICAL DATA</span> <p style="color:black;font-size:16px;text-align:left;"> Due to limited historical data, no performance metrics were calculated Triggers 1 and 2. The likelihood of activation for these triggers was estimated based on all available forecasts across the globe, not just forecasts for Chad or the area of interest. This means that there is high uncertainty in the likelihood of activation, and limited understanding of performance for these predictive triggers.</p>
+* <span style="color: blue;">ACTIVATION</span> <p style="color:black;font-size:16px;text-align:left;"> There is a `r paste0(t3_atv_low_end_68, ' - ', t3_atv_high_end_68)`% chance that Trigger 3 will activate in a given year. The Trigger 1 or 2 thresholds are met in `r t12_atv_central`% of all historical forecasts globally, however there is high uncertainty on how frequently this would occur in `r country_name`.</p>
 * <span style="color: blue;">SHOCK DETECTION</span> <p style="color:black;font-size:16px;text-align:left;"> Package 3 is expected to be implemented ahead of `r paste0(t3_det_low_end_68, ' - ', t3_det_high_end_68)`% of shocks.</p>
 * <span style="color: blue;">FALSE ALARMS</span> <p style="color:black;font-size:16px;text-align:left;"> The risk of activating Package 3 in the absence of a severe shock stands at `r paste0(t3_far_low_end_68, ' - ', t3_far_high_end_68)`% of activations.</p>
 * <span style="color: blue;">NO REGRETS BIAS</span> <p style="color:black;font-size:16px;text-align:left;"> The mechanism is optimised to reduce the risk of failing to activate when there is a shock, at the cost of having false alarms. `r mitigation_warranted `</p>
@@ -322,7 +321,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                        'Target Period', 
                                        'Lead Time', 
                                        'Data Source',
-                                       'Trigger',
+                                       'Threshold',
                                        'Historical Data Coverage',
                                        'Monitored by',
                                        'Activity Package', 
@@ -337,7 +336,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      targeted_window_a, 
                                      lead_time_a, 
                                      data_source_a,
-                                     trigger_a,
+                                     threshold_a,
                                      hist_period_a,
                                      monitored_by_a,
                                      package_a, 
@@ -352,7 +351,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      targeted_window_b, 
                                      lead_time_b, 
                                      data_source_b,
-                                     trigger_b,
+                                     threshold_b,
                                      hist_period_b,
                                      monitored_by_b,
                                      package_b, 
@@ -367,7 +366,7 @@ snapshot_df <- data.frame(row_name = c('Type',
                                      targeted_window_c, 
                                      lead_time_c, 
                                      data_source_c,
-                                     trigger_c,
+                                     threshold_c,
                                      hist_period_c,
                                      monitored_by_c,
                                      package_c, 
@@ -399,12 +398,12 @@ kbl(snapshot_df,
 &nbsp;
 
 ## Activation Scenarios
-<p style="color:black;font-size:16px;text-align:left;"> Due to the lack of historical data for the IRI seasonal forecast, we do not assess the likelihood of activation scenarios together. Refer to the likelihood of the individual triggers activating.</p>
+<p style="color:black;font-size:16px;text-align:left;"> The IRI seasonal forecast over Chad has not reached the threshold in the historical data since 2018, when there were also no recorded droughts. While all available historical forecasts globally were used to calculate the individual likelihood of activation for Trigger 1 and 2, the observational Trigger 3 needs to be calculated over a specific area. Since we do not want to do that with the limited forecast data available, we do not estimate the joint likelihood of activation of the predictive and observational trigger together. Refer to the likelihood of the individual triggers activating.</p>
 
 &nbsp;
 
 ## Technical Team
-<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` have provided data and/or analytical support. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. `r analysis` </p>
+<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` have provided data and/or analytical support. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism, from 2001 to 2017. Only 5 years of historical forecasts were available, from 2018 onward, and none overlapped the historical shock data. Observational data was available from 2000 onward, covering all reported historical shocks. `r analysis` </p>
 
 ## Monitoring Process
 <p style="color:black;font-size:16px;text-align:left;"> `r monitoring_process` </p>
