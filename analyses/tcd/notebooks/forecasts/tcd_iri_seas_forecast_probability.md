@@ -48,7 +48,7 @@ config = Config()
 ```python
 # C indicates the tercile (below-average, normal, or above-average).
 # F indicates the publication month, and L the leadtime
-ds_iri = get_iri_data(config, download=False)
+ds_iri = get_iri_data(config, download=True)
 ds_iri = ds_iri.rio.write_crs("EPSG:4326", inplace=True)
 da_iri = ds_iri.prob
 da_iri_bavg = da_iri.sel(C=0).drop("spatial_ref", axis=1)
@@ -108,9 +108,9 @@ df_bavg = df_bavg[~df_bavg.prob.isnull()]
 ```
 
 ```python
-#this takes some time
-#comp month the forecast is predicting
-#in reality it is a 3 month period for which this is the start month
+# this takes some time
+# comp month the forecast is predicting
+# in reality it is a 3 month period for which this is the start month
 df_bavg.loc[:, "pred_month"] = df_bavg.apply(
     lambda x: x["F"] + relativedelta(months=int(x["L"])), axis=1
 )
@@ -121,8 +121,10 @@ df_bavg["meet_thresh"] = np.where(df_bavg.prob >= thresh, True, False)
 ```
 
 ```python
-#get sum of leadtimes that predict above the threshold
-#for the given predicted period and coordinates
+# get sum of leadtimes that predict above the threshold
+# for the given predicted period and coordinates
+# This sums up, for each coordinate, the # of forecast
+# lead times where thesholds are met
 df_bavg_group_thresh = df_bavg.groupby(
     ["pred_month", "latitude", "longitude"], as_index=False
 ).meet_thresh.sum()
@@ -133,10 +135,36 @@ df_bavg_group_thresh.meet_thresh.value_counts()
 ```
 
 ```python
-#probability of 1 of the leadtimes meeting the threshold
+# probability of 1 of the leadtimes meeting the threshold
 df_bavg_group_thresh[
     df_bavg_group_thresh.meet_thresh >= 1
 ].meet_thresh.count() / df_bavg_group_thresh.meet_thresh.count()
+```
+
+Look at the two separate triggers separately for reporting in the final phase.
+
+```python
+df_trigger1 = (
+    df_bavg[df_bavg.L.isin([4, 3])]
+    .groupby(["pred_month", "latitude", "longitude"], as_index=False)
+    .meet_thresh.sum()
+)
+
+df_trigger1[
+    df_trigger1.meet_thresh >= 1
+].meet_thresh.count() / df_trigger1.meet_thresh.count()
+```
+
+```python
+df_trigger2 = (
+    df_bavg[df_bavg.L.isin([2, 1])]
+    .groupby(["pred_month", "latitude", "longitude"], as_index=False)
+    .meet_thresh.sum()
+)
+
+df_trigger2[
+    df_trigger2.meet_thresh >= 1
+].meet_thresh.count() / df_trigger2.meet_thresh.count()
 ```
 
 ### Thoughts
