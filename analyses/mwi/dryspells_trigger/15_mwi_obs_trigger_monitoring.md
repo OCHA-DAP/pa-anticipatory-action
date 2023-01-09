@@ -105,6 +105,12 @@ arc2_approx.calculate_rolling_sum()
 arc2_approx.identify_dry_spells()
 ```
 
+Check that we've downloaded up to a day or two prior to today. Otherwise, we may have a problem in the downloading.
+
+```python
+arc2_centr.load_aggregated_data()["T"].max().date()
+```
+
 How many dry spells have we detected thus far in our monitoring period?
 
 ```python
