@@ -419,3 +419,7 @@ plt_pneumonic
 ```python
 print(f"Sum of urban cases in monitoring period: {int(df_date_sel.urb_cases.sum())}")
 ```
+
+```python
+
+```
