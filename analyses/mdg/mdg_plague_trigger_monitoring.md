@@ -57,7 +57,11 @@ urban_path = urban_dir / urban_filename
 ```python
 #define period of monitoring
 mon_start_date = pd.Timestamp(date.fromisoformat("2022-01-01"))
-mon_end_date = pd.Timestamp('today').floor('D')
+mon_end_date = pd.Timestamp(date.fromisoformat("2022-12-31"))
+```
+
+```python
+
 ```
 
 ```python
@@ -79,6 +83,9 @@ plague_filename
 
 ```python
 df=plague.load_plague_data(plague_path,keep_cases=incl_cases_class)
+# new end dates for creating 2023 graph
+mon2_start_date = pd.Timestamp(date.fromisoformat("2023-01-01"))
+mon2_end_date = df.date.max()
 ```
 
 ```python
@@ -138,6 +145,8 @@ df_date=plague.aggregate_to_date(df)
 
 ```python
 df_date_sel=df_date[(df_date.date>=pd.to_datetime(mon_start_date, format="%Y-%m-%d"))&(df_date.date<=pd.to_datetime(mon_end_date, format="%Y-%m-%d"))]
+df_date_sel2=df_date[(df_date.date>=pd.to_datetime(mon2_start_date, format="%Y-%m-%d"))&(df_date.date<=pd.to_datetime(mon2_end_date, format="%Y-%m-%d"))]
+df_date_sel2
 ```
 
 ```python
@@ -376,6 +385,9 @@ color_twentyone='#7f2100'
 base_mon = alt.Chart(df_date_sel).transform_calculate(
     cases="'cases monitoring'",
 )
+base_mon2 = alt.Chart(df_date_sel2).transform_calculate(
+    cases="'cases monitoring'",
+)
 scale_mon = alt.Scale(domain=["hist mean", "hist +1.64std","cases monitoring"], range=['red', 'yellow',color_twentyone])
 ```
 
@@ -383,6 +395,11 @@ scale_mon = alt.Scale(domain=["hist mean", "hist +1.64std","cases monitoring"], 
 
 ```python
 bar_mon = base_mon.mark_bar(color=color_twentyone).encode(
+    x='week:N',
+    y=alt.Y('cases_number',title="number of cases"),
+    color=alt.Color('cases:N', scale=scale_mon, title='')
+)
+bar_mon2 = base_mon2.mark_bar(color=color_twentyone).encode(
     x='week:N',
     y=alt.Y('cases_number',title="number of cases"),
     color=alt.Color('cases:N', scale=scale_mon, title='')
@@ -395,6 +412,16 @@ chart_mon = (bar_mon + line_std + band_std + line_avg).properties(
 )
 chart_mon
 # chart_mon.save(os.path.join(plot_dir,f"{iso3}_cases_histavg_{mon_end_date.strftime('%Y%m%d')}.svg"))
+```
+
+```python
+chart_mon2 = (bar_mon2 + line_std + band_std + line_avg).properties(
+    width=600,
+    height=300,
+    title = "Number of cases during 2023 and historical average"
+)
+
+chart_mon2
 ```
 
 ### Pneunomic cases

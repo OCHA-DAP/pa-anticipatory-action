@@ -50,8 +50,7 @@ def latest_plague_path(dir: Union[Path, str] = plague_raw_dir):
     for str in files:
         date_str = re.search(r"\d{4}-\d{2}-\d{2}", str)
         if date_str is not None:
-            date_str = date_str.group()
-            dt = date.fromisoformat(date_str)
+            dt = date.fromisoformat(date_str.group())
             if dt > date_max:
                 date_max = dt
                 path_max = str
