@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import geopandas as gpd
+import shutil
 import numpy as np
 import pandas as pd
 import requests
@@ -287,27 +288,30 @@ class ARC2:
         # merge to main and delete temporary files
         if not main:
             main_filepath = self._get_raw_filepath(main=True)
+            temp_filepath = self._get_raw_filepath(main=True, temp=True)
 
             logger.info(
                 f"Merging ARC2 data from {self.date_min:%d %b %Y} "
                 f"to {self.date_max:%d %b %Y} "
                 f"into main file: {main_filepath.name}."
             )
-
-            main_da = xr.open_dataarray(main_filepath)
-            raw_da = xr.open_dataarray(raw_filepath)
-            main_merge = xr.concat([main_da, raw_da], dim=T_COL)
-
-            # TODO: use these as temporary files rather
-            # than download then delete
-            raw_filepath.unlink()
+            # copy main over to copy and then unlink
+            shutil.copy(main_filepath, temp_filepath)
             main_filepath.unlink()
+
+            main_da = xr.open_dataarray(temp_filepath)
+            raw_da = xr.open_dataarray(raw_filepath)
+
+            main_merge = xr.concat([main_da, raw_da], dim=T_COL)
 
             # Ensuring fill value encoding is properly set in new
             # merged dataset
             main_merge.encoding["_FillValue"] = -999
            
             main_merge.to_netcdf(main_filepath)
+            raw_filepath.unlink()
+            temp_filepath.unlink()
+
 
     def _get_directory(self, dir: Union[Path, str]) -> Path:
         """
@@ -321,7 +325,7 @@ class ARC2:
         )
         return directory
 
-    def _get_raw_filepath(self, main: bool) -> Path:
+    def _get_raw_filepath(self, main: bool, temp: bool = False) -> Path:
         """
         Return filepath to raw ARC2 data for specific x
         and y bounds. All data stored within a single
@@ -339,7 +343,10 @@ class ARC2:
         directory = self._get_directory(RAW_DATA_DIR)
 
         if main:
-            end = "main"
+            if not temp:
+                end = "main"
+            else:
+                end = "main_copy.nc"
         else:
             end = f"{self.date_min:%d_%b_%Y}_{self.date_max:%d_%b_%Y}"
 
