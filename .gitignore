@@ -53,3 +53,4 @@ venv/
 
 # Logs
 geckodriver*.log
+*.ipynb
