@@ -6,10 +6,6 @@ From the country team the proposed trigger is:
 - Trigger #2 in July covering Aug-Sep-Oct. Threshold desired: 50%. 
 - Targeted Admin1s: Boucle de Mounhoun, Centre Nord, Sahel, Nord.
 
-This notebook explores if and when these triggers would be reached. Moreover, an exploration is done on how the raster data can be combined to come to one value for all 4 admin1s.
-
-<!-- - Trigger #1 in March covering Apr-May-June. Threshold desired: 40%.
-- Trigger #2 in July covering Aug-Sep-Oct. Threshold desired: 50%.  -->
 
 
 ```python
@@ -37,6 +33,7 @@ import re
 import matplotlib
 import calendar
 import hvplot.xarray
+from rasterio.enums import Resampling
 
 from pathlib import Path
 import sys
@@ -238,17 +235,6 @@ plt_colors = [
 
 
 ```python
-plt_raster_iri(
-    da_iri_dom_clip,
-    pub_mon=3,
-    lt=3,
-    plt_levels=plt_levels,
-    plt_colors=plt_colors,
-)
-```
-
-
-```python
 iri_clip_diff = iri_clip.sel(C=0) - iri_clip.sel(C=2)
 ```
 
@@ -280,202 +266,9 @@ iri_trig = iri_clip.sel(C=0).where(
 )
 ```
 
-
-```python
-plt_raster_iri(
-    iri_trig.prob,
-    pub_mon=3,
-    lt=3,
-    plt_levels=[1, 0],
-    plt_colors=[hdx_blue],
-    show_cbar=False,
-)
-```
-
-
-```python
-plt_raster_iri(
-    iri_clip_diff.prob,
-    pub_mon=3,
-    lt=3,
-    plt_levels=[-40, -20, -15, -10, -7, -5, -2, 2, 5, 10, 20, 40],
-    plt_colors=plt_colors_rev,
-)
-```
-
-
-```python
-plt_raster_iri(
-    iri_clip_diff.prob,
-    pub_mon=3,
-    lt=3,
-    plt_levels=[-40, -20, -15, -10, -7, -5, -2, 2, 5, 10, 20, 40],
-    plt_colors=plt_colors_rev,
-)
-```
-
-
-```python
-plt_raster_iri(
-    iri_clip.sel(C=0).prob,
-    pub_mon=3,
-    lt=3,
-    plt_levels=[0, 30, 35, 40, 45, 50, 60, 70, 100],
-    plt_colors=[
-        "#ffffff",
-        "#DDC0A6",
-        "#DB9D94",
-        "#fafa02",
-        "#e8b832",
-        "#d18132",
-        "#ab461e",
-        "#783200",
-    ],
-)
-```
-
-
-```python
-plt_raster_iri(
-    iri_clip.sel(C=2).prob,
-    pub_mon=3,
-    lt=3,
-    plt_levels=[0, 30, 35, 40, 45, 50, 60, 70, 100],
-    plt_colors=[
-        "#ffffff",
-        "#9e9ac8",
-        "#54278f",
-        "#d1f8cc",
-        "#acf8a0",
-        "#73bb6e",
-        "#3a82b3",
-        "#0e3bf4",
-    ],
-)
-```
-
-
-```python
-plt_raster_iri(
-    da_iri_dom_clip,
-    pub_mon=7,
-    lt=1,
-    plt_levels=plt_levels,
-    plt_colors=plt_colors,
-)
-```
-
 The same figure, but for the forecasts published in July with a {glue:text}`leadtime_jul` month leadtime are shown below
 
-
-```python
-dom_ds = xr.open_dataset(
-    os.path.join(
-        glb_data_exploration_dir, "iri", "iri_seasfor_tercile_dominant.nc"
-    ),
-    decode_times=False,
-    drop_variables="C",
-)
-dom_ds = dom_ds.rename({"X": "lon", "Y": "lat"})
-# often IRI latitude is flipped so check for that and invert if needed
-dom_ds = invert_latlon(dom_ds, lon_coord="lon", lat_coord="lat")
-dom_ds = change_longitude_range(dom_ds, lon_coord="lon")
-dom_ds = fix_calendar(dom_ds, timevar="F")
-dom_ds = xr.decode_cf(dom_ds)
-da_iri_dom_clip = (
-    dom_ds.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
-    .rio.write_crs("EPSG:4326")
-    .rio.clip(
-        gdf_adm1.geometry.apply(mapping), dom_ds.rio.crs, all_touched=True
-    )
-)
-levels = [-100, -70, -60, -50, -45, -40, 40, 45, 50, 60, 70, 100]
-# iri website bins
-# levels=[-100,-67.5,-57.5,-47.5,-42.5,-37.5,37.5,42.5,47.5,57.5,67.5,100]
-colors = [
-    "#783200",
-    "#ab461e",
-    "#d18132",
-    "#e8b832",
-    "#fafa02",
-    "#ffffff",
-    "#d1f8cc",
-    "#acf8a0",
-    "#73bb6e",
-    "#3a82b3",
-    "#0e3bf4",
-]
-g = (
-    da_iri_dom_clip.where(da_iri_dom_clip.F.dt.month.isin([7]), drop=True)
-    .sel(L=1)
-    .dominant.plot(
-        col="F",
-        col_wrap=5,
-        levels=levels,
-        colors=colors,
-        cbar_kwargs={
-            "orientation": "horizontal",
-            "shrink": 0.8,
-            "aspect": 40,
-            "pad": 0.1,
-            "ticks": levels,
-        },
-        figsize=(25, 7),
-    )
-)
-df_bound = gpd.read_file(adm1_bound_path)
-for ax in g.axes.flat:
-    df_bound.boundary.plot(linewidth=1, ax=ax, color="grey")
-    gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
-    ax.axis("off")
-
-g.fig.suptitle(
-    "Forecasts published in July with 1 month leadtime \n The subtitles indicate the publishing month"
-)
-# g.fig.tight_layout()
-plt.savefig(
-    os.path.join(
-        country_data_exploration_dir, "plots", "iri", "bfa_irifor_jul_l1.png"
-    )
-)
-```
-
 Some forecasts where we see a combination of below and above average are shown below. This is to guide the discussion on for which forecasts we would have wanted to trigger and for which we wouldn't
-
-
-```python
-g = (
-    da_iri_dom_clip.where(
-        da_iri_dom_clip.F.isin(
-            [
-                cftime.Datetime360Day(2021, 2, 16, 0, 0, 0, 0),
-                cftime.Datetime360Day(2017, 5, 16, 0, 0, 0, 0),
-                cftime.Datetime360Day(2017, 4, 16, 0, 0, 0, 0),
-            ]
-        ),
-        drop=True,
-    )
-    .sel(L=3)
-    .dominant.plot(
-        col="F",
-        col_wrap=3,
-        levels=levels,
-        colors=colors,
-        cbar_kwargs={
-            "orientation": "horizontal",
-            "shrink": 0.8,
-            "aspect": 40,
-            "pad": 0.1,
-            "ticks": levels,
-        },
-        figsize=(20, 10),
-    )
-)
-for ax in g.axes.flat:
-    df_bound.boundary.plot(linewidth=1, ax=ax, color="grey")
-    gdf_reg.boundary.plot(linewidth=1, ax=ax, color="red")
-    ax.axis("off")
-```
 
 
 ```python
@@ -487,12 +280,6 @@ iri_clip_reg_allt = iri_clip.rio.clip(gdf_reg["geometry"], all_touched=True)
 print(
     f"touching region: {iri_clip_reg_allt.sel(C=0,F='2017-03-16',L=1).squeeze().prob.count().values}"
 )
-```
-
-
-```python
-g = iri_clip_reg.sel(C=0, F="2017-03-16", L=1).squeeze().prob.plot()
-df_bound.boundary.plot(ax=g.axes, color="grey");
 ```
 
 
@@ -530,32 +317,19 @@ iri_clip_interp.rio.transform(recalc=True)
 
 
 ```python
-iri_clip_interp
+df_bound = gpd.read_file(adm1_bound_path)
 ```
 
 
 ```python
-# check that interpolated values look fine
-g = (
-    iri_clip_interp.where(iri_clip_interp.F.dt.month.isin([7]), drop=True)
-    .sel(L=1, C=0)
-    .prob.plot(
-        col="F",
-        col_wrap=3,
-        cmap=mpl.cm.YlOrRd,
-        cbar_kwargs={
-            "orientation": "horizontal",
-            "shrink": 0.8,
-            "aspect": 40,
-            "pad": 0.1,
-        },
-        figsize=(10, 10),
-    )
-)
-df_bound = gpd.read_file(adm1_bound_path)
-for ax in g.axes.flat:
-    df_bound.boundary.plot(linewidth=1, ax=ax, color="red")
-    ax.axis("off")
+g = iri_clip_reg.sel(C=0, F="2023-03-16", L=3).squeeze().prob.plot()
+df_bound.boundary.plot(ax=g.axes, color="grey");
+```
+
+
+```python
+g = iri_clip_reg.sel(C=0, F="2023-07-16", L=1).squeeze().prob.plot()
+df_bound.boundary.plot(ax=g.axes, color="grey");
 ```
 
 we select the region of interest, shown below
@@ -567,60 +341,42 @@ iri_interp_reg = iri_clip_interp.rio.clip(gdf_reg["geometry"])
 
 
 ```python
-g = (
-    iri_interp_reg.sel(C=0, F="2020-01-16", L=1)
-    .squeeze()
-    .prob.plot.imshow(
-        cmap=matplotlib.colors.ListedColormap([hdx_blue]),
-        figsize=(6, 10),
-        add_colorbar=False,
-    )
+# upsample the resolution in order to create a mask of our aoi
+resolution = 0.01
+mask_list = []
+for terc in iri_interp_reg.C.values:
+    for lt in iri_interp_reg.L.values:
+        da_terc_lt = iri_interp_reg.sel(C=terc, L=lt)
+        da_terc_lt_mask = da_terc_lt.rio.reproject(
+            da_terc_lt.rio.crs,
+            resolution=resolution,
+            resampling=Resampling.nearest,
+            nodata=np.nan,
+        )
+        mask_list.append(da_terc_lt_mask.expand_dims({"C": [terc], "L": [lt]}))
+da_iri_mask = (
+    xr.combine_by_coords(mask_list)
+    .rio.clip(gdf_reg["geometry"], all_touched=False)
+    .prob
 )
-df_bound.boundary.plot(ax=g.axes, color="grey")
-g.axes.set_title(f"Approximate mask")
-gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
-g.axes.axis("off");
+# reproject changes longitude and latitude name to x and y
+# so change back here
+da_iri_mask = da_iri_mask.rename({"x": "longitude", "y": "latitude"})
+da_iri_mask_bavg = da_iri_mask.sel(C=0)
 ```
 
 
 ```python
-
+# check that masking is done correctly
+g = da_iri_mask.sel(F="2023-03-16", L=3, C=0).plot()  # squeeze().plot()
+gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
 
 ```python
-iri_reg_centre = iri_clip.rio.clip(gdf_reg["geometry"])
-g = (
-    iri_reg_centre.sel(C=0, F="2020-01-16", L=1)
-    .squeeze()
-    .prob.plot.imshow(
-        cmap=matplotlib.colors.ListedColormap([hdx_blue]),
-        figsize=(6, 10),
-        add_colorbar=False,
-    )
-)
-df_bound.boundary.plot(ax=g.axes, color="grey")
-g.axes.set_title(f"All cells centering the region")
-gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
-g.axes.axis("off");
-```
-
-
-```python
-iri_allt_centre = iri_clip.rio.clip(gdf_reg["geometry"], all_touched=True)
-g = (
-    iri_allt_centre.sel(C=0, F="2020-01-16", L=1)
-    .squeeze()
-    .prob.plot.imshow(
-        cmap=matplotlib.colors.ListedColormap([hdx_blue]),
-        figsize=(6, 10),
-        add_colorbar=False,
-    )
-)
-df_bound.boundary.plot(ax=g.axes, color="grey")
-g.axes.set_title(f"All cells touching the region")
-gdf_reg.boundary.plot(linewidth=1, ax=g.axes, color="red")
-g.axes.axis("off");
+# check that masking is done correctly
+g = da_iri_mask.sel(F="2023-07-16", L=1, C=0).plot()  # squeeze().plot()
+gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
 
@@ -692,18 +448,6 @@ stats_region["F"] = pd.to_datetime(
     stats_region["F"].apply(lambda x: x.strftime("%Y-%m-%d"))
 )
 stats_region["month"] = stats_region.F.dt.month
-```
-
-
-```python
-# stats_region.to_csv(stats_reg_path,index=False)
-```
-
-
-```python
-len(stats_region[stats_region["40th_bavg_cell"] >= 10]) / len(
-    stats_region
-) * 100
 ```
 
 
@@ -782,105 +526,10 @@ max_prob_jul = stats_jul.max_cell.max()
 
 
 ```python
-glue("max_prob_mar", max_prob_mar)
-glue("max_prob_jul", max_prob_jul)
-glue("num_trig_mar", num_trig_mar)
-glue("num_trig_jul", num_trig_jul)
-glue("year_trig_mar", year_trig_mar)
-glue("year_trig_jul", year_trig_jul)
-glue("threshold_mar", threshold_mar)
-glue("threshold_jul", threshold_jul)
-```
-
-
-```python
-iri_interp_reg.sel(C=0).hvplot.violin(
-    "prob", by="L", color="L", cmap="Category20"
-).opts(ylabel="Probability below average")
-```
-
-
-```python
 iri_interp_reg_bavg_th = iri_interp_reg.where(
     iri_interp_reg.sel(C=0).prob >= 40
 )
 ```
-
-
-```python
-iri_interp_reg_bavg_th_diff = iri_interp_reg_bavg_th.sel(
-    C=0
-) - iri_interp_reg_bavg_th.sel(C=2)
-iri_interp_reg_bavg_th_diff.hvplot.violin(
-    "prob", by="L", color="L", cmap="Category20"
-).opts(ylabel="%bavg - %abv avg")
-```
-
-
-```python
-iri_interp_reg_diff = iri_interp_reg.sel(C=0) - iri_interp_reg.sel(C=2)
-iri_interp_reg_diff.hvplot.violin(
-    "prob", by="L", color="L", cmap="Category20"
-).opts(ylabel="Probability below average")
-```
-
-
-```python
-iri_interp_reg_diff.sel(F="2020-03", L=1).prob.plot()
-```
-
-
-```python
-iri_interp_reg.sel(C=0).hvplot.kde("prob", by="L", alpha=0.5)
-```
-
-
-```python
-iri_interp_reg_diff.hvplot.kde("prob", by="L", alpha=0.5)
-```
-
-NOTE: the plots below only have 5 data points so in my opinion, looking back, really back plots that shouldn't be used
-
-
-```python
-# plot distribution for forecasts with C=0 (=below average) for all months with leadtime = 3
-fig, ax = plt.subplots(figsize=(10, 5))
-g = sns.boxplot(
-    data=stats_region_bavg[stats_region_bavg.L == 3],
-    x="month",
-    y="max_cell",
-    ax=ax,
-    color="#007CE0",
-)
-ax.set_ylabel("Probability")
-ax.spines["right"].set_visible(False)
-ax.spines["top"].set_visible(False)
-ax.set_title("Leadtime = 3 months")
-ax.set_xlabel("Publication month");
-```
-
-
-```python
-# plot distribution for forecasts with C=0 (=below average) for all months with leadtime = 3
-fig, ax = plt.subplots(figsize=(10, 5))
-g = sns.boxplot(
-    data=stats_region_bavg[stats_region_bavg.L == 1],
-    x="month",
-    y="max_cell",
-    ax=ax,
-    color="#007CE0",
-)
-ax.set_ylabel("Probability")
-ax.spines["right"].set_visible(False)
-ax.spines["top"].set_visible(False)
-ax.set_title("Leadtime = 1 month")
-ax.set_xlabel("Publication month");
-```
-
-More specifically we are interested in March and July, with a leadtime of 3 and 1 month respectively. 
-The maximum values across all cells for the March forecasts has been {glue:text}`max_prob_mar:.2f`%, and for the July forecasts {glue:text}`max_prob_jul:.2f`% 
-This would mean that if we would take the max cell as aggregation method, the threshold of {glue:text}`threshold_mar` for March would have been reached {glue:text}`num_trig_mar` times {glue:text}`year_trig_mar`. 
-For July the threshold of {glue:text}`threshold_jul` would have been reached {glue:text}`num_trig_jul` times{glue:text}`year_trig_jul`."
 
 
 ```python
@@ -928,93 +577,6 @@ perc_for_40th = (
 glue("perc_for_maxcell_40th", perc_for_40th)
 ```
 
-Across all months, {glue:text}`perc_for_maxcell_40th:.2f`% of the forecasts with 1 month leadtime had a >=40% probability of below average rainfall in at least one cell across the **whole** country
-
-
-```python
-# plot distribution for forecasts with C=0 (=below average), for all months
-fig, ax = plt.subplots(figsize=(10, 5))
-g = sns.boxplot(
-    data=stats_country[(stats_country.C == 0) & (stats_country.L == 1)],
-    x="month",
-    y="max_cell",
-    ax=ax,
-    color="#007CE0",
-)
-ax.set_ylabel("Probability")
-ax.spines["right"].set_visible(False)
-ax.spines["top"].set_visible(False)
-ax.set_title("Leadtime = 3 months")
-ax.set_xlabel("Publication month")
-```
-
-### Methods of aggregation
-Note: all these computations only cover the region of interest
-
-
-```python
-max_prob_mar = stats_mar["max_cell"].max()
-num_trig_mar_mean = len(stats_mar.loc[stats_mar["mean_cell"] >= threshold_mar])
-year_trig_mar_mean = comb_list_string(
-    [
-        str(y)
-        for y in stats_mar.loc[
-            stats_mar["mean_cell"] >= threshold_mar
-        ].F.dt.year.unique()
-    ]
-)
-num_trig_mar_perc10 = len(
-    stats_mar.loc[stats_mar["10quant_cell"] >= threshold_mar]
-)
-year_trig_mar_perc10 = comb_list_string(
-    [
-        str(y)
-        for y in stats_mar.loc[
-            stats_mar["10quant_cell"] >= threshold_mar
-        ].F.dt.year.unique()
-    ]
-)
-max_perc40_mar = stats_mar["40percth_cell"].max()
-glue("num_trig_mar_mean", num_trig_mar_mean)
-glue("year_trig_mar_mean", year_trig_mar_mean)
-glue("num_trig_mar_perc10", num_trig_mar_perc10)
-glue("year_trig_mar_perc10", year_trig_mar_perc10)
-glue("max_perc40_mar", max_perc40_mar)
-```
-
-While taking the max cell is the most extreme method of aggregation, we have many other possiblities. Such as looking at the mean, or at a percentage of cells. 
-<!-- For the July forecast we wouldn't trigger with any method of aggregation, since we already didn't trigger with the max methodology.  -->
-
-For March, when using the mean method aggregation, the trigger would have been met {glue:text}`num_trig_mar_mean` times{glue:text}`year_trig_mar_mean`.
-
-Below the distribution of the percentage of the area with >=40% probability is shown for March. From here it can be seen that the maximum percentage is {glue:text}`max_perc40_mar:.2f`%.
-We look at the distribution of the percentage of the area with >=40% probability of below avg rainfall for the admins of interest, across all forecasts with a leadtime of {glue:text}`leadtime`. 
-When requiring 10% of cells to be above 40% this would be met {glue:text}`num_trig_mar_perc10` times{glue:text}`year_trig_mar_perc10`.
-
-
-```python
-# plot distribution for forecasts with C=0 (=below average) and L=1, for March
-g = sns.displot(stats_mar["40percth_cell"], color="#007CE0", binwidth=1)
-```
-
-The plot below shows the occurences across all months and all leadtimes where at least 1% of the cells had a probability of at least 40% for below average rainfall. We can see that the occurrence of this is pretty rare.
-
-
-```python
-# plot distribution for forecasts with C=0 (=below average) and L=1, for all months
-g = sns.displot(
-    stats_region_bavg.loc[
-        stats_region_bavg["40percth_cell"] >= 1, "40percth_cell"
-    ],
-    color="#007CE0",
-    binwidth=3,
-)
-```
-
-<!-- While we can include the spatial severity in the trigger threshold, we should also take into account that the spatial uncertainty of seasonal forecasts is large. 
-
-Given the size of the area of interest, it might therefore be better to only focus on whether any cell within that region reached the probability threshold. However, in this case 40% might be too sensitive of a trigger -->
-
 ### Examine dominant tercile and 40% threshold
 Besides setting a threshold on the below average tercile, we also want to be sure that the below average tercile is the dominant tercile. We therefore require, at the pixel level that 
 probability below average >= (probability above average + 5%)
@@ -1053,14 +615,6 @@ stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"] >= 10]
 
 
 ```python
-# percentage of forecasts that met requirement
-len(
-    stats_region_bavg_ltmar[stats_region_bavg_ltmar["40th_bavg_cell"] >= 10]
-) / len(stats_region_bavg_ltmar.F.unique()) * 100
-```
-
-
-```python
 # across all months with leadtime_jul
 stats_region_bavg_ltjul = stats_region_bavg.loc[
     (stats_region_bavg.L == leadtime_jul)
@@ -1070,24 +624,11 @@ stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"] >= 10]
 
 
 ```python
-# percentage of forecasts that met requirement
-len(
-    stats_region_bavg_ltjul[stats_region_bavg_ltjul["40th_bavg_cell"] >= 10]
-) / len(stats_region_bavg_ltjul.F.unique()) * 100
-```
-
-
-```python
 iri_interp_reg_trig = iri_interp_reg.sel(C=0).where(
     (iri_interp_reg.sel(C=0).prob >= 40)
     & (iri_interp_reg.sel(C=0) >= iri_interp_reg.sel(C=2) + 5)
 )
 ```
-
-### Examine ONLY dominant region
-Understand how often it occurrs that the 10 percentile threshold is at least x% higher for below than above average
-
-As can be seen this occurs the same number of times as when below average probability is at least 40%, but the dates don't fully overlap
 
 
 ```python
@@ -1133,90 +674,10 @@ stats_region_merged_ltmar[
 
 
 ```python
-stats_region_merged_ltjul = stats_region_merged[
-    stats_region_merged.L == leadtime_jul
-]
+stats_region_merged[stats_region_merged["F"] == "2023-03-16"]
 ```
 
 
 ```python
-stats_region_merged_ltjul[
-    stats_region_merged_ltjul["diff_bel_abv"] >= diff_threshold
-]
-```
-
-### Examine ONLY dominant pixel
-Understand how often it occurrs that at least 10% of the pixels have x% higher probability for below than above average
-
-As can be seen this occurrs much more often
-
-
-```python
-def compute_zonal_stats_xarray_dominant(
-    raster,
-    shapefile,
-    lon_coord="longitude",
-    lat_coord="latitude",
-    var_name="prob",
-):
-    raster_clip = raster.rio.set_spatial_dims(
-        x_dim=lon_coord, y_dim=lat_coord
-    ).rio.clip(
-        shapefile.geometry.apply(mapping), raster.rio.crs, all_touched=False
-    )
-    raster_diff_bel_abv = raster_clip.sel(C=0) - raster_clip.sel(C=2)
-    grid_quant90 = raster_diff_bel_abv.quantile(
-        0.9, dim=[lon_coord, lat_coord]
-    ).rename({var_name: "10quant_cell"})
-    zonal_stats_xr = xr.merge([grid_quant90])
-    zonal_stats_df = zonal_stats_xr.to_dataframe()
-    zonal_stats_df = zonal_stats_df.reset_index()
-    return zonal_stats_df
-```
-
-
-```python
-stats_dom = compute_zonal_stats_xarray_dominant(iri_clip_interp, gdf_reg)
-stats_dom["F"] = pd.to_datetime(
-    stats_dom["F"].apply(lambda x: x.strftime("%Y-%m-%d"))
-)
-stats_dom["month"] = stats_dom.F.dt.month
-```
-
-
-```python
-len(
-    stats_dom[(stats_dom["10quant_cell"] >= 5) & (stats_dom.L == leadtime_mar)]
-)
-```
-
-
-```python
-len(
-    stats_dom[(stats_dom["10quant_cell"] >= 5) & (stats_dom.L == leadtime_mar)]
-) / len(stats_dom.F.unique())
-```
-
-
-```python
-len(
-    stats_dom[(stats_dom["10quant_cell"] >= 5) & (stats_dom.L == leadtime_jul)]
-)
-```
-
-
-```python
-len(
-    stats_dom[(stats_dom["10quant_cell"] >= 5) & (stats_dom.L == leadtime_jul)]
-) / len(stats_dom.F.unique())
-```
-
-
-```python
-stats_dom[(stats_dom["10quant_cell"] >= 10) & (stats_dom.L == leadtime_mar)]
-```
-
-
-```python
-stats_dom[(stats_dom["10quant_cell"] >= 5) & (stats_dom.L == leadtime_mar)]
+stats_region_merged[stats_region_merged["F"] == "2023-07-16"]
 ```
