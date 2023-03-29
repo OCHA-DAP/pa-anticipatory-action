@@ -185,7 +185,7 @@ df_floodscan_reg_rainy = df_floodscan_reg.loc[(df_floodscan_reg['month'] >= 7) &
 ```
 
 ```python
-# df_floodscan_reg.to_csv(country_data_exploration_dir/'floodscan'/'ssd_floodscan_roi.csv')
+df_floodscan_reg.to_csv(country_data_exploration_dir/'floodscan'/'ssd_floodscan_roi.csv')
 ```
 
 ```python

@@ -12,8 +12,8 @@ class Config:
     # general directories
     RAW_DIR = "raw"
     PROCESSED_DIR = "processed"
-    DATA_DIR = Path(os.environ["AA_DATA_DIR"]) / "public"
-    DATA_PRIVATE_DIR = Path(os.environ["AA_DATA_DIR"]) / "private"
+    DATA_DIR = Path(os.environ["OAP_DATA_DIR"]) / "public"
+    DATA_PRIVATE_DIR = Path(os.environ["OAP_DATA_DIR"]) / "private"
     ANALYSES_DIR = "analyses"
 
     def __init__(self):

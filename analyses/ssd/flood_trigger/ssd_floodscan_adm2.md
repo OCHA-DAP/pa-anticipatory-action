@@ -78,29 +78,37 @@ adms+rivers
 # #clip to country
 # #this takes long, so only do when not saved the file yet
 # #read floodscan data
-# fs = floodscan.Floodscan()
-# fs_raw = fs.read_raw_dataset()
-# fs_clip = (fs_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
-#            .rio.write_crs("EPSG:4326")
-#            .rio.clip(gdf_adm2["geometry"], all_touched=True))
+fs = floodscan.Floodscan()
+fs_raw = fs.read_raw_dataset()
+fs_clip = (fs_raw.rio.set_spatial_dims(x_dim="lon", y_dim="lat")
+           .rio.write_crs("EPSG:4326")
+           .rio.clip(gdf_adm2["geometry"], all_touched=True))
+```
+
+```python
+fs_raw
 ```
 
 ```python
 # #somehow cannot save the file with these attributes
-# fs_clip.SFED_AREA.attrs.pop('grid_mapping')
-# fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
-# fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
-# fs_clip.to_netcdf(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
-```
-
-```python
-fs_clip=xr.load_dataset(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
-#I dont fully understand why, these grid mappings re-occur and what they mean
-#but if having them, later on getting crs problems when computing stats
 fs_clip.SFED_AREA.attrs.pop('grid_mapping')
 fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
 fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
-fs_clip=fs_clip.rio.write_crs("EPSG:4326",inplace=True)
+fs_clip.to_netcdf(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
+```
+
+```python
+fs_clip.sel(time="2021").max(dim='time')
+```
+
+```python
+# fs_clip=xr.load_dataset(country_data_exploration_dir/'floodscan'/f'{iso3}_floodscan.nc')
+# #I dont fully understand why, these grid mappings re-occur and what they mean
+# #but if having them, later on getting crs problems when computing stats
+# fs_clip.SFED_AREA.attrs.pop('grid_mapping')
+# fs_clip.NDT_SFED_AREA.attrs.pop('grid_mapping')
+# fs_clip.LWMASK_AREA.attrs.pop('grid_mapping')
+# fs_clip=fs_clip.rio.write_crs("EPSG:4326",inplace=True)
 ```
 
 We plot the data. We can see that the resolution is high (300 arcseconds = 0.083 degrees). We therefore decide that when analyzing the data at the admin2 level, it is fine to only look at the cells with their centre within the admin2. 

@@ -17,7 +17,7 @@ class Config:
     PROCESSED_DIR = "processed"
     PUBLIC_DIR = "public"
     PRIVATE_DIR = "private"
-    DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
+    DATA_DIR = os.path.join(os.environ["OAP_DATA_DIR"])
     GLOBAL_ISO3 = "glb"
     PLOT_DIR = "plots"
 
