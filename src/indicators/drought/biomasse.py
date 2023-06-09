@@ -78,7 +78,7 @@ def download_dmp(admin_level: AdminArgument = "ADM2") -> None:
     None
     """
     _check_admin(admin_level)
-    url = _BASE_URL.format(admin=admin_level)
+    url = _BASE_URL.format(admin_level=admin_level)
     raw_path = _get_raw_path(admin_level)
     download_ftp(url=url, save_path=raw_path)
 
