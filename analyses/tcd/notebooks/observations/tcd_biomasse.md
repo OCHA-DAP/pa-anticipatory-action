@@ -41,6 +41,10 @@ bm_df = bm.aggregate_biomasse(
 )
 ```
 
-```python
+We are activating if the `biomasse_anomaly` is below 80 in the 24th dekad of 2023. We can quickly check that below.
 
+```python
+bm_df
 ```
+
+

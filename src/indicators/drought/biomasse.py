@@ -35,11 +35,11 @@ import rioxarray
 from src.utils_general.utils import download_ftp
 
 _BASE_URL = (
-    "http://80.69.76.253:8080/geoserver"
+    "http://213.206.230.89:8080/geoserver"
     "/Biomass/wfs?&REQUEST="
     "GetFeature&SERVICE=wfs&VERSION=1.1.0"
     "&TYPENAME=WA_DMP_{admin_level}_ef_v0&"
-    "outputformat=CSV&srsName=EPSG:4326"
+    "outputformat=csv&srsName=EPSG:4326"
 )
 
 _RAW_FILENAME = "WA_DMP_{admin_level}_ef_v0.csv"
