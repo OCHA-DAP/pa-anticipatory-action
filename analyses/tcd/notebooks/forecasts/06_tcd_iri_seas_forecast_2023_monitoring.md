@@ -1,15 +1,14 @@
 # IRI forecast for 2023 monitoring in Chad
 Using a threshold of 42.5% over 20% of the area as this is expected to be reached from time to time but not too often. The 42.5% is specifically set to match with the bins of [IRI's graphics](https://iri.columbia.edu/our-expertise/climate/forecasts/seasonal-climate-forecasts/). 
 
-#### Load libraries and set global constants
 
+#### Load libraries and set global constants
 
 ```python
 %load_ext autoreload
 %autoreload 2
 %load_ext jupyter_black
 ```
-
 
 ```python
 import geopandas as gpd
@@ -41,17 +40,14 @@ from src.indicators.drought.iri_rainfallforecast import (
 from src.utils_general.raster_manipulation import compute_raster_statistics
 ```
 
-
 ```python
 mon_date = "2023-03-16"
 lead_time = 4
 ```
 
-
 ```python
 hdx_blue = "#007ce0"
 ```
-
 
 ```python
 iso3 = "tcd"
@@ -76,7 +72,6 @@ adm2_path = (
 
 #### Set variables
 
-
 ```python
 gdf_adm1 = gpd.read_file(adm1_bound_path)
 gdf_adm2 = gpd.read_file(adm2_path)
@@ -86,13 +81,14 @@ gdf_aoi = gdf_adm2[gdf_adm2[incl_adm_col] == True]
 
 ## Inspect forecasts
 
+
 ### Threshold
+
 
 
 Due to the limited data availability it is very hard to determine the threshold objectively. We do advise against the 60% threshold since even globally this phenomenon that seems too rare for our purpose. 
 
 However a threshold anywhere between 40 and 50 could be reasonable. We experimented with these different thresholds. For now we propose a threshold of 42.5%. This because we estimate it to be already quite rare, in combination with the 20% of the area requirement, but at the same time we estimate it to be possible to occur. The reason we set it to 42.5 specifically is because this matches the IRI bins. Thus people can easily inspect the forecasts themselves on the maproom.
-
 
 ```python
 # C indicates the tercile (below-average, normal, or above-average).
@@ -106,13 +102,11 @@ da_iri_allt = da_iri.rio.clip(gdf_aoi["geometry"], all_touched=True)
 da_iri_allt_bavg = da_iri_allt.sel(C=0)
 ```
 
-
 ```python
 # check that all touching is done correctly
 g = da_iri_allt.sel(F="2023-03-16", L=4, C=0).plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
-
 
 ```python
 # check that all touching is done correctly
@@ -120,20 +114,17 @@ g = da_iri_allt.sel(F="2023-04-16", L=3, C=0).plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
-
 ```python
 # check that all touching is done correctly
 g = da_iri_allt.sel(F="2023-05-16", L=2, C=0).plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
-
 ```python
 # check that all touching is done correctly
 g = da_iri_allt.sel(F="2023-06-16", L=1, C=0).plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
-
 
 ```python
 # upsample the resolution in order to create a mask of our aoi
@@ -160,13 +151,11 @@ da_iri_mask = da_iri_mask.rename({"x": "longitude", "y": "latitude"})
 da_iri_mask_bavg = da_iri_mask.sel(C=0)
 ```
 
-
 ```python
 # check that masking is done correctly
 g = da_iri_mask.sel(F="2023-03-16", L=4, C=0).plot()  # squeeze().plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
-
 
 ```python
 # check that masking is done correctly
@@ -174,13 +163,11 @@ g = da_iri_mask.sel(F="2023-04-16", L=3, C=0).plot()  # squeeze().plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
 
-
 ```python
 # check that masking is done correctly
 g = da_iri_mask.sel(F="2023-05-16", L=2, C=0).plot()  # squeeze().plot()
 gdf_adm1.boundary.plot(ax=g.axes)
 ```
-
 
 ```python
 # check that masking is done correctly
@@ -197,7 +184,6 @@ As discussed above we set the probability of below average to 42.5% (but experim
 
 For now we set the minimum percentage of the area that should reach the threshold to 20% as that was proposed by the Atelier. This seems reasonable to us as it is a substantial area thus possibly indicating widespread drought. At the same time requiring a larger percentage significantly lowers the chances of meeting the trigger, as we often see that extreme values are only forecasted in a smaller area.
 
-
 ```python
 # % probability of bavg
 threshold = 42.5
@@ -205,12 +191,10 @@ threshold = 42.5
 perc_area = 20
 ```
 
-
 ```python
 adm0_col = "admin0Name"
 pcode0_col = "admin0Pcod"
 ```
-
 
 ```python
 # compute stats
@@ -252,7 +236,30 @@ df_stats_reg_bavg["F"] = pd.to_datetime(
 df_stats_reg_bavg["month"] = df_stats_reg_bavg.F.dt.month
 ```
 
-
 ```python
 df_stats_reg_bavg
+```
+
+```python
+df_stats_reg_bavg[
+    (df_stats_reg_bavg["F"] == "2023-03-16") & (df_stats_reg_bavg["L"] == 4.0)
+]
+```
+
+```python
+df_stats_reg_bavg[
+    (df_stats_reg_bavg["F"] == "2023-04-16") & (df_stats_reg_bavg["L"] == 3.0)
+]
+```
+
+```python
+df_stats_reg_bavg[
+    (df_stats_reg_bavg["F"] == "2023-05-16") & (df_stats_reg_bavg["L"] == 2.0)
+]
+```
+
+```python
+df_stats_reg_bavg[
+    (df_stats_reg_bavg["F"] == "2023-06-16") & (df_stats_reg_bavg["L"] == 1.0)
+]
 ```
