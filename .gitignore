@@ -53,3 +53,9 @@ venv/
 
 # Logs
 geckodriver*.log
+
+# Pyenv
+.python-version
+
+*.egg-info
+
