@@ -59,3 +59,5 @@ geckodriver*.log
 
 *.egg-info
 
+.env
+
