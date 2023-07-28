@@ -10,8 +10,10 @@ jupyter:
   kernelspec:
     display_name: pa-anticipatory-action
     language: python
-    name: globaltropicalcyclonemodel copy
+    name: pa-anticipatory-action
 ---
+
+# Historical activations
 
 ```python
 %load_ext jupyter_black
@@ -43,7 +45,18 @@ EXP_DIR = AA_DATA_DIR / "public/exploration/ner"
 COLORS = px.colors.qualitative.Pastel
 ```
 
+## Downloading data
+1. Go to maproom: https://iridl.ldeo.columbia.edu/fbfmaproom2/niger
+2. Copy + paste values into sheet: https://docs.google.com/spreadsheets/d/1y9a4eNtMNJR6XQ0xSO-0W-Rr80fS2NFobDkc9SULhxU/edit#gid=0
+3. Download sheet as .csv into EXP_DIR
+
+
+## Processing data year-by-year
+
 ```python
+# BASELINE = "enacts-precip-jas"
+BASELINE = "bad-year-v2"
+
 filepath = EXP_DIR / "iri/ner_trigger_comparison - Sheet1.csv"
 df = pd.read_csv(filepath, header=None, index_col=0)
 df = df.T
@@ -66,7 +79,7 @@ df = df.replace(["1", "yes"], True).replace(["0", "no"], False)
 packages = [1, 2]
 thresholds = [20, 35]
 pred_months = range(1, 7)
-base_col = next(col for col in df.columns if "type:bad-year-v2" in col)
+base_col = next(col for col in df.columns if BASELINE in col)
 
 for t in thresholds:
     t_cols = [col for col in df.columns if f"threshold:{t}" in col]
@@ -136,13 +149,16 @@ for t in thresholds:
     cols = [out_col, *obsv_cols]
     df[f"consec_pred_obsv|threshold:{t}|package:either"] = df[cols].any(axis=1)
 
+df.to_csv(EXP_DIR / "historical_triggers.csv")
+```
 
+## Checking specific triggers
+
+```python
 cols = [
     col
     for col in df.columns
-    if (
-        ("all_pred" in col) or ("Observational" in col) or ("bad-years" in col)
-    )
+    if (("consec" in col) or ("Observational" in col) or ("bad-years" in col))
     and ("threshold:35" in col)
 ]
 cols.append(base_col)
@@ -150,13 +166,13 @@ df_disp = df[cols]
 display(
     df_disp.T.style.applymap(lambda x: "background-color : red" if x else "")
 )
-
-df.to_csv(EXP_DIR / "historical_triggers.csv")
 ```
 
-```python
-# https://en.wikipedia.org/wiki/Confusion_matrix
+## Calculating confusion matrix and plotting comparison
+https://en.wikipedia.org/wiki/Confusion_matrix
 
+```python
+# set cutoff year to exclude weird years (1991-1997)
 for CUTOFF_YEAR in [1991, 1998]:
     df_cutoff = df[df.index >= CUTOFF_YEAR]
 
@@ -175,6 +191,7 @@ for CUTOFF_YEAR in [1991, 1998]:
         ],
     )
 
+    # calculate basic confusion matrix outputs
     for col in df_cutoff.columns:
         df_conf = pd.crosstab(
             df_cutoff[base_col], df_cutoff[col], dropna=False
@@ -210,6 +227,7 @@ for CUTOFF_YEAR in [1991, 1998]:
 
     df_agg = df_agg.astype(float)
 
+    # calculate additional confusion matrix outputs
     df_agg["P"] = df_agg["TP"] + df_agg["FN"]
     df_agg["N"] = df_agg["FP"] + df_agg["TN"]
     df_agg["PP"] = df_agg["TP"] + df_agg["FP"]
@@ -224,7 +242,7 @@ for CUTOFF_YEAR in [1991, 1998]:
     df_agg["NPV"] = df_agg["TN"] / df_agg["PN"]
     df_agg["FOR"] = 1 - df_agg["NPV"]
 
-    display(df_agg[df_agg["corr"] > 0].sort_values("corr")["corr"])
+    display(df_agg["activation_prob"])
 
     # I think MMC is just the same as the correlation
     df_agg["MMC"] = np.sqrt(
@@ -232,20 +250,24 @@ for CUTOFF_YEAR in [1991, 1998]:
     ) - np.sqrt(df_agg[["FNR", "FPR", "FOR", "FDR"]].prod(axis=1))
 
     df_agg.to_csv(
-        EXP_DIR / f"historical_triggers_summary_since{CUTOFF_YEAR}.csv"
+        EXP_DIR
+        / f"historical_triggers_summary_since{CUTOFF_YEAR}_against_{BASELINE}.csv"
     )
 
     plot_packages = ["either", "1", "2"]
     #     plot_packages = ["either"]
 
+    # plot by package
     for p in plot_packages:
         plot_cols = [
             f"pred_obsv|threshold:35|package:{p}",
             f"consec_pred_obsv|threshold:35|package:{p}",
+            f"consec_pred|threshold:35|package:{p}",
             #             f"all_pred_obsv|threshold:35|package:{p}",
             #             f"consec_pred|threshold:35|package:{p}",
             f"pred_obsv|threshold:20|package:{p}",
             f"consec_pred_obsv|threshold:20|package:{p}",
+            f"consec_pred|threshold:20|package:{p}",
             #             f"all_pred_obsv|threshold:20|package:{p}",
             #             f"consec_pred|threshold:20|package:{p}",
         ]
@@ -258,6 +280,7 @@ for CUTOFF_YEAR in [1991, 1998]:
             [
                 "N'importe<br>quel mois",
                 "2 mois<br>consec.",
+                "N'importe<br>quel mois<br>SANS obsv"
                 #                 "Tous les 3<br>mois",
                 #                 "2 mois<br>consec.<br>sans<br>observationel",
             ]
@@ -270,7 +293,8 @@ for CUTOFF_YEAR in [1991, 1998]:
         fig = go.Figure()
         fig.update_layout(
             template="simple_white",
-            title_text=f"Activations depuis {CUTOFF_YEAR} da la fenêtre: {p}",
+            title_text=f"Activations depuis {CUTOFF_YEAR} da la fenêtre: {p}<br>"
+            f"<sup>comparé avec {BASELINE} comme baseline</sup>",
         )
         fig.add_trace(
             go.Bar(
@@ -296,7 +320,7 @@ for CUTOFF_YEAR in [1991, 1998]:
             go.Bar(
                 x=x_axes,
                 y=df_plot["corr"],
-                name="Corrélation avec bad-years-v2",
+                name=f"Corrélation avec {BASELINE}",
                 text=df_plot["corr"].round(2),
                 textposition="auto",
                 marker_color=COLORS[2],
@@ -314,15 +338,11 @@ for CUTOFF_YEAR in [1991, 1998]:
     )
     fig.update_layout(
         template="simple_white",
-        title_text=f"Compromis entre taux de détection et taux d'activation (depuis {CUTOFF_YEAR})",
+        title_text=f"Compromis entre taux de détection et taux d'activation (depuis {CUTOFF_YEAR})<br>",
     )
     fig.update_yaxes(title_text="Taux de détection")
     fig.update_xaxes(title_text="Taux d'activation")
     fig.show()
-```
-
-```python
-
 ```
 
 ```python

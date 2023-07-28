@@ -29,7 +29,7 @@ __MACOSX/
 # Jupyter Notebook
 .ipynb_checkpoints
 #we are only committing .md files, if a .ipynb is needed on the repo you can add it with the -f flag
-.ipynb
+*.ipynb
 
 # R files
 .Rproj.user
