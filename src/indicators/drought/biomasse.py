@@ -38,7 +38,7 @@ _BASE_URL = (
     "http://213.206.230.89:8080/geoserver"
     "/Biomass/wfs?&REQUEST="
     "GetFeature&SERVICE=wfs&VERSION=1.1.0"
-    "&TYPENAME=WA_DMP_{admin_level}_ef_v0&"
+    "&TYPENAME=WA_DMP_{admin_level}_ef_v1&"
     "outputformat=csv&srsName=EPSG:4326"
 )
 
