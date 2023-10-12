@@ -7,7 +7,8 @@
 from pathlib import Path
 import sys
 import os
-
+# quick fix for changing env variables from AA to OAP
+os.environ["AA_DATA_DIR"] = os.environ["OAP_DATA_DIR"]
 import geopandas as gpd
 
 path_mod = f"{Path(os.path.dirname(os.path.abspath(''))).parents[2]}/"
@@ -30,8 +31,8 @@ import src.indicators.drought.biomasse as bm
 This is just the code for downloading and procesing the Biomasse data, then aggregating to a specific set of admin codes (our region of interest in Chad. Additional analysis and exploration is done within `biomasse_exploration.R`.
 
 ```python
-# bm.download_dmp()
-# dmp = bm.calculate_biomasse(admin_level="ADM2")
+bm.download_dmp()
+dmp = bm.calculate_biomasse(admin_level="ADM2")
 gdf_adm2 = gpd.read_file(adm2_bound_path)
 gdf_reg = gdf_adm2[gdf_adm2.area_of_interest == True]
 bm_df = bm.aggregate_biomasse(
@@ -39,3 +40,11 @@ bm_df = bm.aggregate_biomasse(
     iso3 = "tcd"
 )
 ```
+
+We are activating if the `biomasse_anomaly` is below 80 in the 24th dekad of 2023. We can quickly check that below.
+
+```python
+bm_df
+```
+
+

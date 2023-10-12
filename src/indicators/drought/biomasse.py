@@ -35,11 +35,11 @@ import rioxarray
 from src.utils_general.utils import download_ftp
 
 _BASE_URL = (
-    "http://80.69.76.253:8080/geoserver"
+    "http://213.206.230.89:8080/geoserver"
     "/Biomass/wfs?&REQUEST="
     "GetFeature&SERVICE=wfs&VERSION=1.1.0"
-    "&TYPENAME=WA_DMP_{admin_level}_ef_v0&"
-    "outputformat=CSV&srsName=EPSG:4326"
+    "&TYPENAME=WA_DMP_{admin_level}_ef_v1&"
+    "outputformat=csv&srsName=EPSG:4326"
 )
 
 _RAW_FILENAME = "WA_DMP_{admin_level}_ef_v0.csv"
@@ -78,7 +78,7 @@ def download_dmp(admin_level: AdminArgument = "ADM2") -> None:
     None
     """
     _check_admin(admin_level)
-    url = _BASE_URL.format(admin=admin_level)
+    url = _BASE_URL.format(admin_level=admin_level)
     raw_path = _get_raw_path(admin_level)
     download_ftp(url=url, save_path=raw_path)
 
