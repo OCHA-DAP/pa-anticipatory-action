@@ -1,6 +1,8 @@
 ---
-title: '<img src="https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX" style="height:40px;float:left;margin:10px" /><img src="https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW" style="height:50px;float:left;margin:10px" />'
-pagetitle: 'AA Trigger Report'
+title: "<img src=\"https://drive.google.com/uc?id=118y5T73-iSUZoAMtoJGddxq9QzD_GDKX\"
+  style=\"height:40px;float:left;margin:10px\" /><img src=\"https://drive.google.com/uc?id=1fHQUzF3ZjaoHj9KQ33-94dK_X1hcmjzW\"
+  style=\"height:50px;float:left;margin:10px\" />"
+pagetitle: AA Trigger Report
 output:
   html_document:
     css: style.css
@@ -18,6 +20,9 @@ output:
     toc_float: yes
     toc_depth: '4'
     df_print: paged
+  pdf_document:
+    toc: no
+    toc_depth: '4'
 editor_options:
   chunk_output_type: console
 ---
@@ -29,47 +34,104 @@ editor_options:
 }
 </style>
 
+```{r README, echo = FALSE, message = FALSE, warning = FALSE}
 
-```{r hard-coded values, echo = FALSE, message = FALSE, warning = FALSE}
-### Make sure the performance metrics and learning table files are in the folder sister to the Rmd file
-### Create a "plots" folder sister to RMD file
-### Update this code chunk before knitting
-### Adjust the number of triggers throughout the Rmd, as needed
-### Manually enter the text in this Rmd under Data Sources, Analysis, and Monitoring & Governance sections
+### NOTE: The template is set up for two 3-timepoint predictive triggers and a 1-timepoint observational trigger
+### NOTE: Performance metrics and their CIs should have been generated separately before the trigger report can be produced.
+### NOTE: A "trigger" is tied to a funding+activity package and therefore can include multiple timepoints.
+
+## ON DATA FOLDER ON GDRIVE
+# Create a trigger_report folder under DATA_DIR > /private/exploration/{country_pcode3/trigger_performance}
+# Create a "plots" folder under `trigger_performance`
+# Save `{country_iso3_code}_perf_metrics_table_ci_0.68.csv` and `{country_iso3_code}_perf_metrics_table_ci_0.95.csv` in the trigger_report folder on DATA_DIR
+# Copy the dummy_learning_table_for_template.csv file to the trigger_report folder on DATA_DIR; remove 'dummy" and "for_template" from filename; add the 3-letter code for the country at the very beginning of the filename (eg: ner_perf_metrics_table.csv)
+
+## IN GITHUB REPO
+# Make sure a country-specific RProj file exists that is child to the country folder under `pa-anticipatory-action/analyses/` or at the top level in a project-specific repo
+# Copy these files from country_template/docs to a folder `docs` in a sister position to the Rproj file and in which the Rmd lives: header.html, style.css, plotAtvCI.R, explanatory_ci.png, plotTradeoffCI.R
 
 
-country_name <- "Country Name"
-shock <- "Shock"
-shock_return_period <- "1 in X years"
-nbr_hist_shocks <-"X shocks"
-hist_period <- "XXXX - XXXX" # eg: 1980 - 2021
-perf_metrics_filename <- "dummy_perf_metrics_table_for_template.csv" # include path if not sister to Rmd
-learning_table_filename <- "dummy_learning_table_for_template.csv" # include path if not sister to Rmd
+## PREPARE THE REPORT
+# Update the "hard-coded-values" code chunk
+# Remove or adjust the "country-specific" chunk (chunk 8) as needed
+# If there are fewer or more than 3 triggers and/or fewer or more than 2 packages: Adjust the number of triggers and/or Packages throughout the Rmd (review the snapshot table and activation table carefully.)
+# Update the tables esp filenames and column names (Chunk 14 and 15)
+# Adjust the Annex as needed (number of timepoints or column labels) or remove it altogether if no trigger has more than 1 activation timepoint
+# Knit
+```
+
+```{r hard-coded-values, echo = FALSE, message = FALSE, warning = FALSE}
+country_name <- "" # eg: Niger
+country_pcode3 <- "" # eg: ner
+shock <- "" # eg: Drought
+nbr_hist_shocks <- 1 # Is a number eg: 1
 
 # trigger A info  
-type_a <- 'eg: Predictive' 
-timepoints_a<- 'eg: Jan, Feb, Mar'
-package_a <- 'TBC' # input number only, no $ sign or 'm' for million
-funding_a <- 'X'
-predicted_window_a <- 'eg: JAS' 
-lead_time_a <- 'eg: 7-5 months' # change units as needed. Include all lead times if multiple activation timepoints
+name_a <- "" # what name is the trigger listed as in the perf_metrics_table.csv files?
+type_a <- "" # Predictive or Observational?
+monitored_area_a <- "" # eg: National
+timepoints_a<- "" # eg: 'Jan, Feb, Mar'
+package_a <- "" # eg: 'Package 1'
+funding_a <- 5.25 # eg: 5.25. Input number only, no $ sign or 'm' for million. Formatting will be done automatically.
+targeted_window_a <- "" # 3-letter names for first and last month. eg: 'Jul-Sep'. Forecasted period or period over which obs data are computed.
+lead_time_a <- "" # 'eg: 7-5 months', Change units as needed. Include all lead times if multiple activation timepoints
+data_source_a <- "" # name of product + provider, eg: IRI tercile seasonal forecast
+threshold_a <- "" # eg: "35% of driest years"
+hist_period_a <- "" # period for which historical data is available eg: 1991 - 2020
+monitored_by_a <- "" # owner of monitoring responsibilities eg: CHD
 
 # trigger B info  
-type_b <- 'eg: Predictive'
-timepoints_b <- 'eg: Apr, May, Jun'
-package_b <- 'TBC'
-funding_b <- 'X' 
-predicted_window_b <- 'eg: ASO'
-lead_time_b <- 'eg: 4-1 months'
+name_b <- ""
+type_b <- ""
+monitored_area_b <- ""
+timepoints_b <- ""
+package_b <- ""
+funding_b <- 5.25
+targeted_window_b <- ""
+lead_time_b <- ""
+data_source_b <- ""
+threshold_b <- ""
+hist_period_b <- ""
+monitored_by_b <- ""
 
 # trigger C info  
-type_c <- 'eg: Observational'
-timepoints_c <- 'eg: Jul'
-package_c <- 'TBC'
-funding_c <- 'X'
-predicted_window_c <- 'N/A'
-lead_time_c <- 'N/A'
+name_c <- ""
+type_c <- ""
+monitored_area_c <- ""
+timepoints_c <- ""
+package_c <- ""
+funding_c <- 5.25
+targeted_window_c <- ""
+lead_time_c <- ""
+data_source_c <- ""
+threshold_c <- ""
+hist_period_c <- ""
+monitored_by_c <- ""
 
+# activation timepoints for triggers with multiple timepoints ONLY
+atv_timepoints <- c("", "") # 3-letter months. Should match names in the performance metrics CSV file eg: "Jan", "Feb", "Mar", "Apr", "May", "June"
+  
+# Compile list of triggers and activation timepoints to be included in the report
+trigger_list <- c(name_a, name_b, name_c, atv_timepoints)
+scenario_list <- c("framework-full", "framework-p1", "framework-p2") # exclude framework-none and framework-any
+
+## UPDATE ALL BELOW FOLLOWING THE TEMPLATES PROVIDED AS GUIDES FOR WHAT TO INCLUDE
+
+# Table footnotes
+trigger_table_footnote <- "Expected cost computed using most likely probability of activation (central value). Triggers 1 and 2 can reach their threshold and activate independently from one another. Trigger 3 can only be met if Trigger 2 was not met. See Annex for performance metrics per timepoint. Trigger performance assessed by comparing recommended activations with historical bad years (i.e., years with a shock). 'Bad years' were identified through convergence of evidence from data on cereal deficit, millet production, food insecurity, fodder needs, and farmer surveys."
+full_atv_definition <- "A full activation occurs when Triggers 1 and 2 are met, or when Triggers 1 and 3 are met, and both packages are disbursed."
+package1_atv_definition <- "Package 1 is activated when Trigger 1 is met."
+package2_atv_definition <- "Package 2 is activated when Trigger 2 or Trigger 3 is met."
+activation_table_footnote <-  "" # additional notes, if needed
+
+# Technical Team section (data_providers & analysis combined into a single paragraph)
+data_providers <- "The Département de la statistique du Niger, the Direction de la météorologie nationale du Niger, IRI Columbia University, the World Food Programme, and the Food and Agriculture Orgnization" # will be followed by "provided data and/or analytical support." 
+
+analysis <- "Historical data and analysis are available through IRI's Maproom [tool](http://iridl.ldeo.columbia.edu/fbfmaproom2/niger). The triggers were developed by IRI in close collaboration with DMN, WFP Niger, and the Centre for Humanitarian Data with valuable input from participating agencies and OCHA."
+
+# Monitoring process
+monitoring_process <- "Between January and June inclusively, the FIT team at IRI updates the forecast (Triggers 1 and 2) and the decision tool within Maproom by the 22nd of each month. Within 24 hours of the update, the IRI team notifies the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met. By 7 August the Direction de la météorologie nationale du Niger will collate the rainfall measurements from the stations specified in the framework for the period 1 June - 31 July, and share them with the IRI FIT team. By 10 August the IRI FIT team will confirm the number of stations for which complete data is available; select ENACTS (80% or more available) or CHIRP (less than 80% available) accordingly; compute the SPI values and update Maproom. The IRI FIT team will then notify the AA team, the Niger Humanitarian Coordinator, and the Chief of CERF by email whether or not the trigger is met. In case of an activation, additional meteorological data will be shared by the DMN, the IRI FIT team, and/or Centre for Humanitarian Data to inform response targeting."
+  
 ```
 
 ```{r setup, include = FALSE, message = FALSE, warning = FALSE}
@@ -77,257 +139,466 @@ knitr::opts_chunk$set(echo = FALSE) # do not print code by default
 knitr::opts_chunk$set(include = TRUE) # include chunk output by default
 knitr::opts_chunk$set(message = FALSE) # do not print messages by default
 knitr::opts_chunk$set(warning = FALSE) # do not print warnings by default
-
 options(scipen = 999) # turn off scientific notation
 options(encoding = "UTF-8") # set encoding to UTF-8 instead of ANSI
 ```
 
-```{r libraries, include = FALSE}
-packages <- c('tidyverse', 'ggthemes', 'kableExtra', 'knitr', 'flextable')
+```{r libraries, include = FALSE, warning = FALSE}
+# install, load libraries
+pacman::p_load(tidyverse, here, ggthemes, kableExtra, knitr, flextable, pander)
+```
 
-# install packages not yet installed
-installed_packages <- packages %in% rownames(installed.packages())
 
-if (any(installed_packages == FALSE)) {
-  install.packages(packages[!installed_packages])
-}
+```{r paths}
+# Data paths
+data_folder_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/private/exploration/", country_pcode3,"/trigger_performance/")
+plots_folder_path <- paste0(data_folder_path, "plots/") 
+perf_metrics_95_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.95.csv")
+perf_metrics_68_filename <- paste0(data_folder_path, country_pcode3, "_perf_metrics_table_ci_0.68.csv")
+learning_table_filename <- paste0(data_folder_path, country_pcode3, "_learning_table.csv")
 
-# load libraries 
-lapply(packages, library, character.only = TRUE)
+# pa-anticipatory-action repo paths
+explanatory_ci_plot_path <- here("docs", "explanatory_ci.png") # here = returns path of Rmd
 
 ```
 
 ```{r functions}
-computeCIwidths <- function(metric_name, trigger_id) { 
+source(here("docs", "plotAtvCI.R"))
+source(here("docs", "plotTradeoffCI.R"))
+```
 
-  perf_metrics_data %>%
-  filter(trigger == trigger_id) %>%
-  select(-trigger) %>%
-  filter(metric == metric_name) %>%
-  pivot_wider(names_from = point, values_from = value) %>%
-  mutate(below_ci = low_end,  # width between zero and low end of CI
-         ci = high_end - low_end,# width of CI
-         above_ci = 100 - high_end) %>% # width between high_end of CI and 100
-  pivot_longer(!c('metric','dummy'), names_to = 'point', values_to = 'value')
+```{r data-loading-and-formatting}
+# read in performance metrics files
+perf_metrics_95_data <- read.csv(perf_metrics_95_filename,
+                              colClasses = c('character', 'character', 'numeric', 'character')
+                              )
+perf_metrics_68_data <- read.csv(perf_metrics_68_filename,
+                              colClasses = c('character', 'character', 'numeric', 'character')
+                              )
+
+# format performance metrics values
+perf_metrics_95_data$value <- round(100 * perf_metrics_95_data$value, 0)
+perf_metrics_68_data$value <- round(100 * perf_metrics_68_data$value, 0)
+
+# uniquely identify point labels
+perf_metrics_95_data$upoint <- paste0(perf_metrics_95_data$point, "_95")
+perf_metrics_68_data$upoint <- paste0(perf_metrics_68_data$point, "_68")
+
+# combine datasets
+perf_metrics_data <- rbind(perf_metrics_95_data, perf_metrics_68_data) %>%
+                      select(-point) # remove non-unique point identifier
+
+# create & append framework-none metrics
+framework_min_metrics <- perf_metrics_data %>%
+                            filter(trigger == 'framework-min' & metric == 'atv') %>%
+                            mutate(value = 100 - value)
+
+framework_none_metrics <- data.frame(metric = 'atv', trigger = 'framework-none', value = NA, upoint = c('central_95', 'low_end_95', 'high_end_95', 'central_68', 'low_end_68', 'high_end_68'))
+
+framework_none_metrics$value[framework_none_metrics$upoint == 'central_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'central_95']
+framework_none_metrics$value[framework_none_metrics$upoint == 'low_end_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'high_end_95']
+framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_95'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'low_end_95']
+framework_none_metrics$value[framework_none_metrics$upoint == 'central_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'central_68']
+framework_none_metrics$value[framework_none_metrics$upoint == 'low_end_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'high_end_68']
+framework_none_metrics$value[framework_none_metrics$upoint == 'high_end_68'] <- framework_min_metrics$value[framework_min_metrics$upoint == 'low_end_68']
+
+perf_metrics_data <- rbind(perf_metrics_data, framework_none_metrics)
+
+# format funding amounts
+funding_a_formatted <- paste0('$',funding_a,'m')
+funding_b_formatted <- paste0('$',funding_b,'m')
+funding_c_formatted <- paste0('$',funding_c,'m')
+
+# expected cost amounts (probability of activation multiplied by funding amount)
+expected_cost_a <- paste0('$', round(funding_a * (perf_metrics_data %>% filter(trigger == name_a & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
+expected_cost_b <- paste0('$', round(funding_b * (perf_metrics_data %>% filter(trigger == name_b & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
+expected_cost_c <- paste0('$', round(funding_c * (perf_metrics_data %>% filter(trigger == name_c & metric == "atv" & upoint == 'central_95') %>% select(value) %>% as.numeric()/100), 2), 'm')
+```
+
+```{r country-specific}
+hist_act <- read.csv(paste0(data_folder_path, "historical_activations_trigger_v1.csv")) 
+p2_pred <- sum(hist_act$Trigger2 == 'yes') # count activations of T2 (prediction-based activation of Package 2)
+p2_obs <- sum(hist_act$Trigger3 == 'yes' & hist_act$Trigger2 == '') # count activations of T3 when T2 was not met (observation-based activation of Package 2)
+p2_tot <- sum(hist_act$Trigger3 == 'yes' | hist_act$Trigger2 == 'yes') # count activations of P2
+package2_atv_definition <- paste0(package2_atv_definition, " Historically Package 2 disbursement (", p2_tot, " instances) was triggered by the predictive trigger (Trigger 2) ", round(100*p2_pred/p2_tot, 0),"% of the time and by the observational trigger (Trigger 3) ", round(100*p2_obs/p2_tot, 0), "% of the time.")
+```
+
+
+```{r atv-CIs}
+# Create a CI visual for atv for each trigger, activation timepoint, and activation scenario beside None and Any
+
+for(trigger in c(trigger_list, scenario_list)) {
+  
+  # produce segment_dimensions and plots for triggers 
+  output <- plotAtvCI(trigger_id = trigger)
+  
+  # save plot as png
+  filename <- paste0(trigger, "_atv.png")
+  png(filename = paste0(plots_folder_path, filename), width = 500, height = 400, units = "px")
+  print(output$p)
+  invisible(dev.off())
 }
 ```
 
-```{r data loading and formatting}
+```{r tradeoff-CIs}
+# Tradeoff CIs for individual triggers
 
-# read in performance metrics file
-perf_metrics_data <- read.csv(perf_metrics_filename,
-                              colClasses = c('character', 'character', 'character', 'integer', 'integer')
-                              )
-
-# format funding amounts
-funding_a <- paste0('$',funding_a,'m')
-funding_b <- paste0('$',funding_b,'m')
-funding_c <- paste0('$',funding_c,'m')
-
+for(trigger in c(trigger_list)) {
+  for (metric in c('var', 'det')) {
+  
+  output <- plotTradeoffCI(trigger_id = trigger, 
+                   left_metric_name = metric)
+  
+  # save plot as png
+  filename <- paste0(trigger, "_", metric, "_tradeoff_bar.png")
+  png(filename = paste0(plots_folder_path, filename), width = 500, height = 400, units = "px")
+  print(output$p)
+  invisible(dev.off())
+  }
+}
+  
+# Tradeoff CI for activation scenarios
+  output <- plotTradeoffCI(trigger_id = "framework-min", 
+                   left_metric_name = "atv")
+  
+  # save plot as png
+  filename <- paste0("framework-min_atv_tradeoff_bar.png")
+  png(filename = paste0(plots_folder_path, filename), width = 500, height = 400, units = "px")
+  print(output$p)
+  invisible(dev.off())
 ```
 
-```{r compute CI measurements}
+```{r file-formatting-and-saving}
+# list plots to be trimmed
+plots_to_trim <- grep(list.files(path = plots_folder_path), 
+                      pattern = 'trimmed_', 
+                      invert = TRUE, 
+                      value = TRUE) # excludes 'trimmed_' graphs, which will be overwritten
 
-# compute width and position of CIs for trigger a
-df_a_var <- computeCIwidths(metric_name = 'var', trigger_id = 'a') # valid activation rate 
-df_a_det <- computeCIwidths(metric_name = 'det', trigger_id = 'a') # detection rate
-df_a_far <- computeCIwidths(metric_name = 'far', trigger_id = 'a') # false alarm rate
-df_a_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'a') # miss rate
-df_a_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'a') # probability of trigger activation
-
-# compute width and position of CIs for trigger b
-df_b_var <- computeCIwidths(metric_name = 'var', trigger_id = 'b') # valid activation rate 
-df_b_det <- computeCIwidths(metric_name = 'det', trigger_id = 'b') # detection rate
-df_b_far <- computeCIwidths(metric_name = 'far', trigger_id = 'b') # false alarm rate
-df_b_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'b') # miss rate
-df_b_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'b') # probability of trigger activation
-
-# compute width and position of CIs for trigger c
-df_c_var <- computeCIwidths(metric_name = 'var', trigger_id = 'c') # valid activation rate 
-df_c_det <- computeCIwidths(metric_name = 'det', trigger_id = 'c') # detection rate
-df_c_far <- computeCIwidths(metric_name = 'far', trigger_id = 'c') # false alarm rate
-df_c_mis <- computeCIwidths(metric_name = 'mis', trigger_id = 'c') # miss rate
-df_c_atv <- computeCIwidths(metric_name = 'atv', trigger_id = 'c') # probability of trigger activation
-
-# compute width and position of CIs for the framework
-df_fmwk_min <- computeCIwidths(metric_name = 'min', trigger_id = 'framework') # prob minimum framework activation 
-df_fmwk_ful <- computeCIwidths(metric_name = 'ful', trigger_id = 'framework') # prob full framework activation 
-
+# trim plots
+for (filename in plots_to_trim) {
+  # read in the image
+  original_plot <- magick::image_read(paste0(plots_folder_path, filename))
+  
+  # trim the image
+  trimmed_plot <- magick::image_trim(original_plot)
+  
+  # save trimmed plot
+  magick::image_write(trimmed_plot, path = paste0(plots_folder_path, "trimmed_", filename), format = "png")
+}
 ```
 
-```{r data plotting}
-
-source("computeCIplots.R")
-
-plotCI(trigger_id = 'a', metric = 'var', ci_widths_df = 'df_a_var') 
-plotCI(trigger_id = 'a', metric = 'det', ci_widths_df = 'df_a_det')
-plotCI(trigger_id = 'a', metric = 'far', ci_widths_df = 'df_a_far')
-plotCI(trigger_id = 'a', metric = 'mis', ci_widths_df = 'df_a_mis')
-plotCI(trigger_id = 'a', metric = 'atv', ci_widths_df = 'df_a_atv')
-
-plotCI(trigger_id = 'b', metric = 'var', ci_widths_df = 'df_b_var') 
-plotCI(trigger_id = 'b', metric = 'det', ci_widths_df = 'df_b_det')
-plotCI(trigger_id = 'b', metric = 'far', ci_widths_df = 'df_b_far') 
-plotCI(trigger_id = 'b', metric = 'mis', ci_widths_df = 'df_b_mis')
-plotCI(trigger_id = 'b', metric = 'atv', ci_widths_df = 'df_b_atv')
-
-plotCI(trigger_id = 'c', metric = 'var', ci_widths_df = 'df_c_var') 
-plotCI(trigger_id = 'c', metric = 'det', ci_widths_df = 'df_c_det') 
-plotCI(trigger_id = 'c', metric = 'far', ci_widths_df = 'df_c_far') 
-plotCI(trigger_id = 'c', metric = 'mis', ci_widths_df = 'df_c_mis') 
-plotCI(trigger_id = 'c', metric = 'atv', ci_widths_df = 'df_c_atv')
-
-plotCI(trigger_id = 'framework', metric = 'min', ci_widths_df = 'df_fmwk_min') 
-plotCI(trigger_id = 'framework', metric = 'ful', ci_widths_df = 'df_fmwk_ful') 
+```{r key-messages-metrics}
+any_atv_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'atv') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+any_atv_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'atv') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
+any_det_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+any_det_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'det') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
+any_far_low_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'far') %>% filter(upoint == 'low_end_68') %>% select(value) %>% as.numeric()
+any_far_high_end_68 <- perf_metrics_data %>% filter(trigger == 'framework-min' & metric == 'far') %>% filter(upoint == 'high_end_68') %>% select(value) %>% as.numeric()
+mitigation_warranted <- ifelse(any_far_low_end_68 >= 40, "Mitigation is recommended to minimise the negative impact of a false alarm due to its moderate to high likelihood.", "")
 ```
 
-<br> 
-<br>
-<br>
-
-# Anticipatory Action Trigger 
-# Mechanism Report
-
+# Anticipatory Action Trigger Mechanism Report
+<p style="color:#007ce1;font-size:22px;text-align:center;"> `r paste0(shock, ' in ', country_name)`</p> 
 <p style="color:black;font-size:14px;text-align:right;"> Last updated: `r Sys.Date()`</p> 
 
-***
+## Key Messages
 
-## Shock
-
-<span style="color:#007ce1"> Country: </span> `r paste0("   ", country_name)`
-<br>
-<span style="color:#007ce1"> Hazard: </span> `r shock`
-
-## Data sources
-
-### Historical shocks 
-* Compiled by X. Available on HDX [here](link to HDX dataset in URL format eg: https://data.humdata.org/).
-
-### Forecasts
-* Product 1. The forecast is published (frequency, schedule). Data provider website [here](Link to provider’s data portal).
-* Product 2. The forecast is published (frequency, schedule). Data provider website [here](Link to provider’s data portal).
-
-### Other data
-* Some other dataset. Data available [here](Link to dataset on HDX)
-
-## Analysis
-Performed by the Centre for Humanitarian Data. Publicly available [here](link to Github repo's project folder).
-
-<br>
-
-# Trigger Mechanism Snapshot
+* <span style="color: blue;">ACTIVATION</span> <p style="color:black;font-size:16px;text-align:left;"> There is a `r paste0(any_atv_low_end_68, ' - ', any_atv_high_end_68)`% chance that an activation will occur in a given year.</p>
+* <span style="color: blue;">SHOCK DETECTION</span> <p style="color:black;font-size:16px;text-align:left;"> At least some activities are expected to be implemented ahead of `r paste0(any_det_low_end_68, ' - ', any_det_high_end_68)`% of shocks.</p>
+* <span style="color: blue;">FALSE ALARMS</span> <p style="color:black;font-size:16px;text-align:left;"> The risk of activating in the absence of a severe shock stands at `r paste0(any_far_low_end_68, ' - ', any_far_high_end_68)`% of activations.</p>
+* <span style="color: blue;">NO REGRETS BIAS</span> <p style="color:black;font-size:16px;text-align:left;"> The mechanism is optimised to reduce the risk of failing to activate when there is a shock, at the cost of having false alarms. `r mitigation_warranted `</p>
 
 &nbsp;
 
-```{r mechanism snapshot, include = TRUE}
+_________
 
+## About Metric Estimates
+
+<p style="color:black;font-size:16px;text-align:left;"> The estimates in this report are shown as ranges called confidence intervals. The confidence intervals reflect the probabilistic nature of the estimates as well as the impact of data limitations (small or incomplete datasets, errors or imprecision in measurements, divergences between data sources, etc.) on the accuracy of estimates. They can inform decision-making by illustrating the most likely performance levels and by providing bounds for the possible albeit unlikely extremes.</p> 
+
+<br>
+
+```{r explanatory_ci, echo=FALSE, out.width= "40%", out.extra='style="float:right; padding:10px"'}
+explanatory_ci <- magick::image_read(explanatory_ci_plot_path)
+explanatory_ci
+```
+
+* <p style="color:black;font-size:16px;text-align:left;"> The <span style="font-weight: bold;">central value</span> is the most likely performance; </p>
+* <p style="color:black;font-size:16px;text-align:left;"> Most often the trigger will perform within the <span style="font-weight: bold;">darker inner range</span> (68% of the time);</p>
+* <p style="color:black;font-size:16px;text-align:left;"> There is high confidence that the trigger will perform within the <span style="font-weight: bold;">full coloured (grey or blue) range</span> (95% of the time).</p> 
+
+<br>
+
+## Colour Coding
+<p style="color:black;font-size:16px;text-align:left;"> In the visualizations <span style="color: blue;font-weight: bold;">blue</span> represents activation likelihood, <span style="color: green;font-weight: bold;">green</span> represents desired outcomes (valid non-activations/activations) and <span style="color: red;font-weight: bold;"dou>red</span> represents undesired outcomes or errors.</p>
+
+&nbsp;
+
+## Trigger Mechanism Snapshot
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the trigger mechanism and its performance in signaling severe shocks. It presents estimates of the likelihood that the threshold would be met in a given year as well as how often the trigger is expected to correctly recommend an activation or non-activation.</p> 
+
+&nbsp;
+
+```{r image-links}
+# atv plots
+trigger1_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger1_atv.png")
+trigger2_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_atv.png")
+trigger3_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_atv.png")
+
+# var tradeoff plots
+trigger1_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger1_var_tradeoff_bar.png")
+trigger2_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_var_tradeoff_bar.png")
+trigger3_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_var_tradeoff_bar.png")
+
+# det tradeoff plots
+trigger1_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger1_det_tradeoff_bar.png")
+trigger2_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger2_det_tradeoff_bar.png")
+trigger3_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Trigger3_det_tradeoff_bar.png")
+
+# framework activation plots
+fmwk_min_png_link <- paste0(data_folder_path, "plots/trimmed_framework-min_atv_tradeoff_bar.png")
+fmwk_full_png_link <- paste0(data_folder_path, "plots/trimmed_framework-full_atv.png")
+fmwk_p1_png_link <- paste0(data_folder_path, "plots/trimmed_framework-p1_atv.png")
+fmwk_p2_png_link <- paste0(data_folder_path, "plots/trimmed_framework-p2_atv.png")
+
+# Timepoint activation plots
+jan_atv_png_link <- paste0(data_folder_path, "plots/trimmed_Jan_atv.png")
+jan_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Jan_var_tradeoff_bar.png")
+jan_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_Jan_det_tradeoff_bar.png")
+
+feb_atv_png_link <- paste0(data_folder_path, "plots/trimmed_feb_atv.png")
+feb_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_feb_var_tradeoff_bar.png")
+feb_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_feb_det_tradeoff_bar.png")
+
+mar_atv_png_link <- paste0(data_folder_path, "plots/trimmed_mar_atv.png")
+mar_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_mar_var_tradeoff_bar.png")
+mar_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_mar_det_tradeoff_bar.png")
+
+apr_atv_png_link <- paste0(data_folder_path, "plots/trimmed_apr_atv.png")
+apr_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_apr_var_tradeoff_bar.png")
+apr_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_apr_det_tradeoff_bar.png")
+
+may_atv_png_link <- paste0(data_folder_path, "plots/trimmed_may_atv.png")
+may_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_may_var_tradeoff_bar.png")
+may_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_may_det_tradeoff_bar.png")
+
+jun_atv_png_link <- paste0(data_folder_path, "plots/trimmed_jun_atv.png")
+jun_var_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_jun_var_tradeoff_bar.png")
+jun_det_tradeoff_png_link <- paste0(data_folder_path, "plots/trimmed_jun_det_tradeoff_bar.png")
+
+
+```
+
+
+```{r mechanism-snapshot, include = TRUE}
 snapshot_df <- data.frame(row_name = c('Type', 
+                                       'Monitored Area',
                                        'Activation Timepoints', 
-                                       'Predicted Window', 
+                                       'Target Period', 
                                        'Lead Time', 
-                                       'Valid Activation Rate', 
-                                       'Detection Rate', 
-                                       'False Alarm Rate', 
-                                       'Miss Rate' , 
-                                       'Shock Return Period', 
-                                       'Nbr of Historical Shocks', 
-                                       'Historical Period', 
+                                       'Data Source',
+                                       'Threshold',
+                                       'Historical Data Coverage',
+                                       'Monitored by',
                                        'Activity Package', 
-                                       'Funding Package', 
-                                       'Prob. Trigger Activation', 
-                                       'Prob. Min. Frwk Activ.', 
-                                       'Prob. Full Frwk Activ.'),
+                                       'Probability of being met in a given year', 
+                                       'Funding Amount',
+                                       'Expected Annual Cost',
+                                       'All Activations (%)', 
+                                       'All Shocks (%)'),
                        trigger_a = c(type_a, 
+                                     monitored_area_a,
                                      timepoints_a, 
-                                     predicted_window_a, 
+                                     targeted_window_a, 
                                      lead_time_a, 
-                                     paste0("<img src=plots/trimmed_trigger_a_var_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_a_mis_ci.png"), 
-                                     shock_return_period, 
-                                     nbr_hist_shocks, 
-                                     hist_period, 
+                                     data_source_a,
+                                     threshold_a,
+                                     hist_period_a,
+                                     monitored_by_a,
                                      package_a, 
-                                     funding_a, 
-                                     paste0("<img src=plots/trimmed_trigger_a_atv_ci.png"), 
-                                     "Covers entire framework",  
-                                     "Covers entire framework"),
-                       trigger_b = c(type_b, 
+                                     pandoc.image.return(trigger1_atv_png_link),
+                                     funding_a_formatted,
+                                     expected_cost_a,
+                                     pandoc.image.return(trigger1_var_tradeoff_png_link),
+                                     pandoc.image.return(trigger1_det_tradeoff_png_link)),
+                       trigger_b = c(type_b,
+                                     monitored_area_b,
                                      timepoints_b, 
-                                     predicted_window_b, 
+                                     targeted_window_b, 
                                      lead_time_b, 
-                                     paste0("<img src=plots/trimmed_trigger_b_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_b_det_ci.png"),  
-                                     paste0("<img src=plots/trimmed_trigger_b_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_b_mis_ci.png"), 
-                                     shock_return_period,
-                                     nbr_hist_shocks, 
-                                     hist_period, 
+                                     data_source_b,
+                                     threshold_b,
+                                     hist_period_b,
+                                     monitored_by_b,
                                      package_b, 
-                                     funding_b, 
-                                     paste0("<img src=plots/trimmed_trigger_b_atv_ci.png"), 
-                                     paste0("<","img src=","plots/trimmed_framework_min_ci",".png",">"),  
-                                     paste0("<","img src=","plots/trimmed_framework_ful_ci",".png",">")),  
+                                     pandoc.image.return(trigger2_atv_png_link),
+                                     funding_b_formatted,
+                                     expected_cost_b,
+                                     pandoc.image.return(trigger2_var_tradeoff_png_link),
+                                     pandoc.image.return(trigger2_det_tradeoff_png_link)),
                        trigger_c = c(type_c, 
+                                     monitored_area_c,
                                      timepoints_c, 
-                                     predicted_window_c, 
+                                     targeted_window_c, 
                                      lead_time_c, 
-                                     paste0("<img src=plots/trimmed_trigger_c_var_ci.png"),
-                                     paste0("<img src=plots/trimmed_trigger_c_det_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_far_ci.png"), 
-                                     paste0("<img src=plots/trimmed_trigger_c_mis_ci.png"), 
-                                     shock_return_period, 
-                                     nbr_hist_shocks, 
-                                     hist_period, 
+                                     data_source_c,
+                                     threshold_c,
+                                     hist_period_c,
+                                     monitored_by_c,
                                      package_c, 
-                                     funding_c, 
-                                     paste0("<img src=plots/trimmed_trigger_c_atv_ci.png"), 
-                                     "Covers entire framework",
-                                     "Covers entire framework"))
+                                     pandoc.image.return(trigger3_atv_png_link),
+                                     funding_c_formatted,
+                                     expected_cost_c,
+                                     pandoc.image.return(trigger3_var_tradeoff_png_link),
+                                     pandoc.image.return(trigger3_det_tradeoff_png_link)))
 
 kbl(snapshot_df,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, # omit row numbers
-    col.names = c("","Trigger A", "Trigger B", "Trigger C"), 
+    col.names = c("","Trigger 1", "Trigger 2", "Trigger 3"), 
     align = "rccc") %>%
-  kable_minimal(c("hover")) %>%
-  row_spec(c(1:4, 9:13), extra_css = "line-height: 25px;") %>%
-  row_spec(c(5:8, 14:16), extra_css = "line-height: 45px;") %>%
-  column_spec(column = 1, width = "16em", extra_css = "vertical-align: bottom;") %>%
-  column_spec(column = c(2:4), width = "22em") %>%
-  pack_rows("Description", start_row = 1, end_row = 4, color = '#1bb580') %>%
-  pack_rows("Performance", start_row = 5, end_row = 8, color = '#1bb580') %>%
-  pack_rows("Shock", start_row = 9, end_row = 11, color = '#1bb580') %>%
-  pack_rows("Activation", start_row = 12, end_row = 13, color = '#1bb580') %>%
-  pack_rows("Framework Activation", start_row = 15, end_row = 16, colnum = 1, color = "black", label_row_css = "font-size: 12; font-style: italic; text-align: center; background-color: #E5E5E5;") %>%
-  kableExtra::footnote(general = "", general_title = "___", symbol = c("Every trigger can reach its threshold and activate independently from the others. Only 1 activation can occur per trigger in a given year."))
-
-
+  kable_minimal(c("hover", "striped")) %>%
+  row_spec(c(1:12), extra_css = "line-height: 30px;") %>%
+  row_spec(c(13:14), extra_css = "line-height: 85px;") %>%
+  column_spec(column = 1, extra_css = "vertical-align: middle;") %>%
+  column_spec(column = c(2:4), width = "28em") %>%
+  pack_rows("Description", start_row = 1, end_row = 8, color = '#1bb580') %>%
+  pack_rows("Programming and Funding", start_row = 9, end_row = 12, color = '#1bb580') %>%
+  pack_rows("Performance", start_row = 13, end_row = 14
+            , color = '#1bb580') %>%
+  kableExtra::footnote(general_title = "Notes",
+                       general = trigger_table_footnote)
 ```
 
 &nbsp;
 
-## Monitoring & Governance
-
-(Actor) will monitor the trigger(s). If a trigger is met, (Actor) will notify (Recipients) by email within (time delay). Draft emails can be found [here](link to draft emails).
+## Activation Scenarios
+<p style="color:black;font-size:16px;text-align:left;"> This section examines the likelihood of activation in a given year under various scenarios. The estimates are presented as confidence intervals to illustrate their inherent uncertainty. The graphs show how likely it is that a scenario will occur (<span style="color:  #007ce1;">darker inner band</span>, 68% of years) as well as the highest and lowest probability that a scenario is to occur (<span style="color:  `r alpha("#007ce1", 0.7)`;">full coloured band</span>, 95% of years).</p>
 
 &nbsp;
 
-## Assumptions & Open questions
+```{r framework-activation-table}
+activation_df <- data.frame(row_name = c(paste0('Yearly Disbursements', footnote_marker_number(1)), 
+                                        paste0('Full', footnote_marker_number(2)),
+                                        paste0('Package 1 only', footnote_marker_number(3)),
+                                        paste0('Package 2 only', footnote_marker_number(4))),
+                           atv_stats = c(pandoc.image.return(fmwk_min_png_link),
+                                         pandoc.image.return(fmwk_full_png_link),
+                                         pandoc.image.return(fmwk_p1_png_link),
+                                         pandoc.image.return(fmwk_p2_png_link)))
 
-```{r learning table}
+kbl(activation_df,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, 
+    col.names = c("",""), 
+    align = "rl") %>%
+  kable_styling(full_width = FALSE) %>%
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:4), extra_css = "line-height: 45px;") %>%
+  column_spec(column = 1, width = "20em", extra_css = "vertical-align: middle;") %>%
+  column_spec(column = 2, width = "22em") %>%
+  pack_rows("Activations", start_row = 1, end_row = 2, color = '#1bb580') %>%
+  pack_rows("Disbursement Scenario Breakdown", 2, 4, color = 'black') %>%
+  kableExtra::footnote(general_title = "Notes",
+                       general = activation_table_footnote,
+                       number = c("Any: At least one trigger is met. None: No trigger is met.",
+                        full_atv_definition, 
+                        package1_atv_definition,
+                        package2_atv_definition))
+```
 
+&nbsp;
+
+## Technical Team
+<p style="color:black;font-size:16px;text-align:left;"> `r data_providers` have provided data and/or analytical support. A total of `r nbr_hist_shocks` historical occurrences of severe shocks were documented and used to develop the trigger mechanism. `r analysis` </p>
+
+## Monitoring Process
+<p style="color:black;font-size:16px;text-align:left;"> `r monitoring_process` </p>
+
+## Learning Opportunities
+<p style="color:black;font-size:16px;text-align:left;"> This table summarises the decisions, assumptions, and open questions that arose during trigger development. They are documented for transparency and to inform the learning agenda.</p>
+
+&nbsp;
+
+```{r learning-table}
 learning_table <- read.csv(learning_table_filename)
-
 kbl(learning_table,
     format = 'html',
     escape = FALSE,
     row.names = FALSE, # omit row numbers
     col.names = c("Decision","Rationale", "Assumption", "Open Question"), 
     align = "llll") %>%
-  kable_minimal(c("hover", "striped"))
-
+  kable_minimal(c("hover", "striped")) %>%
+  column_spec(column = c(1:4), width = "28em")
 ```
 
+&nbsp;
+
+## Annex
+<p style="color:black;font-size:16px;text-align:left;"> This table reports the performance metrics per activation timepoint for the triggers that have more than one opportunities for activation.</p>
+
+&nbsp;
+
+```{r timepoint-table, include = TRUE}
+
+
+jun_atv_png_link <- 
+jun_var_tradeoff_png_link 
+jun_det_tradeoff_png_link <- 
+  
+timepoint_df1 <- data.frame(row_name = c('Prob. being met (%)',
+                                        'All Activations (%)', 
+                                       'All Shocks (%)'),
+                       trigger_jan = c(pandoc.image.return(jan_atv_png_link),
+                                       pandoc.image.return(jan_var_tradeoff_png_link),
+                                       pandoc.image.return(jan_det_tradeoff_png_link)),
+                       trigger_feb = c(pandoc.image.return(feb_atv_png_link),
+                                       pandoc.image.return(feb_var_tradeoff_png_link),
+                                       pandoc.image.return(feb_det_tradeoff_png_link)),
+                       trigger_mar = c(pandoc.image.return(mar_atv_png_link),
+                                       pandoc.image.return(mar_var_tradeoff_png_link),
+                                       pandoc.image.return(mar_det_tradeoff_png_link)))
+
+timepoint_df2 <- data.frame(row_name = c('Prob. being met (%)',
+                                        'All Activations (%)', 
+                                       'All Shocks (%)'),
+                       trigger_apr = c(pandoc.image.return(apr_atv_png_link),
+                                       pandoc.image.return(apr_var_tradeoff_png_link),
+                                       pandoc.image.return(apr_det_tradeoff_png_link)),
+                       trigger_may = c(pandoc.image.return(may_atv_png_link),
+                                       pandoc.image.return(may_var_tradeoff_png_link),
+                                       pandoc.image.return(may_det_tradeoff_png_link)),
+                       trigger_jun = c(pandoc.image.return(jun_atv_png_link),
+                                       pandoc.image.return(jun_var_tradeoff_png_link),
+                                       pandoc.image.return(jun_det_tradeoff_png_link)))
+kbl(timepoint_df1,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, 
+    col.names = c("","January", "February", "March"), 
+    align = "rccc") %>%
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:3), extra_css = "line-height: 80px;") %>%
+  column_spec(column = 1, extra_css = "vertical-align: middle;", width = "10em")
+```
+
+&nbsp;
+
+```{r timpoint_table2, eval =F}
+kbl(timepoint_df2,
+    format = 'html',
+    escape = FALSE,
+    row.names = FALSE, 
+    col.names = c("","April", "May", "June"), 
+    align = "rccc") %>%
+  kable_minimal(c("hover")) %>%
+  row_spec(c(1:3), extra_css = "line-height: 60px;") %>%
+  column_spec(column = 1, extra_css = "vertical-align: bottom", width = "10em")
+```
+
+&nbsp;
+&nbsp;
+&nbsp;
