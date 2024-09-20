@@ -180,7 +180,7 @@ def calculate_biomasse(
     df_mean_long.sort_values(by=admin_cols + ["season_index"], inplace=True)
     df_mean_long["biomasse_mean"] = df_mean_long.groupby(by=admin_cols)[
         "DMP_MEA"
-    ].apply(lambda x: x.cumsum() * 365.25 / 36)
+    ].transform(lambda x: x.cumsum() * 365.25 / 36)
 
     df_dmp_long = (
         pd.wide_to_long(
@@ -236,7 +236,7 @@ def calculate_biomasse(
 
     df_merged["biomasse"] = df_merged.groupby(by=admin_cols + ["season"])[
         "DMP"
-    ].apply(lambda x: x.cumsum() * 365.25 / 36)
+    ].transform(lambda x: x.cumsum() * 365.25 / 36)
     df_merged["biomasse_anomaly"] = (
         100 * df_merged["biomasse"] / df_merged["biomasse_mean"]
     )
