@@ -15,6 +15,7 @@ class Config:
     # general directories
     RAW_DIR = "raw"
     PROCESSED_DIR = "processed"
+    EXPLORATION_DIR = "exploration"
     PUBLIC_DIR = "public"
     PRIVATE_DIR = "private"
     DATA_DIR = os.path.join(os.environ["AA_DATA_DIR"])
