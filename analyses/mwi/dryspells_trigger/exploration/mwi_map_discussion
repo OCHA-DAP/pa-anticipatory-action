@@ -1,0 +1,22 @@
+## Discussion of MWI maps
+
+Copied from GitHub PR.
+
+Okay, so, I wanted to put together this PR to show the potential draft maps and also discuss some issues I see with them. To do this analysis, I looked at 2018, where there 3 dry spells and we would've activated the observational trigger.
+
+First, we have a simple map I put together with rainfall across the monitoring period, starting on the 24th of December until the 31st of January, when we would have triggered the 3rd dry spell.
+
+<p align="center"><img src="https://user-images.githubusercontent.com/8086547/137130915-5b6e0fb3-34ed-4cd1-8bc9-bf20a678bf1e.png" width=25% height=25%></p>
+
+I also highlighted the districts that were triggered in that year. However, while doing the work, I began to think about the logic of creating and using a map like this and I would recommend that we actually don't proceed with these. My thoughts are:
+
+* We don't actually want agencies to do targeting based on total rainfall. There could be sufficient rainfall in some areas and worse rainfall in others, but that isn't actually necessarily reflective of where dry spells have occurred and where targeted assistance would be needed.
+* Although we might rely on the administrative boundaries for the triggering, it isn't actually that reflect of where we should be targeting given that the boundaries are relatively arbitrary. So, even if we instead just displayed, for instance, districts that experienced a dry spell, I think it is not as instructive as we think and we risk focusing on smaller districts (with fewer raster cells) more likely to experience a dry spell rather than the wider areas that have experienced one.
+
+I think we should entirely avoid presenting this kind of map because it's liable to be used incorrectly in responding to where dry spells are. A simple idea would be rather than displaying the precipitation map as above, we just overlay raster cells, where for each raster we capture if it's experienced a dry spell in that period.
+
+<p align="center"><img src="https://user-images.githubusercontent.com/8086547/137130939-9fc95c0b-1908-46e1-92a3-b6b48cb0c48b.png" width=25% height=25%></p>
+
+While I need to check my analysis, I think the map works as an example to show how valuable this method can be for identifying areas most impacted by dry spells, ignoring arbitrary admin boundaries.
+
+We can update the maps based on comments and fine tuning for presentation tomorrow, for instance zooming in just to the Southern region, editing text, etc., but I wanted to get these two examples up and discuss what we actually want to show before proceeding.
